@@ -1,0 +1,1266 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>스톱워치 디자인 mockup · BF-415</title>
+    <style>
+      /* ─────────────────── 토큰 (light) ─────────────────── */
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* §2.1 색상 (notepad/timer 공유) */
+        --color-bg-canvas: #fafaf9;
+        --color-bg-surface: #ffffff;
+        --color-bg-subtle: #f1f1ef;
+        --color-border-default: #e5e5e2;
+        --color-border-strong: #d0d0cc;
+        --color-text-primary: #1a1a19;
+        --color-text-secondary: #6b6b66;
+        --color-text-muted: #9a9a93;
+        --color-accent: #3563e9;
+        --color-accent-hover: #2a4fc0;
+        --color-danger: #d14343;
+        --color-danger-hover: #a83333;
+        --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+        /* §2.2 stopwatch 전용 */
+        --color-stopwatch-running: #1f8a5c;
+        --color-stopwatch-stopped: #b7791f;
+        --color-lap-fastest-bg: #e8f6ee;
+        --color-lap-fastest-text: #1f8a5c;
+        --color-lap-slowest-bg: #fbeeee;
+        --color-lap-slowest-text: #9a2a2a;
+
+        /* §2.3 spacing */
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+
+        /* §2.4 radius / shadow */
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+        /* §3 typography */
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-h2: 600 16px/1.3 var(--font-sans);
+        --text-label: 500 14px/1.4 var(--font-sans);
+        --text-body: 400 15px/1.65 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+        --text-button: 500 14px/1 var(--font-sans);
+        --text-button-lg: 600 16px/1 var(--font-sans);
+        --text-button-md: 500 15px/1 var(--font-sans);
+        --text-lap-num: 500 13px/1.4 var(--font-sans);
+        --text-lap-time: 500 18px/1 var(--font-mono);
+        --text-lap-delta: 400 14px/1.4 var(--font-mono);
+      }
+
+      /* dark 패널 (selector 기반 — mockup 한정) */
+      .panel.is-dark {
+        --color-bg-canvas: #0f1115;
+        --color-bg-surface: #171a21;
+        --color-bg-subtle: #1e222b;
+        --color-border-default: #262b36;
+        --color-border-strong: #3a4150;
+        --color-text-primary: #e8e8e4;
+        --color-text-secondary: #9a9a93;
+        --color-text-muted: #6b6b66;
+        --color-accent: #5b82f0;
+        --color-accent-hover: #7596f3;
+        --color-danger: #e55858;
+        --color-danger-hover: #ec7676;
+        --color-focus-ring: rgba(91, 130, 240, 0.55);
+
+        --color-stopwatch-running: #3aae7a;
+        --color-stopwatch-stopped: #d4a23a;
+        --color-lap-fastest-bg: #1f3a2a;
+        --color-lap-fastest-text: #5dcb94;
+        --color-lap-slowest-bg: #3a2326;
+        --color-lap-slowest-text: #fcb7b7;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+      }
+
+      /* ─────────────────── reset / base ─────────────────── */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font: var(--text-body);
+        color: var(--color-text-primary);
+        background: #e9e9e6;
+      }
+
+      /* ─────────────────── mockup gallery layout ─────────────────── */
+      .gallery {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-5);
+      }
+      .gallery__title {
+        font: 700 28px/1.3 var(--font-sans);
+        margin: 0 0 var(--space-2);
+        color: #1a1a19;
+      }
+      .gallery__subtitle {
+        font: 400 14px/1.5 var(--font-sans);
+        color: #6b6b66;
+        margin: 0 0 var(--space-6);
+      }
+      .gallery__section-title {
+        font: 600 18px/1.3 var(--font-sans);
+        margin: var(--space-7) 0 var(--space-3);
+        color: #1a1a19;
+      }
+      .gallery__row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        gap: var(--space-5);
+      }
+
+      .panel {
+        background: var(--color-bg-canvas);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+      .panel__label {
+        background: #1a1a19;
+        color: #fafaf9;
+        font: 500 12px/1.4 var(--font-sans);
+        padding: var(--space-2) var(--space-4);
+        letter-spacing: 0.04em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .panel__label .badge {
+        font: 500 10px/1 var(--font-mono);
+        padding: 3px 7px;
+        border-radius: var(--radius-sm);
+        background: rgba(255, 255, 255, 0.16);
+      }
+      .panel__body {
+        padding: 0;
+      }
+
+      /* ─────────────────── stopwatch page mock ─────────────────── */
+      .sw-app {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+        background: var(--color-bg-canvas);
+      }
+
+      .topbar {
+        height: 56px;
+        padding: 0 var(--space-5);
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .topbar__title {
+        font: var(--text-h1);
+        margin: 0;
+        color: var(--color-text-primary);
+      }
+      .topbar__actions {
+        display: flex;
+        gap: var(--space-2);
+      }
+
+      .page {
+        padding: var(--space-6) var(--space-5);
+      }
+
+      /* ─────────────────── card ─────────────────── */
+      .card {
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-6) var(--space-5);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-5);
+      }
+
+      /* ─────────────────── display ─────────────────── */
+      .display {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: var(--space-2);
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+      }
+      .display__main {
+        font-size: 80px; /* mockup 압축 (실제 desktop 128px / 본 mockup 카드 폭에 맞춤) */
+        font-weight: 300;
+        line-height: 1;
+        color: var(--color-text-primary);
+        display: inline-flex;
+        align-items: baseline;
+      }
+      .display__colon {
+        color: var(--color-text-muted);
+        padding: 0 4px;
+      }
+      .display__frac {
+        font-size: 44px;
+        font-weight: 300;
+        line-height: 1;
+        color: var(--color-text-secondary);
+        display: inline-flex;
+        align-items: baseline;
+      }
+      .display__dot {
+        color: var(--color-text-muted);
+        padding: 0 var(--space-1);
+      }
+
+      /* idle 빈 상태 */
+      .display.is-empty .display__main,
+      .display.is-empty .display__frac {
+        color: var(--color-text-muted);
+      }
+      /* max-cap 위험 상태 */
+      .display.is-maxcap .display__main {
+        color: var(--color-danger);
+      }
+      .display.is-maxcap .display__frac {
+        color: var(--color-danger);
+        opacity: 0.75;
+      }
+      .maxcap-tag {
+        display: inline-block;
+        font: 500 11px/1 var(--font-sans);
+        color: var(--color-danger);
+        background: var(--color-lap-slowest-bg);
+        border: 1px solid var(--color-danger);
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        margin-bottom: -8px;
+      }
+
+      /* ─────────────────── controls (4 buttons) ─────────────────── */
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        justify-content: center;
+        width: 100%;
+      }
+      .btn {
+        font: var(--text-button);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid transparent;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+        user-select: none;
+        white-space: nowrap;
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .btn--primary-lg {
+        height: 56px;
+        min-width: 130px;
+        padding: 0 var(--space-5);
+        font: var(--text-button-lg);
+        background: var(--color-accent);
+        color: #ffffff;
+      }
+      .btn--primary-lg:hover:not(:disabled) {
+        background: var(--color-accent-hover);
+      }
+
+      .btn--secondary-lg {
+        height: 56px;
+        min-width: 96px;
+        padding: 0 var(--space-4);
+        font: var(--text-button-md);
+        background: var(--color-bg-surface);
+        color: var(--color-text-primary);
+        border-color: var(--color-border-strong);
+      }
+      .btn--secondary-lg:hover:not(:disabled) {
+        background: var(--color-bg-subtle);
+      }
+
+      .btn--ghost-lg {
+        height: 56px;
+        min-width: 96px;
+        padding: 0 var(--space-4);
+        font: var(--text-button-md);
+        background: transparent;
+        color: var(--color-text-secondary);
+      }
+      .btn--ghost-lg:hover:not(:disabled) {
+        background: var(--color-bg-subtle);
+        color: var(--color-danger);
+      }
+
+      .btn--ghost {
+        height: 36px;
+        padding: 0 var(--space-3);
+        background: transparent;
+        color: var(--color-text-secondary);
+      }
+      .btn--ghost:hover:not(:disabled) {
+        background: var(--color-bg-subtle);
+        color: var(--color-text-primary);
+      }
+      .btn--sm {
+        height: 28px;
+        font: var(--text-caption);
+        padding: 0 var(--space-3);
+      }
+
+      /* ─────────────────── kbd hint ─────────────────── */
+      .kbd-hint {
+        font: var(--text-caption);
+        color: var(--color-text-muted);
+        text-align: center;
+        margin: 0;
+      }
+      kbd {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        background: var(--color-bg-subtle);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-sm);
+        padding: 1px 6px;
+        margin: 0 2px;
+        color: var(--color-text-secondary);
+      }
+
+      /* ─────────────────── lap card ─────────────────── */
+      .lap-card {
+        margin-top: var(--space-5);
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+      }
+      .lap-card__header {
+        padding: var(--space-3) var(--space-5);
+        border-bottom: 1px solid var(--color-border-default);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .lap-card__title {
+        margin: 0;
+        font: var(--text-h2);
+        color: var(--color-text-primary);
+      }
+      .lap-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .lap-row {
+        display: grid;
+        grid-template-columns: 56px 1fr 1fr 72px;
+        align-items: center;
+        padding: var(--space-3) var(--space-5);
+        border-bottom: 1px solid var(--color-border-default);
+        background: var(--color-bg-surface);
+        transition: background 0.15s;
+      }
+      .lap-row:last-child {
+        border-bottom: none;
+      }
+      .lap-row__num {
+        font: var(--text-lap-num);
+        color: var(--color-text-secondary);
+      }
+      .lap-row__time {
+        font: var(--text-lap-time);
+        color: var(--color-text-primary);
+        font-variant-numeric: tabular-nums;
+      }
+      .lap-row__delta {
+        font: var(--text-lap-delta);
+        color: var(--color-text-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      .lap-row__tag {
+        font: 500 11px/1 var(--font-sans);
+        text-align: right;
+        color: var(--color-text-secondary);
+      }
+      .lap-row.is-fastest {
+        background: var(--color-lap-fastest-bg);
+      }
+      .lap-row.is-fastest .lap-row__delta,
+      .lap-row.is-fastest .lap-row__tag {
+        color: var(--color-lap-fastest-text);
+      }
+      .lap-row.is-slowest {
+        background: var(--color-lap-slowest-bg);
+      }
+      .lap-row.is-slowest .lap-row__delta,
+      .lap-row.is-slowest .lap-row__tag {
+        color: var(--color-lap-slowest-text);
+      }
+
+      .lap-empty {
+        padding: var(--space-5);
+        font: var(--text-caption);
+        color: var(--color-text-muted);
+        text-align: center;
+      }
+
+      /* ─────────────────── mobile preview ─────────────────── */
+      .mobile-frame {
+        width: 360px;
+        max-width: 100%;
+        margin: 0 auto;
+        border: 2px solid #2a2a2a;
+        border-radius: 24px;
+        overflow: hidden;
+        background: var(--color-bg-canvas);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+      }
+      .mobile-frame .topbar {
+        padding: 0 var(--space-4);
+      }
+      .mobile-frame .page {
+        padding: var(--space-4);
+      }
+      .mobile-frame .card {
+        padding: var(--space-5) var(--space-4);
+        gap: var(--space-4);
+      }
+      .mobile-frame .display__main {
+        font-size: 56px;
+      }
+      .mobile-frame .display__frac {
+        font-size: 30px;
+      }
+      .mobile-frame .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
+        width: 100%;
+      }
+      .mobile-frame .btn--primary-lg,
+      .mobile-frame .btn--secondary-lg,
+      .mobile-frame .btn--ghost-lg {
+        width: 100%;
+        min-width: auto;
+        padding: 0 var(--space-3);
+      }
+      .mobile-frame .lap-row {
+        grid-template-columns: 44px 1fr auto;
+        padding: var(--space-3) var(--space-4);
+      }
+      .mobile-frame .lap-row__tag {
+        display: none;
+      }
+      .mobile-frame .lap-row__delta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        justify-content: flex-end;
+      }
+      .inline-tag {
+        font: 500 10px/1 var(--font-sans);
+        padding: 3px 6px;
+        border-radius: var(--radius-sm);
+        background: var(--color-lap-fastest-bg);
+        color: var(--color-lap-fastest-text);
+      }
+      .inline-tag.is-slowest {
+        background: var(--color-lap-slowest-bg);
+        color: var(--color-lap-slowest-text);
+      }
+
+      /* ─────────────────── token / wireframe sections ─────────────────── */
+      .token-table {
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        box-shadow: var(--shadow-card);
+        font: var(--text-body);
+        color: var(--color-text-primary);
+      }
+      .token-table h3 {
+        font: var(--text-h2);
+        margin: 0 0 var(--space-3);
+      }
+      .token-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--space-3);
+      }
+      .token-chip {
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-md);
+        padding: var(--space-2) var(--space-3);
+        font: var(--text-caption);
+        background: var(--color-bg-canvas);
+      }
+      .token-chip__swatch {
+        width: 100%;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border-default);
+        margin-bottom: var(--space-2);
+      }
+      .token-chip__name {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-text-secondary);
+      }
+      .token-chip__value {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-text-primary);
+      }
+
+      .wireframe {
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        box-shadow: var(--shadow-card);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1.45;
+        white-space: pre;
+        color: var(--color-text-primary);
+        overflow-x: auto;
+      }
+
+      .keymap {
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        box-shadow: var(--shadow-card);
+      }
+      .keymap h3 {
+        font: var(--text-h2);
+        margin: 0 0 var(--space-3);
+      }
+      .keymap table {
+        width: 100%;
+        border-collapse: collapse;
+        font: var(--text-body);
+      }
+      .keymap th,
+      .keymap td {
+        text-align: left;
+        padding: var(--space-2) var(--space-3);
+        border-bottom: 1px solid var(--color-border-default);
+        vertical-align: top;
+      }
+      .keymap th {
+        font: var(--text-label);
+        color: var(--color-text-secondary);
+      }
+
+      .focus-demo .btn--primary-lg {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+
+      .note {
+        font: var(--text-caption);
+        color: #6b6b66;
+        margin: var(--space-2) 0 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="gallery">
+      <h1 class="gallery__title">스톱워치 SPA 디자인 mockup</h1>
+      <p class="gallery__subtitle">
+        BF-415 · 명세: <code>docs/design/stopwatch-BF-415.md</code> · 본
+        mockup은 시각 시뮬레이션이며 dev 구현은 명세의 §7.6 정량값을 source of
+        truth 로 사용
+      </p>
+
+      <!-- ────────── 상태별 패널 ────────── -->
+      <h2 class="gallery__section-title">1. 상태별 화면 (light · dark)</h2>
+
+      <div class="gallery__row">
+        <!-- ─── State 1: idle (빈 0:00.00) · light ─── -->
+        <div class="panel">
+          <div class="panel__label">
+            <span>State 1 · idle (빈 0:00.00)</span>
+            <span class="badge">LIGHT</span>
+          </div>
+          <div class="panel__body">
+            <div class="sw-app">
+              <header class="topbar">
+                <h1 class="topbar__title">스톱워치</h1>
+                <div class="topbar__actions">
+                  <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+                </div>
+              </header>
+              <main class="page">
+                <section class="card" aria-label="스톱워치">
+                  <div class="display is-empty">
+                    <span class="display__main">
+                      <span>00</span><span class="display__colon">:</span><span>00</span>
+                    </span>
+                    <span class="display__frac">
+                      <span class="display__dot">.</span><span>00</span>
+                    </span>
+                  </div>
+                  <div class="controls">
+                    <button class="btn btn--primary-lg">▶ 시작</button>
+                    <button class="btn btn--secondary-lg" disabled>⏸ 정지</button>
+                    <button class="btn btn--secondary-lg" disabled>⚑ 랩</button>
+                    <button class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
+                  </div>
+                  <p class="kbd-hint">
+                    <kbd>Space</kbd> 시작/정지 · <kbd>L</kbd> 랩 · <kbd>R</kbd> 리셋
+                  </p>
+                </section>
+                <!-- lap card hidden (랩 0 개) -->
+              </main>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── State 1: idle · dark ─── -->
+        <div class="panel is-dark">
+          <div class="panel__label">
+            <span>State 1 · idle (빈 0:00.00)</span>
+            <span class="badge">DARK</span>
+          </div>
+          <div class="panel__body">
+            <div class="sw-app">
+              <header class="topbar">
+                <h1 class="topbar__title">스톱워치</h1>
+                <div class="topbar__actions">
+                  <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+                </div>
+              </header>
+              <main class="page">
+                <section class="card" aria-label="스톱워치">
+                  <div class="display is-empty">
+                    <span class="display__main">
+                      <span>00</span><span class="display__colon">:</span><span>00</span>
+                    </span>
+                    <span class="display__frac">
+                      <span class="display__dot">.</span><span>00</span>
+                    </span>
+                  </div>
+                  <div class="controls">
+                    <button class="btn btn--primary-lg">▶ 시작</button>
+                    <button class="btn btn--secondary-lg" disabled>⏸ 정지</button>
+                    <button class="btn btn--secondary-lg" disabled>⚑ 랩</button>
+                    <button class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
+                  </div>
+                  <p class="kbd-hint">
+                    <kbd>Space</kbd> 시작/정지 · <kbd>L</kbd> 랩 · <kbd>R</kbd> 리셋
+                  </p>
+                </section>
+              </main>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── State 2: running + 4 랩 · light ─── -->
+        <div class="panel">
+          <div class="panel__label">
+            <span>State 2 · running + 4 lap</span>
+            <span class="badge">LIGHT</span>
+          </div>
+          <div class="panel__body">
+            <div class="sw-app">
+              <header class="topbar">
+                <h1 class="topbar__title">스톱워치</h1>
+                <div class="topbar__actions">
+                  <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+                </div>
+              </header>
+              <main class="page">
+                <section class="card" aria-label="스톱워치">
+                  <div class="display">
+                    <span class="display__main">
+                      <span>00</span><span class="display__colon">:</span><span>24</span>
+                    </span>
+                    <span class="display__frac">
+                      <span class="display__dot">.</span><span>73</span>
+                    </span>
+                  </div>
+                  <div class="controls">
+                    <button class="btn btn--primary-lg" disabled>▶ 시작</button>
+                    <button class="btn btn--secondary-lg">⏸ 정지</button>
+                    <button class="btn btn--secondary-lg">⚑ 랩</button>
+                    <button class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
+                  </div>
+                  <p class="kbd-hint">
+                    <kbd>Space</kbd> 시작/정지 · <kbd>L</kbd> 랩 · <kbd>R</kbd> 리셋
+                  </p>
+                </section>
+
+                <section class="lap-card" aria-label="랩 기록">
+                  <header class="lap-card__header">
+                    <h2 class="lap-card__title">랩 (4)</h2>
+                  </header>
+                  <ol class="lap-list">
+                    <li class="lap-row is-slowest">
+                      <span class="lap-row__num">#4</span>
+                      <span class="lap-row__time">00:24.73</span>
+                      <span class="lap-row__delta">+00:05.12</span>
+                      <span class="lap-row__tag">최장</span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#3</span>
+                      <span class="lap-row__time">00:19.61</span>
+                      <span class="lap-row__delta">+00:04.30</span>
+                      <span class="lap-row__tag"></span>
+                    </li>
+                    <li class="lap-row is-fastest">
+                      <span class="lap-row__num">#2</span>
+                      <span class="lap-row__time">00:15.31</span>
+                      <span class="lap-row__delta">+00:03.10</span>
+                      <span class="lap-row__tag">최단</span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#1</span>
+                      <span class="lap-row__time">00:12.21</span>
+                      <span class="lap-row__delta">+00:12.21</span>
+                      <span class="lap-row__tag"></span>
+                    </li>
+                  </ol>
+                </section>
+              </main>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── State 2: running · dark ─── -->
+        <div class="panel is-dark">
+          <div class="panel__label">
+            <span>State 2 · running + 4 lap</span>
+            <span class="badge">DARK</span>
+          </div>
+          <div class="panel__body">
+            <div class="sw-app">
+              <header class="topbar">
+                <h1 class="topbar__title">스톱워치</h1>
+                <div class="topbar__actions">
+                  <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+                </div>
+              </header>
+              <main class="page">
+                <section class="card" aria-label="스톱워치">
+                  <div class="display">
+                    <span class="display__main">
+                      <span>00</span><span class="display__colon">:</span><span>24</span>
+                    </span>
+                    <span class="display__frac">
+                      <span class="display__dot">.</span><span>73</span>
+                    </span>
+                  </div>
+                  <div class="controls">
+                    <button class="btn btn--primary-lg" disabled>▶ 시작</button>
+                    <button class="btn btn--secondary-lg">⏸ 정지</button>
+                    <button class="btn btn--secondary-lg">⚑ 랩</button>
+                    <button class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
+                  </div>
+                  <p class="kbd-hint">
+                    <kbd>Space</kbd> 시작/정지 · <kbd>L</kbd> 랩 · <kbd>R</kbd> 리셋
+                  </p>
+                </section>
+
+                <section class="lap-card" aria-label="랩 기록">
+                  <header class="lap-card__header">
+                    <h2 class="lap-card__title">랩 (4)</h2>
+                  </header>
+                  <ol class="lap-list">
+                    <li class="lap-row is-slowest">
+                      <span class="lap-row__num">#4</span>
+                      <span class="lap-row__time">00:24.73</span>
+                      <span class="lap-row__delta">+00:05.12</span>
+                      <span class="lap-row__tag">최장</span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#3</span>
+                      <span class="lap-row__time">00:19.61</span>
+                      <span class="lap-row__delta">+00:04.30</span>
+                      <span class="lap-row__tag"></span>
+                    </li>
+                    <li class="lap-row is-fastest">
+                      <span class="lap-row__num">#2</span>
+                      <span class="lap-row__time">00:15.31</span>
+                      <span class="lap-row__delta">+00:03.10</span>
+                      <span class="lap-row__tag">최단</span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#1</span>
+                      <span class="lap-row__time">00:12.21</span>
+                      <span class="lap-row__delta">+00:12.21</span>
+                      <span class="lap-row__tag"></span>
+                    </li>
+                  </ol>
+                </section>
+              </main>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── State 3: stopped + 6 랩 · light ─── -->
+        <div class="panel">
+          <div class="panel__label">
+            <span>State 3 · stopped + 6 lap</span>
+            <span class="badge">LIGHT</span>
+          </div>
+          <div class="panel__body">
+            <div class="sw-app">
+              <header class="topbar">
+                <h1 class="topbar__title">스톱워치</h1>
+                <div class="topbar__actions">
+                  <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+                </div>
+              </header>
+              <main class="page">
+                <section class="card" aria-label="스톱워치">
+                  <div class="display">
+                    <span class="display__main">
+                      <span>01</span><span class="display__colon">:</span><span>12</span>
+                    </span>
+                    <span class="display__frac">
+                      <span class="display__dot">.</span><span>49</span>
+                    </span>
+                  </div>
+                  <div class="controls">
+                    <button class="btn btn--primary-lg">▶ 시작</button>
+                    <button class="btn btn--secondary-lg" disabled>⏸ 정지</button>
+                    <button class="btn btn--secondary-lg" disabled>⚑ 랩</button>
+                    <button class="btn btn--ghost-lg">⟲ 리셋</button>
+                  </div>
+                  <p class="kbd-hint">
+                    <kbd>Space</kbd> 시작/정지 · <kbd>L</kbd> 랩 · <kbd>R</kbd> 리셋
+                  </p>
+                </section>
+
+                <section class="lap-card" aria-label="랩 기록">
+                  <header class="lap-card__header">
+                    <h2 class="lap-card__title">랩 (6)</h2>
+                    <button class="btn btn--ghost btn--sm">지우기</button>
+                  </header>
+                  <ol class="lap-list">
+                    <li class="lap-row">
+                      <span class="lap-row__num">#6</span>
+                      <span class="lap-row__time">01:12.49</span>
+                      <span class="lap-row__delta">+00:13.82</span>
+                      <span class="lap-row__tag"></span>
+                    </li>
+                    <li class="lap-row is-slowest">
+                      <span class="lap-row__num">#5</span>
+                      <span class="lap-row__time">00:58.67</span>
+                      <span class="lap-row__delta">+00:18.91</span>
+                      <span class="lap-row__tag">최장</span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#4</span>
+                      <span class="lap-row__time">00:39.76</span>
+                      <span class="lap-row__delta">+00:10.45</span>
+                      <span class="lap-row__tag"></span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#3</span>
+                      <span class="lap-row__time">00:29.31</span>
+                      <span class="lap-row__delta">+00:08.42</span>
+                      <span class="lap-row__tag"></span>
+                    </li>
+                    <li class="lap-row is-fastest">
+                      <span class="lap-row__num">#2</span>
+                      <span class="lap-row__time">00:20.89</span>
+                      <span class="lap-row__delta">+00:06.18</span>
+                      <span class="lap-row__tag">최단</span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#1</span>
+                      <span class="lap-row__time">00:14.71</span>
+                      <span class="lap-row__delta">+00:14.71</span>
+                      <span class="lap-row__tag"></span>
+                    </li>
+                  </ol>
+                </section>
+              </main>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── State 4: max-cap · light ─── -->
+        <div class="panel">
+          <div class="panel__label">
+            <span>State 4 · max-cap (99:59.99)</span>
+            <span class="badge">LIGHT</span>
+          </div>
+          <div class="panel__body">
+            <div class="sw-app">
+              <header class="topbar">
+                <h1 class="topbar__title">스톱워치</h1>
+                <div class="topbar__actions">
+                  <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+                </div>
+              </header>
+              <main class="page">
+                <section class="card" aria-label="스톱워치">
+                  <span class="maxcap-tag">⚠ 최대 도달</span>
+                  <div class="display is-maxcap">
+                    <span class="display__main">
+                      <span>99</span><span class="display__colon">:</span><span>59</span>
+                    </span>
+                    <span class="display__frac">
+                      <span class="display__dot">.</span><span>99</span>
+                    </span>
+                  </div>
+                  <div class="controls">
+                    <button class="btn btn--primary-lg" disabled>▶ 시작</button>
+                    <button class="btn btn--secondary-lg" disabled>⏸ 정지</button>
+                    <button class="btn btn--secondary-lg" disabled>⚑ 랩</button>
+                    <button class="btn btn--ghost-lg">⟲ 리셋</button>
+                  </div>
+                  <p class="kbd-hint">
+                    <kbd>Space</kbd> 시작/정지 · <kbd>L</kbd> 랩 ·
+                    <kbd>R</kbd> 리셋
+                  </p>
+                </section>
+              </main>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────── 반응형 mobile preview ────────── -->
+      <h2 class="gallery__section-title">2. 반응형 (mobile · < 640px)</h2>
+
+      <div class="gallery__row">
+        <div class="panel">
+          <div class="panel__label">
+            <span>Mobile · idle</span>
+            <span class="badge">LIGHT</span>
+          </div>
+          <div
+            class="panel__body"
+            style="padding: var(--space-5); background: #e9e9e6"
+          >
+            <div class="mobile-frame">
+              <header class="topbar">
+                <h1 class="topbar__title">스톱워치</h1>
+                <div class="topbar__actions">
+                  <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+                </div>
+              </header>
+              <main class="page">
+                <section class="card" aria-label="스톱워치">
+                  <div class="display is-empty">
+                    <span class="display__main">
+                      <span>00</span><span class="display__colon">:</span><span>00</span>
+                    </span>
+                    <span class="display__frac">
+                      <span class="display__dot">.</span><span>00</span>
+                    </span>
+                  </div>
+                  <div class="controls">
+                    <button class="btn btn--primary-lg">▶ 시작</button>
+                    <button class="btn btn--secondary-lg" disabled>⏸ 정지</button>
+                    <button class="btn btn--secondary-lg" disabled>⚑ 랩</button>
+                    <button class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
+                  </div>
+                  <p class="kbd-hint">
+                    <kbd>Space</kbd> · <kbd>L</kbd> · <kbd>R</kbd>
+                  </p>
+                </section>
+              </main>
+            </div>
+            <p class="note">
+              모바일: 4 버튼이 2×2 그리드로 stack — 각 버튼 width 100%.
+              display 폰트 축소 (mm:ss 72px / .xx 40px). 카드 좌우 padding
+              16px.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__label">
+            <span>Mobile · running + lap</span>
+            <span class="badge">LIGHT</span>
+          </div>
+          <div
+            class="panel__body"
+            style="padding: var(--space-5); background: #e9e9e6"
+          >
+            <div class="mobile-frame">
+              <header class="topbar">
+                <h1 class="topbar__title">스톱워치</h1>
+                <div class="topbar__actions">
+                  <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+                </div>
+              </header>
+              <main class="page">
+                <section class="card" aria-label="스톱워치">
+                  <div class="display">
+                    <span class="display__main">
+                      <span>00</span><span class="display__colon">:</span><span>24</span>
+                    </span>
+                    <span class="display__frac">
+                      <span class="display__dot">.</span><span>73</span>
+                    </span>
+                  </div>
+                  <div class="controls">
+                    <button class="btn btn--primary-lg" disabled>▶ 시작</button>
+                    <button class="btn btn--secondary-lg">⏸ 정지</button>
+                    <button class="btn btn--secondary-lg">⚑ 랩</button>
+                    <button class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
+                  </div>
+                  <p class="kbd-hint">
+                    <kbd>Space</kbd> · <kbd>L</kbd> · <kbd>R</kbd>
+                  </p>
+                </section>
+                <section class="lap-card" aria-label="랩 기록">
+                  <header class="lap-card__header">
+                    <h2 class="lap-card__title">랩 (4)</h2>
+                  </header>
+                  <ol class="lap-list">
+                    <li class="lap-row is-slowest">
+                      <span class="lap-row__num">#4</span>
+                      <span class="lap-row__time">00:24.73</span>
+                      <span class="lap-row__delta">
+                        +00:05.12 <span class="inline-tag is-slowest">최장</span>
+                      </span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#3</span>
+                      <span class="lap-row__time">00:19.61</span>
+                      <span class="lap-row__delta">+00:04.30</span>
+                    </li>
+                    <li class="lap-row is-fastest">
+                      <span class="lap-row__num">#2</span>
+                      <span class="lap-row__time">00:15.31</span>
+                      <span class="lap-row__delta">
+                        +00:03.10 <span class="inline-tag">최단</span>
+                      </span>
+                    </li>
+                    <li class="lap-row">
+                      <span class="lap-row__num">#1</span>
+                      <span class="lap-row__time">00:12.21</span>
+                      <span class="lap-row__delta">+00:12.21</span>
+                    </li>
+                  </ol>
+                </section>
+              </main>
+            </div>
+            <p class="note">
+              모바일: 랩 row 가 3 컬럼(번호·누적·차이+inline tag). "최단/최장"
+              라벨이 차이 시간 옆 chip 으로 inline 노출 → 폭 절약.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────── 디자인 토큰 시각화 ────────── -->
+      <h2 class="gallery__section-title">3. 디자인 토큰 매핑 (§2.2 stopwatch 전용)</h2>
+
+      <div class="token-table">
+        <h3>color tokens · light</h3>
+        <div class="token-grid">
+          <div class="token-chip">
+            <div class="token-chip__swatch" style="background:#1F8A5C;"></div>
+            <div class="token-chip__name">--color-stopwatch-running</div>
+            <div class="token-chip__value">#1F8A5C</div>
+          </div>
+          <div class="token-chip">
+            <div class="token-chip__swatch" style="background:#B7791F;"></div>
+            <div class="token-chip__name">--color-stopwatch-stopped</div>
+            <div class="token-chip__value">#B7791F</div>
+          </div>
+          <div class="token-chip">
+            <div class="token-chip__swatch" style="background:#E8F6EE;"></div>
+            <div class="token-chip__name">--color-lap-fastest-bg</div>
+            <div class="token-chip__value">#E8F6EE</div>
+          </div>
+          <div class="token-chip">
+            <div class="token-chip__swatch" style="background:#1F8A5C;"></div>
+            <div class="token-chip__name">--color-lap-fastest-text</div>
+            <div class="token-chip__value">#1F8A5C</div>
+          </div>
+          <div class="token-chip">
+            <div class="token-chip__swatch" style="background:#FBEEEE;"></div>
+            <div class="token-chip__name">--color-lap-slowest-bg</div>
+            <div class="token-chip__value">#FBEEEE</div>
+          </div>
+          <div class="token-chip">
+            <div class="token-chip__swatch" style="background:#9A2A2A;"></div>
+            <div class="token-chip__name">--color-lap-slowest-text</div>
+            <div class="token-chip__value">#9A2A2A</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: var(--space-5);">color tokens · dark</h3>
+        <div class="token-grid">
+          <div class="token-chip" style="background:#0F1115; color:#E8E8E4;">
+            <div class="token-chip__swatch" style="background:#3AAE7A;"></div>
+            <div class="token-chip__name">--color-stopwatch-running</div>
+            <div class="token-chip__value" style="color:#E8E8E4;">#3AAE7A</div>
+          </div>
+          <div class="token-chip" style="background:#0F1115; color:#E8E8E4;">
+            <div class="token-chip__swatch" style="background:#D4A23A;"></div>
+            <div class="token-chip__name">--color-stopwatch-stopped</div>
+            <div class="token-chip__value" style="color:#E8E8E4;">#D4A23A</div>
+          </div>
+          <div class="token-chip" style="background:#0F1115; color:#E8E8E4;">
+            <div class="token-chip__swatch" style="background:#1F3A2A;"></div>
+            <div class="token-chip__name">--color-lap-fastest-bg</div>
+            <div class="token-chip__value" style="color:#E8E8E4;">#1F3A2A</div>
+          </div>
+          <div class="token-chip" style="background:#0F1115; color:#E8E8E4;">
+            <div class="token-chip__swatch" style="background:#5DCB94;"></div>
+            <div class="token-chip__name">--color-lap-fastest-text</div>
+            <div class="token-chip__value" style="color:#E8E8E4;">#5DCB94</div>
+          </div>
+          <div class="token-chip" style="background:#0F1115; color:#E8E8E4;">
+            <div class="token-chip__swatch" style="background:#3A2326;"></div>
+            <div class="token-chip__name">--color-lap-slowest-bg</div>
+            <div class="token-chip__value" style="color:#E8E8E4;">#3A2326</div>
+          </div>
+          <div class="token-chip" style="background:#0F1115; color:#E8E8E4;">
+            <div class="token-chip__swatch" style="background:#FCB7B7;"></div>
+            <div class="token-chip__name">--color-lap-slowest-text</div>
+            <div class="token-chip__value" style="color:#E8E8E4;">#FCB7B7</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────── 키보드 단축키 ────────── -->
+      <h2 class="gallery__section-title">4. 키보드 단축키 (§6.2)</h2>
+
+      <div class="keymap">
+        <h3>전역 단축키</h3>
+        <table>
+          <thead>
+            <tr><th style="width: 30%">키</th><th>동작</th><th style="width: 30%">조건</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd>Space</kbd></td>
+              <td>시작 ↔ 정지 토글</td>
+              <td>전역</td>
+            </tr>
+            <tr>
+              <td><kbd>L</kbd> / <kbd>l</kbd></td>
+              <td>랩 추가</td>
+              <td>running 중에만</td>
+            </tr>
+            <tr>
+              <td><kbd>R</kbd> / <kbd>r</kbd></td>
+              <td>리셋</td>
+              <td>stopped / max-cap</td>
+            </tr>
+            <tr>
+              <td><kbd>Esc</kbd></td>
+              <td>리셋 (R 보조)</td>
+              <td>timer SPA 와 일관성</td>
+            </tr>
+            <tr>
+              <td><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></td>
+              <td>topbar 토글 → 시작 → 정지 → 랩 → 리셋 → 랩 카드 [지우기] 순환</td>
+              <td>전역</td>
+            </tr>
+            <tr>
+              <td><kbd>Enter</kbd></td>
+              <td>현재 focused 버튼 클릭</td>
+              <td>버튼 focus 시 (브라우저 기본)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ────────── focus-visible 데모 ────────── -->
+      <h2 class="gallery__section-title">5. focus-visible 정적 표현</h2>
+
+      <div class="gallery__row">
+        <div class="panel">
+          <div class="panel__label">
+            <span>focus-visible · primary button</span>
+            <span class="badge">LIGHT</span>
+          </div>
+          <div class="panel__body" style="padding: var(--space-6); background: var(--color-bg-canvas);">
+            <div class="focus-demo" style="display: flex; gap: var(--space-3); justify-content: center;">
+              <button class="btn btn--primary-lg">▶ 시작</button>
+              <button class="btn btn--secondary-lg">⏸ 정지</button>
+              <button class="btn btn--secondary-lg">⚑ 랩</button>
+              <button class="btn btn--ghost-lg">⟲ 리셋</button>
+            </div>
+            <p class="note" style="text-align: center; margin-top: var(--space-3);">
+              좌측 primary 버튼이 <code>:focus-visible</code> 상태 — outline
+              2px solid <code>--color-focus-ring</code> + offset 2px (키보드
+              Tab focus 만 해당, 마우스 클릭 시 미노출)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────────── 와이어프레임 ascii ────────── -->
+      <h2 class="gallery__section-title">6. 와이어프레임 (ascii — 명세 §4.1)</h2>
+
+      <div class="wireframe">┌──────────────────────────────────────────────────────────────┐
+│ Topbar · "스톱워치"                                  [🌙]    │  56px
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│           ┌───────────────────────────────────────┐          │
+│           │                                       │          │
+│           │         00 : 24 . 73                  │ display  │
+│           │         ──┬──   ─┬─                   │ (128/72) │
+│           │           │      └─ 1/100 (작게)       │          │
+│           │           └────── mm:ss (크게)         │          │
+│           │                                       │          │
+│           │   [▶ 시작]  [⏸ 정지]  [⚑ 랩]  [⟲ 리셋] │ controls │
+│           │                                       │          │
+│           └───────────────────────────────────────┘          │
+│                                                              │
+│           ┌───────────────────────────────────────┐          │
+│           │  랩 (4)                               │          │
+│           │  ───────────────────────────────────  │          │
+│           │  #4   00:24.73    +00:05.12  ← 최장   │          │
+│           │  #3   00:19.61    +00:04.30           │          │
+│           │  #2   00:15.31    +00:03.10  ← 최단   │          │
+│           │  #1   00:12.21    +00:12.21           │          │
+│           └───────────────────────────────────────┘          │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘</div>
+
+      <p class="note" style="margin-top: var(--space-6);">
+        ※ 본 mockup의 display 폰트 크기는 카드 폭에 맞춘 시각 비례용으로
+        축소되어 있습니다. 실제 desktop 구현은 <code>--text-display</code>
+        (128px) / <code>--text-display-frac</code> (72px) 토큰 적용 — 명세
+        §7.6 정량 일치 표가 source of truth.
+      </p>
+    </div>
+  </body>
+</html>

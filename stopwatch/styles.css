@@ -1,0 +1,510 @@
+/* BF-417 · 스톱워치 SPA 스타일
+ * 명세: docs/design/stopwatch-BF-415.md
+ * 토큰: timer/styles.css §2 의 시스템을 그대로 복제 + §2.2 스톱워치 전용 추가
+ */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* light tokens (명세 §2.1, notepad/timer 와 공유) */
+  --color-bg-canvas: #fafaf9;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f1ef;
+  --color-border-default: #e5e5e2;
+  --color-border-strong: #d0d0cc;
+  --color-text-primary: #1a1a19;
+  --color-text-secondary: #6b6b66;
+  --color-text-muted: #9a9a93;
+  --color-accent: #3563e9;
+  --color-accent-hover: #2a4fc0;
+  --color-danger: #d14343;
+  --color-danger-hover: #a83333;
+  --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+  /* stopwatch 전용 (§2.2) */
+  --color-stopwatch-running: #1f8a5c;
+  --color-stopwatch-stopped: #b7791f;
+  --color-lap-fastest-bg: #e8f6ee;
+  --color-lap-fastest-text: #1f8a5c;
+  --color-lap-slowest-bg: #fbeeee;
+  --color-lap-slowest-text: #9a2a2a;
+  --color-lap-row-bg: var(--color-bg-surface);
+
+  /* spacing / radius / shadow (§2.3, §2.4) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* typography (§3) */
+  --text-h1: 600 20px/1.3 var(--font-sans);
+  --text-h2: 600 16px/1.3 var(--font-sans);
+  --text-display: 300 128px/1 var(--font-mono);
+  --text-display-md: 300 96px/1 var(--font-mono);
+  --text-display-sm: 300 72px/1 var(--font-mono);
+  --text-display-frac: 300 72px/1 var(--font-mono);
+  --text-display-frac-md: 300 56px/1 var(--font-mono);
+  --text-display-frac-sm: 300 40px/1 var(--font-mono);
+  --text-lap-num: 500 13px/1.4 var(--font-sans);
+  --text-lap-time: 500 18px/1 var(--font-mono);
+  --text-lap-delta: 400 14px/1.4 var(--font-mono);
+  --text-label: 500 14px/1.4 var(--font-sans);
+  --text-body: 400 15px/1.65 var(--font-sans);
+  --text-caption: 400 12px/1.4 var(--font-sans);
+  --text-button: 500 14px/1 var(--font-sans);
+  --text-button-lg: 600 16px/1 var(--font-sans);
+  --text-button-md: 500 15px/1 var(--font-sans);
+}
+
+[data-theme="dark"] {
+  --color-bg-canvas: #0f1115;
+  --color-bg-surface: #171a21;
+  --color-bg-subtle: #1e222b;
+  --color-border-default: #262b36;
+  --color-border-strong: #3a4150;
+  --color-text-primary: #e8e8e4;
+  --color-text-secondary: #9a9a93;
+  --color-text-muted: #6b6b66;
+  --color-accent: #5b82f0;
+  --color-accent-hover: #7596f3;
+  --color-danger: #e55858;
+  --color-danger-hover: #ec7676;
+  --color-focus-ring: rgba(91, 130, 240, 0.55);
+
+  --color-stopwatch-running: #3aae7a;
+  --color-stopwatch-stopped: #d4a23a;
+  --color-lap-fastest-bg: #1f3a2a;
+  --color-lap-fastest-text: #5dcb94;
+  --color-lap-slowest-bg: #3a2326;
+  --color-lap-slowest-text: #fcb7b7;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+}
+
+/* ─────────────────── reset / base ─────────────────── */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font: var(--text-body);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+}
+button {
+  font-family: inherit;
+}
+
+/* sr-only — a11y 표준 패턴 (§7.5) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─────────────────── topbar ─────────────────── */
+.topbar {
+  height: 56px;
+  padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  flex: 0 0 auto;
+}
+.topbar__title {
+  font: var(--text-h1);
+  margin: 0;
+  flex: 1 1 auto;
+}
+.topbar__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ─────────────────── buttons ─────────────────── */
+.btn {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font: var(--text-button);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+.btn--ghost:hover {
+  background: var(--color-bg-subtle);
+}
+.btn--sm {
+  height: 28px;
+  padding: 0 var(--space-3);
+  font: var(--text-caption);
+}
+.btn--primary-lg {
+  height: 56px;
+  min-width: 140px;
+  padding: 0 var(--space-5);
+  font: var(--text-button-lg);
+  background: var(--color-accent);
+  color: #fff;
+}
+.btn--primary-lg:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+.btn--secondary-lg {
+  height: 56px;
+  min-width: 100px;
+  padding: 0 var(--space-4);
+  font: var(--text-button-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+}
+.btn--secondary-lg:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+}
+.btn--ghost-lg {
+  height: 56px;
+  min-width: 100px;
+  padding: 0 var(--space-4);
+  font: var(--text-button-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.btn--ghost-lg:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+  color: var(--color-danger);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ─────────────────── page / card (§4.1) ─────────────────── */
+.page {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-7) var(--space-5);
+  gap: var(--space-5);
+}
+.card {
+  width: 100%;
+  max-width: 720px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-7) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/* ─────────────────── display (§4.3) ─────────────────── */
+.display {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--space-2);
+  user-select: none;
+}
+.display__main {
+  font: var(--text-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+.display__frac {
+  font: var(--text-display-frac);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+.display__colon {
+  color: var(--color-text-muted);
+  padding: 0 var(--space-1);
+}
+.display__dot {
+  color: var(--color-text-muted);
+  padding: 0 var(--space-1);
+}
+
+/* 빈 상태 (idle + elapsed 0) → 전체 muted */
+.display.is-empty .display__main,
+.display.is-empty .display__frac {
+  color: var(--color-text-muted);
+}
+
+/* max-cap → danger */
+.display.is-max-cap .display__main,
+.display.is-max-cap .display__frac {
+  color: var(--color-danger);
+}
+
+/* ─────────────────── controls (§4.4) ─────────────────── */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+  width: 100%;
+}
+
+/* ─────────────────── kbd hint (§5.4) ─────────────────── */
+.kbd-hint {
+  font: var(--text-caption);
+  color: var(--color-text-muted);
+  margin: 0;
+  text-align: center;
+}
+.kbd-hint kbd {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+
+/* ─────────────────── lap list card (§4.5) ─────────────────── */
+.lap-card {
+  width: 100%;
+  max-width: 720px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 0;
+  overflow: hidden;
+}
+.lap-card[hidden] {
+  display: none;
+}
+.lap-card__header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.lap-card__title {
+  font: var(--text-h2);
+  margin: 0;
+}
+.lap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.lap-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 1fr 80px;
+  align-items: center;
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-lap-row-bg);
+}
+.lap-row:last-child {
+  border-bottom: none;
+}
+.lap-row:hover {
+  background: var(--color-bg-subtle);
+}
+.lap-row__num {
+  font: var(--text-lap-num);
+  color: var(--color-text-secondary);
+  text-align: left;
+}
+.lap-row__cumulative {
+  font: var(--text-lap-time);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  text-align: left;
+}
+.lap-row__delta {
+  font: var(--text-lap-delta);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+  text-align: left;
+}
+.lap-row__label {
+  font: var(--text-caption);
+  font-weight: 500;
+  text-align: right;
+}
+.lap-row.is-fastest {
+  background: var(--color-lap-fastest-bg);
+}
+.lap-row.is-fastest .lap-row__delta,
+.lap-row.is-fastest .lap-row__label {
+  color: var(--color-lap-fastest-text);
+}
+.lap-row.is-slowest {
+  background: var(--color-lap-slowest-bg);
+}
+.lap-row.is-slowest .lap-row__delta,
+.lap-row.is-slowest .lap-row__label {
+  color: var(--color-lap-slowest-text);
+}
+.lap-row.is-fastest:hover,
+.lap-row.is-slowest:hover {
+  /* 강조 row 는 hover 시에도 자체 배경 유지 (§4.5) */
+}
+.lap-row.is-fastest:hover {
+  background: var(--color-lap-fastest-bg);
+}
+.lap-row.is-slowest:hover {
+  background: var(--color-lap-slowest-bg);
+}
+
+/* lap row 추가 시 fade-in 애니메이션 (§6.4) */
+.lap-row {
+  animation: lap-fade-in 200ms ease;
+}
+@keyframes lap-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lap-row {
+    animation: none;
+  }
+}
+
+/* ─────────────────── 반응형 (§4.7) ─────────────────── */
+@media (max-width: 959px) {
+  .display__main {
+    font: var(--text-display-md);
+    font-variant-numeric: tabular-nums;
+  }
+  .display__frac {
+    font: var(--text-display-frac-md);
+    font-variant-numeric: tabular-nums;
+  }
+  .card {
+    max-width: 560px;
+    padding: var(--space-6) var(--space-5);
+  }
+  .lap-card {
+    max-width: 560px;
+  }
+  .lap-row {
+    grid-template-columns: 52px 1fr 1fr 64px;
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+@media (max-width: 639px) {
+  .display__main {
+    font: var(--text-display-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .display__frac {
+    font: var(--text-display-frac-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .page {
+    padding: var(--space-4);
+  }
+  .card {
+    max-width: 100%;
+    padding: var(--space-5) var(--space-4);
+  }
+  .lap-card {
+    max-width: 100%;
+  }
+  /* 4 버튼 2×2 그리드 (§4.7 mobile) */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+  .controls .btn {
+    width: 100%;
+    min-width: auto;
+  }
+  /* lap row 컬럼 4 라벨 제거 + 컬럼 3 옆 inline tag (§4.7 mobile) */
+  .lap-row {
+    grid-template-columns: 44px 1fr 1fr;
+    padding: var(--space-3) var(--space-4);
+  }
+  .lap-row__label {
+    display: none;
+  }
+  .lap-row__delta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .lap-row__inline-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+  .lap-row.is-fastest .lap-row__inline-tag {
+    background: var(--color-lap-fastest-bg);
+    color: var(--color-lap-fastest-text);
+  }
+  .lap-row.is-slowest .lap-row__inline-tag {
+    background: var(--color-lap-slowest-bg);
+    color: var(--color-lap-slowest-text);
+  }
+}
+
+/* desktop 에서는 inline tag 숨김 (큰 화면은 컬럼 4 라벨이 담당) */
+@media (min-width: 640px) {
+  .lap-row__inline-tag {
+    display: none;
+  }
+}
+
+@media (max-width: 359px) {
+  .display__main {
+    font-size: 64px;
+  }
+  .display__frac {
+    font-size: 32px;
+  }
+}
