@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>타이머 SPA — BF-405 시각 mockup</title>
+    <style>
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* light tokens (notepad-BF-400 §2.1 재사용) */
+        --l-bg-canvas: #fafaf9;
+        --l-bg-surface: #ffffff;
+        --l-bg-subtle: #f1f1ef;
+        --l-border-default: #e5e5e2;
+        --l-border-strong: #d0d0cc;
+        --l-text-primary: #1a1a19;
+        --l-text-secondary: #6b6b66;
+        --l-text-muted: #9a9a93;
+        --l-accent: #3563e9;
+        --l-accent-hover: #2a4fc0;
+        --l-danger: #d14343;
+        --l-danger-hover: #a83333;
+        --l-focus-ring: rgba(53, 99, 233, 0.45);
+
+        /* timer 전용 light (§2.2) */
+        --l-timer-running: #1f8a5c;
+        --l-timer-paused: #b7791f;
+        --l-banner-bg: #fff1f1;
+        --l-banner-border: #f4b5b5;
+        --l-banner-text: #9a2a2a;
+
+        /* dark tokens */
+        --d-bg-canvas: #0f1115;
+        --d-bg-surface: #171a21;
+        --d-bg-subtle: #1e222b;
+        --d-border-default: #262b36;
+        --d-border-strong: #3a4150;
+        --d-text-primary: #e8e8e4;
+        --d-text-secondary: #9a9a93;
+        --d-text-muted: #6b6b66;
+        --d-accent: #5b82f0;
+        --d-danger: #e55858;
+        --d-focus-ring: rgba(91, 130, 240, 0.55);
+        --d-banner-bg: #3a1f22;
+        --d-banner-border: #7a3a3f;
+        --d-banner-text: #fcb7b7;
+
+        /* space */
+        --s1: 4px;
+        --s2: 8px;
+        --s3: 12px;
+        --s4: 16px;
+        --s5: 24px;
+        --s6: 32px;
+        --s7: 48px;
+
+        /* radius / shadow */
+        --r-sm: 4px;
+        --r-md: 8px;
+        --r-lg: 12px;
+        --sh-card-l: 0 4px 16px rgba(0, 0, 0, 0.06);
+        --sh-card-d: 0 4px 16px rgba(0, 0, 0, 0.32);
+        --sh-pop: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background: #ececea;
+        color: var(--l-text-primary);
+        padding: var(--s5);
+      }
+      h1.page-title {
+        font: 600 24px/1.3 var(--font-sans);
+        margin: 0 0 var(--s2);
+      }
+      p.page-sub {
+        color: #666;
+        margin: 0 0 var(--s5);
+        font: 400 14px/1.5 var(--font-sans);
+      }
+      h2.section-label {
+        font: 600 14px/1 var(--font-sans);
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: var(--s6) 0 var(--s3);
+      }
+      .pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--s4);
+      }
+
+      /* ─────── theme wrapper ─────── */
+      .theme {
+        border: 1px solid var(--l-border-strong);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        box-shadow: var(--sh-pop);
+        background: var(--l-bg-canvas);
+        color: var(--l-text-primary);
+      }
+      .theme.dark {
+        background: var(--d-bg-canvas);
+        color: var(--d-text-primary);
+        border-color: var(--d-border-strong);
+      }
+      .theme__label {
+        padding: var(--s2) var(--s4);
+        background: rgba(0, 0, 0, 0.04);
+        border-bottom: 1px solid var(--l-border-default);
+        font: 600 12px/1 var(--font-sans);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--l-text-secondary);
+      }
+      .dark .theme__label {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--d-border-default);
+        color: var(--d-text-secondary);
+      }
+
+      /* topbar */
+      .topbar {
+        height: 56px;
+        padding: 0 var(--s5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--l-bg-surface);
+        border-bottom: 1px solid var(--l-border-default);
+      }
+      .dark .topbar {
+        background: var(--d-bg-surface);
+        border-color: var(--d-border-default);
+      }
+      .topbar__title {
+        font: 600 20px/1.3 var(--font-sans);
+        margin: 0;
+      }
+
+      /* page area inside theme wrapper */
+      .page {
+        padding: var(--s7) var(--s5);
+        display: flex;
+        justify-content: center;
+        min-height: 480px;
+      }
+
+      /* timer card */
+      .card {
+        width: 100%;
+        max-width: 540px;
+        background: var(--l-bg-surface);
+        border-radius: var(--r-lg);
+        box-shadow: var(--sh-card-l);
+        padding: var(--s6) var(--s5);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--s5);
+      }
+      .dark .card {
+        background: var(--d-bg-surface);
+        box-shadow: var(--sh-card-d);
+      }
+
+      /* ended banner */
+      .banner {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: var(--s3);
+        padding: var(--s3) var(--s4);
+        background: var(--l-banner-bg);
+        border: 1px solid var(--l-banner-border);
+        border-radius: var(--r-md);
+        color: var(--l-banner-text);
+      }
+      .dark .banner {
+        background: var(--d-banner-bg);
+        border-color: var(--d-banner-border);
+        color: var(--d-banner-text);
+      }
+      .banner__icon {
+        font-size: 20px;
+      }
+      .banner__text {
+        font: 500 14px/1.4 var(--font-sans);
+        flex: 1;
+      }
+      .banner__close {
+        background: transparent;
+        border: none;
+        color: inherit;
+        font: 400 12px/1.4 var(--font-sans);
+        cursor: pointer;
+        padding: var(--s1) var(--s2);
+        border-radius: var(--r-sm);
+      }
+      .banner__close:hover {
+        background: rgba(0, 0, 0, 0.06);
+      }
+
+      /* large display */
+      .display {
+        font-family: var(--font-mono);
+        font-weight: 300;
+        font-size: 96px; /* mockup 컨테이너 폭에 맞춰 다소 축소(실제 desktop 128px) */
+        line-height: 1;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        color: var(--l-text-primary);
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 0;
+        margin: var(--s3) 0;
+      }
+      .dark .display {
+        color: var(--d-text-primary);
+      }
+      .display--idle-empty {
+        color: var(--l-text-muted);
+      }
+      .dark .display--idle-empty {
+        color: var(--d-text-muted);
+      }
+      .display--ended {
+        color: var(--l-banner-text);
+        font-weight: 400;
+      }
+      .dark .display--ended {
+        color: var(--d-banner-text);
+      }
+      .display__colon {
+        padding: 0 var(--s1);
+      }
+
+      /* input pair */
+      .input-pair {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: var(--s2);
+      }
+      .input-pair__field {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--s1);
+      }
+      .input-pair__field input {
+        width: 72px;
+        height: 56px;
+        font: 600 28px/1 var(--font-mono);
+        text-align: center;
+        border: 1px solid var(--l-border-strong);
+        border-radius: var(--r-md);
+        background: var(--l-bg-canvas);
+        color: var(--l-text-primary);
+        -moz-appearance: textfield;
+      }
+      .dark .input-pair__field input {
+        background: var(--d-bg-canvas);
+        color: var(--d-text-primary);
+        border-color: var(--d-border-strong);
+      }
+      .input-pair__field input::-webkit-outer-spin-button,
+      .input-pair__field input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      .input-pair__field input:focus-visible,
+      .input-pair__field input.is-focus {
+        outline: 2px solid var(--l-focus-ring);
+        outline-offset: 2px;
+        border-color: var(--l-accent);
+      }
+      .dark .input-pair__field input:focus-visible,
+      .dark .input-pair__field input.is-focus {
+        outline-color: var(--d-focus-ring);
+        border-color: var(--d-accent);
+      }
+      .input-pair__label {
+        font: 400 12px/1.4 var(--font-sans);
+        color: var(--l-text-secondary);
+      }
+      .dark .input-pair__label {
+        color: var(--d-text-secondary);
+      }
+      .input-pair__colon {
+        font: 300 28px/1 var(--font-mono);
+        color: var(--l-text-muted);
+        align-self: center;
+        padding: 0 var(--s2);
+        margin-bottom: 18px; /* label 높이 보정 */
+      }
+      .dark .input-pair__colon {
+        color: var(--d-text-muted);
+      }
+
+      /* hint (idle empty) */
+      .hint {
+        margin: 0;
+        font: 400 12px/1.4 var(--font-sans);
+        color: var(--l-text-muted);
+        text-align: center;
+      }
+      .dark .hint {
+        color: var(--d-text-muted);
+      }
+
+      /* controls */
+      .controls {
+        display: flex;
+        gap: var(--s4);
+        align-items: center;
+      }
+      .btn {
+        border: none;
+        border-radius: var(--r-md);
+        cursor: pointer;
+        font: 500 14px/1 var(--font-sans);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--s2);
+      }
+      .btn--primary-lg {
+        height: 56px;
+        min-width: 160px;
+        padding: 0 var(--s6);
+        font: 600 16px/1 var(--font-sans);
+        background: var(--l-accent);
+        color: #fff;
+      }
+      .dark .btn--primary-lg {
+        background: var(--d-accent);
+      }
+      .btn--primary-lg:hover {
+        background: var(--l-accent-hover);
+      }
+      .btn--primary-lg:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .btn--ghost-lg {
+        height: 56px;
+        min-width: 120px;
+        padding: 0 var(--s5);
+        font: 600 16px/1 var(--font-sans);
+        background: transparent;
+        color: var(--l-text-secondary);
+      }
+      .dark .btn--ghost-lg {
+        color: var(--d-text-secondary);
+      }
+      .btn--ghost-lg:hover {
+        background: var(--l-bg-subtle);
+        color: var(--l-danger);
+      }
+      .dark .btn--ghost-lg:hover {
+        background: var(--d-bg-subtle);
+        color: var(--d-danger);
+      }
+      .btn--ghost-lg:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .btn--ghost {
+        height: 36px;
+        padding: 0 var(--s4);
+        background: transparent;
+        color: var(--l-text-primary);
+      }
+      .dark .btn--ghost {
+        color: var(--d-text-primary);
+      }
+      .btn:focus-visible,
+      .btn.is-focus {
+        outline: 2px solid var(--l-focus-ring);
+        outline-offset: 2px;
+      }
+      .dark .btn:focus-visible,
+      .dark .btn.is-focus {
+        outline-color: var(--d-focus-ring);
+      }
+
+      /* keyboard hint */
+      .kbd-hint {
+        margin: 0;
+        font: 400 12px/1.4 var(--font-sans);
+        color: var(--l-text-muted);
+        text-align: center;
+      }
+      .dark .kbd-hint {
+        color: var(--d-text-muted);
+      }
+      kbd {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        background: var(--l-bg-subtle);
+        border: 1px solid var(--l-border-strong);
+        border-radius: var(--r-sm);
+        padding: 1px 6px;
+        margin: 0 2px;
+      }
+      .dark kbd {
+        background: var(--d-bg-subtle);
+        border-color: var(--d-border-strong);
+        color: var(--d-text-primary);
+      }
+
+      /* state label chip */
+      .state-chip {
+        display: inline-block;
+        padding: 2px 8px;
+        font: 500 11px/1.4 var(--font-sans);
+        background: var(--l-bg-subtle);
+        color: var(--l-text-secondary);
+        border-radius: 999px;
+        margin-left: var(--s2);
+      }
+      .dark .state-chip {
+        background: var(--d-bg-subtle);
+        color: var(--d-text-secondary);
+      }
+
+      /* mobile section card */
+      .mobile-frame {
+        width: 360px;
+        margin: 0 auto;
+        border: 1px solid var(--l-border-strong);
+        border-radius: 24px;
+        overflow: hidden;
+        background: var(--l-bg-canvas);
+      }
+      .mobile-frame .topbar {
+        padding: 0 var(--s4);
+      }
+      .mobile-frame .page {
+        padding: var(--s5) var(--s4);
+      }
+      .mobile-frame .card {
+        padding: var(--s5) var(--s4);
+      }
+      .mobile-frame .display {
+        font-size: 72px;
+      }
+      .mobile-frame .controls {
+        flex-direction: column;
+        width: 100%;
+        gap: var(--s3);
+      }
+      .mobile-frame .btn--primary-lg,
+      .mobile-frame .btn--ghost-lg {
+        width: 100%;
+        min-width: 0;
+      }
+
+      /* legend table */
+      table.legend {
+        border-collapse: collapse;
+        font: 400 13px/1.5 var(--font-sans);
+        margin-top: var(--s3);
+      }
+      table.legend th,
+      table.legend td {
+        border: 1px solid #d0d0cc;
+        padding: 6px 12px;
+        text-align: left;
+      }
+      table.legend th {
+        background: #fafaf9;
+        font-weight: 600;
+      }
+
+      /* color swatch */
+      .sw {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        vertical-align: middle;
+        margin-right: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="page-title">타이머 SPA — BF-405 시각 mockup</h1>
+    <p class="page-sub">
+      본 mockup 은
+      <code>docs/design/timer-BF-405.md</code> 명세의 시각 시뮬레이션입니다.
+      light / dark 두 패널을 나란히 표시하여 토큰 매핑을 검증할 수 있습니다.
+      픽셀 단위 일치 의무는 없으며, 명세 §7.6 정량 일치 표가 source of truth.
+    </p>
+
+    <!-- ============ STATE 1: idle empty (0:00) ============ -->
+    <h2 class="section-label">State 1 · idle (빈 상태 0:00) — 입력 대기</h2>
+    <div class="pair">
+      <div class="theme">
+        <div class="theme__label">Light · idle empty</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">idle · 0:00</span></h2>
+          <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+        </header>
+        <div class="page">
+          <section class="card" aria-label="타이머">
+            <div class="display display--idle-empty">
+              <span>00</span><span class="display__colon">:</span><span>00</span>
+            </div>
+            <div class="input-pair">
+              <div class="input-pair__field">
+                <input type="number" value="0" placeholder="00" aria-label="분" class="is-focus" />
+                <span class="input-pair__label">분</span>
+              </div>
+              <span class="input-pair__colon">:</span>
+              <div class="input-pair__field">
+                <input type="number" value="0" placeholder="00" aria-label="초" />
+                <span class="input-pair__label">초</span>
+              </div>
+            </div>
+            <p class="hint">분과 초를 입력하세요</p>
+            <div class="controls">
+              <button class="btn btn--primary-lg" disabled>▶ 시작</button>
+              <button class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <div class="theme dark">
+        <div class="theme__label">Dark · idle empty</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">idle · 0:00</span></h2>
+          <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+        </header>
+        <div class="page">
+          <section class="card" aria-label="타이머">
+            <div class="display display--idle-empty">
+              <span>00</span><span class="display__colon">:</span><span>00</span>
+            </div>
+            <div class="input-pair">
+              <div class="input-pair__field">
+                <input type="number" value="0" placeholder="00" aria-label="분" />
+                <span class="input-pair__label">분</span>
+              </div>
+              <span class="input-pair__colon">:</span>
+              <div class="input-pair__field">
+                <input type="number" value="0" placeholder="00" aria-label="초" />
+                <span class="input-pair__label">초</span>
+              </div>
+            </div>
+            <p class="hint">분과 초를 입력하세요</p>
+            <div class="controls">
+              <button class="btn btn--primary-lg" disabled>▶ 시작</button>
+              <button class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STATE 2: idle (값 입력 후, 시작 전) ============ -->
+    <h2 class="section-label">State 2 · idle (25:00 입력, 시작 전) — primary 버튼 활성</h2>
+    <div class="pair">
+      <div class="theme">
+        <div class="theme__label">Light · idle ready</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">idle · 25:00</span></h2>
+          <button class="btn btn--ghost">🌙</button>
+        </header>
+        <div class="page">
+          <section class="card">
+            <div class="display">
+              <span>25</span><span class="display__colon">:</span><span>00</span>
+            </div>
+            <div class="input-pair">
+              <div class="input-pair__field">
+                <input type="number" value="25" aria-label="분" />
+                <span class="input-pair__label">분</span>
+              </div>
+              <span class="input-pair__colon">:</span>
+              <div class="input-pair__field">
+                <input type="number" value="0" aria-label="초" />
+                <span class="input-pair__label">초</span>
+              </div>
+            </div>
+            <div class="controls">
+              <button class="btn btn--primary-lg is-focus">▶ 시작</button>
+              <button class="btn btn--ghost-lg">⟲ 리셋</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <div class="theme dark">
+        <div class="theme__label">Dark · idle ready</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">idle · 25:00</span></h2>
+          <button class="btn btn--ghost">☀</button>
+        </header>
+        <div class="page">
+          <section class="card">
+            <div class="display">
+              <span>25</span><span class="display__colon">:</span><span>00</span>
+            </div>
+            <div class="input-pair">
+              <div class="input-pair__field">
+                <input type="number" value="25" aria-label="분" />
+                <span class="input-pair__label">분</span>
+              </div>
+              <span class="input-pair__colon">:</span>
+              <div class="input-pair__field">
+                <input type="number" value="0" aria-label="초" />
+                <span class="input-pair__label">초</span>
+              </div>
+            </div>
+            <div class="controls">
+              <button class="btn btn--primary-lg is-focus">▶ 시작</button>
+              <button class="btn btn--ghost-lg">⟲ 리셋</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STATE 3: running ============ -->
+    <h2 class="section-label">State 3 · running (24:37 진행 중) — input 숨김, 일시정지 라벨</h2>
+    <div class="pair">
+      <div class="theme">
+        <div class="theme__label">Light · running</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">running</span></h2>
+          <button class="btn btn--ghost">🌙</button>
+        </header>
+        <div class="page">
+          <section class="card">
+            <div class="display">
+              <span>24</span><span class="display__colon">:</span><span>37</span>
+            </div>
+            <!-- input pair hidden -->
+            <div class="controls">
+              <button class="btn btn--primary-lg">⏸ 일시정지</button>
+              <button class="btn btn--ghost-lg">⟲ 리셋</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <div class="theme dark">
+        <div class="theme__label">Dark · running</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">running</span></h2>
+          <button class="btn btn--ghost">☀</button>
+        </header>
+        <div class="page">
+          <section class="card">
+            <div class="display">
+              <span>24</span><span class="display__colon">:</span><span>37</span>
+            </div>
+            <div class="controls">
+              <button class="btn btn--primary-lg">⏸ 일시정지</button>
+              <button class="btn btn--ghost-lg">⟲ 리셋</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STATE 4: paused ============ -->
+    <h2 class="section-label">State 4 · paused (12:05) — 재개 / 리셋</h2>
+    <div class="pair">
+      <div class="theme">
+        <div class="theme__label">Light · paused</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">paused</span></h2>
+          <button class="btn btn--ghost">🌙</button>
+        </header>
+        <div class="page">
+          <section class="card">
+            <div class="display">
+              <span>12</span><span class="display__colon">:</span><span>05</span>
+            </div>
+            <div class="controls">
+              <button class="btn btn--primary-lg">▶ 재개</button>
+              <button class="btn btn--ghost-lg">⟲ 리셋</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <div class="theme dark">
+        <div class="theme__label">Dark · paused</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">paused</span></h2>
+          <button class="btn btn--ghost">☀</button>
+        </header>
+        <div class="page">
+          <section class="card">
+            <div class="display">
+              <span>12</span><span class="display__colon">:</span><span>05</span>
+            </div>
+            <div class="controls">
+              <button class="btn btn--primary-lg">▶ 재개</button>
+              <button class="btn btn--ghost-lg">⟲ 리셋</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STATE 5: ended ============ -->
+    <h2 class="section-label">State 5 · ended (0:00) — 종료 알림 배너 + 새 타이머</h2>
+    <div class="pair">
+      <div class="theme">
+        <div class="theme__label">Light · ended</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">ended</span></h2>
+          <button class="btn btn--ghost">🌙</button>
+        </header>
+        <div class="page">
+          <section class="card">
+            <div class="banner" role="status" aria-live="polite">
+              <span class="banner__icon" aria-hidden="true">⏰</span>
+              <span class="banner__text">시간이 다 됐어요</span>
+              <button class="banner__close">닫기</button>
+            </div>
+            <div class="display display--ended">
+              <span>00</span><span class="display__colon">:</span><span>00</span>
+            </div>
+            <div class="controls">
+              <button class="btn btn--primary-lg" disabled>▶ 시작</button>
+              <button class="btn btn--ghost-lg">⟲ 새 타이머</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <div class="theme dark">
+        <div class="theme__label">Dark · ended</div>
+        <header class="topbar">
+          <h2 class="topbar__title">타이머 <span class="state-chip">ended</span></h2>
+          <button class="btn btn--ghost">☀</button>
+        </header>
+        <div class="page">
+          <section class="card">
+            <div class="banner" role="status" aria-live="polite">
+              <span class="banner__icon" aria-hidden="true">⏰</span>
+              <span class="banner__text">시간이 다 됐어요</span>
+              <button class="banner__close">닫기</button>
+            </div>
+            <div class="display display--ended">
+              <span>00</span><span class="display__colon">:</span><span>00</span>
+            </div>
+            <div class="controls">
+              <button class="btn btn--primary-lg" disabled>▶ 시작</button>
+              <button class="btn btn--ghost-lg">⟲ 새 타이머</button>
+            </div>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MOBILE preview (< 640px) ============ -->
+    <h2 class="section-label">Mobile preview (< 640px) · idle ready 25:00</h2>
+    <div class="mobile-frame">
+      <header class="topbar">
+        <h2 class="topbar__title">타이머</h2>
+        <button class="btn btn--ghost">🌙</button>
+      </header>
+      <div class="page">
+        <section class="card">
+          <div class="display">
+            <span>25</span><span class="display__colon">:</span><span>00</span>
+          </div>
+          <div class="input-pair">
+            <div class="input-pair__field">
+              <input type="number" value="25" aria-label="분" />
+              <span class="input-pair__label">분</span>
+            </div>
+            <span class="input-pair__colon">:</span>
+            <div class="input-pair__field">
+              <input type="number" value="0" aria-label="초" />
+              <span class="input-pair__label">초</span>
+            </div>
+          </div>
+          <div class="controls">
+            <button class="btn btn--primary-lg">▶ 시작</button>
+            <button class="btn btn--ghost-lg">⟲ 리셋</button>
+          </div>
+          <p class="kbd-hint">
+            <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <!-- ============ Token legend ============ -->
+    <h2 class="section-label">참고 · 타이머 전용 컬러 토큰 (§2.2)</h2>
+    <table class="legend">
+      <thead>
+        <tr>
+          <th>토큰</th>
+          <th>Light</th>
+          <th>Dark</th>
+          <th>용도</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--color-timer-running</code></td>
+          <td><span class="sw" style="background:#1F8A5C"></span>#1F8A5C</td>
+          <td><span class="sw" style="background:#3AAE7A"></span>#3AAE7A</td>
+          <td>running 상태 display 강조 (운영자 확정 시 활성)</td>
+        </tr>
+        <tr>
+          <td><code>--color-timer-paused</code></td>
+          <td><span class="sw" style="background:#B7791F"></span>#B7791F</td>
+          <td><span class="sw" style="background:#D4A23A"></span>#D4A23A</td>
+          <td>paused 상태 display 강조 (운영자 확정 시 활성)</td>
+        </tr>
+        <tr>
+          <td><code>--color-timer-ended-bg</code></td>
+          <td><span class="sw" style="background:#FFF1F1"></span>#FFF1F1</td>
+          <td><span class="sw" style="background:#3A1F22"></span>#3A1F22</td>
+          <td>종료 배너 배경</td>
+        </tr>
+        <tr>
+          <td><code>--color-timer-ended-border</code></td>
+          <td><span class="sw" style="background:#F4B5B5"></span>#F4B5B5</td>
+          <td><span class="sw" style="background:#7A3A3F"></span>#7A3A3F</td>
+          <td>종료 배너 border</td>
+        </tr>
+        <tr>
+          <td><code>--color-timer-ended-text</code></td>
+          <td><span class="sw" style="background:#9A2A2A"></span>#9A2A2A</td>
+          <td><span class="sw" style="background:#FCB7B7"></span>#FCB7B7</td>
+          <td>종료 배너 텍스트 + ended display 색</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="page-sub" style="margin-top: var(--s6)">
+      ※ display 폰트 크기는 mockup 컨테이너 폭(540px)에 맞춰 96px로 축소
+      표시. 실제 desktop(≥960px) 구현은 명세 §3 의 <code>--text-display</code>
+      = 128px / 8rem.
+    </p>
+  </body>
+</html>
