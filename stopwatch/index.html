@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>스톱워치</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">스톱워치</h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="btn-theme"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- 메인 카드: display + controls -->
+      <section class="card" aria-label="스톱워치">
+        <!-- large display -->
+        <div
+          class="display"
+          id="display"
+          role="timer"
+          aria-live="off"
+          aria-label="경과 시간"
+        >
+          <span class="display__main">
+            <span class="display__minutes" id="disp-m">00</span>
+            <span class="display__colon" aria-hidden="true">:</span>
+            <span class="display__seconds" id="disp-s">00</span>
+          </span>
+          <span class="display__frac">
+            <span class="display__dot" aria-hidden="true">.</span>
+            <span class="display__hundredths" id="disp-x">00</span>
+          </span>
+        </div>
+
+        <!-- 4-button controls -->
+        <div class="controls" id="controls">
+          <button type="button" class="btn btn--primary-lg" id="btn-start">
+            ▶ 시작
+          </button>
+          <button
+            type="button"
+            class="btn btn--secondary-lg"
+            id="btn-stop"
+            disabled
+          >
+            ⏸ 정지
+          </button>
+          <button
+            type="button"
+            class="btn btn--secondary-lg"
+            id="btn-lap"
+            disabled
+          >
+            ⚑ 랩
+          </button>
+          <button
+            type="button"
+            class="btn btn--ghost-lg"
+            id="btn-reset"
+            disabled
+          >
+            ⟲ 리셋
+          </button>
+        </div>
+
+        <!-- keyboard hint -->
+        <p class="kbd-hint">
+          <kbd>Space</kbd> 시작/정지 · <kbd>L</kbd> 랩 · <kbd>Esc</kbd> 리셋
+        </p>
+      </section>
+
+      <!-- lap list card (hidden 까지 laps.length === 0) -->
+      <section
+        class="lap-card"
+        id="lap-card"
+        aria-label="랩 기록"
+        hidden
+      >
+        <header class="lap-card__header">
+          <h2 class="lap-card__title">랩 (<span id="lap-count">0</span>)</h2>
+          <button
+            type="button"
+            class="btn btn--ghost btn--sm"
+            id="btn-clear-laps"
+            hidden
+          >
+            지우기
+          </button>
+        </header>
+        <ol class="lap-list" id="lap-list" aria-label="랩 기록 목록">
+          <!-- li 가 동적 prepend -->
+        </ol>
+      </section>
+
+      <!-- SR-only 알림 영역 -->
+      <div
+        id="sr-announce"
+        class="sr-only"
+        role="status"
+        aria-live="polite"
+      ></div>
+    </main>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
