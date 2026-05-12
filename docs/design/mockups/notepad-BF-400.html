@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>메모장 SPA — BF-400 시각 mockup</title>
+    <style>
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* light tokens */
+        --l-bg-canvas: #fafaf9;
+        --l-bg-surface: #ffffff;
+        --l-bg-subtle: #f1f1ef;
+        --l-bg-selected: #e8eef7;
+        --l-border-default: #e5e5e2;
+        --l-border-strong: #d0d0cc;
+        --l-text-primary: #1a1a19;
+        --l-text-secondary: #6b6b66;
+        --l-text-muted: #9a9a93;
+        --l-accent: #3563e9;
+        --l-accent-hover: #2a4fc0;
+        --l-danger: #d14343;
+        --l-danger-hover: #a83333;
+        --l-focus-ring: rgba(53, 99, 233, 0.45);
+
+        /* dark tokens */
+        --d-bg-canvas: #0f1115;
+        --d-bg-surface: #171a21;
+        --d-bg-subtle: #1e222b;
+        --d-bg-selected: #1f2a3d;
+        --d-border-default: #262b36;
+        --d-border-strong: #3a4150;
+        --d-text-primary: #e8e8e4;
+        --d-text-secondary: #9a9a93;
+        --d-text-muted: #6b6b66;
+        --d-accent: #5b82f0;
+        --d-accent-hover: #7596f3;
+        --d-danger: #e55858;
+        --d-danger-hover: #ec7676;
+        --d-focus-ring: rgba(91, 130, 240, 0.55);
+
+        /* space */
+        --s1: 4px;
+        --s2: 8px;
+        --s3: 12px;
+        --s4: 16px;
+        --s5: 24px;
+        --s6: 32px;
+        --s7: 48px;
+
+        /* radius / shadow */
+        --r-sm: 4px;
+        --r-md: 8px;
+        --r-lg: 12px;
+        --sh-modal: 0 12px 32px rgba(0, 0, 0, 0.18);
+        --sh-pop: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background: #ececea;
+        color: var(--l-text-primary);
+        padding: var(--s5);
+      }
+      h2.section-label {
+        font: 600 14px/1 var(--font-sans);
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: var(--s6) 0 var(--s3);
+      }
+      h1.page-title {
+        font: 600 24px/1.3 var(--font-sans);
+        margin: 0 0 var(--s2);
+      }
+      p.page-sub {
+        color: #666;
+        margin: 0 0 var(--s5);
+        font: 400 14px/1.5 var(--font-sans);
+      }
+
+      /* ─────── theme wrappers ─────── */
+      .theme {
+        border: 1px solid var(--l-border-strong);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        box-shadow: var(--sh-pop);
+        background: var(--l-bg-canvas);
+        color: var(--l-text-primary);
+      }
+      .theme.dark {
+        background: var(--d-bg-canvas);
+        color: var(--d-text-primary);
+        border-color: var(--d-border-strong);
+      }
+
+      /* topbar */
+      .topbar {
+        height: 56px;
+        padding: 0 var(--s5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--l-bg-surface);
+        border-bottom: 1px solid var(--l-border-default);
+      }
+      .dark .topbar {
+        background: var(--d-bg-surface);
+        border-color: var(--d-border-default);
+      }
+      .topbar__title {
+        font: 600 20px/1.3 var(--font-sans);
+        margin: 0;
+      }
+      .topbar__actions {
+        display: flex;
+        gap: var(--s2);
+      }
+
+      /* buttons */
+      .btn {
+        height: 36px;
+        padding: 0 var(--s4);
+        border-radius: var(--r-md);
+        font: 500 14px/1 var(--font-sans);
+        cursor: pointer;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--s2);
+      }
+      .btn--primary {
+        background: var(--l-accent);
+        color: #fff;
+      }
+      .dark .btn--primary {
+        background: var(--d-accent);
+      }
+      .btn--ghost {
+        background: transparent;
+        color: var(--l-text-primary);
+      }
+      .dark .btn--ghost {
+        color: var(--d-text-primary);
+      }
+      .btn--danger-ghost {
+        background: transparent;
+        color: var(--l-danger);
+      }
+      .dark .btn--danger-ghost {
+        color: var(--d-danger);
+      }
+      .btn--danger-solid {
+        background: var(--l-danger);
+        color: #fff;
+      }
+      .dark .btn--danger-solid {
+        background: var(--d-danger);
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--l-focus-ring);
+        outline-offset: 2px;
+      }
+      .dark .btn:focus-visible {
+        outline-color: var(--d-focus-ring);
+      }
+
+      /* layout */
+      .layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        height: 540px;
+      }
+
+      .sidebar {
+        background: var(--l-bg-surface);
+        border-right: 1px solid var(--l-border-default);
+        display: flex;
+        flex-direction: column;
+      }
+      .dark .sidebar {
+        background: var(--d-bg-surface);
+        border-color: var(--d-border-default);
+      }
+      .sidebar__search {
+        margin: var(--s3);
+        height: 44px;
+        padding: 0 var(--s3);
+        border: 1px solid var(--l-border-strong);
+        border-radius: var(--r-md);
+        background: var(--l-bg-canvas);
+        color: var(--l-text-primary);
+        font: 400 14px/1 var(--font-sans);
+      }
+      .dark .sidebar__search {
+        background: var(--d-bg-canvas);
+        color: var(--d-text-primary);
+        border-color: var(--d-border-strong);
+      }
+      .sidebar__search:focus-visible {
+        outline: 2px solid var(--l-focus-ring);
+        outline-offset: 2px;
+      }
+
+      .list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        flex: 1;
+        overflow-y: auto;
+      }
+      .list__item {
+        padding: var(--s3) var(--s4);
+        border-bottom: 1px solid var(--l-border-default);
+        cursor: pointer;
+        position: relative;
+      }
+      .dark .list__item {
+        border-color: var(--d-border-default);
+      }
+      .list__item:hover {
+        background: var(--l-bg-subtle);
+      }
+      .dark .list__item:hover {
+        background: var(--d-bg-subtle);
+      }
+      .list__item.is-selected {
+        background: var(--l-bg-selected);
+      }
+      .dark .list__item.is-selected {
+        background: var(--d-bg-selected);
+      }
+      .list__item.is-selected::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--l-accent);
+      }
+      .dark .list__item.is-selected::before {
+        background: var(--d-accent);
+      }
+      .list__item.is-focused {
+        outline: 2px solid var(--l-focus-ring);
+        outline-offset: -2px;
+      }
+      .list__title {
+        font: 500 14px/1.4 var(--font-sans);
+        margin: 0 0 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .list__preview {
+        font: 400 12px/1.4 var(--font-sans);
+        color: var(--l-text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0 0 var(--s1);
+      }
+      .dark .list__preview {
+        color: var(--d-text-secondary);
+      }
+      .list__time {
+        font: 400 12px/1.4 var(--font-sans);
+        color: var(--l-text-muted);
+        text-align: right;
+      }
+      .dark .list__time {
+        color: var(--d-text-muted);
+      }
+
+      .list__empty {
+        text-align: center;
+        padding: var(--s5);
+        font: 400 12px/1.4 var(--font-sans);
+        color: var(--l-text-muted);
+      }
+      .dark .list__empty {
+        color: var(--d-text-muted);
+      }
+
+      /* editor */
+      .editor {
+        background: var(--l-bg-canvas);
+        display: flex;
+        flex-direction: column;
+      }
+      .dark .editor {
+        background: var(--d-bg-canvas);
+      }
+      .editor__meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--s4) var(--s5);
+        border-bottom: 1px solid var(--l-border-default);
+        background: var(--l-bg-surface);
+      }
+      .dark .editor__meta {
+        background: var(--d-bg-surface);
+        border-color: var(--d-border-default);
+      }
+      .editor__title {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font: 600 16px/1.4 var(--font-sans);
+        color: inherit;
+      }
+      .editor__title:focus-visible {
+        outline: 2px solid var(--l-focus-ring);
+        outline-offset: 2px;
+        border-radius: var(--r-sm);
+      }
+      .editor__body-wrap {
+        flex: 1;
+        padding: var(--s6) var(--s7);
+        overflow-y: auto;
+      }
+      .editor__body-inner {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+      .editor__textarea {
+        width: 100%;
+        min-height: 240px;
+        border: none;
+        outline: none;
+        resize: none;
+        background: transparent;
+        color: inherit;
+        font: 400 15px/1.65 var(--font-sans);
+      }
+      .editor__status {
+        padding: var(--s2) var(--s5);
+        border-top: 1px solid var(--l-border-default);
+        background: var(--l-bg-surface);
+        color: var(--l-text-muted);
+        font: 400 12px/1.4 var(--font-sans);
+        display: flex;
+        justify-content: space-between;
+      }
+      .dark .editor__status {
+        background: var(--d-bg-surface);
+        border-color: var(--d-border-default);
+        color: var(--d-text-muted);
+      }
+
+      /* empty state */
+      .empty-state {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--s3);
+        padding: var(--s7);
+        text-align: center;
+      }
+      .empty-state__icon {
+        font-size: 48px;
+        line-height: 1;
+        opacity: 0.85;
+      }
+      .empty-state__title {
+        font: 600 16px/1.4 var(--font-sans);
+        margin: 0;
+      }
+      .empty-state__sub {
+        font: 400 15px/1.65 var(--font-sans);
+        color: var(--l-text-secondary);
+        margin: 0 0 var(--s3);
+      }
+      .dark .empty-state__sub {
+        color: var(--d-text-secondary);
+      }
+      kbd {
+        display: inline-block;
+        padding: 2px 6px;
+        font: 500 12px/1 var(--font-mono);
+        background: var(--l-bg-subtle);
+        border: 1px solid var(--l-border-strong);
+        border-radius: var(--r-sm);
+        color: var(--l-text-secondary);
+        margin-left: var(--s2);
+      }
+      .dark kbd {
+        background: var(--d-bg-subtle);
+        border-color: var(--d-border-strong);
+        color: var(--d-text-secondary);
+      }
+
+      /* modal */
+      .modal-stage {
+        position: relative;
+        height: 420px;
+        background: var(--l-bg-canvas);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        border: 1px solid var(--l-border-strong);
+      }
+      .modal-stage::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(2px);
+      }
+      .modal-stage .behind-text {
+        position: absolute;
+        inset: 0;
+        padding: var(--s5);
+        color: var(--l-text-secondary);
+        font: 400 14px/1.5 var(--font-sans);
+      }
+      .modal {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 420px;
+        background: var(--l-bg-surface);
+        border-radius: var(--r-lg);
+        box-shadow: var(--sh-modal);
+        padding: var(--s5) var(--s6) var(--s6);
+        z-index: 2;
+      }
+      .modal__title {
+        font: 600 16px/1.4 var(--font-sans);
+        margin: 0 0 var(--s3);
+      }
+      .modal__body {
+        font: 400 15px/1.65 var(--font-sans);
+        color: var(--l-text-secondary);
+        margin: 0 0 var(--s5);
+      }
+      .modal__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--s3);
+      }
+
+      /* mobile preview */
+      .mobile-frame {
+        width: 360px;
+        height: 640px;
+        border: 1px solid var(--l-border-strong);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        box-shadow: var(--sh-pop);
+        background: var(--l-bg-canvas);
+        display: flex;
+        flex-direction: column;
+      }
+      .mobile-frame .topbar {
+        padding: 0 var(--s4);
+      }
+      .mobile-frame .sidebar {
+        border-right: none;
+        flex: 1;
+      }
+      .mobile-frame .fab {
+        position: absolute;
+        bottom: var(--s5);
+        right: var(--s5);
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--l-accent);
+        color: #fff;
+        font: 700 24px/1 var(--font-sans);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--sh-pop);
+        border: none;
+        cursor: pointer;
+      }
+
+      .row {
+        display: flex;
+        gap: var(--s5);
+        flex-wrap: wrap;
+      }
+      .col {
+        flex: 1;
+        min-width: 600px;
+      }
+
+      /* token chips */
+      .tokens {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: var(--s3);
+      }
+      .token {
+        display: flex;
+        align-items: center;
+        gap: var(--s3);
+        padding: var(--s3);
+        background: var(--l-bg-surface);
+        border: 1px solid var(--l-border-default);
+        border-radius: var(--r-md);
+        font: 400 12px/1.3 var(--font-mono);
+      }
+      .swatch {
+        width: 24px;
+        height: 24px;
+        border-radius: var(--r-sm);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        flex-shrink: 0;
+      }
+
+      /* button gallery */
+      .gallery {
+        display: flex;
+        gap: var(--s3);
+        flex-wrap: wrap;
+        padding: var(--s4);
+        background: var(--l-bg-surface);
+        border-radius: var(--r-md);
+        border: 1px solid var(--l-border-default);
+      }
+      .gallery.dark {
+        background: var(--d-bg-surface);
+        border-color: var(--d-border-default);
+      }
+
+      .legend {
+        font: 400 12px/1.4 var(--font-sans);
+        color: #666;
+        margin-top: var(--s2);
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="page-title">메모장 SPA — 시각 mockup (BF-400)</h1>
+    <p class="page-sub">
+      본 문서는 <code>docs/design/notepad-BF-400.md</code> 명세의 시각 시뮬레이션입니다.
+      light / dark 두 패널을 나란히 표시해 토큰 매핑을 검증합니다.
+    </p>
+
+    <!-- ───────── 1. 데스크탑 split view ───────── -->
+    <h2 class="section-label">1. Desktop split view (≥ 960px)</h2>
+    <div class="row">
+      <div class="col">
+        <div class="theme">
+          <header class="topbar">
+            <h2 class="topbar__title">메모장</h2>
+            <div class="topbar__actions">
+              <button class="btn btn--primary">+ 새 메모</button>
+              <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+            </div>
+          </header>
+          <div class="layout">
+            <aside class="sidebar">
+              <input class="sidebar__search" type="search" placeholder="메모 검색…" />
+              <ul class="list">
+                <li class="list__item is-selected">
+                  <p class="list__title">회의록 — 5월 기획 킥오프</p>
+                  <p class="list__preview">참석자: 김PM, 이디자인, 박dev. 안건은 SPA 메모…</p>
+                  <p class="list__time">오늘 14:23</p>
+                </li>
+                <li class="list__item is-focused">
+                  <p class="list__title">읽을 책 리스트</p>
+                  <p class="list__preview">- 클린 아키텍처 - 도메인 주도 설계 - 함수형 자바…</p>
+                  <p class="list__time">어제</p>
+                </li>
+                <li class="list__item">
+                  <p class="list__title">출장 준비물</p>
+                  <p class="list__preview">여권, 노트북, 충전 어댑터, 한국 콘센트 변환기…</p>
+                  <p class="list__time">5월 8일</p>
+                </li>
+                <li class="list__item">
+                  <p class="list__title">주간 회고</p>
+                  <p class="list__preview">이번 주에 잘된 점: 코드 리뷰 사이클이 빨라짐…</p>
+                  <p class="list__time">5월 5일</p>
+                </li>
+              </ul>
+            </aside>
+            <section class="editor">
+              <div class="editor__meta">
+                <input class="editor__title" value="회의록 — 5월 기획 킥오프" />
+                <button class="btn btn--danger-ghost">🗑 삭제</button>
+              </div>
+              <div class="editor__body-wrap">
+                <div class="editor__body-inner">
+                  <textarea class="editor__textarea">
+참석자: 김PM, 이디자인, 박dev
+
+안건
+1. SPA 메모장 v1 일정
+2. 디자인 토큰 정의 — light/dark 모두 포함
+3. 키보드 단축키 합의
+
+결정사항
+- 좌측 280px 고정 sidebar
+- Cmd/Ctrl + N 으로 새 메모
+- 800ms debounce 자동 저장</textarea>
+                </div>
+              </div>
+              <div class="editor__status">
+                <span>320자</span>
+                <span>저장됨 · 14:23</span>
+              </div>
+            </section>
+          </div>
+        </div>
+        <p class="legend">▲ Light 테마 — 선택된 항목 (좌측 띠) 과 키보드 focused 항목 (점선 outline) 동시 표시</p>
+      </div>
+
+      <div class="col">
+        <div class="theme dark">
+          <header class="topbar">
+            <h2 class="topbar__title">메모장</h2>
+            <div class="topbar__actions">
+              <button class="btn btn--primary">+ 새 메모</button>
+              <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+            </div>
+          </header>
+          <div class="layout">
+            <aside class="sidebar">
+              <input class="sidebar__search" type="search" placeholder="메모 검색…" />
+              <ul class="list">
+                <li class="list__item is-selected">
+                  <p class="list__title">회의록 — 5월 기획 킥오프</p>
+                  <p class="list__preview">참석자: 김PM, 이디자인, 박dev. 안건은 SPA 메모…</p>
+                  <p class="list__time">오늘 14:23</p>
+                </li>
+                <li class="list__item">
+                  <p class="list__title">읽을 책 리스트</p>
+                  <p class="list__preview">- 클린 아키텍처 - 도메인 주도 설계 - 함수형 자바…</p>
+                  <p class="list__time">어제</p>
+                </li>
+                <li class="list__item">
+                  <p class="list__title">출장 준비물</p>
+                  <p class="list__preview">여권, 노트북, 충전 어댑터, 한국 콘센트 변환기…</p>
+                  <p class="list__time">5월 8일</p>
+                </li>
+              </ul>
+            </aside>
+            <section class="editor">
+              <div class="editor__meta">
+                <input class="editor__title" value="회의록 — 5월 기획 킥오프" />
+                <button class="btn btn--danger-ghost">🗑 삭제</button>
+              </div>
+              <div class="editor__body-wrap">
+                <div class="editor__body-inner">
+                  <textarea class="editor__textarea">
+참석자: 김PM, 이디자인, 박dev
+
+다크 모드에서도 동일 레이아웃을 유지합니다.
+focus ring, accent, danger 모두 dark 변형 적용.</textarea>
+                </div>
+              </div>
+              <div class="editor__status">
+                <span>92자</span>
+                <span>마지막 저장 14:23</span>
+              </div>
+            </section>
+          </div>
+        </div>
+        <p class="legend">▲ Dark 테마 — 동일 구조, 토큰만 dark 변형 치환</p>
+      </div>
+    </div>
+
+    <!-- ───────── 2. EmptyState ───────── -->
+    <h2 class="section-label">2. 빈 상태 (EmptyState — 메모 0건)</h2>
+    <div class="row">
+      <div class="col">
+        <div class="theme">
+          <header class="topbar">
+            <h2 class="topbar__title">메모장</h2>
+            <div class="topbar__actions">
+              <button class="btn btn--primary">+ 새 메모</button>
+              <button class="btn btn--ghost">🌙</button>
+            </div>
+          </header>
+          <div class="layout">
+            <aside class="sidebar">
+              <input class="sidebar__search" type="search" placeholder="메모 검색…" />
+              <div class="list__empty">메모가 없습니다</div>
+            </aside>
+            <section class="editor">
+              <div class="empty-state">
+                <div class="empty-state__icon">📝</div>
+                <h3 class="empty-state__title">아직 메모가 없어요</h3>
+                <p class="empty-state__sub">좌측 상단의 + 새 메모 버튼으로 시작하세요</p>
+                <button class="btn btn--primary">
+                  + 새 메모 만들기 <kbd>Ctrl N</kbd>
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───────── 3. DeleteConfirmModal ───────── -->
+    <h2 class="section-label">3. 삭제 확인 모달 (DeleteConfirmModal)</h2>
+    <div class="row">
+      <div class="col">
+        <div class="modal-stage">
+          <div class="behind-text">… 뒤쪽 메모장 화면이 dim + blur 처리됩니다 …</div>
+          <div class="modal">
+            <h3 class="modal__title">메모를 삭제할까요?</h3>
+            <p class="modal__body">
+              "회의록 — 5월 기획 킥오프" 메모가 영구적으로 삭제되며 되돌릴 수 없습니다.
+            </p>
+            <div class="modal__footer">
+              <button class="btn btn--ghost" autofocus
+                style="outline: 2px solid var(--l-focus-ring); outline-offset: 2px;">
+                취소
+              </button>
+              <button class="btn btn--danger-solid">삭제</button>
+            </div>
+          </div>
+        </div>
+        <p class="legend">
+          ▲ modal open 시 <strong>[취소]</strong> 에 autofocus — destructive default 비선택으로 실수 차단.
+          Escape 키로 cancel 처리. 우측 [삭제] 버튼은 키보드 focus 이동 시에만 confirm.
+        </p>
+      </div>
+    </div>
+
+    <!-- ───────── 4. 컬러 토큰 ───────── -->
+    <h2 class="section-label">4. 컬러 토큰 (light)</h2>
+    <div class="tokens">
+      <div class="token"><span class="swatch" style="background: #fafaf9"></span>bg-canvas<br />#FAFAF9</div>
+      <div class="token"><span class="swatch" style="background: #ffffff"></span>bg-surface<br />#FFFFFF</div>
+      <div class="token"><span class="swatch" style="background: #f1f1ef"></span>bg-subtle<br />#F1F1EF</div>
+      <div class="token"><span class="swatch" style="background: #e8eef7"></span>bg-selected<br />#E8EEF7</div>
+      <div class="token"><span class="swatch" style="background: #e5e5e2"></span>border-default<br />#E5E5E2</div>
+      <div class="token"><span class="swatch" style="background: #d0d0cc"></span>border-strong<br />#D0D0CC</div>
+      <div class="token"><span class="swatch" style="background: #1a1a19"></span>text-primary<br />#1A1A19</div>
+      <div class="token"><span class="swatch" style="background: #6b6b66"></span>text-secondary<br />#6B6B66</div>
+      <div class="token"><span class="swatch" style="background: #9a9a93"></span>text-muted<br />#9A9A93</div>
+      <div class="token"><span class="swatch" style="background: #3563e9"></span>accent<br />#3563E9</div>
+      <div class="token"><span class="swatch" style="background: #2a4fc0"></span>accent-hover<br />#2A4FC0</div>
+      <div class="token"><span class="swatch" style="background: #d14343"></span>danger<br />#D14343</div>
+      <div class="token"><span class="swatch" style="background: #a83333"></span>danger-hover<br />#A83333</div>
+    </div>
+
+    <h2 class="section-label">4-b. 컬러 토큰 (dark)</h2>
+    <div class="tokens" style="background: #1c1f26; padding: var(--s4); border-radius: var(--r-md); color: #e8e8e4;">
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #0f1115"></span>bg-canvas<br />#0F1115</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #171a21"></span>bg-surface<br />#171A21</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #1e222b"></span>bg-subtle<br />#1E222B</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #1f2a3d"></span>bg-selected<br />#1F2A3D</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #262b36"></span>border-default<br />#262B36</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #3a4150"></span>border-strong<br />#3A4150</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #e8e8e4"></span>text-primary<br />#E8E8E4</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #9a9a93"></span>text-secondary<br />#9A9A93</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #5b82f0"></span>accent<br />#5B82F0</div>
+      <div class="token" style="background: #171a21; border-color: #262b36; color: #e8e8e4;"><span class="swatch" style="background: #e55858"></span>danger<br />#E55858</div>
+    </div>
+
+    <!-- ───────── 5. Button gallery ───────── -->
+    <h2 class="section-label">5. Button variant</h2>
+    <div class="row">
+      <div class="col">
+        <div class="gallery">
+          <button class="btn btn--primary">+ 새 메모</button>
+          <button class="btn btn--ghost">취소</button>
+          <button class="btn btn--danger-ghost">🗑 삭제</button>
+          <button class="btn btn--danger-solid">삭제</button>
+          <button class="btn btn--primary" style="outline: 2px solid var(--l-focus-ring); outline-offset: 2px;">focused</button>
+        </div>
+        <p class="legend">▲ Light · 좌→우: primary / ghost / danger-ghost / danger-solid / primary(focus-visible)</p>
+      </div>
+      <div class="col">
+        <div class="gallery dark">
+          <button class="btn btn--primary">+ 새 메모</button>
+          <button class="btn btn--ghost" style="color: var(--d-text-primary);">취소</button>
+          <button class="btn btn--danger-ghost">🗑 삭제</button>
+          <button class="btn btn--danger-solid">삭제</button>
+          <button class="btn btn--primary" style="outline: 2px solid var(--d-focus-ring); outline-offset: 2px;">focused</button>
+        </div>
+        <p class="legend">▲ Dark · 동일 5 variant 의 dark 토큰 변형</p>
+      </div>
+    </div>
+
+    <!-- ───────── 6. Mobile preview ───────── -->
+    <h2 class="section-label">6. 모바일 (&lt; 640px) — 1단 stack 전환</h2>
+    <div class="row">
+      <div class="mobile-frame" style="position: relative;">
+        <header class="topbar">
+          <h2 class="topbar__title" style="font-size: 18px;">메모장</h2>
+          <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+        </header>
+        <aside class="sidebar">
+          <input class="sidebar__search" type="search" placeholder="메모 검색…" />
+          <ul class="list">
+            <li class="list__item is-selected">
+              <p class="list__title">회의록 — 5월 기획 킥오프</p>
+              <p class="list__preview">참석자: 김PM, 이디자인, 박dev…</p>
+              <p class="list__time">오늘 14:23</p>
+            </li>
+            <li class="list__item">
+              <p class="list__title">읽을 책 리스트</p>
+              <p class="list__preview">- 클린 아키텍처 - 도메인 주도 설계…</p>
+              <p class="list__time">어제</p>
+            </li>
+            <li class="list__item">
+              <p class="list__title">출장 준비물</p>
+              <p class="list__preview">여권, 노트북, 충전 어댑터…</p>
+              <p class="list__time">5월 8일</p>
+            </li>
+            <li class="list__item">
+              <p class="list__title">주간 회고</p>
+              <p class="list__preview">이번 주에 잘된 점…</p>
+              <p class="list__time">5월 5일</p>
+            </li>
+          </ul>
+        </aside>
+        <button class="fab" aria-label="새 메모">+</button>
+      </div>
+      <div class="mobile-frame" style="background: var(--d-bg-canvas); color: var(--d-text-primary); border-color: var(--d-border-strong);">
+        <header class="topbar" style="background: var(--d-bg-surface); border-color: var(--d-border-default);">
+          <button class="btn btn--ghost" style="color: var(--d-text-primary); padding: 0 var(--s2);">← 목록</button>
+          <button class="btn btn--danger-ghost">🗑</button>
+        </header>
+        <section class="editor" style="background: var(--d-bg-canvas);">
+          <div class="editor__meta" style="background: var(--d-bg-surface); border-color: var(--d-border-default); padding: var(--s3) var(--s4);">
+            <input class="editor__title" value="회의록 — 5월" style="font-size: 15px; color: var(--d-text-primary);" />
+          </div>
+          <div class="editor__body-wrap" style="padding: var(--s4);">
+            <textarea class="editor__textarea" style="color: var(--d-text-primary);">
+모바일에서는 list 와 editor 가 1단 stack 으로 토글됩니다.
+
+좌상단 [← 목록] 버튼으로 sidebar 로 복귀.
+하단 status bar 는 동일하게 표시.</textarea>
+          </div>
+          <div class="editor__status" style="background: var(--d-bg-surface); border-color: var(--d-border-default); color: var(--d-text-muted);">
+            <span>92자</span>
+            <span>저장됨 · 14:23</span>
+          </div>
+        </section>
+      </div>
+    </div>
+    <p class="legend">
+      ▲ 좌: list view (FAB = + 새 메모) / 우: editor full-screen overlay (좌상단 ← 목록 back button). 폭 &lt; 640px 에서 sidebar / editor 가 stack 으로 전환.
+    </p>
+
+    <p style="margin-top: var(--s7); font: 400 12px/1.5 var(--font-sans); color: #888;">
+      이 mockup 은 시안 시각 시뮬레이션입니다. 실제 구현은 <code>docs/design/notepad-BF-400.md</code> 의 토큰·명세를 single source of truth 로 따르며, dev-1 은 본 mockup 의 픽셀 일치 의무가 없습니다.
+    </p>
+  </body>
+</html>
