@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>칸반 보드</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">칸반 보드</h1>
+      <div class="topbar__actions">
+        <button type="button" class="btn btn--primary" id="btn-add-global">
+          ＋ 카드
+        </button>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="btn-theme"
+          aria-label="테마 전환"
+        >
+          ☀
+        </button>
+      </div>
+    </header>
+
+    <main class="board" id="board" aria-label="칸반 보드">
+      <!-- 컬럼·카드는 main.js render() 가 동적 생성 -->
+    </main>
+
+    <div
+      id="sr-announce"
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+    ></div>
+
+    <!-- non-module 로 순차 로드 (Task AC: ES module / import / export / fetch 0건, file:// 안전) -->
+    <script src="storage.js"></script>
+    <script src="drag.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>
