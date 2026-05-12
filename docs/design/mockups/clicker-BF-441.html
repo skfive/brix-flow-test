@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>클릭 카운터 게임 SPA 디자인 mockup · BF-441</title>
+    <style>
+      /* ============================================================
+         Clicker SPA Design Mockup (BF-441)
+         self-contained, 외부 CDN 없음 (AC §3 file:// 안전)
+         - 다크 우선 토큰 (#0d1117, #a78bfa)
+         - 라이트 페어
+         - 원형 180px 클릭 버튼
+         - 4rem+ 점수 display
+         - scale(0.95) 150ms 인터랙션
+         - 반응형 mobile preview 포함
+         ============================================================ */
+
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* dark default (AC §1) — mockup 패널은 .theme-dark / .theme-light 로 override */
+        --color-bg-canvas: #0d1117;
+        --color-bg-surface: #161b22;
+        --color-bg-subtle: #1f2530;
+        --color-border-default: #262c36;
+        --color-border-strong: #3a4150;
+        --color-text-primary: #e8e8e4;
+        --color-text-secondary: #9a9a93;
+        --color-text-muted: #6b6b66;
+        --color-accent: #a78bfa;
+        --color-accent-hover: #bda1fc;
+        --color-accent-active: #8c6df0;
+        --color-accent-on: #0d1117;
+        --color-danger: #e55858;
+        --color-focus-ring: rgba(167, 139, 250, 0.55);
+
+        --color-click-glow: rgba(167, 139, 250, 0.45);
+        --color-click-ring: rgba(167, 139, 250, 0.18);
+        --color-score-accent: #a78bfa;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --space-8: 64px;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-circle: 50%;
+
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+        --shadow-click:
+          0 8px 24px var(--color-click-glow),
+          0 0 0 6px var(--color-click-ring);
+        --shadow-click-active: 0 2px 8px var(--color-click-glow);
+
+        --motion-press: 150ms; /* AC §1: 150ms */
+        --motion-fast: 120ms;
+        --motion-mid: 220ms;
+        --ease-out: cubic-bezier(0.2, 0, 0, 1);
+        --scale-press: 0.95; /* AC §1: scale(0.95) */
+
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-score: 300 5rem/1 var(--font-mono);
+        --text-score-sm: 300 4rem/1 var(--font-mono);
+        --text-score-label: 500 13px/1.4 var(--font-sans);
+        --text-click-cta: 600 18px/1 var(--font-sans);
+        --text-label: 500 14px/1.4 var(--font-sans);
+        --text-body: 400 15px/1.65 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+        --text-button: 500 14px/1 var(--font-sans);
+      }
+
+      .theme-light {
+        --color-bg-canvas: #fafaf9;
+        --color-bg-surface: #ffffff;
+        --color-bg-subtle: #f1f1ef;
+        --color-border-default: #e5e5e2;
+        --color-border-strong: #d0d0cc;
+        --color-text-primary: #1a1a19;
+        --color-text-secondary: #6b6b66;
+        --color-text-muted: #9a9a93;
+        --color-accent: #7b5be8;
+        --color-accent-hover: #6b4fd8;
+        --color-accent-active: #5a3fc0;
+        --color-accent-on: #ffffff;
+        --color-danger: #d14343;
+        --color-focus-ring: rgba(123, 91, 232, 0.45);
+
+        --color-click-glow: rgba(123, 91, 232, 0.3);
+        --color-click-ring: rgba(123, 91, 232, 0.12);
+        --color-score-accent: #7b5be8;
+
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+      }
+
+      /* ===== mockup page chrome (외부 토큰 영향 없음) ===== */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font: var(--text-body);
+        background: #0a0d11;
+        color: #e8e8e4;
+        font-family: var(--font-sans);
+      }
+      .mockup-header {
+        padding: var(--space-6) var(--space-7);
+        border-bottom: 1px solid #2a3140;
+        background: #0a0d11;
+      }
+      .mockup-header h1 {
+        margin: 0 0 var(--space-2) 0;
+        font: 700 22px/1.3 var(--font-sans);
+      }
+      .mockup-header p {
+        margin: 0;
+        color: #9a9a93;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .mockup-header code {
+        font-family: var(--font-mono);
+        background: #1f2530;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+      .panel-grid {
+        display: grid;
+        gap: var(--space-6);
+        padding: var(--space-7);
+        grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+      }
+      .panel {
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        border: 1px solid #2a3140;
+        background: var(--color-bg-canvas);
+        display: flex;
+        flex-direction: column;
+      }
+      .panel__label {
+        padding: var(--space-3) var(--space-5);
+        background: #0a0d11;
+        color: #c9c9c1;
+        font: 600 12px/1.4 var(--font-sans);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-bottom: 1px solid #2a3140;
+      }
+      .panel__body {
+        padding: var(--space-5);
+        min-height: 560px;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+      }
+
+      /* ===== topbar (실제 SPA 마크업 시뮬레이션) ===== */
+      .topbar {
+        height: 56px;
+        padding: 0 var(--space-5);
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5))
+          var(--space-5);
+        border-radius: 0;
+      }
+      .topbar__title {
+        margin: 0;
+        font: var(--text-h1);
+        color: var(--color-text-primary);
+      }
+      .topbar__actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .btn {
+        font: var(--text-button);
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        cursor: pointer;
+        line-height: 1;
+        transition: background var(--motion-fast) var(--ease-out),
+          color var(--motion-fast) var(--ease-out);
+      }
+      .btn--ghost {
+        background: transparent;
+        color: var(--color-text-secondary);
+        border: 1px solid transparent;
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+      .btn--ghost:hover {
+        background: var(--color-bg-subtle);
+      }
+
+      /* ===== page + card ===== */
+      .page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: var(--space-6) 0 0;
+      }
+      .card.clicker {
+        width: 100%;
+        max-width: 380px;
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-7) var(--space-6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-6);
+      }
+
+      /* ===== score display (AC §1 — 4rem+ desktop / 4rem mobile) ===== */
+      .score {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .score__label {
+        font: var(--text-score-label);
+        color: var(--color-text-secondary);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .score__value {
+        font: var(--text-score); /* 5rem (≥4rem AC 충족) */
+        color: var(--color-text-primary);
+        font-variant-numeric: tabular-nums;
+        transition: color var(--motion-mid) var(--ease-out);
+        line-height: 1;
+      }
+      .score__value.is-zero {
+        color: var(--color-text-muted);
+      }
+
+      /* ===== click button (AC §1 — 180px 원형 + scale(0.95) 150ms) ===== */
+      .click-button {
+        width: 180px;
+        height: 180px;
+        border-radius: var(--radius-circle); /* 50% */
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+        font: var(--text-click-cta);
+        border: none;
+        cursor: pointer;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        box-shadow: var(--shadow-click);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          transform var(--motion-press) var(--ease-out),
+          background var(--motion-fast) var(--ease-out),
+          box-shadow var(--motion-fast) var(--ease-out);
+      }
+      .click-button:hover {
+        background: var(--color-accent-hover);
+        transform: scale(1.02);
+      }
+      .click-button:active,
+      .click-button.is-pressed {
+        background: var(--color-accent-active);
+        transform: scale(var(--scale-press)); /* 0.95 ← AC §1 */
+        box-shadow: var(--shadow-click-active);
+      }
+      .click-button:focus-visible,
+      .click-button.is-focus {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 4px;
+      }
+
+      /* ===== reset (ghost) ===== */
+      .btn--reset {
+        height: 40px;
+        min-width: 96px;
+        padding: 0 var(--space-4);
+        font: var(--text-button);
+        border-radius: var(--radius-md);
+        background: transparent;
+        border: 1px solid var(--color-border-strong);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+      }
+      .btn--reset:hover:not(:disabled) {
+        background: var(--color-bg-subtle);
+        color: var(--color-danger);
+      }
+      .btn--reset:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ===== kbd hint ===== */
+      .kbd-hint {
+        margin: var(--space-5) 0 0;
+        color: var(--color-text-muted);
+        font: var(--text-caption);
+        text-align: center;
+      }
+      kbd {
+        padding: 2px 6px;
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-subtle);
+        font: 11px/1 var(--font-mono);
+        color: var(--color-text-secondary);
+      }
+
+      /* ===== click-state showcase (4 상태 정적 표현) ===== */
+      .click-states {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-5);
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-5);
+        background: var(--color-bg-canvas);
+      }
+      .click-states__cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .click-states__cell-label {
+        font: var(--text-caption);
+        color: var(--color-text-secondary);
+      }
+      /* hover sim - same as :hover styles, applied statically */
+      .click-button.sim-hover {
+        background: var(--color-accent-hover);
+        transform: scale(1.02);
+      }
+      .click-button.sim-active {
+        background: var(--color-accent-active);
+        transform: scale(var(--scale-press));
+        box-shadow: var(--shadow-click-active);
+      }
+      .click-button.sim-focus {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 4px;
+      }
+
+      /* ===== mobile preview frame ===== */
+      .mobile-frame {
+        width: 360px;
+        margin: 0 auto;
+        border: 8px solid #2a3140;
+        border-radius: 32px;
+        overflow: hidden;
+        background: var(--color-bg-canvas);
+      }
+      .mobile-frame .topbar {
+        margin: 0;
+      }
+      .mobile-frame .page {
+        padding: var(--space-5) var(--space-4);
+      }
+      .mobile-frame .card.clicker {
+        max-width: 100%;
+        padding: var(--space-6) var(--space-5);
+      }
+      .mobile-frame .score__value {
+        font: var(--text-score-sm); /* 4rem ← AC §1 mobile */
+      }
+      .mobile-frame .btn--reset {
+        min-width: 100%;
+      }
+
+      /* ===== legend / annotation ===== */
+      .legend {
+        background: var(--color-bg-subtle);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-md);
+        padding: var(--space-3) var(--space-4);
+        font: var(--text-caption);
+        color: var(--color-text-secondary);
+        line-height: 1.6;
+        margin-top: var(--space-5);
+      }
+      .legend strong {
+        color: var(--color-text-primary);
+      }
+      .legend code {
+        font-family: var(--font-mono);
+        background: var(--color-bg-canvas);
+        padding: 0 4px;
+        border-radius: 2px;
+      }
+
+      /* ===== token swatch row (AC 시각 검증) ===== */
+      .swatch-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        padding: var(--space-5);
+        background: var(--color-bg-canvas);
+        border-top: 1px solid var(--color-border-default);
+      }
+      .swatch {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .swatch__chip {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border-default);
+      }
+      .swatch__text {
+        font: var(--text-caption);
+        font-family: var(--font-mono);
+        color: var(--color-text-secondary);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .click-button {
+          transition: background var(--motion-fast) var(--ease-out);
+        }
+        .click-button:hover,
+        .click-button:active,
+        .click-button.is-pressed,
+        .click-button.sim-hover,
+        .click-button.sim-active {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="mockup-header">
+      <h1>클릭 카운터 게임 SPA · BF-441 디자인 mockup</h1>
+      <p>
+        명세: <code>docs/design/clicker-BF-441.md</code> · fast mode
+        self-critique · 외부 의존성 0건 (file:// 안전, AC §3 매핑)
+      </p>
+    </header>
+
+    <div class="panel-grid">
+      <!-- ========== Panel 1: 다크 default · 점수 0 (idle) ========== -->
+      <section class="panel">
+        <div class="panel__label">다크 default · 점수 0 (idle 빈 상태)</div>
+        <div class="panel__body">
+          <header class="topbar">
+            <h1 class="topbar__title">클릭 카운터</h1>
+            <div class="topbar__actions">
+              <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+            </div>
+          </header>
+
+          <main class="page">
+            <section class="card clicker" aria-label="클릭 카운터 게임">
+              <div class="score">
+                <span class="score__label">점수</span>
+                <span class="score__value is-zero">0</span>
+              </div>
+
+              <button
+                type="button"
+                class="click-button"
+                aria-label="클릭하여 점수 +1"
+              >
+                Click!
+              </button>
+
+              <button
+                type="button"
+                class="btn btn--reset"
+                aria-label="점수 리셋"
+                disabled
+              >
+                ⟲ Reset
+              </button>
+            </section>
+
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 클릭 · <kbd>R</kbd> 리셋 · <kbd>T</kbd> 테마
+            </p>
+          </main>
+
+          <div class="legend">
+            <strong>idle 상태</strong>: score 텍스트
+            <code>--color-text-muted</code> (회색),
+            reset 버튼 <code>disabled</code>, 클릭 버튼은 enabled (entry point).
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Panel 2: 다크 · 점수 42 (active) ========== -->
+      <section class="panel">
+        <div class="panel__label">다크 · 점수 42 (active)</div>
+        <div class="panel__body">
+          <header class="topbar">
+            <h1 class="topbar__title">클릭 카운터</h1>
+            <div class="topbar__actions">
+              <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+            </div>
+          </header>
+
+          <main class="page">
+            <section class="card clicker" aria-label="클릭 카운터 게임">
+              <div class="score">
+                <span class="score__label">점수</span>
+                <span class="score__value">42</span>
+              </div>
+
+              <button
+                type="button"
+                class="click-button"
+                aria-label="클릭하여 점수 +1"
+              >
+                Click!
+              </button>
+
+              <button
+                type="button"
+                class="btn btn--reset"
+                aria-label="점수 리셋"
+              >
+                ⟲ Reset
+              </button>
+            </section>
+
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 클릭 · <kbd>R</kbd> 리셋 · <kbd>T</kbd> 테마
+            </p>
+          </main>
+
+          <div class="legend">
+            <strong>active 상태</strong>: score
+            <code>--color-text-primary</code> (밝은 색), reset enabled.
+            <code>font-variant-numeric: tabular-nums</code> 로 자릿수 안정.
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Panel 3: 다크 · 점수 999 (자릿수 확인) ========== -->
+      <section class="panel">
+        <div class="panel__label">다크 · 점수 999 (tabular-nums 검증)</div>
+        <div class="panel__body">
+          <header class="topbar">
+            <h1 class="topbar__title">클릭 카운터</h1>
+            <div class="topbar__actions">
+              <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+            </div>
+          </header>
+
+          <main class="page">
+            <section class="card clicker" aria-label="클릭 카운터 게임">
+              <div class="score">
+                <span class="score__label">점수</span>
+                <span class="score__value">999</span>
+              </div>
+
+              <button
+                type="button"
+                class="click-button"
+                aria-label="클릭하여 점수 +1"
+              >
+                Click!
+              </button>
+
+              <button
+                type="button"
+                class="btn btn--reset"
+                aria-label="점수 리셋"
+              >
+                ⟲ Reset
+              </button>
+            </section>
+
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 클릭 · <kbd>R</kbd> 리셋 · <kbd>T</kbd> 테마
+            </p>
+          </main>
+
+          <div class="legend">
+            <strong>3 자릿수</strong>: mono + tabular-nums 로 가로폭 흔들림 없음.
+            v1 은 7 자리 (~10M) 까지 정상 표시 가정.
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Panel 4: 라이트 페어 · 점수 7 ========== -->
+      <section class="panel theme-light">
+        <div class="panel__label">라이트 페어 · 점수 7 (토큰 검증)</div>
+        <div class="panel__body">
+          <header class="topbar">
+            <h1 class="topbar__title">클릭 카운터</h1>
+            <div class="topbar__actions">
+              <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+            </div>
+          </header>
+
+          <main class="page">
+            <section class="card clicker" aria-label="클릭 카운터 게임">
+              <div class="score">
+                <span class="score__label">점수</span>
+                <span class="score__value">7</span>
+              </div>
+
+              <button
+                type="button"
+                class="click-button"
+                aria-label="클릭하여 점수 +1"
+              >
+                Click!
+              </button>
+
+              <button
+                type="button"
+                class="btn btn--reset"
+                aria-label="점수 리셋"
+              >
+                ⟲ Reset
+              </button>
+            </section>
+
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 클릭 · <kbd>R</kbd> 리셋 · <kbd>T</kbd> 테마
+            </p>
+          </main>
+
+          <div class="legend">
+            <strong>라이트 모드</strong>: <code>[data-theme="light"]</code>
+            대신 mockup 에서는 <code>.theme-light</code> 클래스로 동일 토큰 override 시뮬레이션.
+            accent 색 <code>#7B5BE8</code>, accent-on 텍스트 <code>#FFFFFF</code>.
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Panel 5: 클릭 버튼 4 상태 (정적 표현) ========== -->
+      <section class="panel" style="grid-column: 1 / -1">
+        <div class="panel__label">
+          클릭 버튼 4 상태 (default / hover / active(scale 0.95) / focus-visible)
+        </div>
+        <div class="click-states">
+          <div class="click-states__cell">
+            <button
+              type="button"
+              class="click-button"
+              aria-label="default 상태"
+              tabindex="-1"
+            >
+              Click!
+            </button>
+            <span class="click-states__cell-label">default</span>
+          </div>
+          <div class="click-states__cell">
+            <button
+              type="button"
+              class="click-button sim-hover"
+              aria-label="hover 상태"
+              tabindex="-1"
+            >
+              Click!
+            </button>
+            <span class="click-states__cell-label">
+              :hover (scale 1.02)
+            </span>
+          </div>
+          <div class="click-states__cell">
+            <button
+              type="button"
+              class="click-button sim-active"
+              aria-label="active 상태"
+              tabindex="-1"
+            >
+              Click!
+            </button>
+            <span class="click-states__cell-label">
+              :active / .is-pressed
+              <br />
+              <code style="font-family: var(--font-mono); font-size: 11px">
+                scale(0.95) · 150ms
+              </code>
+            </span>
+          </div>
+          <div class="click-states__cell">
+            <button
+              type="button"
+              class="click-button sim-focus"
+              aria-label="focus-visible 상태"
+              tabindex="-1"
+            >
+              Click!
+            </button>
+            <span class="click-states__cell-label">
+              :focus-visible (키보드 outline)
+            </span>
+          </div>
+        </div>
+        <div class="legend">
+          <strong>AC §1 매핑</strong>:
+          <code>transform: scale(0.95)</code> +
+          <code>transition: transform 150ms ease-out</code>.
+          키보드 (<kbd>Space</kbd>/<kbd>Enter</kbd>) 트리거 시 JS 가
+          <code>.is-pressed</code> 클래스를 150ms 동안 토글해 마우스 <code>:active</code> 와
+          시각 동기.
+        </div>
+      </section>
+
+      <!-- ========== Panel 6: 모바일 (< 640px) 레이아웃 ========== -->
+      <section class="panel" style="grid-column: 1 / -1">
+        <div class="panel__label">
+          모바일 (&lt; 640px) 반응형 — 점수 4rem (AC §1 매핑)
+        </div>
+        <div
+          class="panel__body"
+          style="padding: var(--space-6); background: #0a0d11"
+        >
+          <div class="mobile-frame">
+            <header class="topbar">
+              <h1 class="topbar__title">클릭 카운터</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+              </div>
+            </header>
+            <main class="page">
+              <section class="card clicker" aria-label="클릭 카운터 게임">
+                <div class="score">
+                  <span class="score__label">점수</span>
+                  <span class="score__value">128</span>
+                </div>
+                <button
+                  type="button"
+                  class="click-button"
+                  aria-label="클릭하여 점수 +1"
+                >
+                  Click!
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--reset"
+                  aria-label="점수 리셋"
+                >
+                  ⟲ Reset
+                </button>
+              </section>
+              <p class="kbd-hint">
+                <kbd>Space</kbd> 클릭 · <kbd>R</kbd> 리셋
+              </p>
+            </main>
+          </div>
+          <div class="legend">
+            <strong>mobile 변동</strong>: score
+            <code>--text-score-sm</code> (4rem / 64px) · card max-width
+            100% · reset 버튼 카드 폭 채움. 클릭 버튼 180×180 은 유지 (터치 타깃
+            ≥ 48px AAA 충족).
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Panel 7: 핵심 토큰 swatch (시각 검증) ========== -->
+      <section class="panel" style="grid-column: 1 / -1">
+        <div class="panel__label">핵심 토큰 swatch (AC §1 다크 토큰 검증)</div>
+        <div class="swatch-row">
+          <div class="swatch">
+            <div
+              class="swatch__chip"
+              style="background: #0d1117"
+            ></div>
+            <span class="swatch__text">
+              --color-bg-canvas: #0d1117 (AC)
+            </span>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__chip"
+              style="background: #161b22"
+            ></div>
+            <span class="swatch__text">
+              --color-bg-surface: #161b22
+            </span>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__chip"
+              style="background: #a78bfa"
+            ></div>
+            <span class="swatch__text">
+              --color-accent: #a78bfa (AC)
+            </span>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__chip"
+              style="background: #bda1fc"
+            ></div>
+            <span class="swatch__text">
+              --color-accent-hover: #bda1fc
+            </span>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__chip"
+              style="background: #8c6df0"
+            ></div>
+            <span class="swatch__text">
+              --color-accent-active: #8c6df0
+            </span>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__chip"
+              style="background: #e8e8e4"
+            ></div>
+            <span class="swatch__text">
+              --color-text-primary: #e8e8e4
+            </span>
+          </div>
+          <div class="swatch">
+            <div
+              class="swatch__chip"
+              style="background: #6b6b66"
+            ></div>
+            <span class="swatch__text">
+              --color-text-muted: #6b6b66
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!--
+      외부 의존성 0건 · ES module 미사용 · fetch 미사용 · 외부 CDN 미사용
+      → AC §3 (file:// 직접 열기 안전) 충족.
+      더블클릭으로 본 파일을 열면 위 시안이 정상 렌더됩니다.
+    -->
+  </body>
+</html>
