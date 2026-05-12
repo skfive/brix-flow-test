@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>날씨 카드 SPA 디자인 mockup · BF-435</title>
+    <style>
+      /* ============================================================
+         Weather SPA Design Mockup (BF-435)
+         self-contained — 외부 CDN · SVG · 웹폰트 0건 (file:// 호환)
+         ============================================================ */
+
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* color — light (default) */
+        --color-bg-canvas: #f6f8fa;
+        --color-bg-surface: #ffffff;
+        --color-bg-elevated: #f1f4f8;
+        --color-bg-subtle: #eaeef2;
+        --color-border-default: #d0d7de;
+        --color-border-strong: #afb8c1;
+        --color-text-primary: #1f2328;
+        --color-text-secondary: #59636e;
+        --color-text-muted: #848d97;
+        --color-accent: #0284c7;
+        --color-accent-hover: #0369a1;
+        --color-accent-soft: rgba(2, 132, 199, 0.10);
+        --color-focus-ring: rgba(2, 132, 199, 0.45);
+        --color-shadow-card: rgba(15, 23, 42, 0.08);
+        --color-shadow-card-hover: rgba(15, 23, 42, 0.14);
+
+        /* state halo — light */
+        --state-sunny: rgba(234, 179, 8, 0.14);
+        --state-cloudy: rgba(100, 116, 139, 0.12);
+        --state-rainy: rgba(59, 130, 246, 0.14);
+        --state-snowy: rgba(125, 211, 252, 0.18);
+        --state-thunder: rgba(147, 51, 234, 0.14);
+        --state-windy: rgba(13, 148, 136, 0.12);
+
+        /* spacing */
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-7: 32px;
+        --space-8: 48px;
+
+        /* radius / shadow */
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 14px;
+        --radius-pill: 999px;
+        --shadow-card: 0 4px 14px var(--color-shadow-card);
+        --shadow-card-hover: 0 10px 28px var(--color-shadow-card-hover);
+
+        /* motion */
+        --motion-fast: 120ms;
+        --motion-mid: 200ms; /* AC: 카드 hover transition */
+        --motion-slow: 280ms; /* 진입 fade-in */
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+
+        /* typography */
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-temp: 300 3rem/1 var(--font-mono);
+        --text-temp-unit: 500 1rem/1 var(--font-sans);
+        --text-city: 600 18px/1.3 var(--font-sans);
+        --text-state: 500 14px/1.4 var(--font-sans);
+        --text-metric-val: 600 14px/1.3 var(--font-sans);
+        --text-metric-label: 500 12px/1.3 var(--font-sans);
+        --text-body: 400 15px/1.65 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+        --text-button: 500 14px/1 var(--font-sans);
+      }
+
+      .theme-dark {
+        --color-bg-canvas: #0d1117; /* AC */
+        --color-bg-surface: #161b22;
+        --color-bg-elevated: #1c222b;
+        --color-bg-subtle: #21262d;
+        --color-border-default: #30363d;
+        --color-border-strong: #444c56;
+        --color-text-primary: #e6edf3;
+        --color-text-secondary: #9da7b3;
+        --color-text-muted: #6e7681;
+        --color-accent: #38bdf8; /* AC */
+        --color-accent-hover: #7dd3fc;
+        --color-accent-soft: rgba(56, 189, 248, 0.12);
+        --color-focus-ring: rgba(56, 189, 248, 0.55);
+        --color-shadow-card: rgba(0, 0, 0, 0.40);
+        --color-shadow-card-hover: rgba(0, 0, 0, 0.55);
+
+        --state-sunny: rgba(250, 204, 21, 0.16);
+        --state-cloudy: rgba(148, 163, 184, 0.16);
+        --state-rainy: rgba(96, 165, 250, 0.18);
+        --state-snowy: rgba(186, 230, 253, 0.20);
+        --state-thunder: rgba(192, 132, 252, 0.18);
+        --state-windy: rgba(45, 212, 191, 0.16);
+      }
+
+      /* ---------- base reset (mockup-only outer chrome) ---------- */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font: var(--text-body);
+        background: #303035;
+        color: #e8e8e4;
+        min-height: 100vh;
+        padding: 24px;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .mockup-header {
+        max-width: 1240px;
+        margin: 0 auto 24px;
+      }
+      .mockup-header h1 {
+        font: 600 24px/1.3 var(--font-sans);
+        margin-bottom: 4px;
+      }
+      .mockup-header p {
+        font: 400 14px/1.5 var(--font-sans);
+        color: #b8b8b1;
+      }
+      .mockup-grid {
+        display: grid;
+        gap: 24px;
+        max-width: 1240px;
+        margin: 0 auto;
+      }
+
+      .mockup-panel {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+      }
+      .mockup-panel__label {
+        font: 600 12px/1 var(--font-sans);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #b8b8b1;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      }
+      .mockup-panel__viewport {
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        min-height: 720px;
+      }
+
+      /* ============================================================
+         Weather SPA — actual styles (본 명세 §7.3 ~ §4.x 그대로)
+         ============================================================ */
+
+      .topbar {
+        height: 56px;
+        padding: 0 var(--space-7);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--color-bg-canvas);
+        border-bottom: 1px solid var(--color-border-default);
+      }
+      .topbar__title {
+        font: var(--text-h1);
+        color: var(--color-text-primary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .topbar__title span[aria-hidden] {
+        font-size: 1.5rem;
+        line-height: 1;
+      }
+      .topbar__actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+
+      .btn {
+        cursor: pointer;
+        font: var(--text-button);
+        color: var(--color-text-primary);
+      }
+      .btn--secondary {
+        height: 36px;
+        padding: 0 var(--space-4);
+        border-radius: var(--radius-md);
+        background: transparent;
+        border: 1px solid var(--color-border-default);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        transition: background var(--motion-mid) var(--ease-standard),
+          border-color var(--motion-mid) var(--ease-standard),
+          color var(--motion-mid) var(--ease-standard);
+      }
+      .btn--secondary:hover {
+        background: var(--color-accent-soft);
+        border-color: var(--color-accent);
+        color: var(--color-accent);
+      }
+      .btn--ghost-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-md);
+        background: transparent;
+        border: none;
+        font-size: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background var(--motion-mid) var(--ease-standard);
+      }
+      .btn--ghost-icon:hover {
+        background: var(--color-bg-subtle);
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+
+      .page {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: var(--space-8) var(--space-7);
+      }
+
+      .grid {
+        display: grid;
+        gap: var(--space-6);
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      /* 카드 본체 */
+      .card {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-6) var(--space-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        transition: transform var(--motion-mid) var(--ease-standard),
+          box-shadow var(--motion-mid) var(--ease-standard),
+          border-color var(--motion-mid) var(--ease-standard),
+          background var(--motion-mid) var(--ease-standard);
+        animation: card-enter var(--motion-slow) var(--ease-emphasized) both;
+      }
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-card-hover);
+        border-color: var(--color-border-strong);
+        background: var(--color-bg-elevated);
+      }
+      .card:active {
+        transform: translateY(-2px);
+      }
+      .card__head {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .card__emoji {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem; /* AC: 이모지 3rem */
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .card__city {
+        font: var(--text-city);
+        color: var(--color-text-primary);
+      }
+      .card__temp {
+        display: flex;
+        align-items: baseline;
+        gap: 2px;
+        margin-top: var(--space-2);
+      }
+      .card__temp-val {
+        font: var(--text-temp); /* AC: 온도 3rem */
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-primary);
+      }
+      .card__temp-unit {
+        font: var(--text-temp-unit);
+        color: var(--color-accent);
+      }
+      .card__state {
+        font: var(--text-state);
+        color: var(--color-text-secondary);
+      }
+      .card__metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin-top: var(--space-2);
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: 6px 10px;
+        border-radius: var(--radius-md);
+        background: var(--color-bg-subtle);
+      }
+      .chip span[aria-hidden] {
+        font-size: 1rem;
+        line-height: 1;
+      }
+      .chip__val {
+        font: var(--text-metric-val);
+        color: var(--color-text-primary);
+      }
+      .chip__val .muted {
+        color: var(--color-text-muted);
+        font-weight: 500;
+      }
+
+      /* state halo 매핑 */
+      .card[data-state="sunny"] .card__emoji {
+        background: var(--state-sunny);
+      }
+      .card[data-state="cloudy"] .card__emoji {
+        background: var(--state-cloudy);
+      }
+      .card[data-state="rainy"] .card__emoji {
+        background: var(--state-rainy);
+      }
+      .card[data-state="snowy"] .card__emoji {
+        background: var(--state-snowy);
+      }
+      .card[data-state="thunder"] .card__emoji {
+        background: var(--state-thunder);
+      }
+      .card[data-state="windy"] .card__emoji {
+        background: var(--state-windy);
+      }
+
+      /* fade-in stagger */
+      @keyframes card-enter {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .card:nth-child(1) {
+        animation-delay: 0ms;
+      }
+      .card:nth-child(2) {
+        animation-delay: 80ms;
+      }
+      .card:nth-child(3) {
+        animation-delay: 160ms;
+      }
+      .card:nth-child(4) {
+        animation-delay: 240ms;
+      }
+      .card:nth-child(5) {
+        animation-delay: 320ms;
+      }
+      .card:nth-child(6) {
+        animation-delay: 400ms;
+      }
+
+      /* kbd hint */
+      .kbd-hint {
+        text-align: center;
+        font: var(--text-caption);
+        color: var(--color-text-muted);
+        margin-top: var(--space-7);
+      }
+      kbd {
+        padding: 2px 6px;
+        border: 1px solid var(--color-border-default);
+        border-radius: 3px;
+        background: var(--color-bg-subtle);
+        color: var(--color-text-secondary);
+        font: 11px/1 var(--font-mono);
+        margin: 0 2px;
+      }
+
+      /* 반응형 — desktop / tablet / mobile (실제 SPA 와 동일) */
+      @media (max-width: 959px) {
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 599px) {
+        .grid {
+          grid-template-columns: 1fr;
+          gap: var(--space-4);
+        }
+        .page {
+          padding: var(--space-6) var(--space-4);
+        }
+        .topbar {
+          padding: 0 var(--space-4);
+        }
+        .card {
+          padding: var(--space-6) var(--space-4);
+        }
+      }
+
+      /* prefers-reduced-motion 가드 */
+      @media (prefers-reduced-motion: reduce) {
+        .card {
+          animation: none;
+          transition: none;
+        }
+        .card:hover {
+          transform: none;
+        }
+      }
+
+      /* ============================================================
+         Mockup viewport sub-frames (mobile preview 강제 폭)
+         ============================================================ */
+      .mockup-panel--mobile .mockup-panel__viewport {
+        max-width: 420px;
+        margin: 24px auto;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 12px;
+        overflow: hidden;
+        min-height: 600px;
+      }
+      .mockup-panel--mobile .grid {
+        /* viewport 자체가 좁아져도 보장 — 1열 */
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+      }
+      .mockup-panel--mobile .page {
+        padding: var(--space-6) var(--space-4);
+      }
+      .mockup-panel--mobile .topbar {
+        padding: 0 var(--space-4);
+      }
+      .mockup-panel--mobile .card {
+        padding: var(--space-6) var(--space-4);
+      }
+
+      /* 인터랙션 가이드 패널 */
+      .guide {
+        max-width: 1240px;
+        margin: 32px auto 0;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 24px;
+        font: 400 14px/1.6 var(--font-sans);
+        color: #d8d8d4;
+      }
+      .guide h2 {
+        font: 600 16px/1.3 var(--font-sans);
+        margin-bottom: 12px;
+        color: #f0f0eb;
+      }
+      .guide ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .guide li {
+        margin-bottom: 6px;
+      }
+      .guide code {
+        background: rgba(56, 189, 248, 0.12);
+        color: #7dd3fc;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font: 12px/1.4 var(--font-mono);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="mockup-header">
+      <h1>날씨 카드 SPA · 디자인 mockup (BF-435)</h1>
+      <p>
+        다크 우선 (#0d1117 / #38bdf8) · 카드 grid 3·2·1 열 · 이모지 3rem · hover lift 200ms · stagger fade-in 80ms · file:// 호환
+      </p>
+    </header>
+
+    <div class="mockup-grid">
+      <!-- =============================================================
+           다크 패널 (default · AC primary)
+           ============================================================= -->
+      <section class="mockup-panel">
+        <div class="mockup-panel__label">DARK THEME · default (3 열 desktop)</div>
+        <div class="mockup-panel__viewport theme-dark">
+          <header class="topbar">
+            <h1 class="topbar__title">
+              <span aria-hidden="true">🌤</span> 날씨
+            </h1>
+            <div class="topbar__actions">
+              <button
+                type="button"
+                class="btn btn--secondary"
+                aria-label="데이터 새로고침"
+              >
+                <span aria-hidden="true">⟳</span> 새로고침
+              </button>
+              <button
+                type="button"
+                class="btn btn--ghost-icon"
+                aria-label="테마 전환"
+              >
+                🌙
+              </button>
+            </div>
+          </header>
+
+          <main class="page">
+            <section class="grid" aria-label="도시별 현재 날씨">
+              <article class="card" data-state="sunny" aria-label="서울 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☀️</span>
+                  <h2 class="card__city">서울</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">24</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Sunny</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 3 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">3 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 42%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">42<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="cloudy" aria-label="Tokyo 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☁️</span>
+                  <h2 class="card__city">Tokyo</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">19</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Cloudy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 2 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">2 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 68%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">68<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="rainy" aria-label="New York 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">🌧️</span>
+                  <h2 class="card__city">New York</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">12</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Rainy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 5 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">5 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 84%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">84<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="cloudy" aria-label="London 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☁️</span>
+                  <h2 class="card__city">London</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">15</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Cloudy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 4 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">4 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 72%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">72<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="snowy" aria-label="Sydney 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">❄️</span>
+                  <h2 class="card__city">Sydney</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">-2</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Snowy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 6 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">6 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 51%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">51<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="sunny" aria-label="Dubai 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☀️</span>
+                  <h2 class="card__city">Dubai</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">36</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Sunny</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 2 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">2 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 18%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">18<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+            </section>
+
+            <p class="kbd-hint">
+              <kbd>R</kbd> 새로고침 ·
+              <kbd>T</kbd> 테마
+            </p>
+          </main>
+        </div>
+      </section>
+
+      <!-- =============================================================
+           라이트 패널 (토큰 페어 시각 검증)
+           ============================================================= -->
+      <section class="mockup-panel">
+        <div class="mockup-panel__label">LIGHT THEME · 토글 시 (토큰 페어 검증)</div>
+        <div class="mockup-panel__viewport">
+          <header class="topbar">
+            <h1 class="topbar__title">
+              <span aria-hidden="true">🌤</span> 날씨
+            </h1>
+            <div class="topbar__actions">
+              <button
+                type="button"
+                class="btn btn--secondary"
+                aria-label="데이터 새로고침"
+              >
+                <span aria-hidden="true">⟳</span> 새로고침
+              </button>
+              <button
+                type="button"
+                class="btn btn--ghost-icon"
+                aria-label="테마 전환"
+              >
+                ☀
+              </button>
+            </div>
+          </header>
+
+          <main class="page">
+            <section class="grid" aria-label="도시별 현재 날씨">
+              <article class="card" data-state="sunny" aria-label="서울 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☀️</span>
+                  <h2 class="card__city">서울</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">24</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Sunny</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 3 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">3 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 42%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">42<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="cloudy" aria-label="Tokyo 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☁️</span>
+                  <h2 class="card__city">Tokyo</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">19</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Cloudy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 2 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">2 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 68%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">68<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="rainy" aria-label="New York 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">🌧️</span>
+                  <h2 class="card__city">New York</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">12</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Rainy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 5 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">5 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 84%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">84<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="cloudy" aria-label="London 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☁️</span>
+                  <h2 class="card__city">London</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">15</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Cloudy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 4 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">4 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 72%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">72<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="snowy" aria-label="Sydney 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">❄️</span>
+                  <h2 class="card__city">Sydney</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">-2</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Snowy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 6 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">6 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 51%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">51<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="sunny" aria-label="Dubai 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☀️</span>
+                  <h2 class="card__city">Dubai</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">36</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Sunny</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 2 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">2 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 18%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">18<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+            </section>
+
+            <p class="kbd-hint">
+              <kbd>R</kbd> 새로고침 ·
+              <kbd>T</kbd> 테마
+            </p>
+          </main>
+        </div>
+      </section>
+
+      <!-- =============================================================
+           모바일 1열 미리보기 (다크)
+           ============================================================= -->
+      <section class="mockup-panel mockup-panel--mobile">
+        <div class="mockup-panel__label">
+          MOBILE · &lt; 600px (1 열) — 폭 강제 420px viewport
+        </div>
+        <div class="mockup-panel__viewport theme-dark">
+          <header class="topbar">
+            <h1 class="topbar__title">
+              <span aria-hidden="true">🌤</span> 날씨
+            </h1>
+            <div class="topbar__actions">
+              <button
+                type="button"
+                class="btn btn--ghost-icon"
+                aria-label="테마 전환"
+              >
+                🌙
+              </button>
+            </div>
+          </header>
+
+          <main class="page">
+            <section class="grid" aria-label="도시별 현재 날씨">
+              <article class="card" data-state="sunny" aria-label="서울 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">☀️</span>
+                  <h2 class="card__city">서울</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">24</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Sunny</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 3 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">3 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 42%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">42<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+
+              <article class="card" data-state="rainy" aria-label="New York 날씨">
+                <header class="card__head">
+                  <span class="card__emoji" aria-hidden="true">🌧️</span>
+                  <h2 class="card__city">New York</h2>
+                </header>
+                <div class="card__temp">
+                  <span class="card__temp-val">12</span
+                  ><span class="card__temp-unit">°C</span>
+                </div>
+                <p class="card__state">Rainy</p>
+                <div class="card__metrics">
+                  <span class="chip" aria-label="풍속 5 m/s">
+                    <span aria-hidden="true">💨</span>
+                    <span class="chip__val">5 <span class="muted">m/s</span></span>
+                  </span>
+                  <span class="chip" aria-label="습도 84%">
+                    <span aria-hidden="true">💧</span>
+                    <span class="chip__val">84<span class="muted">%</span></span>
+                  </span>
+                </div>
+              </article>
+            </section>
+
+            <p class="kbd-hint">
+              <kbd>R</kbd> 새로고침 ·
+              <kbd>T</kbd> 테마
+            </p>
+          </main>
+        </div>
+      </section>
+    </div>
+
+    <!-- =============================================================
+         인터랙션 가이드 (정적 캡처 외 motion 명세 설명)
+         ============================================================= -->
+    <section class="guide">
+      <h2>인터랙션 시각 가이드</h2>
+      <ul>
+        <li>
+          <strong>카드 hover lift</strong>: <code>transform: translateY(-4px)</code> + box-shadow 강화 +
+          border-color 강화, 모두 <code>200ms cubic-bezier(0.2, 0, 0, 1)</code> 일치 (AC 명시).
+          본 mockup HTML 을 브라우저로 직접 열어 카드 hover 시 확인 가능.
+        </li>
+        <li>
+          <strong>페이지 진입 stagger fade-in</strong>: 카드 6장이 80ms 간격 (0 → 400ms) 으로
+          <code>opacity 0 → 1</code>, <code>translateY 8px → 0</code>, 각각 280ms
+          <code>cubic-bezier(0.2, 0, 0, 1.2)</code>. 본 mockup 페이지 로드 시 자동 재생.
+        </li>
+        <li>
+          <strong>이모지 halo</strong>: <code>data-state</code> attribute (sunny / cloudy / rainy / snowy /
+          thunder / windy) 에 따라 이모지 뒤 원형 배경 색이 자동 매핑. 카드 본체 톤을 흩뜨리지 않도록
+          16% 이하 opacity 사용.
+        </li>
+        <li>
+          <strong>다크 토큰 페어</strong>: <code>--color-bg-canvas: #0d1117</code> (GitHub Dark) +
+          <code>--color-accent: #38bdf8</code> (Tailwind sky-400) — AC 직접 명시. 온도 단위 <code>°C</code>
+          가 accent 색으로 표시 (시각 anchor).
+        </li>
+        <li>
+          <strong>반응형 grid</strong>: 본 mockup 의 다크/라이트 패널은 desktop 3 열 고정 (1240px viewport),
+          하단 mobile 패널은 420px 폭 강제 → 1 열. tablet 2 열은 브라우저 폭을 600 ~ 959 사이로 줄여 확인.
+        </li>
+        <li>
+          <strong>file:// 호환</strong>: 본 mockup HTML 은 외부 CDN · SVG · 웹폰트 · <code>fetch()</code> ·
+          <code>import</code> 0 건. <code>file:///…/weather-BF-435.html</code> 로 직접 열어도 동작.
+          DevTools console 의 에러 / Network 외부 호출도 0 건이어야 합니다.
+        </li>
+        <li>
+          <strong>prefers-reduced-motion</strong>: OS / 브라우저 설정에서 모션 감소 활성 시 모든
+          animation · transition · hover transform 비활성 — 카드 즉시 표시.
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>
