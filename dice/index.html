@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>주사위</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // BF-448 · 다크 default 강제 (명세 §6.5 / §7.2) — flicker 방지 위해 head 인라인
+      // pomodoro/clicker/index.html 의 패턴 복제 (명세 §9.2)
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {
+          // localStorage 사용 불가 환경 (private mode 등) — default 다크 유지
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">주사위</h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="theme-toggle"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- 주사위 박스 (1~5개 가변 — 작업 AC) + 굴리기 CTA -->
+      <section class="card dice-card" aria-label="주사위">
+        <!-- 주사위 개수 선택 (1~5) -->
+        <fieldset class="dice-count" aria-label="주사위 개수">
+          <legend class="dice-count__legend">개수</legend>
+          <div class="dice-count__group" role="radiogroup" aria-label="주사위 개수 선택">
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="1"
+              role="radio"
+              aria-checked="false"
+            >1</button>
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="2"
+              role="radio"
+              aria-checked="true"
+            >2</button>
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="3"
+              role="radio"
+              aria-checked="false"
+            >3</button>
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="4"
+              role="radio"
+              aria-checked="false"
+            >4</button>
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="5"
+              role="radio"
+              aria-checked="false"
+            >5</button>
+          </div>
+        </fieldset>
+
+        <div
+          class="dice-box"
+          id="dice-box"
+          role="group"
+          aria-label="주사위 결과"
+        >
+          <!-- main.js 가 렌더 — 초기엔 2개 ⚀ ⚀ -->
+        </div>
+
+        <button
+          type="button"
+          class="roll-button"
+          id="btn-roll"
+          aria-label="주사위 굴리기"
+        >
+          🎲 굴리기
+        </button>
+      </section>
+
+      <!-- 통계 카드 (단일 굴림 기준 — 합계 / 평균 / 최대) -->
+      <section class="card stats-card" aria-labelledby="stats-title">
+        <h2 id="stats-title" class="sr-only">현재 굴림 통계</h2>
+        <div class="stat-row stat-row--sum">
+          <span class="stat-row__label">합계</span>
+          <span
+            class="stat-row__value stat-row__value--sum"
+            id="stat-sum"
+            aria-label="합계"
+            >--</span
+          >
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">평균</span>
+          <span class="stat-row__value" id="stat-avg" aria-label="평균">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">최대</span>
+          <span class="stat-row__value" id="stat-max" aria-label="최대">--</span>
+        </div>
+      </section>
+
+      <!-- 히스토리 (compact row · 최근 10건 cap — 작업 AC) -->
+      <section class="card history-card" aria-labelledby="history-title">
+        <div class="history-card__header">
+          <h2 id="history-title" class="history-card__title">히스토리</h2>
+          <button
+            type="button"
+            class="btn btn--ghost btn--danger-ghost"
+            id="btn-clear-history"
+            aria-label="히스토리 전체 삭제"
+            disabled
+          >
+            ⌫ 전체 삭제
+          </button>
+        </div>
+        <ul class="history-list" id="history-list">
+          <li class="history-empty" id="history-empty">아직 굴림 기록 없음</li>
+        </ul>
+      </section>
+
+      <p class="kbd-hint">
+        <kbd>Space</kbd> 굴리기 · <kbd>1</kbd>–<kbd>5</kbd> 개수 ·
+        <kbd>T</kbd> 테마
+      </p>
+    </main>
+
+    <!-- 전체 삭제 확인 모달 (작업 AC: "전체 삭제 확인 모달") -->
+    <div
+      class="modal-backdrop"
+      id="modal-backdrop"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div class="modal">
+        <h2 class="modal__title" id="modal-title">히스토리 전체 삭제</h2>
+        <p class="modal__body" id="modal-body">
+          최근 10건의 굴림 기록을 모두 삭제합니다. 이 동작은 되돌릴 수 없습니다.
+        </p>
+        <div class="modal__actions">
+          <button
+            type="button"
+            class="btn btn--ghost"
+            id="modal-cancel"
+            aria-label="취소"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            class="btn btn--danger"
+            id="modal-confirm"
+            aria-label="히스토리 삭제 확정"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 비-module script — file:// CORS 안전 (명세 §6.7 / §9.4) -->
+    <script src="./storage.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
