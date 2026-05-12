@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>할일 SPA mockup — BF-420</title>
+    <style>
+      /* ---------- Mockup-only frame styling ---------- */
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background: #ECECE9;
+        color: #1A1A19;
+      }
+      .mockup-page {
+        padding: 32px 24px 64px;
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+      .mockup-page h1.mockup-h1 {
+        margin: 0 0 4px;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .mockup-page p.mockup-sub {
+        margin: 0 0 32px;
+        font-size: 14px;
+        color: #6B6B66;
+      }
+      .mockup-section-title {
+        margin: 32px 0 12px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #6B6B66;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .mockup-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .mockup-grid--3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .mockup-frame {
+        background: #FFFFFF;
+        border-radius: 16px;
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      .mockup-frame__label {
+        padding: 10px 16px;
+        background: #FAFAF9;
+        font-size: 12px;
+        color: #6B6B66;
+        font-weight: 600;
+        border-bottom: 1px solid #E5E5E2;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .mockup-frame__label .pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        background: #E8EEF7;
+        color: #2A4FC0;
+        border-radius: 999px;
+        font-weight: 500;
+      }
+      .mockup-frame__body {
+        padding: 0;
+      }
+
+      /* ---------- TODO SPA tokens (mockup duplication) ---------- */
+      .theme-light {
+        --color-bg-canvas: #FAFAF9;
+        --color-bg-surface: #FFFFFF;
+        --color-bg-subtle: #F1F1EF;
+        --color-bg-selected: #E8EEF7;
+        --color-border-default: #E5E5E2;
+        --color-border-strong: #D0D0CC;
+        --color-text-primary: #1A1A19;
+        --color-text-secondary: #6B6B66;
+        --color-text-muted: #9A9A93;
+        --color-accent: #3563E9;
+        --color-accent-hover: #2A4FC0;
+        --color-danger: #D14343;
+        --color-danger-hover: #A83333;
+        --color-focus-ring: rgba(53,99,233,0.45);
+        --shadow-card: 0 4px 16px rgba(0,0,0,0.06);
+        --shadow-modal: 0 12px 32px rgba(0,0,0,0.18);
+      }
+      .theme-dark {
+        --color-bg-canvas: #0F1115;
+        --color-bg-surface: #171A21;
+        --color-bg-subtle: #1E222B;
+        --color-bg-selected: #1F2A3D;
+        --color-border-default: #262B36;
+        --color-border-strong: #3A4150;
+        --color-text-primary: #E8E8E4;
+        --color-text-secondary: #9A9A93;
+        --color-text-muted: #6B6B66;
+        --color-accent: #5B82F0;
+        --color-accent-hover: #7596F3;
+        --color-danger: #E55858;
+        --color-danger-hover: #EC7676;
+        --color-focus-ring: rgba(91,130,240,0.55);
+        --shadow-card: 0 4px 16px rgba(0,0,0,0.32);
+        --shadow-modal: 0 12px 32px rgba(0,0,0,0.36);
+      }
+      .theme-light, .theme-dark {
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        padding: 24px;
+      }
+
+      /* ---------- Topbar ---------- */
+      .topbar {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: 12px;
+        margin-bottom: 16px;
+      }
+      .topbar__title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .topbar__actions { display: flex; gap: 8px; }
+
+      /* ---------- Generic button ---------- */
+      .btn {
+        font: 500 14px/1 var(--font-sans);
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        padding: 0 16px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background 120ms ease, color 120ms ease;
+      }
+      .btn--ghost {
+        background: transparent;
+        color: var(--color-text-primary);
+      }
+      .btn--ghost:hover { background: var(--color-bg-subtle); }
+      .btn--ghost-danger {
+        background: transparent;
+        color: var(--color-danger);
+      }
+      .btn--ghost-danger:hover {
+        background: var(--color-bg-subtle);
+        color: var(--color-danger-hover);
+      }
+      .btn--primary-lg {
+        height: 44px;
+        min-width: 72px;
+        padding: 0 16px;
+        background: var(--color-accent);
+        color: white;
+        font: 600 15px/1 var(--font-sans);
+      }
+      .btn--primary-lg:hover { background: var(--color-accent-hover); }
+      .btn--primary-lg[disabled] {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .btn--danger-solid {
+        background: var(--color-danger);
+        color: white;
+      }
+      .btn--danger-solid:hover { background: var(--color-danger-hover); }
+
+      /* ---------- Todo card ---------- */
+      .todo-card {
+        background: var(--color-bg-surface);
+        border-radius: 12px;
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+      }
+      .todo-card__section {
+        border-bottom: 1px solid var(--color-border-default);
+      }
+      .todo-card__section:last-child { border-bottom: none; }
+
+      /* input row */
+      .todo-card__input {
+        padding: 24px 24px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .input {
+        flex: 1;
+        height: 44px;
+        padding: 0 16px;
+        border: 1px solid var(--color-border-strong);
+        border-radius: 8px;
+        font: 400 16px/1.5 var(--font-sans);
+        background: var(--color-bg-surface);
+        color: var(--color-text-primary);
+        outline: none;
+      }
+      .input::placeholder { color: var(--color-text-muted); }
+      .input.is-focus {
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 2px var(--color-focus-ring);
+      }
+
+      /* filter + counter */
+      .todo-card__filter {
+        padding: 12px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .filter-tabs { display: flex; gap: 8px; }
+      .filter-chip {
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 4px;
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font: 500 14px/1 var(--font-sans);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-variant-numeric: tabular-nums;
+      }
+      .filter-chip:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+      .filter-chip.is-active {
+        background: var(--color-bg-selected);
+        color: var(--color-accent-hover);
+        font-weight: 600;
+      }
+      .counter {
+        font: 500 14px/1.4 var(--font-sans);
+        color: var(--color-text-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+      .counter.is-all-done {
+        color: var(--color-accent);
+        font-weight: 600;
+      }
+
+      /* todo list */
+      .todo-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .todo-item {
+        display: grid;
+        grid-template-columns: 32px 1fr 32px;
+        column-gap: 12px;
+        align-items: center;
+        padding: 12px 24px;
+        border-bottom: 1px solid var(--color-border-default);
+      }
+      .todo-item:last-child { border-bottom: none; }
+      .todo-item:hover { background: var(--color-bg-subtle); }
+      .todo-item.is-focused {
+        background: var(--color-bg-subtle);
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: -2px;
+        position: relative;
+      }
+      .todo-item__check {
+        width: 22px;
+        height: 22px;
+        border: 1.5px solid var(--color-border-strong);
+        border-radius: 4px;
+        background: transparent;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        padding: 0;
+        transition: background 120ms ease, border-color 120ms ease;
+      }
+      .todo-item__check svg { opacity: 0; }
+      .todo-item.is-done .todo-item__check {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+      }
+      .todo-item.is-done .todo-item__check svg { opacity: 1; }
+      .todo-item__title {
+        font: 400 15px/1.55 var(--font-sans);
+        color: var(--color-text-primary);
+        word-break: break-word;
+      }
+      .todo-item.is-done .todo-item__title {
+        color: var(--color-text-muted);
+        text-decoration: line-through;
+        text-decoration-color: var(--color-text-muted);
+        text-decoration-thickness: 1.5px;
+      }
+      .todo-item__delete {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        border-radius: 4px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .todo-item__delete:hover {
+        background: var(--color-bg-subtle);
+        color: var(--color-danger);
+      }
+
+      /* empty state */
+      .empty-state {
+        padding: 48px 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        text-align: center;
+      }
+      .empty-state__icon {
+        font-size: 48px;
+        color: var(--color-text-muted);
+        line-height: 1;
+      }
+      .empty-state__title {
+        margin: 0;
+        font: 600 16px/1.4 var(--font-sans);
+        color: var(--color-text-primary);
+      }
+      .empty-state__desc {
+        margin: 0;
+        font: 400 15px/1.65 var(--font-sans);
+        color: var(--color-text-secondary);
+      }
+
+      /* filter-empty (필터 결과 0 건) */
+      .filter-empty {
+        padding: 48px 24px;
+        text-align: center;
+        font: 400 15px/1.65 var(--font-sans);
+        color: var(--color-text-secondary);
+      }
+
+      /* footer */
+      .todo-card__footer {
+        padding: 12px 24px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      /* ---------- Modal ---------- */
+      .modal-wrap {
+        position: relative;
+        height: 480px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg-canvas);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .modal-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        backdrop-filter: blur(2px);
+      }
+      .modal {
+        position: relative;
+        width: 420px;
+        max-width: 90%;
+        padding: 24px 32px 32px;
+        background: var(--color-bg-surface);
+        border-radius: 12px;
+        box-shadow: var(--shadow-modal);
+        z-index: 1;
+      }
+      .modal__title {
+        margin: 0 0 12px;
+        font: 600 18px/1.3 var(--font-sans);
+        color: var(--color-text-primary);
+      }
+      .modal__body {
+        margin: 0 0 24px;
+        font: 400 15px/1.65 var(--font-sans);
+        color: var(--color-text-secondary);
+      }
+      .modal__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+      /* focused 표시 (취소 버튼 default focus) */
+      .btn.is-focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+
+      /* ---------- Mobile preview ---------- */
+      .mobile-frame {
+        max-width: 380px;
+        margin: 0 auto;
+        border: 8px solid #2A2A28;
+        border-radius: 32px;
+        overflow: hidden;
+        background: var(--color-bg-canvas);
+        padding: 12px;
+      }
+      .mobile-frame .todo-card { box-shadow: none; }
+      .mobile-frame .topbar { margin-bottom: 12px; }
+      .mobile-frame .btn--primary-lg {
+        min-width: 44px;
+        width: 44px;
+        padding: 0;
+        justify-content: center;
+        font-size: 22px;
+      }
+      .mobile-frame .todo-card__filter {
+        padding: 12px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .mobile-frame .filter-tabs {
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      .mobile-frame .todo-card__input {
+        padding: 16px;
+        gap: 8px;
+      }
+      .mobile-frame .todo-item {
+        padding: 12px 16px;
+      }
+      .mobile-frame .todo-card__footer {
+        padding: 12px 16px;
+      }
+
+      /* ---------- Token swatch ---------- */
+      .swatch-row {
+        display: grid;
+        grid-template-columns: 120px 80px 80px 1fr;
+        gap: 12px;
+        padding: 8px 16px;
+        align-items: center;
+        font-size: 13px;
+        border-bottom: 1px solid #E5E5E2;
+      }
+      .swatch-row:last-child { border-bottom: none; }
+      .swatch-row__name { font-family: var(--font-mono); font-size: 12px; color: #4A4A48; }
+      .swatch-row__hex { font-family: var(--font-mono); font-size: 11px; color: #6B6B66; }
+      .swatch-row__chip { width: 100%; height: 24px; border-radius: 4px; border: 1px solid #E5E5E2; }
+      .swatch-row__use { color: #6B6B66; font-size: 12px; }
+
+      /* ---------- file:// constraints box ---------- */
+      .file-constraints {
+        background: #FFF8E6;
+        border: 1px solid #F4D89A;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 24px 0;
+      }
+      .file-constraints h3 {
+        margin: 0 0 12px;
+        font-size: 15px;
+        color: #8A5A0F;
+      }
+      .file-constraints ul {
+        margin: 0;
+        padding-left: 20px;
+        font-size: 13px;
+        color: #5C3F0A;
+        line-height: 1.7;
+      }
+      .file-constraints code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        background: #FCEFCF;
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mockup-page">
+      <h1 class="mockup-h1">할일 SPA — BF-420 시각 mockup</h1>
+      <p class="mockup-sub">
+        명세 문서: <code>docs/design/todo-BF-420.md</code> · 본 mockup 은 시각 시뮬레이션이며 정량 일치는 명세 §7.6 표가 source of truth.
+      </p>
+
+      <!-- 4 가지 상태 패널 -->
+      <div class="mockup-section-title">상태 패널 (light · dark)</div>
+      <div class="mockup-grid">
+
+        <!-- (1) empty 상태 - light -->
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>① 빈 상태 (empty) — Light</span>
+            <span class="pill">filter=all · todos=0</span>
+          </div>
+          <div class="mockup-frame__body theme-light">
+            <header class="topbar">
+              <h1 class="topbar__title">할일</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+              </div>
+            </header>
+            <section class="todo-card">
+              <div class="todo-card__section todo-card__input">
+                <input class="input" type="text" placeholder="새 할일을 입력하세요…" aria-label="새 할일 입력" />
+                <button class="btn btn--primary-lg" disabled>+ 추가</button>
+              </div>
+              <div class="empty-state">
+                <div class="empty-state__icon" aria-hidden="true">📋</div>
+                <h2 class="empty-state__title">아직 할일이 없습니다</h2>
+                <p class="empty-state__desc">위에서 새 할일을 추가해 보세요</p>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- (1) empty 상태 - dark -->
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>① 빈 상태 (empty) — Dark</span>
+            <span class="pill">filter=all · todos=0</span>
+          </div>
+          <div class="mockup-frame__body theme-dark">
+            <header class="topbar">
+              <h1 class="topbar__title">할일</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+              </div>
+            </header>
+            <section class="todo-card">
+              <div class="todo-card__section todo-card__input">
+                <input class="input" type="text" placeholder="새 할일을 입력하세요…" aria-label="새 할일 입력" />
+                <button class="btn btn--primary-lg" disabled>+ 추가</button>
+              </div>
+              <div class="empty-state">
+                <div class="empty-state__icon" aria-hidden="true">📋</div>
+                <h2 class="empty-state__title">아직 할일이 없습니다</h2>
+                <p class="empty-state__desc">위에서 새 할일을 추가해 보세요</p>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- (2) 혼합 상태 - light -->
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>② 혼합 상태 (mixed) — Light</span>
+            <span class="pill">filter=all · 진행 3 · 완료 2</span>
+          </div>
+          <div class="mockup-frame__body theme-light">
+            <header class="topbar">
+              <h1 class="topbar__title">할일</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+              </div>
+            </header>
+            <section class="todo-card">
+              <div class="todo-card__section todo-card__input">
+                <input class="input is-focus" type="text" value="" placeholder="새 할일을 입력하세요…" aria-label="새 할일 입력" />
+                <button class="btn btn--primary-lg" disabled>+ 추가</button>
+              </div>
+              <div class="todo-card__section todo-card__filter">
+                <div class="filter-tabs" role="group" aria-label="필터">
+                  <button class="filter-chip is-active" aria-pressed="true">전체 <span>5</span></button>
+                  <button class="filter-chip" aria-pressed="false">진행 <span>3</span></button>
+                  <button class="filter-chip" aria-pressed="false">완료 <span>2</span></button>
+                </div>
+                <div class="counter">3개 남음</div>
+              </div>
+              <ul class="todo-card__section todo-list" aria-label="할일 목록">
+                <li class="todo-item">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false" aria-label="장보기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">장보기</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 장보기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+                <li class="todo-item is-focused">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false" aria-label="운동 30분">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">운동 30분</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 운동 30분">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+                <li class="todo-item">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false" aria-label="책 30분 읽기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">책 30분 읽기</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 책 30분 읽기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+                <li class="todo-item is-done">
+                  <button class="todo-item__check" role="checkbox" aria-checked="true" aria-label="세탁">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">세탁</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 세탁">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+                <li class="todo-item is-done">
+                  <button class="todo-item__check" role="checkbox" aria-checked="true" aria-label="쓰레기 버리기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">쓰레기 버리기</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 쓰레기 버리기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+              </ul>
+              <div class="todo-card__section todo-card__footer">
+                <button class="btn btn--ghost-danger">완료된 <span>2</span>개 삭제</button>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- (2) 혼합 상태 - dark -->
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>② 혼합 상태 (mixed) — Dark</span>
+            <span class="pill">filter=all · 진행 3 · 완료 2</span>
+          </div>
+          <div class="mockup-frame__body theme-dark">
+            <header class="topbar">
+              <h1 class="topbar__title">할일</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+              </div>
+            </header>
+            <section class="todo-card">
+              <div class="todo-card__section todo-card__input">
+                <input class="input" type="text" value="" placeholder="새 할일을 입력하세요…" aria-label="새 할일 입력" />
+                <button class="btn btn--primary-lg" disabled>+ 추가</button>
+              </div>
+              <div class="todo-card__section todo-card__filter">
+                <div class="filter-tabs" role="group" aria-label="필터">
+                  <button class="filter-chip is-active" aria-pressed="true">전체 <span>5</span></button>
+                  <button class="filter-chip" aria-pressed="false">진행 <span>3</span></button>
+                  <button class="filter-chip" aria-pressed="false">완료 <span>2</span></button>
+                </div>
+                <div class="counter">3개 남음</div>
+              </div>
+              <ul class="todo-card__section todo-list" aria-label="할일 목록">
+                <li class="todo-item">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false" aria-label="장보기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">장보기</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 장보기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+                <li class="todo-item">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false" aria-label="운동 30분">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">운동 30분</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 운동 30분">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+                <li class="todo-item">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false" aria-label="책 30분 읽기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">책 30분 읽기</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 책 30분 읽기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+                <li class="todo-item is-done">
+                  <button class="todo-item__check" role="checkbox" aria-checked="true" aria-label="세탁">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">세탁</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 세탁">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+                <li class="todo-item is-done">
+                  <button class="todo-item__check" role="checkbox" aria-checked="true" aria-label="쓰레기 버리기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">쓰레기 버리기</span>
+                  <button class="todo-item__delete" aria-label="할일 삭제: 쓰레기 버리기">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </li>
+              </ul>
+              <div class="todo-card__section todo-card__footer">
+                <button class="btn btn--ghost-danger">완료된 <span>2</span>개 삭제</button>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- (3) 진행 필터 - light -->
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>③ 진행 필터 활성 — Light</span>
+            <span class="pill">filter=pending</span>
+          </div>
+          <div class="mockup-frame__body theme-light">
+            <header class="topbar">
+              <h1 class="topbar__title">할일</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+              </div>
+            </header>
+            <section class="todo-card">
+              <div class="todo-card__section todo-card__input">
+                <input class="input" type="text" placeholder="새 할일을 입력하세요…" aria-label="새 할일 입력" />
+                <button class="btn btn--primary-lg" disabled>+ 추가</button>
+              </div>
+              <div class="todo-card__section todo-card__filter">
+                <div class="filter-tabs" role="group" aria-label="필터">
+                  <button class="filter-chip" aria-pressed="false">전체 <span>5</span></button>
+                  <button class="filter-chip is-active" aria-pressed="true">진행 <span>3</span></button>
+                  <button class="filter-chip" aria-pressed="false">완료 <span>2</span></button>
+                </div>
+                <div class="counter">3개 남음</div>
+              </div>
+              <ul class="todo-card__section todo-list" aria-label="할일 목록">
+                <li class="todo-item">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false"></button>
+                  <span class="todo-item__title">장보기</span>
+                  <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                </li>
+                <li class="todo-item">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false"></button>
+                  <span class="todo-item__title">운동 30분</span>
+                  <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                </li>
+                <li class="todo-item">
+                  <button class="todo-item__check" role="checkbox" aria-checked="false"></button>
+                  <span class="todo-item__title">책 30분 읽기</span>
+                  <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                </li>
+              </ul>
+              <!-- footer hidden (완료 항목 없음) -->
+            </section>
+          </div>
+        </div>
+
+        <!-- (3) 완료 필터 + 모두 완료 - light -->
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>③ 완료 필터 + 모두 완료 — Light</span>
+            <span class="pill">filter=done · pending=0</span>
+          </div>
+          <div class="mockup-frame__body theme-light">
+            <header class="topbar">
+              <h1 class="topbar__title">할일</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+              </div>
+            </header>
+            <section class="todo-card">
+              <div class="todo-card__section todo-card__input">
+                <input class="input" type="text" placeholder="새 할일을 입력하세요…" aria-label="새 할일 입력" />
+                <button class="btn btn--primary-lg" disabled>+ 추가</button>
+              </div>
+              <div class="todo-card__section todo-card__filter">
+                <div class="filter-tabs" role="group" aria-label="필터">
+                  <button class="filter-chip" aria-pressed="false">전체 <span>3</span></button>
+                  <button class="filter-chip" aria-pressed="false">진행 <span>0</span></button>
+                  <button class="filter-chip is-active" aria-pressed="true">완료 <span>3</span></button>
+                </div>
+                <div class="counter is-all-done">모두 완료! 🎉</div>
+              </div>
+              <ul class="todo-card__section todo-list" aria-label="할일 목록">
+                <li class="todo-item is-done">
+                  <button class="todo-item__check" role="checkbox" aria-checked="true">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">장보기</span>
+                  <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                </li>
+                <li class="todo-item is-done">
+                  <button class="todo-item__check" role="checkbox" aria-checked="true">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">운동 30분</span>
+                  <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                </li>
+                <li class="todo-item is-done">
+                  <button class="todo-item__check" role="checkbox" aria-checked="true">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <span class="todo-item__title">세탁</span>
+                  <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                </li>
+              </ul>
+              <div class="todo-card__section todo-card__footer">
+                <button class="btn btn--ghost-danger">완료된 <span>3</span>개 삭제</button>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- (4) 삭제 modal - light -->
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>④ 완료삭제 modal open — Light</span>
+            <span class="pill">[취소] focus</span>
+          </div>
+          <div class="mockup-frame__body theme-light" style="padding: 0;">
+            <div class="modal-wrap theme-light" style="padding: 0; border-radius: 0;">
+              <div class="modal-overlay"></div>
+              <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title-light">
+                <h2 class="modal__title" id="modal-title-light">완료된 할일을 삭제할까요?</h2>
+                <p class="modal__body">완료된 2개 할일이 영구적으로 삭제되며 되돌릴 수 없습니다.</p>
+                <div class="modal__footer">
+                  <button class="btn btn--ghost is-focus-visible">취소</button>
+                  <button class="btn btn--danger-solid">삭제</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- file:// 제약 박스 -->
+      <div class="file-constraints">
+        <h3>🔒 file:// CORS 안전 가이드 — 명세 §11 핵심 발췌</h3>
+        <ul>
+          <li><strong>금지</strong>: <code>&lt;script type="module"&gt;</code> · <code>import</code> / <code>export</code> 키워드 · <code>fetch()</code> · <code>XMLHttpRequest</code> · 외부 CDN (<code>https://unpkg.com</code>, Google Fonts, Tailwind CDN 등) · <code>new Worker(...)</code> · dynamic <code>import(...)</code></li>
+          <li><strong>허용</strong>: 상대 경로 <code>&lt;link rel="stylesheet"&gt;</code> · 일반 <code>&lt;script src&gt;</code> (type 속성 없음) · inline <code>&lt;style&gt;</code>/<code>&lt;script&gt;</code> · <code>localStorage</code> · <code>crypto.randomUUID()</code> · inline SVG · system font stack · CSS custom properties</li>
+          <li><strong>JS 파일 분리 시</strong>: HTML 에 <code>&lt;script src="a.js"&gt;&lt;/script&gt; &lt;script src="b.js"&gt;&lt;/script&gt;</code> 순서대로 로드 → IIFE 로 전역 namespace 노출 (<code>window.bfStorage</code> 등)</li>
+          <li><strong>reviewer 검증</strong>: <code>grep -nE '^(import|export)\s' todo/*.js</code> 0 hit, <code>grep -nE 'type=["\x27]module["\x27]' todo/*.html</code> 0 hit</li>
+        </ul>
+      </div>
+
+      <!-- Mobile preview -->
+      <div class="mockup-section-title">Mobile preview (&lt; 640px)</div>
+      <div class="mockup-grid">
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>Mobile — Light · 혼합 상태</span>
+            <span class="pill">[+ 추가] 아이콘만 · 필터 가로 스크롤</span>
+          </div>
+          <div class="mockup-frame__body theme-light" style="background: #FAFAF9; padding: 16px;">
+            <div class="mobile-frame">
+              <header class="topbar">
+                <h1 class="topbar__title">할일</h1>
+                <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+              </header>
+              <section class="todo-card">
+                <div class="todo-card__section todo-card__input">
+                  <input class="input" type="text" placeholder="할일 입력…" aria-label="새 할일 입력" />
+                  <button class="btn btn--primary-lg" aria-label="할일 추가">+</button>
+                </div>
+                <div class="todo-card__section todo-card__filter">
+                  <div class="filter-tabs">
+                    <button class="filter-chip is-active" aria-pressed="true">전체 <span>5</span></button>
+                    <button class="filter-chip" aria-pressed="false">진행 <span>3</span></button>
+                    <button class="filter-chip" aria-pressed="false">완료 <span>2</span></button>
+                  </div>
+                  <div class="counter">3개 남음</div>
+                </div>
+                <ul class="todo-card__section todo-list" aria-label="할일 목록">
+                  <li class="todo-item">
+                    <button class="todo-item__check" role="checkbox" aria-checked="false"></button>
+                    <span class="todo-item__title">장보기</span>
+                    <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                  </li>
+                  <li class="todo-item">
+                    <button class="todo-item__check" role="checkbox" aria-checked="false"></button>
+                    <span class="todo-item__title">운동 30분</span>
+                    <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                  </li>
+                  <li class="todo-item is-done">
+                    <button class="todo-item__check" role="checkbox" aria-checked="true">
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8 L7 12 L13 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <span class="todo-item__title">세탁</span>
+                    <button class="todo-item__delete" aria-label="삭제"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 4 L12 12 M12 4 L4 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+                  </li>
+                </ul>
+                <div class="todo-card__section todo-card__footer">
+                  <button class="btn btn--ghost-danger">완료된 <span>1</span>개 삭제</button>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>Mobile — Dark · 빈 상태</span>
+            <span class="pill">empty + autofocus 비활성</span>
+          </div>
+          <div class="mockup-frame__body theme-dark" style="padding: 16px;">
+            <div class="mobile-frame">
+              <header class="topbar">
+                <h1 class="topbar__title">할일</h1>
+                <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+              </header>
+              <section class="todo-card">
+                <div class="todo-card__section todo-card__input">
+                  <input class="input" type="text" placeholder="할일 입력…" aria-label="새 할일 입력" />
+                  <button class="btn btn--primary-lg" aria-label="할일 추가" disabled>+</button>
+                </div>
+                <div class="empty-state">
+                  <div class="empty-state__icon" aria-hidden="true">📋</div>
+                  <h2 class="empty-state__title">아직 할일이 없습니다</h2>
+                  <p class="empty-state__desc">위에서 새 할일을 추가해 보세요</p>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Token swatches -->
+      <div class="mockup-section-title">컬러 토큰 매핑 — 명세 §2.1 / §2.2</div>
+      <div class="mockup-grid">
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>공유 컬러 (notepad / timer / stopwatch 공유)</span>
+            <span class="pill">light HEX</span>
+          </div>
+          <div class="mockup-frame__body" style="padding: 0; background: white;">
+            <div class="swatch-row"><div class="swatch-row__name">--color-bg-canvas</div><div class="swatch-row__chip" style="background:#FAFAF9"></div><div class="swatch-row__hex">#FAFAF9</div><div class="swatch-row__use">페이지 배경</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-bg-surface</div><div class="swatch-row__chip" style="background:#FFFFFF; border-color:#D0D0CC"></div><div class="swatch-row__hex">#FFFFFF</div><div class="swatch-row__use">카드 표면</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-bg-subtle</div><div class="swatch-row__chip" style="background:#F1F1EF"></div><div class="swatch-row__hex">#F1F1EF</div><div class="swatch-row__use">hover bg</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-bg-selected</div><div class="swatch-row__chip" style="background:#E8EEF7"></div><div class="swatch-row__hex">#E8EEF7</div><div class="swatch-row__use">필터 활성 bg</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-border-default</div><div class="swatch-row__chip" style="background:#E5E5E2"></div><div class="swatch-row__hex">#E5E5E2</div><div class="swatch-row__use">row 구분선</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-border-strong</div><div class="swatch-row__chip" style="background:#D0D0CC"></div><div class="swatch-row__hex">#D0D0CC</div><div class="swatch-row__use">input·checkbox border</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-text-primary</div><div class="swatch-row__chip" style="background:#1A1A19"></div><div class="swatch-row__hex">#1A1A19</div><div class="swatch-row__use">본문·항목 텍스트</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-text-secondary</div><div class="swatch-row__chip" style="background:#6B6B66"></div><div class="swatch-row__hex">#6B6B66</div><div class="swatch-row__use">필터 비활성·카운터</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-text-muted</div><div class="swatch-row__chip" style="background:#9A9A93"></div><div class="swatch-row__hex">#9A9A93</div><div class="swatch-row__use">placeholder·완료 strike</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-accent</div><div class="swatch-row__chip" style="background:#3563E9"></div><div class="swatch-row__hex">#3563E9</div><div class="swatch-row__use">추가 버튼·체크 색</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-accent-hover</div><div class="swatch-row__chip" style="background:#2A4FC0"></div><div class="swatch-row__hex">#2A4FC0</div><div class="swatch-row__use">필터 활성 텍스트</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-danger</div><div class="swatch-row__chip" style="background:#D14343"></div><div class="swatch-row__hex">#D14343</div><div class="swatch-row__use">삭제 버튼·modal confirm</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-danger-hover</div><div class="swatch-row__chip" style="background:#A83333"></div><div class="swatch-row__hex">#A83333</div><div class="swatch-row__use">danger hover</div></div>
+          </div>
+        </div>
+
+        <div class="mockup-frame">
+          <div class="mockup-frame__label">
+            <span>다크 모드</span>
+            <span class="pill">dark HEX</span>
+          </div>
+          <div class="mockup-frame__body" style="padding: 0; background: white;">
+            <div class="swatch-row"><div class="swatch-row__name">--color-bg-canvas</div><div class="swatch-row__chip" style="background:#0F1115"></div><div class="swatch-row__hex">#0F1115</div><div class="swatch-row__use">페이지 배경</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-bg-surface</div><div class="swatch-row__chip" style="background:#171A21"></div><div class="swatch-row__hex">#171A21</div><div class="swatch-row__use">카드 표면</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-bg-subtle</div><div class="swatch-row__chip" style="background:#1E222B"></div><div class="swatch-row__hex">#1E222B</div><div class="swatch-row__use">hover bg</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-bg-selected</div><div class="swatch-row__chip" style="background:#1F2A3D"></div><div class="swatch-row__hex">#1F2A3D</div><div class="swatch-row__use">필터 활성 bg</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-border-default</div><div class="swatch-row__chip" style="background:#262B36"></div><div class="swatch-row__hex">#262B36</div><div class="swatch-row__use">row 구분선</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-border-strong</div><div class="swatch-row__chip" style="background:#3A4150"></div><div class="swatch-row__hex">#3A4150</div><div class="swatch-row__use">input·checkbox border</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-text-primary</div><div class="swatch-row__chip" style="background:#E8E8E4"></div><div class="swatch-row__hex">#E8E8E4</div><div class="swatch-row__use">본문·항목 텍스트</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-text-secondary</div><div class="swatch-row__chip" style="background:#9A9A93"></div><div class="swatch-row__hex">#9A9A93</div><div class="swatch-row__use">필터 비활성·카운터</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-text-muted</div><div class="swatch-row__chip" style="background:#6B6B66"></div><div class="swatch-row__hex">#6B6B66</div><div class="swatch-row__use">placeholder·완료 strike</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-accent</div><div class="swatch-row__chip" style="background:#5B82F0"></div><div class="swatch-row__hex">#5B82F0</div><div class="swatch-row__use">추가 버튼·체크 색</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-accent-hover</div><div class="swatch-row__chip" style="background:#7596F3"></div><div class="swatch-row__hex">#7596F3</div><div class="swatch-row__use">필터 활성 텍스트</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-danger</div><div class="swatch-row__chip" style="background:#E55858"></div><div class="swatch-row__hex">#E55858</div><div class="swatch-row__use">삭제 버튼·modal confirm</div></div>
+            <div class="swatch-row"><div class="swatch-row__name">--color-danger-hover</div><div class="swatch-row__chip" style="background:#EC7676"></div><div class="swatch-row__hex">#EC7676</div><div class="swatch-row__use">danger hover</div></div>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top: 48px; font-size: 12px; color: #6B6B66;">
+        © 본 mockup 은 시각 시뮬레이션입니다 — 픽셀 단위 일치 의무 X.
+        실제 구현 정량 기준: <code>docs/design/todo-BF-420.md §7.6 정량 일치 표</code>.
+      </p>
+    </div>
+  </body>
+</html>
