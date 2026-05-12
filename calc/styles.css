@@ -1,0 +1,350 @@
+/* BF-412 · 계산기 SPA 스타일
+ * 명세: docs/design/calculator-BF-410.md
+ * 토큰: notepad/styles.css §2 / timer/styles.css §2 의 시스템을 그대로 복제
+ *      + §2.2 계산기 전용 추가 토큰 + §3 타이포 토큰
+ */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --color-bg-canvas: #fafaf9;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f1ef;
+  --color-border-default: #e5e5e2;
+  --color-border-strong: #d0d0cc;
+  --color-text-primary: #1a1a19;
+  --color-text-secondary: #6b6b66;
+  --color-text-muted: #9a9a93;
+  --color-accent: #3563e9;
+  --color-accent-hover: #2a4fc0;
+  --color-danger: #d14343;
+  --color-danger-hover: #a83333;
+  --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+  --color-key-digit-bg: #ffffff;
+  --color-key-digit-hover: #f1f1ef;
+  --color-key-op-bg: #f6f1e8;
+  --color-key-op-hover: #efe5d0;
+  --color-key-op-text: #8a5a12;
+  --color-key-fn-bg: #f1f1ef;
+  --color-key-fn-hover: #e5e5e2;
+  --color-key-equals-bg: #3563e9;
+  --color-key-equals-hover: #2a4fc0;
+  --color-key-equals-text: #ffffff;
+  --color-error-text: #9a2a2a;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-key-pressed: inset 0 2px 4px rgba(0, 0, 0, 0.12);
+
+  --text-h1: 600 20px/1.3 var(--font-sans);
+  --text-expr: 400 18px/1.4 var(--font-mono);
+  --text-expr-sm: 400 16px/1.4 var(--font-mono);
+  --text-result: 500 56px/1.1 var(--font-mono);
+  --text-result-md: 500 48px/1.1 var(--font-mono);
+  --text-result-sm: 500 40px/1.1 var(--font-mono);
+  --text-label: 500 14px/1.4 var(--font-sans);
+  --text-body: 400 15px/1.65 var(--font-sans);
+  --text-caption: 400 12px/1.4 var(--font-sans);
+  --text-key: 500 24px/1 var(--font-sans);
+  --text-key-equals: 600 26px/1 var(--font-sans);
+}
+
+[data-theme="dark"] {
+  --color-bg-canvas: #0f1115;
+  --color-bg-surface: #171a21;
+  --color-bg-subtle: #1e222b;
+  --color-border-default: #262b36;
+  --color-border-strong: #3a4150;
+  --color-text-primary: #e8e8e4;
+  --color-text-secondary: #9a9a93;
+  --color-text-muted: #6b6b66;
+  --color-accent: #5b82f0;
+  --color-accent-hover: #7596f3;
+  --color-danger: #e55858;
+  --color-danger-hover: #ec7676;
+  --color-focus-ring: rgba(91, 130, 240, 0.55);
+
+  --color-key-digit-bg: #1e222b;
+  --color-key-digit-hover: #262b36;
+  --color-key-op-bg: #2a2418;
+  --color-key-op-hover: #3a301d;
+  --color-key-op-text: #d4a23a;
+  --color-key-fn-bg: #262b36;
+  --color-key-fn-hover: #3a4150;
+  --color-key-equals-bg: #5b82f0;
+  --color-key-equals-hover: #7596f3;
+  --color-key-equals-text: #0f1115;
+  --color-error-text: #fcb7b7;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+  --shadow-key-pressed: inset 0 2px 4px rgba(0, 0, 0, 0.32);
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font: var(--text-body);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+}
+button {
+  font-family: inherit;
+}
+
+.topbar {
+  height: 56px;
+  padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  flex: 0 0 auto;
+}
+.topbar__title {
+  font: var(--text-h1);
+  margin: 0;
+  flex: 1 1 auto;
+}
+.topbar__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font: 500 14px/1 var(--font-sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+.btn--ghost:hover {
+  background: var(--color-bg-subtle);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.page {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-7) var(--space-5);
+}
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-md);
+  min-height: 112px;
+}
+.display__expr {
+  font: var(--text-expr);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+  width: 100%;
+  text-align: right;
+  min-height: 1.4em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+}
+.display__result {
+  font: var(--text-result);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  width: 100%;
+  text-align: right;
+  line-height: 1.1;
+  word-break: break-all;
+}
+.display__result.is-empty {
+  color: var(--color-text-muted);
+}
+.display__result.is-error {
+  color: var(--color-error-text);
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: var(--space-2);
+}
+.key {
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  font: var(--text-key);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 80ms ease,
+    box-shadow 80ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+.key:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.key:active,
+.key.is-active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-key-pressed);
+}
+
+.key--digit {
+  background: var(--color-key-digit-bg);
+  color: var(--color-text-primary);
+}
+.key--digit:hover {
+  background: var(--color-key-digit-hover);
+}
+.key--op {
+  background: var(--color-key-op-bg);
+  color: var(--color-key-op-text);
+}
+.key--op:hover {
+  background: var(--color-key-op-hover);
+}
+.key--fn {
+  background: var(--color-key-fn-bg);
+  color: var(--color-text-primary);
+}
+.key--fn:hover {
+  background: var(--color-key-fn-hover);
+}
+.key--fn[data-key="C"]:hover {
+  color: var(--color-danger);
+}
+.key--equals {
+  background: var(--color-key-equals-bg);
+  color: var(--color-key-equals-text);
+  font: var(--text-key-equals);
+  border-color: transparent;
+  grid-column: 4 / 5;
+  grid-row: 4 / 6;
+  aspect-ratio: auto;
+}
+.key--equals:hover {
+  background: var(--color-key-equals-hover);
+}
+.key--zero {
+  grid-column: 1 / 3;
+  aspect-ratio: auto;
+}
+
+.kbd-hint {
+  font: var(--text-caption);
+  color: var(--color-text-muted);
+  margin: 0;
+  text-align: center;
+}
+.kbd-hint kbd {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 959px) {
+  .card {
+    max-width: 420px;
+  }
+  .display__result {
+    font: var(--text-result-md);
+    font-variant-numeric: tabular-nums;
+  }
+  .key {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 639px) {
+  .page {
+    padding: var(--space-4) var(--space-3);
+  }
+  .card {
+    max-width: 100%;
+    padding: var(--space-4);
+  }
+  .display {
+    min-height: 96px;
+  }
+  .display__expr {
+    font: var(--text-expr-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .display__result {
+    font: var(--text-result-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .key {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 359px) {
+  .card {
+    padding: var(--space-3);
+  }
+  .key {
+    font-size: 18px;
+  }
+}
