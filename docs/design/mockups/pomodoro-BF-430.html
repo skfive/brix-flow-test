@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>뽀모도로 SPA 디자인 mockup · BF-430</title>
+    <style>
+      /* ============================================================
+         Pomodoro SPA Design Mockup (BF-430)
+         self-contained, 외부 CDN 없음 (CORS 안전 시뮬레이션)
+         ============================================================ */
+
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* shared tokens (light) */
+        --color-bg-canvas: #FAFAF9;
+        --color-bg-surface: #FFFFFF;
+        --color-bg-subtle: #F1F1EF;
+        --color-border-default: #E5E5E2;
+        --color-border-strong: #D0D0CC;
+        --color-text-primary: #1A1A19;
+        --color-text-secondary: #6B6B66;
+        --color-text-muted: #9A9A93;
+        --color-accent: #3563E9;
+        --color-danger: #D14343;
+        --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+        /* pomodoro mode signature (light) */
+        --color-focus: #E04848;
+        --color-focus-bg: #FCE9E9;
+        --color-focus-border: #F4B5B5;
+        --color-break: #0FA8A8;
+        --color-break-bg: #E0F7F7;
+        --color-break-border: #A8E4E4;
+        --color-long-break: #7B5BE8;
+        --color-long-break-bg: #EFEAFD;
+        --color-long-break-border: #C8B7F4;
+        --color-dot-empty: #E5E5E2;
+
+        /* spacing / radius / shadow */
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-pill: 999px;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+        /* motion */
+        --motion-fast: 120ms;
+        --motion-mid: 220ms;
+        --motion-slow: 400ms;
+        --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+        --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+
+        /* typography */
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-countdown: 300 6rem/1 var(--font-mono);
+        --text-countdown-sm: 300 4rem/1 var(--font-mono);
+        --text-mode-badge: 600 13px/1 var(--font-sans);
+        --text-cycle: 500 14px/1.4 var(--font-sans);
+        --text-label: 500 14px/1.4 var(--font-sans);
+        --text-body: 400 15px/1.65 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+        --text-button: 500 14px/1 var(--font-sans);
+        --text-button-lg: 600 16px/1 var(--font-sans);
+
+        /* primary 텍스트 색 (모드 시그너처 배경 위) */
+        --color-on-mode: #FFFFFF;
+      }
+
+      .theme-dark {
+        --color-bg-canvas: #0F1115;
+        --color-bg-surface: #171A21;
+        --color-bg-subtle: #1E222B;
+        --color-border-default: #262B36;
+        --color-border-strong: #3A4150;
+        --color-text-primary: #E8E8E4;
+        --color-text-secondary: #9A9A93;
+        --color-text-muted: #6B6B66;
+        --color-accent: #5B82F0;
+        --color-danger: #E55858;
+        --color-focus-ring: rgba(91, 130, 240, 0.55);
+
+        --color-focus: #FF6B6B;
+        --color-focus-bg: #3A1F22;
+        --color-focus-border: #7A3A3F;
+        --color-break: #3DD9D9;
+        --color-break-bg: #0E2F30;
+        --color-break-border: #1F5C5D;
+        --color-long-break: #A48BFF;
+        --color-long-break-bg: #1F1A3A;
+        --color-long-break-border: #4A3D7A;
+        --color-dot-empty: #262B36;
+
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+        --color-on-mode: #0F1115; /* 다크에서는 검정 텍스트 가독성 */
+      }
+
+      /* ---------- base reset / page ---------- */
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font: var(--text-body);
+        background: #303035;
+        color: #E8E8E4;
+        min-height: 100vh;
+        padding: 24px;
+      }
+      h1, h2, h3, p { margin: 0; }
+
+      .mockup-header {
+        max-width: 1320px;
+        margin: 0 auto 24px;
+        padding: 0 8px;
+      }
+      .mockup-header h1 {
+        font: 600 22px/1.3 var(--font-sans);
+        color: #FFFFFF;
+        margin-bottom: 8px;
+      }
+      .mockup-header p {
+        color: #B0B0AB;
+        font: 400 13px/1.5 var(--font-sans);
+      }
+      .mockup-header code {
+        font: 12px var(--font-mono);
+        background: #1E222B;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      .mockup-section {
+        max-width: 1320px;
+        margin: 0 auto 32px;
+      }
+      .mockup-section__title {
+        color: #FFFFFF;
+        font: 600 16px/1.3 var(--font-sans);
+        margin-bottom: 12px;
+        padding-left: 8px;
+      }
+      .mockup-section__desc {
+        color: #B0B0AB;
+        font: 400 13px/1.5 var(--font-sans);
+        margin-bottom: 16px;
+        padding-left: 8px;
+      }
+
+      .panels {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      @media (max-width: 1080px) {
+        .panels { grid-template-columns: 1fr; }
+      }
+
+      .panel {
+        border-radius: 14px;
+        overflow: hidden;
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      .panel__label {
+        padding: 10px 16px;
+        font: 600 12px/1 var(--font-sans);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-secondary);
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+      }
+      .panel__body {
+        padding: 24px 16px 32px;
+      }
+
+      /* ---------- topbar ---------- */
+      .topbar {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 var(--space-5);
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        margin: -24px -16px 24px;
+      }
+      .topbar__title {
+        font: var(--text-h1);
+        color: var(--color-text-primary);
+      }
+      .topbar__actions { display: flex; gap: var(--space-2); }
+
+      /* ---------- pomodoro card ---------- */
+      .pomodoro {
+        max-width: 480px;
+        margin: 0 auto;
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-7) var(--space-6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-5);
+      }
+
+      /* mode alias pattern (§7.4) */
+      .pomodoro[data-mode="FOCUS"] {
+        --current-color: var(--color-focus);
+        --current-bg: var(--color-focus-bg);
+        --current-border: var(--color-focus-border);
+      }
+      .pomodoro[data-mode="SHORT_BREAK"] {
+        --current-color: var(--color-break);
+        --current-bg: var(--color-break-bg);
+        --current-border: var(--color-break-border);
+      }
+      .pomodoro[data-mode="LONG_BREAK"] {
+        --current-color: var(--color-long-break);
+        --current-bg: var(--color-long-break-bg);
+        --current-border: var(--color-long-break-border);
+      }
+
+      /* mode-zone transition base (§6.4) */
+      .mode-zone {
+        transition:
+          opacity var(--motion-mid) var(--ease-standard),
+          transform var(--motion-mid) var(--ease-emphasized),
+          background-color var(--motion-mid) var(--ease-standard),
+          color var(--motion-mid) var(--ease-standard);
+      }
+
+      /* ---------- mode badge ---------- */
+      .mode-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: var(--space-1) var(--space-4);
+        background: var(--current-bg);
+        border: 1px solid var(--current-border);
+        color: var(--current-color);
+        border-radius: var(--radius-pill);
+        font: var(--text-mode-badge);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      /* ---------- cycle dots (§4.4) ---------- */
+      .cycle-dots {
+        display: flex;
+        gap: 4px; /* AC 명시 */
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: var(--radius-sm);
+        background: var(--color-dot-empty);
+        transition: background var(--motion-mid) var(--ease-standard);
+      }
+      .dot--done { background: var(--current-color); }
+      .dot--current {
+        background: transparent;
+        border: 2px solid var(--current-color);
+        animation: dot-pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes dot-pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .dot--current { animation: none; opacity: 0.85; }
+        .mode-zone { transition-duration: 0ms; }
+      }
+
+      /* ---------- countdown (§4.5) ---------- */
+      .countdown {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 0;
+        font: var(--text-countdown);
+        color: var(--current-color);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+      }
+      .countdown--paused { opacity: 0.7; }
+      .countdown__colon {
+        margin: 0 -4px;
+      }
+
+      /* ---------- controls (§4.6) ---------- */
+      .controls {
+        display: flex;
+        gap: var(--space-3);
+        width: 100%;
+        justify-content: center;
+      }
+      .btn {
+        font: var(--text-button);
+        border-radius: var(--radius-md);
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          background-color var(--motion-fast) var(--ease-standard),
+          color var(--motion-fast) var(--ease-standard),
+          filter var(--motion-fast) var(--ease-standard),
+          transform var(--motion-fast) var(--ease-standard);
+      }
+      .btn--ghost {
+        background: transparent;
+        color: var(--color-text-secondary);
+        height: 36px;
+        padding: 0 var(--space-3);
+      }
+      .btn--ghost:hover { background: var(--color-bg-subtle); }
+      .btn--primary-lg {
+        height: 48px;
+        min-width: 132px;
+        padding: 0 var(--space-5);
+        font: var(--text-button-lg);
+        background: var(--current-color);
+        color: var(--color-on-mode);
+      }
+      .btn--primary-lg:hover { filter: brightness(1.08); }
+      .btn--primary-lg:active { transform: translateY(1px); }
+      .btn--ghost-lg {
+        height: 48px;
+        min-width: 96px;
+        padding: 0 var(--space-4);
+        font: var(--text-button-lg);
+        background: transparent;
+        color: var(--color-text-secondary);
+        border: 1px solid var(--color-border-strong);
+      }
+      .btn--ghost-lg:hover { background: var(--color-bg-subtle); }
+      .btn--reset:hover { color: var(--color-danger); }
+      .btn:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+
+      /* ---------- cycle counter (§4.7) ---------- */
+      .cycle-counter {
+        font: var(--text-cycle);
+        color: var(--color-text-secondary);
+        margin-top: var(--space-1);
+      }
+      .cycle-counter__n {
+        color: var(--current-color);
+        font-weight: 600;
+      }
+      .cycle-counter--long-break {
+        font: var(--text-cycle);
+      }
+      .cycle-counter--long-break strong {
+        color: var(--current-color);
+        font-weight: 600;
+      }
+
+      /* ---------- kbd hint (§4.8) ---------- */
+      .kbd-hint {
+        margin-top: var(--space-5);
+        text-align: center;
+        color: var(--color-text-muted);
+        font: var(--text-caption);
+      }
+      .kbd-hint kbd {
+        padding: 2px 6px;
+        border: 1px solid var(--color-border-default);
+        border-radius: 3px;
+        background: var(--color-bg-subtle);
+        font: 11px/1 var(--font-mono);
+        color: var(--color-text-secondary);
+        margin: 0 2px;
+      }
+
+      /* ---------- legend / annotation ---------- */
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        background: #1E222B;
+        padding: 16px;
+        border-radius: 10px;
+        margin-top: 12px;
+      }
+      .legend__item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #B0B0AB;
+        font: 12px/1.4 var(--font-mono);
+      }
+      .legend__swatch {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      /* ---------- mobile preview ---------- */
+      .mobile-frame {
+        width: 360px;
+        margin: 0 auto;
+        border-radius: 24px;
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      .mobile-frame .pomodoro {
+        max-width: 100%;
+        padding: var(--space-5) var(--space-4);
+      }
+      .mobile-frame .countdown {
+        font: var(--text-countdown-sm); /* 4rem — AC 명시 */
+        color: var(--current-color);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+      }
+      .mobile-frame .controls .btn {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      /* ---------- transition demo (정적) ---------- */
+      .transition-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .transition-step {
+        text-align: center;
+      }
+      .transition-step__caption {
+        font: 11px/1.4 var(--font-mono);
+        color: #B0B0AB;
+        margin-top: 8px;
+      }
+      .transition-step .mini-card {
+        width: 220px;
+        padding: 18px;
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+      }
+      .mini-card .countdown {
+        font: 300 3rem/1 var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+      }
+      .mini-card[data-snapshot="A"] { /* FOCUS, fully visible */ }
+      .mini-card[data-snapshot="B"] { /* mid-fade out: opacity 0.5 scale 0.98 */
+        opacity: 0.5;
+        transform: scale(0.98);
+      }
+      .mini-card[data-snapshot="C"] { /* BREAK, fade-in 시작 (opacity 0.5, scale 0.96) */
+        opacity: 0.5;
+        transform: scale(0.96);
+      }
+      .mini-card[data-snapshot="D"] { /* BREAK, fully visible */ }
+
+      .arrow {
+        font: 24px/1 var(--font-mono);
+        color: #B0B0AB;
+      }
+
+      /* ---------- focus state demo ---------- */
+      .focus-demo .btn--primary-lg.focused {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ============================================================
+         HEADER
+         ============================================================ -->
+    <div class="mockup-header">
+      <h1>뽀모도로 SPA · 디자인 mockup (BF-430)</h1>
+      <p>
+        명세: <code>docs/design/pomodoro-BF-430.md</code> ·
+        다크 우선 / 모드 시그너처 3색 (FOCUS · SHORT_BREAK · LONG_BREAK) /
+        카운트다운 6rem (mobile 4rem) / dot gap 4px / fade+scale 220ms /
+        외부 CDN · module import 0 (file:// CORS 안전)
+      </p>
+    </div>
+
+    <!-- ============================================================
+         SECTION 1 · FOCUS (RED) — DARK / LIGHT
+         ============================================================ -->
+    <div class="mockup-section">
+      <h2 class="mockup-section__title">① FOCUS 모드 — 24:37 진행 중 (사이클 2/4)</h2>
+      <p class="mockup-section__desc">
+        FOCUS 시그너처 <strong>빨강</strong> (<code>--color-focus</code>) 적용 ·
+        dot 2개 채움 + 2번째 dot 진행 중 (outline + pulse) ·
+        primary 배경 = 모드 시그너처 색 · paused 시 display opacity 0.7
+      </p>
+      <div class="panels">
+        <!-- DARK -->
+        <div class="panel theme-dark">
+          <div class="panel__label">DARK · default 진입 (집중 모드 시각 시그널)</div>
+          <div class="panel__body">
+            <div class="topbar">
+              <h1 class="topbar__title">뽀모도로</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+              </div>
+            </div>
+            <section class="pomodoro" data-mode="FOCUS" aria-label="뽀모도로 타이머">
+              <div class="mode-badge mode-zone" aria-live="polite">FOCUS</div>
+              <div class="cycle-dots" role="img" aria-label="사이클 4개 중 2개 완료">
+                <span class="dot dot--done"></span>
+                <span class="dot dot--current"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div class="countdown mode-zone" role="timer" aria-label="남은 시간 24분 37초">
+                <span>24</span><span class="countdown__colon">:</span><span>37</span>
+              </div>
+              <div class="controls">
+                <button class="btn btn--primary-lg mode-zone">⏸ Pause</button>
+                <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+                <button class="btn btn--ghost-lg">⤼ Skip</button>
+              </div>
+              <p class="cycle-counter">사이클 <span class="cycle-counter__n">2</span> / 4</p>
+            </section>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 ·
+              <kbd>R</kbd> 리셋 ·
+              <kbd>S</kbd> Skip ·
+              <kbd>T</kbd> 테마
+            </p>
+          </div>
+        </div>
+        <!-- LIGHT -->
+        <div class="panel">
+          <div class="panel__label">LIGHT · 토글로 전환</div>
+          <div class="panel__body">
+            <div class="topbar">
+              <h1 class="topbar__title">뽀모도로</h1>
+              <div class="topbar__actions">
+                <button class="btn btn--ghost" aria-label="테마 전환">☀</button>
+              </div>
+            </div>
+            <section class="pomodoro" data-mode="FOCUS" aria-label="뽀모도로 타이머">
+              <div class="mode-badge mode-zone" aria-live="polite">FOCUS</div>
+              <div class="cycle-dots" role="img" aria-label="사이클 4개 중 2개 완료">
+                <span class="dot dot--done"></span>
+                <span class="dot dot--current"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div class="countdown mode-zone" role="timer" aria-label="남은 시간 24분 37초">
+                <span>24</span><span class="countdown__colon">:</span><span>37</span>
+              </div>
+              <div class="controls">
+                <button class="btn btn--primary-lg mode-zone">⏸ Pause</button>
+                <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+                <button class="btn btn--ghost-lg">⤼ Skip</button>
+              </div>
+              <p class="cycle-counter">사이클 <span class="cycle-counter__n">2</span> / 4</p>
+            </section>
+            <p class="kbd-hint">
+              <kbd>Space</kbd> 시작/정지 ·
+              <kbd>R</kbd> 리셋 ·
+              <kbd>S</kbd> Skip ·
+              <kbd>T</kbd> 테마
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION 2 · SHORT_BREAK (TEAL)
+         ============================================================ -->
+    <div class="mockup-section">
+      <h2 class="mockup-section__title">② SHORT_BREAK 모드 — 04:21 휴식 중 (사이클 2 완료)</h2>
+      <p class="mockup-section__desc">
+        SHORT_BREAK 시그너처 <strong>청록</strong> (<code>--color-break</code>) 적용 ·
+        dot 2개 채움, 3번째 dot 빈 상태 (다음 FOCUS 대기) · 사이클 카운터 N 색도 청록 fade 교체
+      </p>
+      <div class="panels">
+        <div class="panel theme-dark">
+          <div class="panel__label">DARK</div>
+          <div class="panel__body">
+            <section class="pomodoro" data-mode="SHORT_BREAK" aria-label="뽀모도로 타이머">
+              <div class="mode-badge mode-zone" aria-live="polite">SHORT BREAK</div>
+              <div class="cycle-dots" role="img" aria-label="사이클 4개 중 2개 완료, 휴식 중">
+                <span class="dot dot--done"></span>
+                <span class="dot dot--done"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div class="countdown mode-zone" role="timer" aria-label="휴식 4분 21초">
+                <span>04</span><span class="countdown__colon">:</span><span>21</span>
+              </div>
+              <div class="controls">
+                <button class="btn btn--primary-lg mode-zone">⏸ Pause</button>
+                <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+                <button class="btn btn--ghost-lg">⤼ Skip</button>
+              </div>
+              <p class="cycle-counter">사이클 <span class="cycle-counter__n">2</span> / 4</p>
+            </section>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__label">LIGHT</div>
+          <div class="panel__body">
+            <section class="pomodoro" data-mode="SHORT_BREAK" aria-label="뽀모도로 타이머">
+              <div class="mode-badge mode-zone" aria-live="polite">SHORT BREAK</div>
+              <div class="cycle-dots" role="img" aria-label="사이클 4개 중 2개 완료, 휴식 중">
+                <span class="dot dot--done"></span>
+                <span class="dot dot--done"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div class="countdown mode-zone" role="timer" aria-label="휴식 4분 21초">
+                <span>04</span><span class="countdown__colon">:</span><span>21</span>
+              </div>
+              <div class="controls">
+                <button class="btn btn--primary-lg mode-zone">⏸ Pause</button>
+                <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+                <button class="btn btn--ghost-lg">⤼ Skip</button>
+              </div>
+              <p class="cycle-counter">사이클 <span class="cycle-counter__n">2</span> / 4</p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION 3 · LONG_BREAK (PURPLE)
+         ============================================================ -->
+    <div class="mockup-section">
+      <h2 class="mockup-section__title">③ LONG_BREAK 모드 — 12:55 (4 사이클 완료 후)</h2>
+      <p class="mockup-section__desc">
+        LONG_BREAK 시그너처 <strong>보라</strong> (<code>--color-long-break</code>) 적용 ·
+        dot 4개 모두 채움 · 사이클 카운터 라벨 "사이클 완료 · LONG BREAK" 로 치환
+      </p>
+      <div class="panels">
+        <div class="panel theme-dark">
+          <div class="panel__label">DARK</div>
+          <div class="panel__body">
+            <section class="pomodoro" data-mode="LONG_BREAK" aria-label="뽀모도로 타이머">
+              <div class="mode-badge mode-zone" aria-live="polite">LONG BREAK</div>
+              <div class="cycle-dots" role="img" aria-label="사이클 4개 모두 완료">
+                <span class="dot dot--done"></span>
+                <span class="dot dot--done"></span>
+                <span class="dot dot--done"></span>
+                <span class="dot dot--done"></span>
+              </div>
+              <div class="countdown mode-zone" role="timer" aria-label="긴 휴식 12분 55초">
+                <span>12</span><span class="countdown__colon">:</span><span>55</span>
+              </div>
+              <div class="controls">
+                <button class="btn btn--primary-lg mode-zone">⏸ Pause</button>
+                <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+                <button class="btn btn--ghost-lg">⤼ Skip</button>
+              </div>
+              <p class="cycle-counter cycle-counter--long-break">
+                <strong>사이클 완료</strong> · LONG BREAK
+              </p>
+            </section>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__label">LIGHT</div>
+          <div class="panel__body">
+            <section class="pomodoro" data-mode="LONG_BREAK" aria-label="뽀모도로 타이머">
+              <div class="mode-badge mode-zone" aria-live="polite">LONG BREAK</div>
+              <div class="cycle-dots" role="img" aria-label="사이클 4개 모두 완료">
+                <span class="dot dot--done"></span>
+                <span class="dot dot--done"></span>
+                <span class="dot dot--done"></span>
+                <span class="dot dot--done"></span>
+              </div>
+              <div class="countdown mode-zone" role="timer" aria-label="긴 휴식 12분 55초">
+                <span>12</span><span class="countdown__colon">:</span><span>55</span>
+              </div>
+              <div class="controls">
+                <button class="btn btn--primary-lg mode-zone">⏸ Pause</button>
+                <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+                <button class="btn btn--ghost-lg">⤼ Skip</button>
+              </div>
+              <p class="cycle-counter cycle-counter--long-break">
+                <strong>사이클 완료</strong> · LONG BREAK
+              </p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION 4 · MOBILE PREVIEW (<640px)
+         ============================================================ -->
+    <div class="mockup-section">
+      <h2 class="mockup-section__title">④ Mobile (&lt;640px) 미리보기 — countdown 4rem (64px)</h2>
+      <p class="mockup-section__desc">
+        반응형 breakpoint &lt;640px: countdown <code>4rem</code> (AC 명시),
+        controls 의 3 버튼이 한 줄에 균등 분배 (<code>flex: 1 1 0</code>)
+      </p>
+      <div class="panels">
+        <div class="panel theme-dark">
+          <div class="panel__label">DARK · 360px</div>
+          <div class="panel__body" style="display:flex;justify-content:center;">
+            <div class="mobile-frame">
+              <section class="pomodoro" data-mode="FOCUS">
+                <div class="mode-badge mode-zone">FOCUS</div>
+                <div class="cycle-dots">
+                  <span class="dot dot--done"></span>
+                  <span class="dot dot--current"></span>
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                </div>
+                <div class="countdown mode-zone">
+                  <span>24</span><span class="countdown__colon">:</span><span>37</span>
+                </div>
+                <div class="controls">
+                  <button class="btn btn--primary-lg mode-zone">⏸ Pause</button>
+                  <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+                  <button class="btn btn--ghost-lg">⤼ Skip</button>
+                </div>
+                <p class="cycle-counter">사이클 <span class="cycle-counter__n">2</span> / 4</p>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__label">LIGHT · 360px</div>
+          <div class="panel__body" style="display:flex;justify-content:center;">
+            <div class="mobile-frame">
+              <section class="pomodoro" data-mode="SHORT_BREAK">
+                <div class="mode-badge mode-zone">SHORT BREAK</div>
+                <div class="cycle-dots">
+                  <span class="dot dot--done"></span>
+                  <span class="dot dot--done"></span>
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                </div>
+                <div class="countdown mode-zone">
+                  <span>04</span><span class="countdown__colon">:</span><span>21</span>
+                </div>
+                <div class="controls">
+                  <button class="btn btn--primary-lg mode-zone">⏸ Pause</button>
+                  <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+                  <button class="btn btn--ghost-lg">⤼ Skip</button>
+                </div>
+                <p class="cycle-counter">사이클 <span class="cycle-counter__n">2</span> / 4</p>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION 5 · MODE TRANSITION (FOCUS → BREAK) 시퀀스
+         ============================================================ -->
+    <div class="mockup-section">
+      <h2 class="mockup-section__title">⑤ 모드 전환 인터랙션 (FOCUS → SHORT_BREAK) — 220ms fade + scale 0.96→1</h2>
+      <p class="mockup-section__desc">
+        0:00 도달 또는 Skip 시: 220ms <code>--motion-mid</code> ·
+        opacity 1→0 + scale 1→0.96 (out) ·
+        새 모드 색·라벨 DOM 갱신 후 opacity 0→1 + scale 0.96→1 (in) ·
+        <code>--ease-emphasized</code> · prefers-reduced-motion 시 transform 비활성
+      </p>
+      <div class="panel theme-dark">
+        <div class="panel__label">시퀀스 시각 (정적 4-step 캡처)</div>
+        <div class="panel__body">
+          <div class="transition-row">
+            <div class="transition-step">
+              <div class="mini-card" data-snapshot="A">
+                <div class="pomodoro" data-mode="FOCUS" style="padding:0;background:transparent;box-shadow:none;gap:8px;">
+                  <div class="mode-badge">FOCUS</div>
+                  <div class="countdown"><span>00</span><span class="countdown__colon">:</span><span>01</span></div>
+                </div>
+              </div>
+              <p class="transition-step__caption">t=0ms · FOCUS 마지막 tick</p>
+            </div>
+            <span class="arrow">→</span>
+            <div class="transition-step">
+              <div class="mini-card" data-snapshot="B">
+                <div class="pomodoro" data-mode="FOCUS" style="padding:0;background:transparent;box-shadow:none;gap:8px;">
+                  <div class="mode-badge">FOCUS</div>
+                  <div class="countdown"><span>00</span><span class="countdown__colon">:</span><span>00</span></div>
+                </div>
+              </div>
+              <p class="transition-step__caption">t≈110ms · fade-out (opacity 0.5, scale 0.98)</p>
+            </div>
+            <span class="arrow">→</span>
+            <div class="transition-step">
+              <div class="mini-card" data-snapshot="C">
+                <div class="pomodoro" data-mode="SHORT_BREAK" style="padding:0;background:transparent;box-shadow:none;gap:8px;">
+                  <div class="mode-badge">SHORT BREAK</div>
+                  <div class="countdown"><span>05</span><span class="countdown__colon">:</span><span>00</span></div>
+                </div>
+              </div>
+              <p class="transition-step__caption">t≈110ms · DOM swap → fade-in 시작 (opacity 0.5, scale 0.96)</p>
+            </div>
+            <span class="arrow">→</span>
+            <div class="transition-step">
+              <div class="mini-card" data-snapshot="D">
+                <div class="pomodoro" data-mode="SHORT_BREAK" style="padding:0;background:transparent;box-shadow:none;gap:8px;">
+                  <div class="mode-badge">SHORT BREAK</div>
+                  <div class="countdown"><span>05</span><span class="countdown__colon">:</span><span>00</span></div>
+                </div>
+              </div>
+              <p class="transition-step__caption">t=220ms · SHORT_BREAK 완전 표시 + auto running</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION 6 · TOKEN LEGEND
+         ============================================================ -->
+    <div class="mockup-section">
+      <h2 class="mockup-section__title">⑥ 모드 시그너처 토큰 (다크 / 라이트)</h2>
+      <p class="mockup-section__desc">
+        AC 매핑: <code>--color-focus</code> (빨강) · <code>--color-break</code> (청록) ·
+        <code>--color-long-break</code> (보라) · <code>--color-bg-canvas</code> 페어 hex
+      </p>
+      <div class="panels">
+        <div class="panel theme-dark">
+          <div class="panel__label">DARK 토큰</div>
+          <div class="panel__body">
+            <div class="legend">
+              <div class="legend__item"><span class="legend__swatch" style="background:#0F1115"></span> --color-bg-canvas · #0F1115</div>
+              <div class="legend__item"><span class="legend__swatch" style="background:#171A21"></span> --color-bg-surface · #171A21</div>
+              <div class="legend__item"><span class="legend__swatch" style="background:#FF6B6B"></span> --color-focus · #FF6B6B</div>
+              <div class="legend__item"><span class="legend__swatch" style="background:#3DD9D9"></span> --color-break · #3DD9D9</div>
+              <div class="legend__item"><span class="legend__swatch" style="background:#A48BFF"></span> --color-long-break · #A48BFF</div>
+              <div class="legend__item"><span class="legend__swatch" style="background:#3A1F22"></span> --color-focus-bg · #3A1F22</div>
+              <div class="legend__item"><span class="legend__swatch" style="background:#0E2F30"></span> --color-break-bg · #0E2F30</div>
+              <div class="legend__item"><span class="legend__swatch" style="background:#1F1A3A"></span> --color-long-break-bg · #1F1A3A</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__label">LIGHT 토큰</div>
+          <div class="panel__body">
+            <div class="legend" style="background:#F1F1EF;">
+              <div class="legend__item" style="color:#3A3A38;"><span class="legend__swatch" style="background:#FAFAF9"></span> --color-bg-canvas · #FAFAF9</div>
+              <div class="legend__item" style="color:#3A3A38;"><span class="legend__swatch" style="background:#FFFFFF"></span> --color-bg-surface · #FFFFFF</div>
+              <div class="legend__item" style="color:#3A3A38;"><span class="legend__swatch" style="background:#E04848"></span> --color-focus · #E04848</div>
+              <div class="legend__item" style="color:#3A3A38;"><span class="legend__swatch" style="background:#0FA8A8"></span> --color-break · #0FA8A8</div>
+              <div class="legend__item" style="color:#3A3A38;"><span class="legend__swatch" style="background:#7B5BE8"></span> --color-long-break · #7B5BE8</div>
+              <div class="legend__item" style="color:#3A3A38;"><span class="legend__swatch" style="background:#FCE9E9"></span> --color-focus-bg · #FCE9E9</div>
+              <div class="legend__item" style="color:#3A3A38;"><span class="legend__swatch" style="background:#E0F7F7"></span> --color-break-bg · #E0F7F7</div>
+              <div class="legend__item" style="color:#3A3A38;"><span class="legend__swatch" style="background:#EFEAFD"></span> --color-long-break-bg · #EFEAFD</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION 7 · FOCUS-VISIBLE / KEYBOARD STATE (정적)
+         ============================================================ -->
+    <div class="mockup-section">
+      <h2 class="mockup-section__title">⑦ 키보드 focus-visible 상태 (Space / R / S / T 매핑)</h2>
+      <p class="mockup-section__desc">
+        모든 interactive 요소는 <code>:focus-visible</code> 시 2px outline · offset 2px ·
+        Space=primary 토글 · R=Reset · S=Skip · T=테마 토글
+      </p>
+      <div class="panel theme-dark focus-demo">
+        <div class="panel__label">FOCUS 모드 / primary 버튼 focused 상태</div>
+        <div class="panel__body">
+          <section class="pomodoro" data-mode="FOCUS" style="max-width:420px;">
+            <div class="mode-badge mode-zone">FOCUS</div>
+            <div class="cycle-dots">
+              <span class="dot dot--current"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+            <div class="countdown mode-zone">
+              <span>25</span><span class="countdown__colon">:</span><span>00</span>
+            </div>
+            <div class="controls">
+              <button class="btn btn--primary-lg mode-zone focused">▶ Start</button>
+              <button class="btn btn--ghost-lg btn--reset">⟲ Reset</button>
+              <button class="btn btn--ghost-lg">⤼ Skip</button>
+            </div>
+            <p class="cycle-counter">사이클 <span class="cycle-counter__n">1</span> / 4</p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         FOOTER NOTE
+         ============================================================ -->
+    <div class="mockup-header" style="margin-top:32px;color:#888;">
+      <p>
+        <strong>참고 (dev 용):</strong> 본 mockup 은 정량값 시각 검증용입니다.
+        실제 구현 시 source of truth 는 <code>docs/design/pomodoro-BF-430.md §7.8</code>
+        정량 일치 표입니다. 모든 토큰은 같은 markdown §2 · §3 · §7.3 참조.
+      </p>
+    </div>
+  </body>
+</html>
