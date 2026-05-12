@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>타이머</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">타이머</h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="btn-theme"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="card" aria-label="타이머">
+        <!-- 종료 배너 (hidden by default) -->
+        <div
+          class="banner banner--ended"
+          id="ended-banner"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <span class="banner__icon" aria-hidden="true">⏰</span>
+          <span class="banner__text">시간이 다 됐어요</span>
+          <button
+            type="button"
+            class="banner__close"
+            id="btn-banner-close"
+            aria-label="알림 닫기"
+          >
+            닫기
+          </button>
+        </div>
+
+        <!-- large display -->
+        <div
+          class="display"
+          id="display"
+          role="timer"
+          aria-live="off"
+          aria-label="남은 시간"
+        >
+          <span class="display__minutes" id="disp-m">0</span>
+          <span class="display__colon" aria-hidden="true">:</span>
+          <span class="display__seconds" id="disp-s">00</span>
+        </div>
+
+        <!-- input pair (idle 만 노출) -->
+        <div class="input-pair" id="input-pair">
+          <div class="input-pair__field">
+            <input
+              type="number"
+              id="input-m"
+              min="0"
+              max="99"
+              value="0"
+              inputmode="numeric"
+              pattern="\d*"
+              aria-label="분"
+            />
+            <span class="input-pair__label">분</span>
+          </div>
+          <span class="input-pair__colon" aria-hidden="true">:</span>
+          <div class="input-pair__field">
+            <input
+              type="number"
+              id="input-s"
+              min="0"
+              max="59"
+              value="0"
+              inputmode="numeric"
+              pattern="\d*"
+              aria-label="초"
+            />
+            <span class="input-pair__label">초</span>
+          </div>
+        </div>
+
+        <!-- hint (idle 0:00 만 노출) -->
+        <p class="hint" id="hint">분과 초를 입력하세요</p>
+
+        <!-- controls -->
+        <div class="controls">
+          <button
+            type="button"
+            class="btn btn--primary-lg"
+            id="btn-primary"
+            disabled
+          >
+            ▶ 시작
+          </button>
+          <button
+            type="button"
+            class="btn btn--ghost-lg"
+            id="btn-reset"
+            disabled
+          >
+            ⟲ 리셋
+          </button>
+        </div>
+
+        <!-- keyboard hint -->
+        <p class="kbd-hint">
+          <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
