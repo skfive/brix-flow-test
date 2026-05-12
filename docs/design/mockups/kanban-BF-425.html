@@ -1,0 +1,1304 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>칸반 보드 디자인 mockup · BF-425</title>
+    <style>
+      /* ════════════════════════════════════════════════════════════
+         §2.1 색상 토큰 — 다크 default
+         ════════════════════════════════════════════════════════════ */
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* 다크 default */
+        --color-bg-canvas: #0d1117;
+        --color-bg-surface: #161b22;
+        --color-bg-card: #1c2128;
+        --color-bg-elevated: #22272e;
+        --color-bg-subtle: #1c2128;
+        --color-border-default: #30363d;
+        --color-border-strong: #444c56;
+        --color-text-primary: #c9d1d9;
+        --color-text-secondary: #8b949e;
+        --color-text-muted: #6e7681;
+        --color-accent: #58a6ff;
+        --color-accent-hover: #79b8ff;
+        --color-accent-soft: rgba(88, 166, 255, 0.08);
+        --color-accent-soft-strong: rgba(88, 166, 255, 0.16);
+        --color-success: #3fb950;
+        --color-warning: #d29922;
+        --color-neutral: #8b949e;
+        --color-danger: #f85149;
+        --color-focus-ring: rgba(88, 166, 255, 0.4);
+
+        /* §2.2 spacing */
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+
+        /* §2.3 radius / shadow */
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-pill: 999px;
+        --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.4);
+        --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.5);
+        --shadow-drag: 0 16px 32px rgba(0, 0, 0, 0.6);
+
+        /* §2.4 motion */
+        --duration-fast: 120ms;
+        --duration-base: 200ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* §3 typography */
+        --text-h1: 600 18px/1.3 var(--font-sans);
+        --text-card-title: 500 14px/1.45 var(--font-sans);
+        --text-card-meta: 400 12px/1.4 var(--font-sans);
+        --text-column-header: 600 12px/1 var(--font-sans);
+        --text-count: 600 11px/1 var(--font-mono);
+        --text-tag: 500 11px/1 var(--font-sans);
+        --text-button: 500 13px/1 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+      }
+
+      /* 라이트 패널 override (mockup 한정 selector) */
+      .panel.is-light {
+        --color-bg-canvas: #f6f8fa;
+        --color-bg-surface: #ffffff;
+        --color-bg-card: #ffffff;
+        --color-bg-elevated: #f6f8fa;
+        --color-bg-subtle: #f1f3f5;
+        --color-border-default: #d0d7de;
+        --color-border-strong: #afb8c1;
+        --color-text-primary: #1f2328;
+        --color-text-secondary: #656d76;
+        --color-text-muted: #8c959f;
+        --color-accent: #0969da;
+        --color-accent-hover: #1f6feb;
+        --color-accent-soft: rgba(9, 105, 218, 0.08);
+        --color-accent-soft-strong: rgba(9, 105, 218, 0.12);
+        --color-success: #1a7f37;
+        --color-warning: #9a6700;
+        --color-neutral: #656d76;
+        --color-danger: #cf222e;
+        --color-focus-ring: rgba(9, 105, 218, 0.35);
+        --shadow-card: 0 1px 0 rgba(31, 35, 40, 0.04),
+          0 1px 1px rgba(31, 35, 40, 0.06);
+        --shadow-card-hover: 0 8px 24px rgba(140, 149, 159, 0.2);
+        --shadow-drag: 0 16px 32px rgba(140, 149, 159, 0.4);
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         reset / base — body 는 mockup gallery 배경
+         ════════════════════════════════════════════════════════════ */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font: 400 14px/1.5 var(--font-sans);
+        color: #c9d1d9;
+        background: #0a0d11;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         mockup gallery layout
+         ════════════════════════════════════════════════════════════ */
+      .gallery {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-5);
+      }
+      .gallery__title {
+        font: 700 28px/1.3 var(--font-sans);
+        margin: 0 0 var(--space-2);
+        color: #f0f6fc;
+      }
+      .gallery__subtitle {
+        font: 400 14px/1.5 var(--font-sans);
+        color: #8b949e;
+        margin: 0 0 var(--space-6);
+      }
+      .gallery__section-title {
+        font: 600 16px/1.3 var(--font-sans);
+        color: #f0f6fc;
+        margin: var(--space-6) 0 var(--space-3);
+        padding-bottom: var(--space-2);
+        border-bottom: 1px solid #30363d;
+      }
+      .gallery__caption {
+        font: 400 12px/1.5 var(--font-sans);
+        color: #8b949e;
+        margin: 0 0 var(--space-3);
+      }
+      .gallery__row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-5);
+        margin-bottom: var(--space-6);
+      }
+      @media (min-width: 1100px) {
+        .gallery__row.is-2col {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      /* 각 패널 (light / dark) — 토큰을 자체 영역에 격리 */
+      .panel {
+        background: var(--color-bg-canvas);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        border: 1px solid #30363d;
+      }
+      .panel__label {
+        position: sticky;
+        top: 0;
+        padding: var(--space-2) var(--space-4);
+        background: rgba(13, 17, 23, 0.85);
+        color: #8b949e;
+        font: 500 11px/1 var(--font-sans);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-bottom: 1px solid #30363d;
+        z-index: 10;
+      }
+      .panel.is-light .panel__label {
+        background: rgba(246, 248, 250, 0.92);
+        color: #656d76;
+        border-bottom-color: #d0d7de;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         §4.2 Topbar
+         ════════════════════════════════════════════════════════════ */
+      .topbar {
+        height: 56px;
+        padding: 0 var(--space-5);
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .topbar__title {
+        margin: 0;
+        font: var(--text-h1);
+        color: var(--color-text-primary);
+      }
+      .topbar__actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         버튼 base
+         ════════════════════════════════════════════════════════════ */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-1);
+        height: 32px;
+        padding: 0 var(--space-3);
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        font: var(--text-button);
+        cursor: pointer;
+        transition: background var(--duration-fast) var(--ease-in-out),
+          color var(--duration-fast) var(--ease-in-out),
+          border-color var(--duration-fast) var(--ease-in-out);
+        user-select: none;
+      }
+      .btn--primary {
+        background: var(--color-accent);
+        color: #ffffff;
+      }
+      .btn--primary:hover {
+        background: var(--color-accent-hover);
+      }
+      .btn--ghost {
+        background: transparent;
+        color: var(--color-text-secondary);
+        border-color: var(--color-border-default);
+      }
+      .btn--ghost:hover {
+        background: var(--color-bg-elevated);
+        color: var(--color-text-primary);
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         §4.1 board grid
+         ════════════════════════════════════════════════════════════ */
+      .board {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: var(--space-5);
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px; /* AC: gap 16px */
+        align-items: start;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         §4.3 / §5.2 컬럼
+         ════════════════════════════════════════════════════════════ */
+      .column {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        padding: var(--space-3);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        min-height: 240px;
+        transition: background var(--duration-base) var(--ease-in-out),
+          border-color var(--duration-base) var(--ease-in-out);
+      }
+      /* drop target 하이라이트 — AC: rgba(88,166,255,0.08) */
+      .column.is-drop-target {
+        background: var(--color-accent-soft);
+        border-color: var(--color-accent);
+        box-shadow: inset 0 0 0 1px var(--color-accent-soft-strong);
+      }
+
+      .column-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-3) var(--space-2);
+        border-bottom: 1px solid var(--color-border-default);
+      }
+      .column-header__label {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .column-header__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        flex-shrink: 0;
+      }
+      .column-header__dot--neutral {
+        background: var(--color-neutral);
+      }
+      .column-header__dot--warning {
+        background: var(--color-warning);
+      }
+      .column-header__dot--success {
+        background: var(--color-success);
+      }
+      .column-header__text {
+        font: var(--text-column-header);
+        text-transform: uppercase; /* AC: uppercase */
+        letter-spacing: 0.06em;
+        color: var(--color-text-primary);
+      }
+
+      /* §4.3 count badge */
+      .count-badge {
+        min-width: 22px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: var(--radius-pill);
+        background: var(--color-bg-subtle);
+        color: var(--color-text-secondary);
+        font: var(--text-count);
+        font-variant-numeric: tabular-nums;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--color-border-default);
+      }
+
+      .column-body {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        min-height: 60px;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         §4.4 카드
+         ════════════════════════════════════════════════════════════ */
+      .card {
+        position: relative;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border-default);
+        border-radius: 8px; /* AC: 8px */
+        padding: var(--space-3);
+        box-shadow: var(--shadow-card);
+        cursor: grab;
+        transition: transform var(--duration-fast) var(--ease-in-out),
+          box-shadow var(--duration-fast) var(--ease-in-out),
+          background var(--duration-fast) var(--ease-in-out),
+          opacity var(--duration-base) var(--ease-in-out);
+      }
+      .card:hover,
+      .card.is-hover-demo {
+        background: var(--color-bg-elevated);
+        box-shadow: var(--shadow-card-hover);
+        transform: translateY(-2px); /* AC: translateY(-2px) */
+      }
+      .card:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+      .card:active {
+        cursor: grabbing;
+      }
+      /* §4.6 드래그 중 source — AC: opacity 0.5 */
+      .card.is-dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+      }
+      .card.is-drop-preview {
+        box-shadow: var(--shadow-drag);
+        transform: translateY(-2px) rotate(2deg);
+        background: var(--color-bg-elevated);
+      }
+
+      .card__title {
+        margin: 0 0 var(--space-2);
+        font: var(--text-card-title);
+        color: var(--color-text-primary);
+        word-break: break-word;
+      }
+      .card__meta {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+        font: var(--text-card-meta);
+        color: var(--color-text-secondary);
+      }
+      .card__due {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .card__delete {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 22px;
+        height: 22px;
+        border: none;
+        background: transparent;
+        color: var(--color-text-muted);
+        font: 500 16px/1 var(--font-sans);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity var(--duration-fast) var(--ease-in-out),
+          color var(--duration-fast) var(--ease-in-out),
+          background var(--duration-fast) var(--ease-in-out);
+      }
+      .card:hover .card__delete,
+      .card.is-hover-demo .card__delete {
+        opacity: 1;
+      }
+      .card__delete:hover {
+        color: var(--color-danger);
+        background: var(--color-bg-subtle);
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-elevated);
+        color: var(--color-text-secondary);
+        font: var(--text-tag);
+        border: 1px solid var(--color-border-default);
+      }
+      .avatar {
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: var(--color-accent-soft-strong);
+        color: var(--color-accent);
+        font: 500 11px/1 var(--font-sans);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         §4.8 컬럼 푸터 [+ 카드 추가]
+         ════════════════════════════════════════════════════════════ */
+      .column-add {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-1);
+        width: 100%;
+        padding: var(--space-2) var(--space-3);
+        background: transparent;
+        border: 1px dashed var(--color-border-default);
+        border-radius: var(--radius-md);
+        color: var(--color-text-secondary);
+        font: var(--text-button);
+        cursor: pointer;
+        transition: background var(--duration-fast) var(--ease-in-out),
+          color var(--duration-fast) var(--ease-in-out),
+          border-color var(--duration-fast) var(--ease-in-out);
+      }
+      .column-add:hover {
+        border-color: var(--color-accent);
+        color: var(--color-accent);
+        background: var(--color-accent-soft);
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         §4.7 빈 컬럼 hint
+         ════════════════════════════════════════════════════════════ */
+      .empty-hint {
+        font: var(--text-caption);
+        color: var(--color-text-muted);
+        text-align: center;
+        padding: var(--space-5) var(--space-3);
+        border: 1px dashed var(--color-border-default);
+        border-radius: var(--radius-md);
+        background: transparent;
+        margin: 0;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         §4.9 inline 추가 form
+         ════════════════════════════════════════════════════════════ */
+      .add-form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        padding: var(--space-3);
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-accent);
+        border-radius: var(--radius-md);
+        box-shadow: 0 0 0 3px var(--color-accent-soft);
+      }
+      .add-form textarea {
+        min-height: 60px;
+        max-height: 120px;
+        padding: var(--space-2);
+        background: var(--color-bg-canvas);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-sm);
+        color: var(--color-text-primary);
+        font: var(--text-card-title);
+        resize: none;
+        outline: none;
+      }
+      .add-form textarea:focus {
+        border-color: var(--color-accent);
+      }
+      .add-form__actions {
+        display: flex;
+        gap: var(--space-2);
+        justify-content: flex-end;
+      }
+      .add-form .btn {
+        height: 28px;
+        padding: 0 var(--space-3);
+        font-size: 12px;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         §6.3 placeholder slot (drop position indicator)
+         ════════════════════════════════════════════════════════════ */
+      .drop-slot {
+        height: 4px;
+        background: var(--color-accent);
+        border-radius: 2px;
+        margin: 2px 0;
+        list-style: none;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         반응형 (§4.11) — gallery 자체는 wide, 패널 안에서 시뮬레이션
+         ════════════════════════════════════════════════════════════ */
+      .panel--mobile .board {
+        grid-template-columns: 1fr; /* AC: < 640px → 1컬럼 stack */
+        gap: var(--space-3);
+        max-width: 420px;
+      }
+      .panel--mobile .column {
+        min-height: 160px;
+      }
+
+      /* ════════════════════════════════════════════════════════════
+         AC 정량 표
+         ════════════════════════════════════════════════════════════ */
+      .spec-table {
+        width: 100%;
+        border-collapse: collapse;
+        font: 400 12px/1.5 var(--font-sans);
+        background: #161b22;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .spec-table th,
+      .spec-table td {
+        text-align: left;
+        padding: var(--space-2) var(--space-3);
+        border-bottom: 1px solid #30363d;
+      }
+      .spec-table th {
+        background: #1c2128;
+        font-weight: 600;
+        color: #f0f6fc;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .spec-table td {
+        color: #c9d1d9;
+      }
+      .spec-table tr:last-child td {
+        border-bottom: none;
+      }
+      .spec-table code {
+        font-family: var(--font-mono);
+        background: #22272e;
+        padding: 1px 6px;
+        border-radius: 4px;
+        color: #79b8ff;
+      }
+
+      /* sr-only 표준 */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* 토큰 swatch 그리드 (§2.1 시각) */
+      .swatch-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: var(--space-2);
+      }
+      .swatch {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: var(--radius-md);
+        padding: var(--space-2);
+        font: 400 11px/1.4 var(--font-mono);
+        color: #c9d1d9;
+      }
+      .swatch__chip {
+        width: 100%;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        margin-bottom: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .swatch__name {
+        color: #8b949e;
+        font-size: 10px;
+        display: block;
+      }
+      .swatch__value {
+        color: #f0f6fc;
+        font-weight: 600;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="gallery">
+      <h1 class="gallery__title">칸반 보드 디자인 mockup · BF-425</h1>
+      <p class="gallery__subtitle">
+        다크 우선 토큰 · 3컬럼 grid (gap 16px) · DnD 인터랙션 · file:// 호환 (외부
+        폰트/아이콘 0건)
+      </p>
+
+      <!-- ═══════════════ 1. default 보드 (light / dark 나란히) ═══════════════ -->
+      <h2 class="gallery__section-title">1. default 보드 — 다크 (메인) + 라이트 (보조)</h2>
+      <p class="gallery__caption">
+        3컬럼 grid · gap 16px · 컬럼 헤더 uppercase + dot + count badge · 카드
+        title 14px / meta 12px / tag 11px
+      </p>
+
+      <div class="gallery__row is-2col">
+        <!-- 다크 패널 (메인) -->
+        <div class="panel">
+          <div class="panel__label">DARK · default</div>
+          <header class="topbar">
+            <h1 class="topbar__title">칸반 보드</h1>
+            <div class="topbar__actions">
+              <button class="btn btn--primary" type="button">＋ 카드</button>
+              <button class="btn btn--ghost" type="button" aria-label="테마 전환">🌙</button>
+            </div>
+          </header>
+
+          <main class="board">
+            <!-- 컬럼 1: TO DO -->
+            <section class="column" aria-label="To Do 컬럼">
+              <header class="column-header">
+                <div class="column-header__label">
+                  <span class="column-header__dot column-header__dot--neutral" aria-hidden="true"></span>
+                  <span class="column-header__text">TO DO</span>
+                </div>
+                <span class="count-badge" aria-label="3개">3</span>
+              </header>
+              <ol class="column-body">
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">디자인 시스템 토큰 정리</h3>
+                  <div class="card__meta">
+                    <span class="tag">#design</span>
+                    <span class="card__due">2일 후</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">로그인 화면 와이어프레임</h3>
+                  <div class="card__meta">
+                    <span class="tag">#wireframe</span>
+                    <span class="avatar" aria-label="담당자 K">K</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">사용자 인터뷰 일정 조율</h3>
+                  <div class="card__meta">
+                    <span class="tag">#research</span>
+                  </div>
+                </li>
+              </ol>
+              <button class="column-add" type="button">＋ 카드 추가</button>
+            </section>
+
+            <!-- 컬럼 2: IN PROGRESS -->
+            <section class="column" aria-label="In Progress 컬럼">
+              <header class="column-header">
+                <div class="column-header__label">
+                  <span class="column-header__dot column-header__dot--warning" aria-hidden="true"></span>
+                  <span class="column-header__text">IN PROGRESS</span>
+                </div>
+                <span class="count-badge" aria-label="2개">2</span>
+              </header>
+              <ol class="column-body">
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">칸반 보드 SPA 구현</h3>
+                  <div class="card__meta">
+                    <span class="tag">#frontend</span>
+                    <span class="card__due">진행 중</span>
+                    <span class="avatar" aria-label="담당자 J">J</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">DnD 네이티브 API 검토</h3>
+                  <div class="card__meta">
+                    <span class="tag">#tech-spike</span>
+                  </div>
+                </li>
+              </ol>
+              <button class="column-add" type="button">＋ 카드 추가</button>
+            </section>
+
+            <!-- 컬럼 3: DONE -->
+            <section class="column" aria-label="Done 컬럼">
+              <header class="column-header">
+                <div class="column-header__label">
+                  <span class="column-header__dot column-header__dot--success" aria-hidden="true"></span>
+                  <span class="column-header__text">DONE</span>
+                </div>
+                <span class="count-badge" aria-label="5개">5</span>
+              </header>
+              <ol class="column-body">
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">프로젝트 셋업</h3>
+                  <div class="card__meta">
+                    <span class="tag">#setup</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">메모장 SPA 출시 (BF-400)</h3>
+                  <div class="card__meta">
+                    <span class="tag">#shipped</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">타이머 SPA 출시 (BF-405)</h3>
+                  <div class="card__meta">
+                    <span class="tag">#shipped</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">스톱워치 SPA 출시 (BF-415)</h3>
+                  <div class="card__meta">
+                    <span class="tag">#shipped</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">디자인 토큰 v1 확정</h3>
+                  <div class="card__meta">
+                    <span class="tag">#design-ops</span>
+                  </div>
+                </li>
+              </ol>
+              <button class="column-add" type="button">＋ 카드 추가</button>
+            </section>
+          </main>
+        </div>
+
+        <!-- 라이트 패널 (보조) -->
+        <div class="panel is-light">
+          <div class="panel__label">LIGHT · 보조 비교</div>
+          <header class="topbar">
+            <h1 class="topbar__title">칸반 보드</h1>
+            <div class="topbar__actions">
+              <button class="btn btn--primary" type="button">＋ 카드</button>
+              <button class="btn btn--ghost" type="button" aria-label="테마 전환">☀</button>
+            </div>
+          </header>
+
+          <main class="board">
+            <section class="column" aria-label="To Do 컬럼">
+              <header class="column-header">
+                <div class="column-header__label">
+                  <span class="column-header__dot column-header__dot--neutral" aria-hidden="true"></span>
+                  <span class="column-header__text">TO DO</span>
+                </div>
+                <span class="count-badge">3</span>
+              </header>
+              <ol class="column-body">
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">디자인 시스템 토큰 정리</h3>
+                  <div class="card__meta">
+                    <span class="tag">#design</span>
+                    <span>2일 후</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">로그인 화면 와이어프레임</h3>
+                  <div class="card__meta">
+                    <span class="tag">#wireframe</span>
+                    <span class="avatar" aria-label="담당자 K">K</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">사용자 인터뷰 일정 조율</h3>
+                  <div class="card__meta">
+                    <span class="tag">#research</span>
+                  </div>
+                </li>
+              </ol>
+              <button class="column-add" type="button">＋ 카드 추가</button>
+            </section>
+
+            <section class="column" aria-label="In Progress 컬럼">
+              <header class="column-header">
+                <div class="column-header__label">
+                  <span class="column-header__dot column-header__dot--warning" aria-hidden="true"></span>
+                  <span class="column-header__text">IN PROGRESS</span>
+                </div>
+                <span class="count-badge">2</span>
+              </header>
+              <ol class="column-body">
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">칸반 보드 SPA 구현</h3>
+                  <div class="card__meta">
+                    <span class="tag">#frontend</span>
+                    <span>진행 중</span>
+                    <span class="avatar" aria-label="담당자 J">J</span>
+                  </div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">DnD 네이티브 API 검토</h3>
+                  <div class="card__meta">
+                    <span class="tag">#tech-spike</span>
+                  </div>
+                </li>
+              </ol>
+              <button class="column-add" type="button">＋ 카드 추가</button>
+            </section>
+
+            <section class="column" aria-label="Done 컬럼">
+              <header class="column-header">
+                <div class="column-header__label">
+                  <span class="column-header__dot column-header__dot--success" aria-hidden="true"></span>
+                  <span class="column-header__text">DONE</span>
+                </div>
+                <span class="count-badge">5</span>
+              </header>
+              <ol class="column-body">
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">프로젝트 셋업</h3>
+                  <div class="card__meta"><span class="tag">#setup</span></div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">메모장 SPA 출시</h3>
+                  <div class="card__meta"><span class="tag">#shipped</span></div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">타이머 SPA 출시</h3>
+                  <div class="card__meta"><span class="tag">#shipped</span></div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">스톱워치 SPA 출시</h3>
+                  <div class="card__meta"><span class="tag">#shipped</span></div>
+                </li>
+                <li class="card" tabindex="0">
+                  <button class="card__delete" type="button" aria-label="삭제">×</button>
+                  <h3 class="card__title">디자인 토큰 v1 확정</h3>
+                  <div class="card__meta"><span class="tag">#design-ops</span></div>
+                </li>
+              </ol>
+              <button class="column-add" type="button">＋ 카드 추가</button>
+            </section>
+          </main>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 2. DnD 인터랙션 상태 ═══════════════ -->
+      <h2 class="gallery__section-title">2. DnD 인터랙션 — 드래그 중 / 드롭 타겟 / hover lift</h2>
+      <p class="gallery__caption">
+        source card opacity 0.5 · drop target column 배경 rgba(88,166,255,0.08) ·
+        카드 hover translateY(-2px) + 강한 shadow
+      </p>
+
+      <div class="panel">
+        <div class="panel__label">DARK · DnD in progress</div>
+        <main class="board" style="padding-top: var(--space-4)">
+          <!-- 컬럼 1: source (드래그 시작) -->
+          <section class="column" aria-label="To Do 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--neutral" aria-hidden="true"></span>
+                <span class="column-header__text">TO DO</span>
+              </div>
+              <span class="count-badge">3</span>
+            </header>
+            <ol class="column-body">
+              <li class="card" tabindex="0">
+                <h3 class="card__title">유저 온보딩 흐름 설계</h3>
+                <div class="card__meta"><span class="tag">#ux</span></div>
+              </li>
+              <!-- 드래그 중 source 카드 -->
+              <li class="card is-dragging" tabindex="0" aria-grabbed="true">
+                <h3 class="card__title">📦 드래그 중 카드 (opacity 0.5)</h3>
+                <div class="card__meta">
+                  <span class="tag">#dragging</span>
+                  <span>source</span>
+                </div>
+              </li>
+              <li class="card" tabindex="0">
+                <h3 class="card__title">접근성 audit 체크리스트</h3>
+                <div class="card__meta"><span class="tag">#a11y</span></div>
+              </li>
+            </ol>
+            <button class="column-add" type="button">＋ 카드 추가</button>
+          </section>
+
+          <!-- 컬럼 2: drop target (하이라이트) -->
+          <section class="column is-drop-target" aria-label="In Progress 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--warning" aria-hidden="true"></span>
+                <span class="column-header__text">IN PROGRESS</span>
+              </div>
+              <span class="count-badge">2</span>
+            </header>
+            <ol class="column-body">
+              <li class="card" tabindex="0">
+                <h3 class="card__title">칸반 보드 SPA 구현</h3>
+                <div class="card__meta">
+                  <span class="tag">#frontend</span>
+                  <span>진행 중</span>
+                </div>
+              </li>
+              <li class="drop-slot" aria-hidden="true"></li>
+              <li class="card" tabindex="0">
+                <h3 class="card__title">DnD 네이티브 API 검토</h3>
+                <div class="card__meta"><span class="tag">#tech-spike</span></div>
+              </li>
+            </ol>
+            <button class="column-add" type="button">＋ 카드 추가</button>
+          </section>
+
+          <!-- 컬럼 3: hover lift 시연 -->
+          <section class="column" aria-label="Done 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--success" aria-hidden="true"></span>
+                <span class="column-header__text">DONE</span>
+              </div>
+              <span class="count-badge">2</span>
+            </header>
+            <ol class="column-body">
+              <!-- hover 시연 -->
+              <li class="card is-hover-demo" tabindex="0">
+                <button class="card__delete" type="button" aria-label="삭제">×</button>
+                <h3 class="card__title">🪄 hover 시연 — translateY(-2px)</h3>
+                <div class="card__meta">
+                  <span class="tag">#hover</span>
+                  <span>강한 shadow + lift</span>
+                </div>
+              </li>
+              <li class="card" tabindex="0">
+                <h3 class="card__title">디자인 토큰 v1 확정</h3>
+                <div class="card__meta"><span class="tag">#design-ops</span></div>
+              </li>
+            </ol>
+            <button class="column-add" type="button">＋ 카드 추가</button>
+          </section>
+        </main>
+      </div>
+
+      <!-- ═══════════════ 3. 빈 컬럼 / inline 추가 form ═══════════════ -->
+      <h2 class="gallery__section-title">3. 빈 컬럼 / inline 카드 추가 form</h2>
+      <p class="gallery__caption">
+        빈 상태 dashed hint · [+ 카드 추가] 클릭 시 그 자리에 inline textarea 표시
+      </p>
+
+      <div class="panel">
+        <div class="panel__label">DARK · 빈 + add form 상태</div>
+        <main class="board" style="padding-top: var(--space-4)">
+          <!-- 빈 컬럼 -->
+          <section class="column" aria-label="To Do 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--neutral" aria-hidden="true"></span>
+                <span class="column-header__text">TO DO</span>
+              </div>
+              <span class="count-badge">0</span>
+            </header>
+            <ol class="column-body">
+              <li>
+                <p class="empty-hint">
+                  카드가 없습니다.<br />＋ 카드 추가 로 시작하세요.
+                </p>
+              </li>
+            </ol>
+            <button class="column-add" type="button">＋ 카드 추가</button>
+          </section>
+
+          <!-- inline add form 활성 컬럼 -->
+          <section class="column" aria-label="In Progress 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--warning" aria-hidden="true"></span>
+                <span class="column-header__text">IN PROGRESS</span>
+              </div>
+              <span class="count-badge">1</span>
+            </header>
+            <ol class="column-body">
+              <li class="card" tabindex="0">
+                <h3 class="card__title">기존 카드 (시연)</h3>
+                <div class="card__meta"><span class="tag">#wip</span></div>
+              </li>
+              <li>
+                <div class="add-form">
+                  <textarea placeholder="제목을 입력하세요…">DnD 드롭 정확도 개선</textarea>
+                  <div class="add-form__actions">
+                    <button class="btn btn--ghost" type="button">취소</button>
+                    <button class="btn btn--primary" type="button">추가</button>
+                  </div>
+                </div>
+              </li>
+            </ol>
+            <!-- 추가 form 활성 시 column-add 는 hidden -->
+          </section>
+
+          <section class="column" aria-label="Done 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--success" aria-hidden="true"></span>
+                <span class="column-header__text">DONE</span>
+              </div>
+              <span class="count-badge">3</span>
+            </header>
+            <ol class="column-body">
+              <li class="card" tabindex="0">
+                <h3 class="card__title">메모장 SPA</h3>
+                <div class="card__meta"><span class="tag">#shipped</span></div>
+              </li>
+              <li class="card" tabindex="0">
+                <h3 class="card__title">타이머 SPA</h3>
+                <div class="card__meta"><span class="tag">#shipped</span></div>
+              </li>
+              <li class="card" tabindex="0">
+                <h3 class="card__title">스톱워치 SPA</h3>
+                <div class="card__meta"><span class="tag">#shipped</span></div>
+              </li>
+            </ol>
+            <button class="column-add" type="button">＋ 카드 추가</button>
+          </section>
+        </main>
+      </div>
+
+      <!-- ═══════════════ 4. mobile (< 640px) — 1컬럼 stack ═══════════════ -->
+      <h2 class="gallery__section-title">4. 모바일 (&lt; 640px) — 1컬럼 stack</h2>
+      <p class="gallery__caption">
+        AC 기준: &lt; 640px 에서 3컬럼이 1컬럼으로 vertical stack. column 헤더는
+        sticky top 0 으로 고정.
+      </p>
+
+      <div class="panel panel--mobile" style="max-width: 440px; margin: 0 auto">
+        <div class="panel__label">DARK · mobile preview</div>
+        <header class="topbar">
+          <h1 class="topbar__title">칸반 보드</h1>
+          <div class="topbar__actions">
+            <button class="btn btn--primary" type="button" aria-label="카드 추가">＋</button>
+            <button class="btn btn--ghost" type="button" aria-label="테마 전환">🌙</button>
+          </div>
+        </header>
+        <main class="board">
+          <section class="column" aria-label="To Do 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--neutral" aria-hidden="true"></span>
+                <span class="column-header__text">TO DO</span>
+              </div>
+              <span class="count-badge">2</span>
+            </header>
+            <ol class="column-body">
+              <li class="card" tabindex="0">
+                <h3 class="card__title">디자인 시스템 정리</h3>
+                <div class="card__meta"><span class="tag">#design</span></div>
+              </li>
+              <li class="card" tabindex="0">
+                <h3 class="card__title">로그인 와이어프레임</h3>
+                <div class="card__meta"><span class="tag">#wireframe</span></div>
+              </li>
+            </ol>
+            <button class="column-add" type="button">＋ 카드 추가</button>
+          </section>
+          <section class="column" aria-label="In Progress 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--warning" aria-hidden="true"></span>
+                <span class="column-header__text">IN PROGRESS</span>
+              </div>
+              <span class="count-badge">1</span>
+            </header>
+            <ol class="column-body">
+              <li class="card" tabindex="0">
+                <h3 class="card__title">칸반 보드 구현</h3>
+                <div class="card__meta"><span class="tag">#frontend</span></div>
+              </li>
+            </ol>
+            <button class="column-add" type="button">＋ 카드 추가</button>
+          </section>
+          <section class="column" aria-label="Done 컬럼">
+            <header class="column-header">
+              <div class="column-header__label">
+                <span class="column-header__dot column-header__dot--success" aria-hidden="true"></span>
+                <span class="column-header__text">DONE</span>
+              </div>
+              <span class="count-badge">2</span>
+            </header>
+            <ol class="column-body">
+              <li class="card" tabindex="0">
+                <h3 class="card__title">메모장 SPA</h3>
+                <div class="card__meta"><span class="tag">#shipped</span></div>
+              </li>
+              <li class="card" tabindex="0">
+                <h3 class="card__title">타이머 SPA</h3>
+                <div class="card__meta"><span class="tag">#shipped</span></div>
+              </li>
+            </ol>
+            <button class="column-add" type="button">＋ 카드 추가</button>
+          </section>
+        </main>
+      </div>
+
+      <!-- ═══════════════ 5. AC 정량 토큰 swatch ═══════════════ -->
+      <h2 class="gallery__section-title">5. AC 핵심 토큰 swatch (다크 default)</h2>
+      <p class="gallery__caption">
+        AC 명시 토큰 시각 표 — bg-canvas / accent / text-primary + drop highlight
+      </p>
+
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #0d1117"></div>
+          <span class="swatch__name">--color-bg-canvas</span>
+          <span class="swatch__value">#0d1117</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #161b22"></div>
+          <span class="swatch__name">--color-bg-surface</span>
+          <span class="swatch__value">#161b22</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #1c2128"></div>
+          <span class="swatch__name">--color-bg-card</span>
+          <span class="swatch__value">#1c2128</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #58a6ff"></div>
+          <span class="swatch__name">--color-accent</span>
+          <span class="swatch__value">#58a6ff</span>
+        </div>
+        <div class="swatch">
+          <div
+            class="swatch__chip"
+            style="
+              background: rgba(88, 166, 255, 0.08);
+              border: 1px solid #30363d;
+            "
+          ></div>
+          <span class="swatch__name">--color-accent-soft (drop target)</span>
+          <span class="swatch__value">rgba(88,166,255,0.08)</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #c9d1d9"></div>
+          <span class="swatch__name">--color-text-primary</span>
+          <span class="swatch__value">#c9d1d9</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #8b949e"></div>
+          <span class="swatch__name">--color-text-secondary</span>
+          <span class="swatch__value">#8b949e</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #30363d"></div>
+          <span class="swatch__name">--color-border-default</span>
+          <span class="swatch__value">#30363d</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #3fb950"></div>
+          <span class="swatch__name">--color-success (DONE dot)</span>
+          <span class="swatch__value">#3fb950</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #d29922"></div>
+          <span class="swatch__name">--color-warning (IN PROGRESS dot)</span>
+          <span class="swatch__value">#d29922</span>
+        </div>
+      </div>
+
+      <!-- ═══════════════ 6. AC 정량 일치 표 ═══════════════ -->
+      <h2 class="gallery__section-title">6. AC 정량 일치 (검증 표)</h2>
+      <p class="gallery__caption">
+        본 mockup 이 명세 §7.6 의 정량 기준과 일치하는지 reviewer 가 한눈에 검증.
+      </p>
+
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>AC 항목</th>
+            <th>값</th>
+            <th>구현 위치 (CSS)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>board grid gap</td>
+            <td><code>16px</code></td>
+            <td><code>.board { gap: 16px }</code></td>
+          </tr>
+          <tr>
+            <td>카드 border-radius</td>
+            <td><code>8px</code></td>
+            <td><code>.card { border-radius: 8px }</code></td>
+          </tr>
+          <tr>
+            <td>카드 hover transform</td>
+            <td><code>translateY(-2px)</code></td>
+            <td><code>.card:hover { transform: translateY(-2px) }</code></td>
+          </tr>
+          <tr>
+            <td>드래그 source opacity</td>
+            <td><code>0.5</code></td>
+            <td><code>.card.is-dragging { opacity: 0.5 }</code></td>
+          </tr>
+          <tr>
+            <td>drop target 배경 (dark)</td>
+            <td><code>rgba(88,166,255,0.08)</code></td>
+            <td><code>.column.is-drop-target { background: var(--color-accent-soft) }</code></td>
+          </tr>
+          <tr>
+            <td>mobile 1컬럼 stack</td>
+            <td><code>&lt; 640px → grid-template-columns: 1fr</code></td>
+            <td>panel--mobile 시연 (구현 CSS 는 <code>@media (max-width: 639px)</code>)</td>
+          </tr>
+          <tr>
+            <td>컬럼 헤더 uppercase</td>
+            <td><code>text-transform: uppercase; letter-spacing: 0.06em</code></td>
+            <td><code>.column-header__text</code></td>
+          </tr>
+          <tr>
+            <td>count badge font</td>
+            <td><code>600 11px/1 mono</code></td>
+            <td><code>.count-badge { font: var(--text-count) }</code></td>
+          </tr>
+          <tr>
+            <td>fade-in/out / drop settle</td>
+            <td><code>200ms</code></td>
+            <td><code>--duration-base: 200ms</code> + keyframes (§6.3)</td>
+          </tr>
+          <tr>
+            <td>다크 default `--color-bg-canvas`</td>
+            <td><code>#0d1117</code></td>
+            <td><code>:root { --color-bg-canvas: #0d1117 }</code></td>
+          </tr>
+          <tr>
+            <td>다크 default `--color-accent`</td>
+            <td><code>#58a6ff</code></td>
+            <td><code>:root { --color-accent: #58a6ff }</code></td>
+          </tr>
+          <tr>
+            <td>다크 default `--color-text-primary`</td>
+            <td><code>#c9d1d9</code></td>
+            <td><code>:root { --color-text-primary: #c9d1d9 }</code></td>
+          </tr>
+          <tr>
+            <td>typography 위계</td>
+            <td><code>14 / 12 / 11px</code></td>
+            <td>card-title 14 · card-meta·column-header·caption 12 · count·tag 11</td>
+          </tr>
+          <tr>
+            <td>file:// 호환</td>
+            <td>외부 폰트 / 아이콘 / CDN 0건</td>
+            <td>system font stack + unicode (🌙 ☀ ＋ ×) only</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>
