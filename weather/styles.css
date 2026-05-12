@@ -585,6 +585,13 @@ body {
   z-index: 100;
   animation: fade-in var(--motion-fast) var(--ease-standard);
 }
+/* BF-440 회귀 가드 — `display: flex` 가 HTML `hidden` attribute (default
+ * `display: none`) 를 override 하지 못하도록 [hidden] selector 로 보강.
+ * 누락 시 modal-backdrop 이 항상 visible 상태로 pointer event 를 intercept 해
+ * 페이지 전체의 click 이 차단된다 (BF-438 회귀 사례). */
+.modal-backdrop[hidden] {
+  display: none;
+}
 @keyframes fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
