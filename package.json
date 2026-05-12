@@ -1,0 +1,10 @@
+{
+  "name": "notepad-spa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vanilla HTML/CSS/JS 기반 메모장 SPA (BF-402: /notepad 라우트, localStorage CRUD)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/notepad-*.test.js"
+  }
+}

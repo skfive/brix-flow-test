@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>메모장</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <button
+        type="button"
+        class="topbar__back"
+        id="btn-back"
+        aria-label="목록으로 돌아가기"
+        hidden
+      >
+        ← 목록
+      </button>
+      <h1 class="topbar__title">메모장</h1>
+      <div class="topbar__actions">
+        <button type="button" class="btn btn--primary" id="btn-new">
+          + 새 메모
+        </button>
+      </div>
+    </header>
+
+    <main class="layout" id="layout">
+      <aside class="sidebar" aria-label="메모 목록">
+        <ul
+          class="list"
+          id="note-list"
+          role="listbox"
+          aria-label="저장된 메모"
+          tabindex="0"
+        ></ul>
+        <p class="list__empty" id="list-empty" hidden>
+          메모가 없습니다
+        </p>
+      </aside>
+
+      <section class="editor" aria-label="편집기" id="editor">
+        <!-- 비어있을 때 -->
+        <div class="editor__empty" id="editor-empty">
+          <div class="editor__empty-icon" aria-hidden="true">📝</div>
+          <h2 class="editor__empty-title">아직 메모가 없어요</h2>
+          <p class="editor__empty-sub">
+            상단의 <strong>+ 새 메모</strong> 버튼으로 시작하세요
+          </p>
+          <button
+            type="button"
+            class="btn btn--primary"
+            id="btn-empty-new"
+          >
+            + 새 메모 만들기
+          </button>
+        </div>
+
+        <!-- 메모 표시 / 작성 영역 (JS 가 토글) -->
+        <div class="editor__pane" id="editor-pane" hidden>
+          <div class="editor__metabar">
+            <input
+              type="text"
+              class="editor__title"
+              id="editor-title"
+              placeholder="제목"
+              maxlength="200"
+              aria-label="메모 제목"
+            />
+            <div class="editor__actions">
+              <button
+                type="button"
+                class="btn btn--primary"
+                id="btn-save"
+              >
+                💾 저장
+              </button>
+              <button
+                type="button"
+                class="btn btn--danger-ghost"
+                id="btn-delete"
+              >
+                🗑 삭제
+              </button>
+            </div>
+          </div>
+          <textarea
+            class="editor__body"
+            id="editor-body"
+            placeholder="메모를 입력하세요…"
+            aria-label="메모 본문"
+          ></textarea>
+          <div class="editor__status" id="editor-status" aria-live="polite">
+            <span class="editor__count" id="editor-count">0자</span>
+            <span class="editor__saved" id="editor-saved"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div
+      class="modal"
+      id="delete-modal"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-modal-title"
+      aria-describedby="delete-modal-desc"
+    >
+      <div class="modal__overlay" id="modal-overlay"></div>
+      <div class="modal__box">
+        <h2 class="modal__title" id="delete-modal-title">
+          메모를 삭제할까요?
+        </h2>
+        <p class="modal__desc" id="delete-modal-desc">
+          <span id="delete-modal-target"></span> 메모가 영구적으로 삭제되며
+          되돌릴 수 없습니다.
+        </p>
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost" id="btn-cancel-delete">
+            취소
+          </button>
+          <button
+            type="button"
+            class="btn btn--danger-solid"
+            id="btn-confirm-delete"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
