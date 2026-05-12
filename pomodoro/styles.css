@@ -1,0 +1,487 @@
+/* BF-432 · 뽀모도로 SPA 스타일
+ * 명세: docs/design/pomodoro-BF-430.md §2 / §3 / §4 / §6 / §7.3 / §7.4
+ * - notepad/timer/stopwatch 와 공유 토큰 + 뽀모도로 전용 추가 (§2.2 / §2.5)
+ * - 다크 default — 첫 진입 시 저장값 없으면 dark (§6.6)
+ */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* color tokens — light (§2.1) */
+  --color-bg-canvas: #fafaf9;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f1ef;
+  --color-border-default: #e5e5e2;
+  --color-border-strong: #d0d0cc;
+  --color-text-primary: #1a1a19;
+  --color-text-secondary: #6b6b66;
+  --color-text-muted: #9a9a93;
+  --color-accent: #3563e9;
+  --color-accent-hover: #2a4fc0;
+  --color-danger: #d14343;
+  --color-danger-hover: #a83333;
+  --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+  /* pomodoro 전용 — light (§2.2) */
+  --color-focus: #e04848;
+  --color-focus-bg: #fce9e9;
+  --color-focus-border: #f4b5b5;
+  --color-break: #0fa8a8;
+  --color-break-bg: #e0f7f7;
+  --color-break-border: #a8e4e4;
+  --color-long-break: #7b5be8;
+  --color-long-break-bg: #efeafd;
+  --color-long-break-border: #c8b7f4;
+  --color-dot-empty: #e5e5e2;
+
+  /* primary-lg 텍스트 색 — light 는 흰색 (§4.6) */
+  --primary-lg-text: #ffffff;
+
+  /* spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* radius / shadow */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* motion (§2.5) */
+  --motion-fast: 120ms;
+  --motion-mid: 220ms;
+  --motion-slow: 400ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+
+  /* typography (§3) */
+  --text-h1: 600 20px/1.3 var(--font-sans);
+  --text-countdown: 300 6rem/1 var(--font-mono);
+  --text-countdown-sm: 300 4rem/1 var(--font-mono);
+  --text-mode-badge: 600 13px/1 var(--font-sans);
+  --text-cycle: 500 14px/1.4 var(--font-sans);
+  --text-label: 500 14px/1.4 var(--font-sans);
+  --text-body: 400 15px/1.65 var(--font-sans);
+  --text-caption: 400 12px/1.4 var(--font-sans);
+  --text-button: 500 14px/1 var(--font-sans);
+  --text-button-lg: 600 16px/1 var(--font-sans);
+}
+
+[data-theme="dark"] {
+  --color-bg-canvas: #0f1115;
+  --color-bg-surface: #171a21;
+  --color-bg-subtle: #1e222b;
+  --color-border-default: #262b36;
+  --color-border-strong: #3a4150;
+  --color-text-primary: #e8e8e4;
+  --color-text-secondary: #9a9a93;
+  --color-text-muted: #6b6b66;
+  --color-accent: #5b82f0;
+  --color-accent-hover: #7596f3;
+  --color-danger: #e55858;
+  --color-danger-hover: #ec7676;
+  --color-focus-ring: rgba(91, 130, 240, 0.55);
+
+  --color-focus: #ff6b6b;
+  --color-focus-bg: #3a1f22;
+  --color-focus-border: #7a3a3f;
+  --color-break: #3dd9d9;
+  --color-break-bg: #0e2f30;
+  --color-break-border: #1f5c5d;
+  --color-long-break: #a48bff;
+  --color-long-break-bg: #1f1a3a;
+  --color-long-break-border: #4a3d7a;
+  --color-dot-empty: #262b36;
+
+  /* dark 에서는 primary-lg 텍스트가 시그너처 색 위에 검정으로 가독성 확보 (§4.6) */
+  --primary-lg-text: #0f1115;
+
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+}
+
+/* 모드별 시그너처 색 alias (§7.4) — JS 가 data-mode 한 줄만 바꾸면 전체 갱신 */
+.pomodoro[data-mode="FOCUS"] {
+  --current-color: var(--color-focus);
+  --current-bg: var(--color-focus-bg);
+  --current-border: var(--color-focus-border);
+}
+.pomodoro[data-mode="SHORT_BREAK"] {
+  --current-color: var(--color-break);
+  --current-bg: var(--color-break-bg);
+  --current-border: var(--color-break-border);
+}
+.pomodoro[data-mode="LONG_BREAK"] {
+  --current-color: var(--color-long-break);
+  --current-bg: var(--color-long-break-bg);
+  --current-border: var(--color-long-break-border);
+}
+
+/* ─────────────────── reset / base ─────────────────── */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font: var(--text-body);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+}
+button {
+  font-family: inherit;
+}
+
+/* ─────────────────── topbar ─────────────────── */
+.topbar {
+  height: 56px;
+  padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  flex: 0 0 auto;
+}
+.topbar__title {
+  font: var(--text-h1);
+  margin: 0;
+  flex: 1 1 auto;
+}
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.focus-total {
+  font: var(--text-caption);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.focus-total__value {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────── buttons ─────────────────── */
+.btn {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font: var(--text-button);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  background: transparent;
+  color: var(--color-text-primary);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    filter var(--motion-fast) var(--ease-standard);
+}
+.btn--ghost:hover {
+  background: var(--color-bg-subtle);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.btn--primary-lg {
+  height: 48px;
+  min-width: 132px;
+  padding: 0 var(--space-5);
+  font: var(--text-button-lg);
+  background: var(--current-color);
+  color: var(--primary-lg-text);
+  border-radius: var(--radius-md);
+  transition:
+    background-color var(--motion-mid) var(--ease-standard),
+    filter var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+.btn--primary-lg:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.btn--primary-lg:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn--ghost-lg {
+  height: 48px;
+  min-width: 96px;
+  padding: 0 var(--space-4);
+  font: var(--text-button-lg);
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+}
+.btn--ghost-lg:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+}
+#btn-reset:hover:not(:disabled) {
+  color: var(--color-danger);
+}
+
+/* ─────────────────── page / card (§4.1) ─────────────────── */
+.page {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: var(--space-7) var(--space-5);
+  gap: var(--space-5);
+}
+.card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-7) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+/* ─────────────────── mode badge (§4.3) ─────────────────── */
+.mode-badge {
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--current-bg);
+  border: 1px solid var(--current-border);
+  color: var(--current-color);
+  font: var(--text-mode-badge);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ─────────────────── cycle dots (§4.4) ─────────────────── */
+.cycle-dots {
+  display: flex;
+  gap: 4px; /* AC 명시 정량 */
+  align-items: center;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-dot-empty);
+  display: inline-block;
+  box-sizing: border-box;
+}
+.dot.dot--done {
+  background: var(--current-color);
+}
+.dot.dot--current {
+  background: transparent;
+  border: 2px solid var(--current-color);
+  animation: dot-pulse 1.4s ease-in-out infinite;
+}
+.dot.dot--empty {
+  background: var(--color-dot-empty);
+}
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dot.dot--current {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ─────────────────── countdown (§4.5) ─────────────────── */
+.countdown {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+  font: var(--text-countdown);
+  font-variant-numeric: tabular-nums;
+  color: var(--current-color);
+  user-select: none;
+  transition:
+    opacity var(--motion-mid) var(--ease-standard),
+    transform var(--motion-mid) var(--ease-emphasized),
+    color var(--motion-mid) var(--ease-standard);
+}
+.countdown.is-paused {
+  opacity: 0.7;
+}
+
+/* ─────────────────── controls (§4.6) ─────────────────── */
+.controls {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  width: 100%;
+}
+
+/* ─────────────────── cycle counter (§4.7) ─────────────────── */
+.cycle-counter {
+  font: var(--text-cycle);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+.cycle-counter__n {
+  color: var(--current-color);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─────────────────── kbd hint (§4.8) ─────────────────── */
+.kbd-hint {
+  font: var(--text-caption);
+  color: var(--color-text-muted);
+  margin: 0;
+  text-align: center;
+}
+.kbd-hint kbd {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 3px;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+
+/* ─────────────────── 모드 전환 fade+scale (§6.4) ─────────────────── */
+.mode-zone {
+  transition:
+    opacity var(--motion-mid) var(--ease-standard),
+    transform var(--motion-mid) var(--ease-emphasized),
+    background-color var(--motion-mid) var(--ease-standard),
+    color var(--motion-mid) var(--ease-standard);
+}
+.pomodoro[data-transitioning="true"] .mode-zone {
+  opacity: 0;
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-zone {
+    transition: none;
+  }
+  .pomodoro[data-transitioning="true"] .mode-zone {
+    transform: none;
+  }
+}
+
+/* ─────────────────── toast (인앱 알림) ─────────────────── */
+.toast-stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 1000;
+  pointer-events: none;
+}
+.toast {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--current-border, var(--color-border-strong));
+  border-left: 4px solid var(--current-color, var(--color-accent));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  color: var(--color-text-primary);
+  font: var(--text-label);
+  max-width: 320px;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--motion-mid) var(--ease-standard),
+    transform var(--motion-mid) var(--ease-standard);
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast[data-mode="FOCUS"] {
+  border-left-color: var(--color-focus);
+}
+.toast[data-mode="SHORT_BREAK"] {
+  border-left-color: var(--color-break);
+}
+.toast[data-mode="LONG_BREAK"] {
+  border-left-color: var(--color-long-break);
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: opacity var(--motion-fast) linear;
+    transform: none;
+  }
+}
+
+/* ─────────────────── 반응형 (§4.9) ─────────────────── */
+@media (max-width: 639px) {
+  .countdown {
+    font: var(--text-countdown-sm);
+    font-variant-numeric: tabular-nums;
+  }
+  .page {
+    padding: var(--space-4);
+  }
+  .card {
+    max-width: 100%;
+    padding: var(--space-5) var(--space-4);
+    margin: 0;
+  }
+  .controls .btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 379px) {
+  /* XS: ghost-lg 라벨 단축 — 텍스트 잘림 방지 */
+  #btn-reset {
+    font-size: 0;
+  }
+  #btn-reset::before {
+    content: "⟲";
+    font-size: 16px;
+  }
+  #btn-skip {
+    font-size: 0;
+  }
+  #btn-skip::before {
+    content: "⤼";
+    font-size: 16px;
+  }
+}
