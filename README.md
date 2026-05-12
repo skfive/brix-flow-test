@@ -8,7 +8,8 @@
 | `timer/index.html` | 타이머 (mm:ss 카운트다운) |
 | `stopwatch/index.html` | 스톱워치 (lap 기록) |
 | `kanban/index.html` | 칸반 보드 |
-| **`pomodoro/index.html`** | **뽀모도로 (BF-432)** |
+| `pomodoro/index.html` | 뽀모도로 (BF-432) |
+| **`weather/index.html`** | **날씨 카드 (BF-438) — 도시 추가/메모/정렬/다크 우선** |
 
 ---
 
@@ -104,6 +105,66 @@ npm test -- tests/pomodoro-*.test.js
 - `tests/pomodoro-timer.test.js` — 순수 로직 (모드 전이, 자정 리셋, 포맷)
 - `tests/pomodoro-storage.test.js` — localStorage 추상 (state/stats round-trip, prefix 격리)
 - `pomodoro/` 디렉토리는 비-module (UMD) 패턴 — `createRequire(import.meta.url)` 로 로드합니다.
+
+---
+
+---
+
+## /weather (BF-438)
+
+도시별 현재 날씨 카드 grid SPA — 도시 추가·메모 인라인 편집·삭제 모달·정렬 토글·다크 우선 테마.
+디자인 명세: [`docs/design/weather-BF-435.md`](docs/design/weather-BF-435.md)
+
+### 열기
+
+```sh
+# 1) 직접 열기 (file:// — CORS 안전)
+open weather/index.html       # macOS
+xdg-open weather/index.html   # Linux
+
+# 2) 또는 정적 서버
+python3 -m http.server 8080
+# → http://localhost:8080/weather/
+```
+
+> 외부 CDN·module import·`fetch()` self-load 0건. DevTools console 의 에러도 0건입니다.
+
+### 컨트롤
+
+| 동작 | 마우스 | 키보드 |
+|---|---|---|
+| 도시 카드 추가 | 폼 `＋ 추가` 버튼 | 폼 안에서 `Enter` |
+| 메모 인라인 편집 | 메모 영역 클릭 | 메모 영역 focus 후 `Enter` |
+| 편집 저장 / 취소 | textarea 외부 클릭 = 저장 | `Enter` 저장 / `Esc` 취소 |
+| 카드 삭제 | 카드 우상단 `×` → 모달 `삭제` | 모달 focus 후 `Enter` 확정 / `Esc` 취소 |
+| 정렬 토글 (최신순 ↔ 가나다) | topbar 아래 `⇅ 최신순` 칩 | — |
+| 테마 토글 (다크 ↔ 라이트) | topbar 우측 `🌙` / `☀` | `T` |
+
+- 첫 진입 시 (`localStorage["bf-theme"]` 미저장) **다크** 강제 (명세 §6.5)
+- 한 번 토글하면 저장값이 생성되어 이후 모든 SPA (`notepad`/`timer`/`stopwatch`/`kanban`/`pomodoro`) 와 동기
+
+### 새로고침 복원
+
+- 카드·정렬 모드·테마 모두 복원됩니다.
+- 메모 편집 중인 상태는 복원하지 않습니다 (의도적 — 부분 입력 잔존 방지).
+
+### localStorage 키 (prefix `weather:`)
+
+| 키 | 형식 | 비고 |
+|---|---|---|
+| `weather:<ulid>` | `{ id, city, emoji, memo, state, createdAt, updatedAt }` | 카드 1건 = 1 entry |
+| `weather:__sort__` | `"updated-desc"` / `"city-asc"` | 정렬 모드 |
+| `bf-theme` | `"dark"` / `"light"` | **본 prefix 밖** — 다른 SPA 와 공유 |
+
+### 단위 테스트
+
+```sh
+# weather 모듈만 (focused scope)
+BRIX_TEST_SCOPE=focused node --test tests/weather-*.test.js
+```
+
+- `tests/weather-storage.test.js` — storage 추상 (CRUD round-trip, prefix 격리, ulid)
+- `tests/weather-integration.test.js` — 복원 시나리오 + 정적 회귀 가드 (결함 A~O)
 
 ---
 

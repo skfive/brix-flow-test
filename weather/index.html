@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>날씨</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // BF-438 · 다크 default 강제 (명세 §6.5) — flicker 방지 위해 head 인라인
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {
+          // localStorage 사용 불가 환경 (private mode 등) — default 다크 유지
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">
+        <span class="topbar__title-emoji" aria-hidden="true">🌤</span>
+        <span>날씨</span>
+      </h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost-icon"
+          id="theme-toggle"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- 도시 추가 form (Enter 제출) -->
+      <form class="add-form" id="add-form" aria-label="도시 추가">
+        <div class="add-form__field">
+          <label class="add-form__label" for="add-city">도시</label>
+          <input
+            class="add-form__input"
+            type="text"
+            id="add-city"
+            name="city"
+            placeholder="예: 서울"
+            maxlength="60"
+            required
+            autocomplete="off"
+          />
+        </div>
+        <div class="add-form__field">
+          <label class="add-form__label" for="add-emoji">이모지</label>
+          <select class="add-form__select" id="add-emoji" name="emoji">
+            <option value="☀️" data-state="sunny">☀️</option>
+            <option value="☁️" data-state="cloudy">☁️</option>
+            <option value="🌧️" data-state="rainy">🌧️</option>
+            <option value="❄️" data-state="snowy">❄️</option>
+            <option value="⛈️" data-state="thunder">⛈️</option>
+            <option value="💨" data-state="windy">💨</option>
+          </select>
+        </div>
+        <div class="add-form__field add-form__field--memo">
+          <label class="add-form__label" for="add-memo">메모 (선택)</label>
+          <input
+            class="add-form__input"
+            type="text"
+            id="add-memo"
+            name="memo"
+            placeholder="예: 오늘은 아침 산책 좋음"
+            maxlength="140"
+            autocomplete="off"
+          />
+        </div>
+        <div class="add-form__actions">
+          <button type="submit" class="btn btn--primary" id="add-submit">
+            ＋ 추가
+          </button>
+        </div>
+      </form>
+
+      <!-- 정렬 토글 + 카드 개수 -->
+      <div class="controls-row">
+        <span class="controls-row__count" id="count-label">0개 도시</span>
+        <button
+          type="button"
+          class="sort-toggle"
+          id="sort-toggle"
+          aria-label="정렬 모드 전환"
+        >
+          <span class="sort-toggle__icon" aria-hidden="true">⇅</span>
+          <span class="sort-toggle__label" id="sort-toggle-label">
+            최신순
+          </span>
+        </button>
+      </div>
+
+      <!-- 카드 grid (JS 가 동적 render) -->
+      <section
+        class="grid"
+        id="grid"
+        aria-label="도시별 날씨 카드"
+      ></section>
+
+      <!-- 빈 상태 (JS 가 토글) -->
+      <div
+        class="empty-state"
+        id="empty-state"
+        hidden
+        role="status"
+        aria-live="polite"
+      >
+        <span class="empty-state__icon" aria-hidden="true">🌥️</span>
+        <h2 class="empty-state__title">아직 도시가 없어요</h2>
+        <p class="empty-state__body">
+          위 폼에 도시명·이모지·메모를 입력하고 <kbd>Enter</kbd> 로 첫 카드를
+          추가해 보세요.
+        </p>
+      </div>
+
+      <p class="kbd-hint">
+        <kbd>Enter</kbd> 추가/저장 · <kbd>Esc</kbd> 취소 ·
+        <kbd>T</kbd> 테마
+      </p>
+    </main>
+
+    <!-- 삭제 모달 (JS 가 토글) -->
+    <div
+      class="modal-backdrop"
+      id="modal-backdrop"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div class="modal">
+        <h2 class="modal__title" id="modal-title">카드 삭제</h2>
+        <p class="modal__body" id="modal-body">
+          정말 이 도시 카드를 삭제할까요?
+        </p>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--secondary" id="modal-cancel">
+            취소
+          </button>
+          <button type="button" class="btn btn--danger" id="modal-confirm">
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SR live region -->
+    <div id="sr-announce" class="sr-only" role="status" aria-live="polite"></div>
+
+    <!-- 비-module script — file:// CORS 안전 (Task AC) -->
+    <script src="./storage.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
