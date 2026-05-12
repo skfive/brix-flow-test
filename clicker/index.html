@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>클릭 카운터</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // BF-443 · 다크 default 강제 (명세 §6.5 / §7.2) — flicker 방지 위해 head 인라인
+      // pomodoro/index.html 의 패턴 복제 (명세 §9.2)
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {
+          // localStorage 사용 불가 환경 (private mode 등) — default 다크 유지
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">클릭 카운터</h1>
+      <div class="topbar__actions">
+        <span
+          class="best-score"
+          id="best-score"
+          aria-live="polite"
+          aria-label="최고 점수"
+        >
+          Best <span class="best-score__value" id="best-score-value">0</span>
+        </span>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="theme-toggle"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="card clicker" aria-label="클릭 카운터 게임">
+        <!-- 점수 영역 (명세 §4.3) -->
+        <div
+          class="score"
+          role="status"
+          aria-live="off"
+          aria-atomic="true"
+        >
+          <span class="score__label">점수</span>
+          <span
+            class="score__value is-zero"
+            id="score-value"
+            aria-label="현재 점수 0 점"
+            >0</span
+          >
+        </div>
+
+        <!-- 원형 클릭 버튼 (명세 §4.4 — AC §1: 180px / 보라 / scale(0.95) 150ms) -->
+        <button
+          type="button"
+          class="click-button"
+          id="btn-click"
+          aria-label="클릭하여 점수 +1"
+        >
+          Click!
+        </button>
+
+        <!-- 보조 컨트롤 (BF-443: 리셋 + 전체 초기화) -->
+        <div class="clicker__controls">
+          <button
+            type="button"
+            class="btn btn--ghost"
+            id="btn-reset"
+            aria-label="현재 점수만 리셋 (best 유지)"
+            disabled
+          >
+            ⟲ Reset
+          </button>
+          <button
+            type="button"
+            class="btn btn--ghost btn--danger-ghost"
+            id="btn-clear-all"
+            aria-label="전체 초기화 (점수와 best 모두 0)"
+            disabled
+          >
+            ⌫ 전체 초기화
+          </button>
+        </div>
+      </section>
+
+      <p class="kbd-hint">
+        <kbd>Space</kbd> 클릭 · <kbd>R</kbd> 리셋 · <kbd>T</kbd> 테마
+      </p>
+    </main>
+
+    <!-- 인앱 toast (best score 갱신 축하 — Notification API 금지) -->
+    <div
+      class="toast-stack"
+      id="toast-stack"
+      role="status"
+      aria-live="polite"
+    ></div>
+
+    <!-- 전체 초기화 확인 모달 (작업 AC: "확인 모달") -->
+    <div
+      class="modal-backdrop"
+      id="modal-backdrop"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div class="modal">
+        <h2 class="modal__title" id="modal-title">전체 초기화</h2>
+        <p class="modal__body" id="modal-body">
+          현재 점수와 최고 점수를 모두 0 으로 되돌립니다. 이 동작은 되돌릴 수 없습니다.
+        </p>
+        <div class="modal__actions">
+          <button
+            type="button"
+            class="btn btn--ghost"
+            id="modal-cancel"
+            aria-label="취소"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            class="btn btn--danger"
+            id="modal-confirm"
+            aria-label="전체 초기화 확정"
+          >
+            초기화
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 비-module script — file:// CORS 안전 (명세 §6.7 / §9.4) -->
+    <script src="./storage.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>

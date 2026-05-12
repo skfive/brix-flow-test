@@ -10,6 +10,7 @@
 | `kanban/index.html` | 칸반 보드 |
 | `pomodoro/index.html` | 뽀모도로 (BF-432) |
 | **`weather/index.html`** | **날씨 카드 (BF-438) — 도시 추가/메모/정렬/다크 우선** |
+| **`clicker/index.html`** | **클릭 카운터 (BF-443) — 점수/best/리셋/전체 초기화/다크 우선** |
 
 ---
 

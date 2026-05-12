@@ -1,0 +1,467 @@
+/* BF-443 · 클릭 카운터 SPA 스타일
+ * 명세: docs/design/clicker-BF-441.md §2 / §3 / §4 / §7
+ * - notepad/timer/stopwatch/pomodoro 와 공유 토큰 (명세 §9.2 복제)
+ * - 클리커 전용 추가: §2.2 (--color-click-*), §2.5 (--scale-press / --motion-press)
+ * - 다크 default — 첫 진입 시 저장값 없으면 dark (§6.5)
+ */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* 다크 default — AC §1 매핑 (#0d1117 / #a78bfa) */
+  --color-bg-canvas: #0d1117;
+  --color-bg-surface: #161b22;
+  --color-bg-subtle: #1f2530;
+  --color-border-default: #262c36;
+  --color-border-strong: #3a4150;
+  --color-text-primary: #e8e8e4;
+  --color-text-secondary: #9a9a93;
+  --color-text-muted: #6b6b66;
+  --color-accent: #a78bfa;
+  --color-accent-hover: #bda1fc;
+  --color-accent-active: #8c6df0;
+  --color-accent-on: #0d1117;
+  --color-danger: #e55858;
+  --color-focus-ring: rgba(167, 139, 250, 0.55);
+
+  /* 클리커 전용 (§2.2) */
+  --color-click-glow: rgba(167, 139, 250, 0.45);
+  --color-click-ring: rgba(167, 139, 250, 0.18);
+  --color-score-accent: #a78bfa;
+
+  /* spacing (§2.3 — 재사용) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* radius / shadow (§2.4) */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-circle: 50%;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+  --shadow-click:
+    0 8px 24px var(--color-click-glow), 0 0 0 6px var(--color-click-ring);
+  --shadow-click-active: 0 2px 8px var(--color-click-glow);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  /* motion (§2.5 — AC §1 매핑) */
+  --motion-press: 150ms; /* AC: scale(0.95) 150ms */
+  --motion-fast: 120ms;
+  --motion-mid: 220ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --scale-press: 0.95; /* AC: scale(0.95) */
+
+  /* typography (§3) */
+  --text-h1: 600 20px/1.3 var(--font-sans);
+  --text-score: 300 5rem/1 var(--font-mono); /* desktop ≥640px */
+  --text-score-sm: 300 4rem/1 var(--font-mono); /* mobile <640px (AC §1) */
+  --text-score-label: 500 13px/1.4 var(--font-sans);
+  --text-click-cta: 600 18px/1 var(--font-sans);
+  --text-label: 500 14px/1.4 var(--font-sans);
+  --text-body: 400 15px/1.65 var(--font-sans);
+  --text-caption: 400 12px/1.4 var(--font-sans);
+  --text-button: 500 14px/1 var(--font-sans);
+}
+
+[data-theme="light"] {
+  --color-bg-canvas: #fafaf9;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f1ef;
+  --color-border-default: #e5e5e2;
+  --color-border-strong: #d0d0cc;
+  --color-text-primary: #1a1a19;
+  --color-text-secondary: #6b6b66;
+  --color-text-muted: #9a9a93;
+  --color-accent: #7b5be8;
+  --color-accent-hover: #6b4fd8;
+  --color-accent-active: #5a3fc0;
+  --color-accent-on: #ffffff;
+  --color-danger: #d14343;
+  --color-focus-ring: rgba(123, 91, 232, 0.45);
+
+  --color-click-glow: rgba(123, 91, 232, 0.3);
+  --color-click-ring: rgba(123, 91, 232, 0.12);
+  --color-score-accent: #7b5be8;
+
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ───────────── reset / base ───────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font: var(--text-body);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  transition: background var(--motion-mid) var(--ease-out),
+    color var(--motion-mid) var(--ease-out);
+}
+button {
+  font-family: inherit;
+}
+
+/* ───────────── topbar (§4.2) ───────────── */
+.topbar {
+  height: 56px;
+  padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  flex: 0 0 auto;
+}
+.topbar__title {
+  font: var(--text-h1);
+  margin: 0;
+  flex: 1 1 auto;
+}
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* best score 라벨 (BF-443 — topbar 우측, 다크 토글 옆) */
+.best-score {
+  font: var(--text-caption);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.best-score__value {
+  color: var(--color-accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+/* ───────────── buttons (공유 — §9.2 복제) ───────────── */
+.btn {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font: var(--text-button);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  background: transparent;
+  color: var(--color-text-primary);
+  transition: background-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn--ghost {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+.btn--ghost:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+}
+#btn-reset:hover:not(:disabled) {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.btn--danger-ghost {
+  color: var(--color-text-muted);
+}
+.btn--danger-ghost:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.btn--danger {
+  background: var(--color-danger);
+  color: #ffffff;
+  border: 1px solid var(--color-danger);
+}
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* ───────────── page / card (§4.1) ───────────── */
+.page {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: var(--space-7) var(--space-5);
+  gap: var(--space-5);
+}
+.card.clicker {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-7) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/* ───────────── score display (§4.3) ───────────── */
+.score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+.score__label {
+  font: var(--text-score-label);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.score__value {
+  font: var(--text-score);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--motion-mid) var(--ease-out);
+}
+.score__value.is-zero {
+  color: var(--color-text-muted);
+}
+.score__value.is-pulse {
+  /* 점수 +1 직후 일시 강조 색 (§5.1 옵션 — 운영자 default 채택) */
+  color: var(--color-score-accent);
+}
+
+/* ───────────── 원형 클릭 버튼 (§4.4 — 핵심 AC §1) ───────────── */
+.click-button {
+  width: 180px;
+  height: 180px;
+  border-radius: var(--radius-circle);
+  background: var(--color-accent);
+  color: var(--color-accent-on);
+  font: var(--text-click-cta);
+  letter-spacing: 0.02em;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-click);
+  transition: transform var(--motion-press) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+.click-button:hover {
+  background: var(--color-accent-hover);
+  transform: scale(1.02);
+}
+.click-button:active,
+.click-button.is-pressed {
+  background: var(--color-accent-active);
+  transform: scale(var(--scale-press)); /* 0.95 ← AC 매핑 */
+  box-shadow: var(--shadow-click-active);
+}
+.click-button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+
+/* ───────────── 보조 컨트롤 (Reset / 전체 초기화) ───────────── */
+.clicker__controls {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.clicker__controls .btn {
+  flex: 0 1 auto;
+}
+
+/* ───────────── kbd hint (§4.4 / §5.4) ───────────── */
+.kbd-hint {
+  font: var(--text-caption);
+  color: var(--color-text-muted);
+  margin: 0;
+  text-align: center;
+}
+.kbd-hint kbd {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+
+/* ───────────── toast (BF-443: best 갱신 축하) ───────────── */
+.toast-stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 1000;
+  pointer-events: none;
+}
+.toast {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-strong);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  color: var(--color-text-primary);
+  font: var(--text-label);
+  max-width: 320px;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--motion-mid) var(--ease-out),
+    transform var(--motion-mid) var(--ease-out);
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ───────────── 전체 초기화 확인 모달 ───────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 1100;
+  animation: fade-in var(--motion-fast) var(--ease-out);
+}
+.modal-backdrop[hidden] {
+  display: none;
+}
+.modal {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popover);
+  padding: var(--space-6);
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.modal__title {
+  margin: 0;
+  font: var(--text-h1);
+  color: var(--color-text-primary);
+}
+.modal__body {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font: var(--text-body);
+}
+.modal__actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ───────────── 반응형 (§4.7) ───────────── */
+@media (max-width: 639px) {
+  .score__value {
+    font: var(--text-score-sm); /* 4rem ← AC §1 매핑 */
+    font-variant-numeric: tabular-nums;
+  }
+  .page {
+    padding: var(--space-4);
+  }
+  .card.clicker {
+    max-width: 100%;
+    padding: var(--space-6) var(--space-5);
+    margin: 0;
+  }
+  .clicker__controls .btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 359px) {
+  .click-button {
+    width: 160px;
+    height: 160px;
+  }
+}
+
+/* ───────────── prefers-reduced-motion (§7.5) ───────────── */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+  .click-button {
+    transition: background var(--motion-fast) var(--ease-out);
+  }
+  .click-button:hover {
+    transform: none;
+  }
+  .click-button:active,
+  .click-button.is-pressed {
+    transform: none;
+  }
+  .score__value {
+    transition: color var(--motion-fast);
+  }
+  .toast {
+    transition: opacity var(--motion-fast) linear;
+    transform: none;
+  }
+  .modal-backdrop {
+    animation: none;
+  }
+}
