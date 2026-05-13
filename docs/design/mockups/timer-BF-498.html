@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>타이머 SPA — 시각 mockup (BF-498)</title>
+
+  <!-- ─────────────────────────────────────────────
+       FOUC 방지 IIFE — §5.2 (palette/ 와 완전 동일)
+       bf-theme localStorage → data-theme 즉시 설정
+  ───────────────────────────────────────────── -->
+  <script>
+  (function() {
+    try {
+      var t = localStorage.getItem('bf-theme');
+      if (t !== 'light' && t !== 'dark') t = 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (_e) { /* private mode — dark 유지 */ }
+  })();
+  </script>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       §2.1 디자인 토큰 — Dark Default
+       [E-2 · T-1 · T-2]
+    ═══════════════════════════════════════════════════════════ */
+    :root {
+      /* 배경 토큰 */
+      --color-bg-canvas:  #0f1115;
+      --color-bg-surface: #171a21;
+      --color-bg-subtle:  #1e222b;
+
+      /* 테두리 토큰 */
+      --color-border-default: #262b36;
+      --color-border-strong:  #3a4150;
+
+      /* 텍스트 토큰 */
+      --color-text-primary:   #e8e8e4;
+      --color-text-secondary: #9a9a93;
+      --color-text-muted:     #6b6b66;
+
+      /* 액션 토큰 */
+      --color-accent:       #5b82f0;
+      --color-accent-hover: #7596f3;
+      --color-danger:       #e55858;
+      --color-danger-hover: #ec7676;
+      --color-focus-ring:   rgba(91, 130, 240, 0.55);
+
+      /* 타이머 상태 토큰 */
+      --color-timer-running: #3aae7a;
+      --color-timer-paused:  #d4a23a;
+
+      /* 종료 알림 토큰 [E-4] */
+      --color-timer-ended-bg:     #3a1f22;
+      --color-timer-ended-border: #7a3a3f;
+      --color-timer-ended-text:   #fcb7b7;
+      --color-timer-ended-flash:  #ff6b6b;
+      --color-timer-ended-glow:   rgba(255, 107, 107, 0.45); /* [BF-497 신규] text-shadow 글로우 */
+
+      /* 그림자 */
+      --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+
+      /* 공간 토큰 §2.3 */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --space-7: 48px;
+
+      /* 반경 */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+
+      /* 모션 */
+      --motion-fast: 120ms;
+      --motion-mid:  220ms;
+      --ease-out:    cubic-bezier(0.2, 0, 0, 1);
+
+      /* 폰트 스택 — system font only, 외부 CDN 0건 (vanilla-static) */
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+                   "Pretendard", "Apple SD Gothic Neo", sans-serif;
+      --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       §2.2 Light 오버라이드 [T-2]
+    ═══════════════════════════════════════════════════════════ */
+    [data-theme="light"] {
+      --color-bg-canvas:  #fafaf9;
+      --color-bg-surface: #ffffff;
+      --color-bg-subtle:  #f1f1ef;
+      --color-border-default: #e5e5e2;
+      --color-border-strong:  #d0d0cc;
+      --color-text-primary:   #1a1a19;
+      --color-text-secondary: #6b6b66;
+      --color-text-muted:     #9a9a93;
+      --color-accent:         #3563e9;
+      --color-accent-hover:   #2a4fc0;
+      --color-danger:         #d14343;
+      --color-danger-hover:   #a83333;
+      --color-focus-ring:     rgba(53, 99, 233, 0.45);
+      --color-timer-running:  #1f8a5c;
+      --color-timer-paused:   #b7791f;
+      --color-timer-ended-bg:     #fff1f1;
+      --color-timer-ended-border: #f4b5b5;
+      --color-timer-ended-text:   #9a2a2a;
+      --color-timer-ended-flash:  #e53e3e;
+      --color-timer-ended-glow:   rgba(229, 62, 62, 0.30); /* [BF-497 신규] light용 글로우 */
+      --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       기본 리셋
+    ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { color-scheme: dark; }
+    [data-theme="light"] { color-scheme: light; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg-canvas);
+      color: var(--color-text-primary);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      transition: background var(--motion-mid), color var(--motion-mid);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       Topbar — §4.2 [T-2]
+       palette/ 와 동일 패턴: h=56px, bf-theme, #theme-toggle
+    ═══════════════════════════════════════════════════════════ */
+    .topbar {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-5);
+      background: var(--color-bg-surface);
+      border-bottom: 1px solid var(--color-border-default);
+      flex: 0 0 auto;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      transition: background var(--motion-mid), border-color var(--motion-mid);
+    }
+    .topbar__title {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--color-text-primary);
+      flex: 1;
+      margin: 0;
+    }
+    #theme-toggle {
+      height: 36px;
+      padding: 0 var(--space-3);
+      background: transparent;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      font-size: 16px;
+      cursor: pointer;
+      transition: background var(--motion-fast), color var(--motion-fast),
+                  border-color var(--motion-fast);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+    }
+    #theme-toggle:hover {
+      background: var(--color-bg-subtle);
+      color: var(--color-text-primary);
+    }
+    #theme-toggle:focus-visible {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       Main 영역 — §4.1
+    ═══════════════════════════════════════════════════════════ */
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: var(--space-7) var(--space-5);
+    }
+    .mockup-wrapper {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       Mockup 섹션 구분 레이블 (시각화 전용 — dev 구현 불필요)
+    ═══════════════════════════════════════════════════════════ */
+    .mockup-label {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border-default);
+      border-radius: var(--radius-sm);
+      padding: 2px 8px;
+      margin-bottom: var(--space-3);
+      font-family: var(--font-mono);
+    }
+    .mockup-divider {
+      width: 100%;
+      text-align: center;
+      margin: var(--space-7) auto var(--space-5);
+      position: relative;
+    }
+    .mockup-divider::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 0; right: 0;
+      height: 1px;
+      background: var(--color-border-default);
+    }
+    .mockup-divider span {
+      position: relative;
+      z-index: 1;
+      background: var(--color-bg-canvas);
+      padding: 0 var(--space-4);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       Timer Card — §4.1
+    ═══════════════════════════════════════════════════════════ */
+    .timer-card {
+      width: 100%;
+      background: var(--color-bg-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      padding: var(--space-7) var(--space-6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-6);
+      transition: background var(--motion-mid), box-shadow var(--motion-mid);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       Ended Banner — §4.6 [E-4]
+    ═══════════════════════════════════════════════════════════ */
+    .ended-banner {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-5);
+      background: var(--color-timer-ended-bg);
+      border: 1px solid var(--color-timer-ended-border);
+      border-radius: var(--radius-md);
+      color: var(--color-timer-ended-text);
+      font: 500 14px/1.4 var(--font-sans);
+    }
+    .ended-banner[hidden] { display: none; }
+    .ended-banner__icon { font-size: 18px; line-height: 1; }
+    .ended-banner__text { flex: 1; }
+    .ended-banner__close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      opacity: 0.7;
+      padding: 0 var(--space-1);
+      border-radius: var(--radius-sm);
+    }
+    .ended-banner__close:hover { opacity: 1; }
+
+    @keyframes banner-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .banner-in {
+      animation: banner-in 300ms var(--ease-out) both;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       카운트다운 Display — §4.3 [E-2]
+       tabular-nums · 128px mono · 상태별 색 전환
+    ═══════════════════════════════════════════════════════════ */
+    .display {
+      font-size: 128px;
+      font-weight: 300;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      user-select: none;
+      display: flex;
+      align-items: baseline;
+      color: var(--color-text-muted);     /* idle 0:00 기본 */
+      transition: color var(--motion-fast), text-shadow var(--motion-fast);
+    }
+    .display__colon {
+      display: inline-block;
+      padding: 0 4px;
+    }
+
+    /* 상태별 클래스 — §4.3 상태 매트릭스 */
+    .display.has-value  { color: var(--color-text-primary); }
+    .display.is-running { color: var(--color-text-primary); }
+    .display.is-paused  { color: var(--color-timer-paused); }
+
+    /* ended: flash(2회) + pulse(2회) + text-shadow 글로우 지속 [BF-497 §4.3 신규] */
+    .display.is-ended {
+      color: var(--color-timer-ended-text);
+      font-weight: 400;
+      text-shadow: 0 0 24px var(--color-timer-ended-glow); /* 글로우 — animation 종료 후에도 유지 */
+      animation:
+        timer-flash 300ms ease-in-out 2,
+        timer-pulse 500ms ease-in-out 2 600ms;
+    }
+
+    /* flash: 강렬한 빨강 → 연한 빨강 2회 진동 */
+    @keyframes timer-flash {
+      0%   { color: var(--color-timer-ended-flash); }
+      50%  { color: var(--color-timer-ended-text);  }
+      100% { color: var(--color-timer-ended-flash); }
+    }
+    /* pulse: opacity 부드러운 진동 2회 (delay 600ms) */
+    @keyframes timer-pulse {
+      0%, 100% { opacity: 1;    }
+      50%       { opacity: 0.55; }
+    }
+
+    /* prefers-reduced-motion: 모든 애니메이션 비활성 §4.6 + §8 */
+    @media (prefers-reduced-motion: reduce) {
+      .display.is-ended { animation: none; }
+      .banner-in        { animation: none; }
+      *                 { transition-duration: 0.01ms !important; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       상태 인디케이터 dot (시각화 보조 — mockup 전용)
+    ═══════════════════════════════════════════════════════════ */
+    .state-indicator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: 12px;
+      color: var(--color-text-muted);
+      font-family: var(--font-sans);
+    }
+    .state-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .state-indicator.is-running { color: var(--color-timer-running); }
+    .state-indicator.is-running .state-dot {
+      animation: blink 1s ease-in-out infinite;
+    }
+    .state-indicator.is-paused { color: var(--color-timer-paused); }
+    .state-indicator.is-ended  { color: var(--color-timer-ended-text); }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       분/초 입력 폼 — §4.4 [E-1]
+       idle 상태에서만 노출
+    ═══════════════════════════════════════════════════════════ */
+    .input-pair {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-4);
+    }
+    .input-pair[hidden] { display: none; }
+    .input-pair__field {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .input-pair input[type="number"] {
+      width: 72px;
+      height: 56px;
+      font: 600 28px/1 var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      background: var(--color-bg-canvas);
+      color: var(--color-text-primary);
+      appearance: none;
+      -moz-appearance: textfield;
+      transition: border-color var(--motion-fast);
+    }
+    .input-pair input[type="number"]::-webkit-outer-spin-button,
+    .input-pair input[type="number"]::-webkit-inner-spin-button { display: none; }
+    .input-pair input[type="number"]:focus {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 2px;
+      border-color: var(--color-accent);
+    }
+    .input-pair__label {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      line-height: 1.4;
+    }
+    .input-pair__sep {
+      font: 300 28px/1 var(--font-mono);
+      color: var(--color-text-muted);
+      padding-bottom: var(--space-5); /* label 높이 보정 */
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       hint 텍스트 — idle 0:00 전용
+    ═══════════════════════════════════════════════════════════ */
+    .hint {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      line-height: 1.4;
+      text-align: center;
+    }
+    .hint[hidden] { display: none; }
+
+    /* ═══════════════════════════════════════════════════════════
+       컨트롤 버튼 — §4.5 [E-3]
+       primary-lg (56px) · ghost-lg (56px)
+    ═══════════════════════════════════════════════════════════ */
+    .controls {
+      display: flex;
+      gap: var(--space-4);
+      justify-content: center;
+      width: 100%;
+    }
+
+    /* primary 버튼 (시작/일시정지/재개) */
+    .btn--primary-lg {
+      height: 56px;
+      min-width: 160px;
+      padding: 0 var(--space-6);
+      background: var(--color-accent);
+      color: #fff;
+      font: 600 16px/1 var(--font-sans);
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      transition: background var(--motion-fast), transform 100ms;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+    }
+    .btn--primary-lg:hover:not(:disabled)  { background: var(--color-accent-hover); }
+    .btn--primary-lg:active:not(:disabled) { transform: scale(0.97); }
+    .btn--primary-lg:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn--primary-lg:focus-visible {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ghost 버튼 (리셋) */
+    .btn--ghost-lg {
+      height: 56px;
+      padding: 0 var(--space-5);
+      background: transparent;
+      color: var(--color-text-secondary);
+      font: 500 14px/1 var(--font-sans);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: color var(--motion-fast), border-color var(--motion-fast),
+                  background var(--motion-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .btn--ghost-lg:hover:not(:disabled) {
+      color: var(--color-danger);
+      border-color: var(--color-danger);
+      background: var(--color-bg-subtle);
+    }
+    .btn--ghost-lg:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn--ghost-lg:focus-visible {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       키보드 hint — §8 접근성
+    ═══════════════════════════════════════════════════════════ */
+    .kbd-hint {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      line-height: 1.4;
+      display: flex;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .kbd-hint kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-default);
+      border-radius: var(--radius-sm);
+      font: 11px/1.6 var(--font-mono);
+      color: var(--color-text-secondary);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       글로우 데모 배지 (mockup 전용 — §4.3 신규 토큰 시각화)
+    ═══════════════════════════════════════════════════════════ */
+    .glow-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      background: var(--color-timer-ended-bg);
+      border: 1px solid var(--color-timer-ended-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-2) var(--space-4);
+      font-size: 12px;
+      color: var(--color-timer-ended-text);
+      font-family: var(--font-mono);
+    }
+    .glow-badge__token {
+      opacity: 0.65;
+      font-size: 11px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       반응형 §7
+    ═══════════════════════════════════════════════════════════ */
+    @media (max-width: 959px) {
+      .display { font-size: 96px; }
+      .timer-card { padding: var(--space-6) var(--space-5); }
+    }
+    @media (max-width: 639px) {
+      .display { font-size: 72px; }
+      .timer-card { padding: var(--space-5) var(--space-4); }
+      .controls {
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+      .controls .btn--primary-lg,
+      .controls .btn--ghost-lg { width: 100%; }
+      main { padding: var(--space-5) var(--space-4); }
+    }
+    @media (max-width: 359px) {
+      .display { font-size: 64px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ──────────────────────────────────────────────────────
+       Topbar (§4.2) — #theme-toggle · bf-theme localStorage
+       palette/ 와 완전 동일 인터페이스 [T-2]
+  ────────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <h1 class="topbar__title">타이머</h1>
+    <button id="theme-toggle"
+            aria-label="라이트 테마로 전환"
+            title="테마 전환 — bf-theme localStorage · T key">
+      ☀
+    </button>
+  </header>
+
+  <main>
+    <div class="mockup-wrapper">
+
+      <!-- ════════════════════════════════════════════════
+           State 1 · IDLE (빈 상태 — 0:00)
+           display: muted · 시작 버튼: disabled · hint 표시
+      ════════════════════════════════════════════════ -->
+      <span class="mockup-label">State 1 — IDLE · 입력 대기 (0:00)</span>
+
+      <section class="timer-card" aria-label="타이머 — Idle 빈 상태">
+        <!-- 종료 배너: idle 에서 숨김 -->
+        <div class="ended-banner" hidden role="alert" aria-live="assertive">
+          <span class="ended-banner__icon" aria-hidden="true">⏰</span>
+          <span class="ended-banner__text">시간이 다 됐어요!</span>
+          <button class="ended-banner__close" aria-label="알림 닫기">×</button>
+        </div>
+
+        <!-- display (§4.3) [E-2]: idle 0:00 → muted 색 -->
+        <div class="display" id="display-idle-empty"
+             role="timer" aria-live="off" aria-label="남은 시간">
+          <span id="disp-m-empty">0</span>
+          <span class="display__colon" aria-hidden="true">:</span>
+          <span id="disp-s-empty">00</span>
+        </div>
+
+        <!-- 분/초 입력 폼 (§4.4) [E-1]: idle 에서만 노출 -->
+        <div class="input-pair" id="input-pair">
+          <div class="input-pair__field">
+            <input type="number" id="input-m"
+                   min="0" max="99" value="0"
+                   inputmode="numeric" pattern="\d*"
+                   aria-label="분" />
+            <span class="input-pair__label">분</span>
+          </div>
+          <span class="input-pair__sep" aria-hidden="true">:</span>
+          <div class="input-pair__field">
+            <input type="number" id="input-s"
+                   min="0" max="59" value="0"
+                   inputmode="numeric" pattern="\d*"
+                   aria-label="초" />
+            <span class="input-pair__label">초</span>
+          </div>
+        </div>
+
+        <!-- hint: idle 0:00 전용 -->
+        <p class="hint" id="hint">분과 초를 입력하세요</p>
+
+        <!-- controls (§4.5) [E-3]: 값 없으면 시작 disabled -->
+        <div class="controls">
+          <button class="btn--primary-lg" id="btn-primary-empty"
+                  disabled aria-label="타이머 시작 (분 또는 초 입력 필요)">
+            ▶ 시작
+          </button>
+          <button class="btn--ghost-lg" disabled aria-label="타이머 리셋">
+            ⟲ 리셋
+          </button>
+        </div>
+
+        <p class="kbd-hint">
+          <kbd>Space</kbd> 시작/정지
+          &nbsp;·&nbsp;
+          <kbd>Esc</kbd> 리셋
+          &nbsp;·&nbsp;
+          <kbd>T</kbd> 테마
+        </p>
+      </section>
+
+      <!-- ════════════════════════════════════════════════
+           State 1b · IDLE (값 입력 후 — 시작 활성)
+           display: primary · 시작 버튼 활성
+      ════════════════════════════════════════════════ -->
+      <div class="mockup-divider"><span>State 1b — IDLE · 값 입력 후 (시작 활성)</span></div>
+
+      <section class="timer-card" aria-label="타이머 — Idle 값 입력 상태">
+        <div class="ended-banner" hidden role="alert" aria-live="assertive">
+          <span class="ended-banner__icon" aria-hidden="true">⏰</span>
+          <span class="ended-banner__text">시간이 다 됐어요!</span>
+          <button class="ended-banner__close" aria-label="알림 닫기">×</button>
+        </div>
+
+        <!-- display: 값 입력됨 → primary 색 -->
+        <div class="display has-value"
+             role="timer" aria-live="off" aria-label="남은 시간">
+          <span>5</span>
+          <span class="display__colon" aria-hidden="true">:</span>
+          <span>00</span>
+        </div>
+
+        <div class="input-pair">
+          <div class="input-pair__field">
+            <input type="number" min="0" max="99" value="5"
+                   inputmode="numeric" pattern="\d*" aria-label="분" />
+            <span class="input-pair__label">분</span>
+          </div>
+          <span class="input-pair__sep" aria-hidden="true">:</span>
+          <div class="input-pair__field">
+            <input type="number" min="0" max="59" value="0"
+                   inputmode="numeric" pattern="\d*" aria-label="초" />
+            <span class="input-pair__label">초</span>
+          </div>
+        </div>
+
+        <!-- hint: 값 있으면 숨김 -->
+
+        <div class="controls">
+          <!-- 값 있으면 시작 활성 -->
+          <button class="btn--primary-lg" aria-label="타이머 시작">
+            ▶ 시작
+          </button>
+          <button class="btn--ghost-lg" aria-label="타이머 리셋">
+            ⟲ 리셋
+          </button>
+        </div>
+
+        <p class="kbd-hint">
+          <kbd>Space</kbd> 시작/정지
+          &nbsp;·&nbsp;
+          <kbd>Esc</kbd> 리셋
+        </p>
+      </section>
+
+      <!-- ════════════════════════════════════════════════
+           State 2 · RUNNING (카운트다운 진행 중)
+           display: primary 색 · 입력 폼 숨김 · 일시정지 버튼
+      ════════════════════════════════════════════════ -->
+      <div class="mockup-divider"><span>State 2 — RUNNING · 카운트다운 진행 중</span></div>
+
+      <section class="timer-card" aria-label="타이머 — Running 상태">
+        <div class="ended-banner" hidden role="alert" aria-live="assertive">
+          <span class="ended-banner__icon" aria-hidden="true">⏰</span>
+          <span class="ended-banner__text">시간이 다 됐어요!</span>
+          <button class="ended-banner__close" aria-label="알림 닫기">×</button>
+        </div>
+
+        <!-- 상태 인디케이터 (running — 점멸 dot) -->
+        <div class="state-indicator is-running">
+          <span class="state-dot" aria-hidden="true"></span>
+          진행 중
+        </div>
+
+        <!-- display: running → text-primary -->
+        <div class="display is-running"
+             role="timer" aria-live="off" aria-label="남은 시간">
+          <span>4</span>
+          <span class="display__colon" aria-hidden="true">:</span>
+          <span>37</span>
+        </div>
+
+        <!-- 입력 폼: running 에서 숨김 (hidden) -->
+
+        <div class="controls">
+          <button class="btn--primary-lg" aria-label="타이머 일시정지">
+            ⏸ 일시정지
+          </button>
+          <button class="btn--ghost-lg" aria-label="타이머 리셋">
+            ⟲ 리셋
+          </button>
+        </div>
+
+        <p class="kbd-hint">
+          <kbd>Space</kbd> 일시정지
+          &nbsp;·&nbsp;
+          <kbd>Esc</kbd> 리셋
+        </p>
+      </section>
+
+      <!-- ════════════════════════════════════════════════
+           State 2b · PAUSED (일시정지)
+           display: amber 색 · 재개 버튼
+      ════════════════════════════════════════════════ -->
+      <div class="mockup-divider"><span>State 2b — PAUSED · 일시정지</span></div>
+
+      <section class="timer-card" aria-label="타이머 — Paused 상태">
+        <div class="ended-banner" hidden role="alert" aria-live="assertive">
+          <span class="ended-banner__icon" aria-hidden="true">⏰</span>
+          <span class="ended-banner__text">시간이 다 됐어요!</span>
+          <button class="ended-banner__close" aria-label="알림 닫기">×</button>
+        </div>
+
+        <div class="state-indicator is-paused">
+          <span class="state-dot" aria-hidden="true"></span>
+          일시정지
+        </div>
+
+        <!-- display: paused → timer-paused (amber) 색 -->
+        <div class="display is-paused"
+             role="timer" aria-live="off" aria-label="남은 시간">
+          <span>4</span>
+          <span class="display__colon" aria-hidden="true">:</span>
+          <span>37</span>
+        </div>
+
+        <div class="controls">
+          <button class="btn--primary-lg" aria-label="타이머 재개">
+            ▶ 재개
+          </button>
+          <button class="btn--ghost-lg" aria-label="타이머 리셋">
+            ⟲ 리셋
+          </button>
+        </div>
+
+        <p class="kbd-hint">
+          <kbd>Space</kbd> 재개
+          &nbsp;·&nbsp;
+          <kbd>Esc</kbd> 리셋
+        </p>
+      </section>
+
+      <!-- ════════════════════════════════════════════════
+           State 3 · ENDED (종료 알림) [E-4]
+           ─ 배너(⏰) 슬라이드인
+           ─ display: flash(2회) + pulse(2회) + 글로우 지속 [BF-497 신규]
+           ─ 시작 버튼 disabled · 리셋 활성
+      ════════════════════════════════════════════════ -->
+      <div class="mockup-divider"><span>State 3 — ENDED · 종료 알림 (글로우 지속)</span></div>
+
+      <section class="timer-card" aria-label="타이머 — Ended 상태">
+
+        <!-- 종료 배너: 슬라이드인 + assertive alert [E-4] -->
+        <div class="ended-banner banner-in"
+             role="alert" aria-live="assertive">
+          <span class="ended-banner__icon" aria-hidden="true">⏰</span>
+          <span class="ended-banner__text">시간이 다 됐어요!</span>
+          <button class="ended-banner__close" aria-label="알림 닫기">×</button>
+        </div>
+
+        <div class="state-indicator is-ended">
+          <span class="state-dot" aria-hidden="true"></span>
+          종료
+        </div>
+
+        <!-- display: is-ended
+             → color: --color-timer-ended-text
+             → text-shadow: 0 0 24px --color-timer-ended-glow  [BF-497 신규 글로우]
+             → animation: timer-flash(2) + timer-pulse(2, 600ms delay)
+             → 글로우는 animation 종료 후에도 .is-ended 클래스로 유지 -->
+        <div class="display is-ended"
+             id="display-ended"
+             role="timer" aria-live="off" aria-label="남은 시간 0:00">
+          <span>0</span>
+          <span class="display__colon" aria-hidden="true">:</span>
+          <span>00</span>
+        </div>
+
+        <!-- 신규 글로우 토큰 배지 (mockup 시각화 보조) -->
+        <div class="glow-badge">
+          <span>text-shadow 글로우 지속 중</span>
+          <span class="glow-badge__token">-- color-timer-ended-glow</span>
+        </div>
+
+        <!-- 컨트롤: 시작 disabled · 리셋 활성 -->
+        <div class="controls">
+          <button class="btn--primary-lg" disabled
+                  aria-label="타이머 시작 — 리셋 후 가능">
+            ▶ 시작
+          </button>
+          <button class="btn--ghost-lg"
+                  aria-label="타이머 리셋">
+            ⟲ 리셋
+          </button>
+        </div>
+
+        <p class="kbd-hint">
+          <kbd>Esc</kbd> 리셋
+        </p>
+      </section>
+
+      <!-- ════════════════════════════════════════════════
+           글로우 애니메이션 재생 데모 (mockup 체험 전용)
+           실제 ended 진입 순서: flash → pulse → 글로우 유지
+      ════════════════════════════════════════════════ -->
+      <div class="mockup-divider"><span>글로우 애니메이션 시퀀스 재생 데모</span></div>
+
+      <section class="timer-card" aria-label="글로우 애니메이션 데모">
+        <p style="font-size:13px; color:var(--color-text-secondary); text-align:center; line-height:1.6;">
+          아래 버튼을 클릭하면 종료 진입 시퀀스를 재생합니다.<br>
+          <span style="color:var(--color-text-muted); font-size:12px;">
+            flash(300ms×2) → pulse(500ms×2, delay 600ms) → 글로우 지속
+          </span>
+        </p>
+
+        <div class="display" id="display-demo"
+             role="timer" aria-live="off" aria-label="남은 시간 데모">
+          <span>0</span>
+          <span class="display__colon" aria-hidden="true">:</span>
+          <span>00</span>
+        </div>
+
+        <button class="btn--primary-lg" id="btn-replay"
+                aria-label="글로우 애니메이션 재생">
+          ▶ 애니메이션 재생
+        </button>
+
+        <p style="font-size:12px; color:var(--color-text-muted); text-align:center;">
+          animation 종료 후에도 text-shadow 글로우가 유지됩니다 (is-ended 클래스 지속)
+        </p>
+      </section>
+
+    </div><!-- /.mockup-wrapper -->
+  </main>
+
+  <!-- ──────────────────────────────────────────────────────
+       Mockup 인터랙션 스크립트
+       · 테마 토글 (bf-theme localStorage — palette/ 완전 동일)
+       · idle display 동기 (입력 → display 즉시 반영)
+       · bf-timer-last-config 복원
+       · 글로우 애니메이션 재생 데모
+  ────────────────────────────────────────────────────── -->
+  <script>
+  (function() {
+    /* ── 테마 토글 §5.3 [T-2] ───────────────────────── */
+    var themeBtn = document.getElementById('theme-toggle');
+
+    function getTheme() {
+      return document.documentElement.getAttribute('data-theme') === 'light'
+        ? 'light' : 'dark';
+    }
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      themeBtn.textContent = theme === 'dark' ? '☀' : '🌙';
+      themeBtn.setAttribute('aria-label',
+        theme === 'dark' ? '라이트 테마로 전환' : '다크 테마로 전환');
+    }
+    function toggleTheme() {
+      var next = getTheme() === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try { localStorage.setItem('bf-theme', next); } catch (_e) {}
+    }
+
+    themeBtn.addEventListener('click', toggleTheme);
+    applyTheme(getTheme()); // 초기 아이콘 동기
+
+    /* 키보드 T 단축키 §8 */
+    document.addEventListener('keydown', function(e) {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e.key && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        toggleTheme();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        /* mockup: Esc 는 리셋 신호 — 데모용으로 idle 로 복귀 시각 */
+      }
+    });
+
+    /* ── idle display 동기 §4.4 [E-1] ──────────────── */
+    var inputM  = document.getElementById('input-m');
+    var inputS  = document.getElementById('input-s');
+    var dispM   = document.getElementById('disp-m-empty');
+    var dispS   = document.getElementById('disp-s-empty');
+    var display = document.getElementById('display-idle-empty');
+    var hint    = document.getElementById('hint');
+    var btnStartEmpty = document.getElementById('btn-primary-empty');
+
+    function syncDisplay() {
+      var m = Math.max(0, parseInt(inputM.value, 10) || 0);
+      var s = Math.max(0, Math.min(59, parseInt(inputS.value, 10) || 0));
+      dispM.textContent = m;
+      dispS.textContent = String(s).padStart(2, '0');
+
+      var hasValue = m > 0 || s > 0;
+      if (hasValue) {
+        display.classList.add('has-value');
+        hint.hidden = true;
+      } else {
+        display.classList.remove('has-value');
+        hint.hidden = false;
+      }
+      btnStartEmpty.disabled = !hasValue;
+
+      /* bf-timer-last-config 저장 §6 */
+      try {
+        localStorage.setItem('bf-timer-last-config', JSON.stringify({ m: m, s: s }));
+      } catch (_e) {}
+    }
+
+    inputM.addEventListener('input', syncDisplay);
+    inputS.addEventListener('input', syncDisplay);
+
+    /* bf-timer-last-config 복원 §6 */
+    try {
+      var saved = JSON.parse(localStorage.getItem('bf-timer-last-config'));
+      if (saved && typeof saved.m === 'number') {
+        inputM.value = Math.min(99, Math.max(0, saved.m));
+        inputS.value = Math.min(59, Math.max(0, saved.s));
+        syncDisplay();
+      }
+    } catch (_e) {}
+
+    /* ── ended-banner 닫기 버튼 ─────────────────────── */
+    document.querySelectorAll('.ended-banner__close').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var banner = btn.closest('.ended-banner');
+        if (banner) banner.hidden = true;
+      });
+    });
+
+    /* ── 글로우 애니메이션 재생 데모 ─────────────────── */
+    var demoDisplay = document.getElementById('display-demo');
+    var replayBtn   = document.getElementById('btn-replay');
+
+    replayBtn.addEventListener('click', function() {
+      /* 클래스 제거 후 reflow → 재추가 (animation restart) */
+      demoDisplay.classList.remove('is-ended');
+      void demoDisplay.offsetWidth; /* reflow 강제 */
+      demoDisplay.classList.add('is-ended');
+      replayBtn.textContent = '↺ 다시 재생';
+    });
+  })();
+  </script>
+</body>
+</html>
