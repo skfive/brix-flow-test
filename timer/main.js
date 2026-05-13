@@ -26,7 +26,7 @@ const inputSEl = $("input-s");
 const hintEl = $("hint");
 const btnPrimary = $("btn-primary");
 const btnReset = $("btn-reset");
-const btnTheme = $("btn-theme");
+const btnTheme = $("theme-toggle");
 const bannerEl = $("ended-banner");
 const btnBannerClose = $("btn-banner-close");
 
@@ -47,22 +47,19 @@ const state = {
 // ─────────── 테마 토글 (§6.5, notepad 와 키 공유) ───────────
 const THEME_KEY = "bf-theme";
 function initTheme() {
-  let theme = null;
-  try {
-    theme = localStorage.getItem(THEME_KEY);
-  } catch {
-    // localStorage 사용 불가 환경 (private mode 등) — silent fallback
-  }
-  if (!theme) {
-    theme = window.matchMedia?.("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-  applyTheme(theme);
+  // BF-467: head IIFE 가 이미 data-theme 속성을 설정했으므로
+  // 현재 attribute 를 source of truth 로 사용 (OS prefers-color-scheme 폴백 제거).
+  const current =
+    document.documentElement.getAttribute("data-theme") || "dark";
+  applyTheme(current);
 }
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   btnTheme.textContent = theme === "dark" ? "☀" : "🌙";
+  btnTheme.setAttribute(
+    "aria-label",
+    theme === "dark" ? "라이트 테마로 전환" : "다크 테마로 전환",
+  );
 }
 function toggleTheme() {
   const next =
@@ -299,6 +296,18 @@ document.addEventListener("keydown", (e) => {
     } else if (state.phase === "idle" || state.phase === "paused") {
       startOrResume();
     }
+    return;
+  }
+  // T — 테마 토글 (BF-467 §6.5, input focus 제외)
+  if (e.key && e.key.toLowerCase() === "t") {
+    const focused = document.activeElement;
+    if (
+      focused &&
+      (focused.tagName === "INPUT" || focused.tagName === "TEXTAREA")
+    )
+      return;
+    e.preventDefault();
+    toggleTheme();
   }
 });
 
