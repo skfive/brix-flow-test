@@ -19,6 +19,7 @@
     <style>
       /* ═══════════════════════════════════════════════
          §2 디자인 토큰 — Dark Default (:root)
+         외부 CDN 0건 · vanilla-static · system font
          ═══════════════════════════════════════════════ */
       :root {
         /* 폰트 스택 (system font — 외부 CDN 없음) */
@@ -27,32 +28,32 @@
         --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
 
         /* 배경 */
-        --color-bg-canvas: #0f1115;
+        --color-bg-canvas:  #0f1115;
         --color-bg-surface: #171a21;
-        --color-bg-subtle: #1e222b;
+        --color-bg-subtle:  #1e222b;
 
         /* 테두리 */
         --color-border-default: #262b36;
-        --color-border-strong: #3a4150;
+        --color-border-strong:  #3a4150;
 
         /* 텍스트 */
-        --color-text-primary: #e8e8e4;
+        --color-text-primary:   #e8e8e4;
         --color-text-secondary: #9a9a93;
-        --color-text-muted: #6b6b66;
+        --color-text-muted:     #6b6b66;
 
         /* 액션 */
-        --color-accent: #5b82f0;
-        --color-accent-hover: #7596f3;
-        --color-danger: #e55858;
-        --color-danger-hover: #ec7676;
-        --color-focus-ring: rgba(91, 130, 240, 0.55);
+        --color-accent:      #5b82f0;
+        --color-accent-hover:#7596f3;
+        --color-danger:      #e55858;
+        --color-danger-hover:#ec7676;
+        --color-focus-ring:  rgba(91, 130, 240, 0.55);
 
         /* 타이머 전용 */
-        --color-timer-running: #3aae7a;
-        --color-timer-paused: #d4a23a;
-        --color-timer-ended-bg: #3a1f22;
-        --color-timer-ended-border: #7a3a3f;
-        --color-timer-ended-text: #fcb7b7;
+        --color-timer-running:        #3aae7a;
+        --color-timer-paused:         #d4a23a;
+        --color-timer-ended-bg:       #3a1f22;
+        --color-timer-ended-border:   #7a3a3f;
+        --color-timer-ended-text:     #fcb7b7;
 
         /* 그림자 */
         --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
@@ -72,15 +73,15 @@
         --radius-lg: 12px;
 
         /* 타이포 토큰 */
-        --text-h1: 600 20px/1.3 var(--font-sans);
-        --text-display: 300 128px/1 var(--font-mono);
-        --text-display-md: 300 96px/1 var(--font-mono);
-        --text-display-sm: 300 72px/1 var(--font-mono);
-        --text-label: 500 14px/1.4 var(--font-sans);
-        --text-body: 400 15px/1.65 var(--font-sans);
-        --text-caption: 400 12px/1.4 var(--font-sans);
-        --text-button: 500 14px/1 var(--font-sans);
-        --text-button-lg: 600 16px/1 var(--font-sans);
+        --text-h1:        600 20px/1.3  var(--font-sans);
+        --text-display:   300 128px/1   var(--font-mono);
+        --text-display-md:300 96px/1    var(--font-mono);
+        --text-display-sm:300 72px/1    var(--font-mono);
+        --text-label:     500 14px/1.4  var(--font-sans);
+        --text-body:      400 15px/1.65 var(--font-sans);
+        --text-caption:   400 12px/1.4  var(--font-sans);
+        --text-button:    500 14px/1    var(--font-sans);
+        --text-button-lg: 600 16px/1    var(--font-sans);
 
         /* 모션 */
         --motion-mid: 220ms;
@@ -89,31 +90,31 @@
 
       /* §2.2 Light 오버라이드 */
       [data-theme="light"] {
-        --color-bg-canvas: #fafaf9;
+        --color-bg-canvas:  #fafaf9;
         --color-bg-surface: #ffffff;
-        --color-bg-subtle: #f1f1ef;
+        --color-bg-subtle:  #f1f1ef;
         --color-border-default: #e5e5e2;
-        --color-border-strong: #d0d0cc;
-        --color-text-primary: #1a1a19;
+        --color-border-strong:  #d0d0cc;
+        --color-text-primary:   #1a1a19;
         --color-text-secondary: #6b6b66;
-        --color-text-muted: #9a9a93;
-        --color-accent: #3563e9;
-        --color-accent-hover: #2a4fc0;
-        --color-danger: #d14343;
-        --color-danger-hover: #a83333;
-        --color-focus-ring: rgba(53, 99, 233, 0.45);
-        --color-timer-running: #1f8a5c;
-        --color-timer-paused: #b7791f;
-        --color-timer-ended-bg: #fff1f1;
+        --color-text-muted:     #9a9a93;
+        --color-accent:         #3563e9;
+        --color-accent-hover:   #2a4fc0;
+        --color-danger:         #d14343;
+        --color-danger-hover:   #a83333;
+        --color-focus-ring:     rgba(53, 99, 233, 0.45);
+        --color-timer-running:      #1f8a5c;
+        --color-timer-paused:       #b7791f;
+        --color-timer-ended-bg:     #fff1f1;
         --color-timer-ended-border: #f4b5b5;
-        --color-timer-ended-text: #9a2a2a;
+        --color-timer-ended-text:   #9a2a2a;
         --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
       }
 
       /* ═══════════════════════════════════════════════
          Base Reset
          ═══════════════════════════════════════════════ */
-      * { box-sizing: border-box; }
+      *, *::before, *::after { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
       body {
         font: var(--text-body);
@@ -126,7 +127,7 @@
           background var(--motion-mid) var(--ease-out),
           color var(--motion-mid) var(--ease-out);
       }
-      button { font-family: inherit; cursor: pointer; }
+      button { font-family: inherit; cursor: pointer; border: none; }
 
       /* ═══════════════════════════════════════════════
          Topbar (§4.2)
@@ -162,7 +163,6 @@
       .btn {
         height: 36px;
         padding: 0 var(--space-4);
-        border: none;
         border-radius: var(--radius-md);
         font: var(--text-button);
         cursor: pointer;
@@ -185,9 +185,7 @@
         color: #fff;
         transition: background var(--motion-mid) var(--ease-out);
       }
-      .btn--primary-lg:hover:not(:disabled) {
-        background: var(--color-accent-hover);
-      }
+      .btn--primary-lg:hover:not(:disabled) { background: var(--color-accent-hover); }
       .btn--ghost-lg {
         height: 56px;
         min-width: 120px;
@@ -195,17 +193,15 @@
         font: var(--text-button-lg);
         background: transparent;
         color: var(--color-text-secondary);
-        transition: background var(--motion-mid) var(--ease-out),
-                    color var(--motion-mid) var(--ease-out);
+        transition:
+          background var(--motion-mid) var(--ease-out),
+          color var(--motion-mid) var(--ease-out);
       }
       .btn--ghost-lg:hover:not(:disabled) {
         background: var(--color-bg-subtle);
         color: var(--color-danger);
       }
-      .btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
+      .btn:disabled { opacity: 0.4; cursor: not-allowed; }
       .btn:focus-visible {
         outline: 2px solid var(--color-focus-ring);
         outline-offset: 2px;
@@ -251,24 +247,27 @@
         border: 1px solid var(--color-timer-ended-border);
         border-radius: var(--radius-md);
         color: var(--color-timer-ended-text);
+        transition:
+          background var(--motion-mid) var(--ease-out),
+          border-color var(--motion-mid) var(--ease-out);
       }
       .banner[hidden] { display: none; }
-      .banner__icon { font-size: 24px; line-height: 1; }
-      .banner__text {
+      .banner__icon  { font-size: 24px; line-height: 1; }
+      .banner__text  {
         flex: 1 1 auto;
         font: var(--text-label);
         color: var(--color-timer-ended-text);
       }
       .banner__close {
-        border: none;
         background: transparent;
         color: var(--color-timer-ended-text);
         font: var(--text-caption);
         cursor: pointer;
         padding: var(--space-1) var(--space-2);
         border-radius: var(--radius-sm);
+        transition: background var(--motion-mid) var(--ease-out);
       }
-      .banner__close:hover { background: rgba(0, 0, 0, 0.06); }
+      .banner__close:hover { background: rgba(0,0,0,0.08); }
       .banner__close:focus-visible {
         outline: 2px solid var(--color-focus-ring);
         outline-offset: 2px;
@@ -294,12 +293,13 @@
         font-variant-numeric: tabular-nums;
         color: var(--color-text-primary);
         user-select: none;
+        letter-spacing: -2px;
         transition: color var(--motion-mid) var(--ease-out);
       }
-      .display.is-empty { color: var(--color-text-muted); }
+      .display.is-empty   { color: var(--color-text-muted); }
       .display.is-running { color: var(--color-text-primary); }
       .display.is-paused  { color: var(--color-text-primary); }
-      .display.is-ended {
+      .display.is-ended   {
         color: var(--color-timer-ended-text);
         font-weight: 400;
         animation: timer-pulse 1s ease-in-out 2;
@@ -404,9 +404,9 @@
       }
 
       /* ═══════════════════════════════════════════════
-         State Badge (mockup 전용 — dev 구현 불필요)
+         Mockup 전용: 상태 뱃지 (dev 구현 불필요)
          ═══════════════════════════════════════════════ */
-      .mock-label {
+      .mock-badge {
         display: inline-block;
         font: var(--text-caption);
         font-family: var(--font-mono);
@@ -420,8 +420,31 @@
       }
 
       /* ═══════════════════════════════════════════════
-         Mockup 전용 레이아웃 (5가지 상태 패널 배치)
+         Mockup 레이아웃: 5가지 상태 패널 그리드
          ═══════════════════════════════════════════════ */
+      .mock-page-header {
+        width: 100%;
+        max-width: 1400px;
+        margin-bottom: var(--space-5);
+      }
+      .mock-page-header h2 {
+        font: var(--text-h1);
+        color: var(--color-text-muted);
+        margin: 0 0 var(--space-2) 0;
+        font-weight: 400;
+      }
+      .mock-page-header p {
+        font: var(--text-caption);
+        color: var(--color-text-muted);
+        margin: 0;
+      }
+      .mock-divider {
+        width: 100%;
+        max-width: 1400px;
+        border: none;
+        border-top: 1px dashed var(--color-border-default);
+        margin: 0 0 var(--space-5) 0;
+      }
       .mock-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -443,9 +466,9 @@
         letter-spacing: 0.04em;
         text-transform: uppercase;
       }
-      /* 패널 내 카드 (정적 시뮬레이션용) */
       .mock-panel .card {
         padding: var(--space-6) var(--space-5);
+        flex: 1;
       }
 
       /* ═══════════════════════════════════════════════
@@ -466,6 +489,12 @@
       @media (max-width: 359px) {
         .display { font-size: 64px; }
       }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
     </style>
   </head>
 
@@ -485,25 +514,37 @@
 
     <!-- ─── 5가지 상태 패널 ─────────────────────────────── -->
     <main class="page" style="align-items: flex-start;">
+
+      <!-- 헤더 설명 -->
+      <div class="mock-page-header">
+        <h2>타이머 SPA Mockup — BF-486</h2>
+        <p>
+          디자인 명세: docs/design/timer-BF-486.md ·
+          dark default + bf-theme localStorage + #theme-toggle ·
+          외부 의존성 0건 (vanilla-static)
+        </p>
+      </div>
+      <hr class="mock-divider" />
+
       <div class="mock-grid">
 
-        <!-- ① idle (0:00) ───────────────────────────── -->
+        <!-- ① idle (0:00) — 빈 상태 ─────────────────── -->
         <div class="mock-panel">
           <p class="mock-panel-title">① idle — 빈 상태 (0:00)</p>
           <div class="card">
-            <!-- 배너: 비활성 -->
-            <div class="banner banner--ended" id="banner-1" role="status" aria-live="polite" hidden>
+            <!-- 배너: 숨김 -->
+            <div class="banner banner--ended" role="status" aria-live="polite" hidden>
               <span class="banner__icon" aria-hidden="true">⏰</span>
               <span class="banner__text">시간이 다 됐어요</span>
               <button type="button" class="banner__close" aria-label="알림 닫기">닫기</button>
             </div>
-            <!-- display: muted (0:00) -->
+            <!-- display: muted (0:00, is-empty) -->
             <div class="display is-empty" role="timer" aria-live="off" aria-label="남은 시간">
               <span class="display__minutes">0</span>
               <span class="display__colon" aria-hidden="true">:</span>
               <span class="display__seconds">00</span>
             </div>
-            <!-- input-pair: 노출 -->
+            <!-- input-pair: 노출 (idle 전용) -->
             <div class="input-pair">
               <div class="input-pair__field">
                 <input type="number" min="0" max="99" value="0"
@@ -517,21 +558,20 @@
                 <span class="input-pair__label">초</span>
               </div>
             </div>
-            <!-- hint: 노출 -->
+            <!-- hint: 노출 (idle + 값=0) -->
             <p class="hint">분과 초를 입력하세요</p>
-            <!-- controls: 모두 disabled -->
+            <!-- controls: 모두 disabled (hasValue=false) -->
             <div class="controls">
               <button type="button" class="btn btn--primary-lg" disabled>▶ 시작</button>
               <button type="button" class="btn btn--ghost-lg" disabled>⟲ 리셋</button>
             </div>
-            <!-- kbd-hint -->
             <p class="kbd-hint">
               <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
             </p>
           </div>
         </div>
 
-        <!-- ② idle (25:00) ──────────────────────────── -->
+        <!-- ② idle (25:00) — 값 입력 후 ───────────── -->
         <div class="mock-panel">
           <p class="mock-panel-title">② idle — 값 입력 후 (25:00)</p>
           <div class="card">
@@ -540,7 +580,7 @@
               <span class="banner__text">시간이 다 됐어요</span>
               <button type="button" class="banner__close" aria-label="알림 닫기">닫기</button>
             </div>
-            <!-- display: primary (값>0) -->
+            <!-- display: primary (값>0, 시작 대기) -->
             <div class="display" role="timer" aria-live="off" aria-label="남은 시간">
               <span class="display__minutes">25</span>
               <span class="display__colon" aria-hidden="true">:</span>
@@ -562,7 +602,7 @@
             </div>
             <!-- hint: 숨김 (값>0) -->
             <p class="hint" hidden>분과 초를 입력하세요</p>
-            <!-- controls: 모두 enabled -->
+            <!-- controls: 모두 enabled (hasValue=true) -->
             <div class="controls">
               <button type="button" class="btn btn--primary-lg">▶ 시작</button>
               <button type="button" class="btn btn--ghost-lg">⟲ 리셋</button>
@@ -573,7 +613,7 @@
           </div>
         </div>
 
-        <!-- ③ running (08:42) ───────────────────────── -->
+        <!-- ③ running (08:42) — 카운트다운 중 ──────── -->
         <div class="mock-panel">
           <p class="mock-panel-title">③ running — 카운트다운 중 (08:42)</p>
           <div class="card">
@@ -582,13 +622,13 @@
               <span class="banner__text">시간이 다 됐어요</span>
               <button type="button" class="banner__close" aria-label="알림 닫기">닫기</button>
             </div>
-            <!-- display: primary + running -->
+            <!-- display: primary, running 상태 -->
             <div class="display is-running" role="timer" aria-live="off" aria-label="남은 시간">
               <span class="display__minutes">8</span>
               <span class="display__colon" aria-hidden="true">:</span>
               <span class="display__seconds">42</span>
             </div>
-            <!-- input-pair: 숨김 (running 상태) -->
+            <!-- input-pair: 숨김 (running 시 hidden) -->
             <div class="input-pair" hidden>
               <div class="input-pair__field">
                 <input type="number" min="0" max="99" value="8" aria-label="분" />
@@ -603,7 +643,7 @@
             <p class="hint" hidden>분과 초를 입력하세요</p>
             <!-- controls: 일시정지 + 리셋 enabled -->
             <div class="controls">
-              <button type="button" class="btn btn--primary-lg">⏸ 일시정지</button>
+              <button type="button" class="btn btn--primary-lg" aria-label="타이머 일시정지">⏸ 일시정지</button>
               <button type="button" class="btn btn--ghost-lg">⟲ 리셋</button>
             </div>
             <p class="kbd-hint">
@@ -612,7 +652,7 @@
           </div>
         </div>
 
-        <!-- ④ paused (04:15) ────────────────────────── -->
+        <!-- ④ paused (04:15) — 일시정지 ─────────── -->
         <div class="mock-panel">
           <p class="mock-panel-title">④ paused — 일시정지 (04:15)</p>
           <div class="card">
@@ -621,14 +661,14 @@
               <span class="banner__text">시간이 다 됐어요</span>
               <button type="button" class="banner__close" aria-label="알림 닫기">닫기</button>
             </div>
-            <!-- display: primary + paused 표시 -->
+            <!-- display: primary, paused 상태 -->
             <div class="display is-paused" role="timer" aria-live="off" aria-label="남은 시간">
               <span class="display__minutes">4</span>
               <span class="display__colon" aria-hidden="true">:</span>
               <span class="display__seconds">15</span>
             </div>
-            <!-- 일시정지 상태 표시 (mockup 전용) -->
-            <span class="mock-label">⏸ 일시정지</span>
+            <!-- 일시정지 상태 표시 뱃지 (mockup 전용) -->
+            <span class="mock-badge">⏸ 일시정지 중</span>
             <!-- input-pair: 숨김 -->
             <div class="input-pair" hidden>
               <div class="input-pair__field">
@@ -644,7 +684,7 @@
             <p class="hint" hidden>분과 초를 입력하세요</p>
             <!-- controls: 재개 + 리셋 -->
             <div class="controls">
-              <button type="button" class="btn btn--primary-lg">▶ 재개</button>
+              <button type="button" class="btn btn--primary-lg" aria-label="타이머 재개">▶ 재개</button>
               <button type="button" class="btn btn--ghost-lg">⟲ 리셋</button>
             </div>
             <p class="kbd-hint">
@@ -653,17 +693,17 @@
           </div>
         </div>
 
-        <!-- ⑤ ended (0:00) ──────────────────────────── -->
+        <!-- ⑤ ended (0:00) — 종료 알림 ────────────── -->
         <div class="mock-panel">
           <p class="mock-panel-title">⑤ ended — 종료 알림 (0:00)</p>
           <div class="card">
-            <!-- 배너: 활성 -->
+            <!-- 배너: 활성 (종료 시 fade-in 200ms) -->
             <div class="banner banner--ended" role="status" aria-live="polite">
               <span class="banner__icon" aria-hidden="true">⏰</span>
               <span class="banner__text">시간이 다 됐어요</span>
               <button type="button" class="banner__close" aria-label="알림 닫기">닫기</button>
             </div>
-            <!-- display: ended 색 -->
+            <!-- display: ended 색상 + 펄스 2회 -->
             <div class="display is-ended" role="timer" aria-live="off" aria-label="남은 시간">
               <span class="display__minutes">0</span>
               <span class="display__colon" aria-hidden="true">:</span>
@@ -684,7 +724,7 @@
             <p class="hint" hidden>분과 초를 입력하세요</p>
             <!-- controls: 시작 disabled + 새 타이머 enabled -->
             <div class="controls">
-              <button type="button" class="btn btn--primary-lg" disabled>▶ 시작</button>
+              <button type="button" class="btn btn--primary-lg" disabled aria-label="타이머 시작">▶ 시작</button>
               <button type="button" class="btn btn--ghost-lg">⟲ 새 타이머</button>
             </div>
             <p class="kbd-hint">
@@ -696,10 +736,12 @@
       </div><!-- /.mock-grid -->
     </main><!-- /.page -->
 
-    <!-- ─── JS: 테마 토글 + aria-label 동기 ──────────── -->
+    <!-- ─── JS: 테마 토글 (palette/ 와 동일 패턴) ─────── -->
     <script>
       (function () {
-        var html    = document.documentElement;
+        "use strict";
+
+        var html     = document.documentElement;
         var themeBtn = document.getElementById("theme-toggle");
 
         function getTheme() {
@@ -717,7 +759,7 @@
           }
         }
 
-        // 초기 상태 동기
+        /* 초기 상태 동기 */
         applyTheme(getTheme());
 
         if (themeBtn) {
@@ -728,7 +770,7 @@
           });
         }
 
-        // T 키 단축키 (input focus 외)
+        /* T 키 단축키 (input focus 외) */
         document.addEventListener("keydown", function (e) {
           if (e.key === "t" || e.key === "T") {
             var tag = document.activeElement && document.activeElement.tagName;
