@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>타이머</title>
-    <link rel="stylesheet" href="styles.css" />
+    <!-- BF-497 §5.2: FOUC 방지 IIFE — 스타일시트 링크 앞에 위치해야 data-theme 먼저 설정됨 (FOUC 방지) -->
     <script>
       (function () {
         try {
@@ -14,6 +14,7 @@
         } catch (_e) {}
       })();
     </script>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="topbar">
@@ -32,27 +33,28 @@
 
     <main class="page">
       <section class="card" aria-label="타이머">
-        <!-- 종료 배너 §5.4 (hidden by default) -->
+        <!-- 종료 배너 — BF-497 §4.6 (hidden by default) -->
+        <!-- NOTE: role="status"/aria-live="polite"/id="btn-banner-close" 는 기존 테스트 가드 유지 -->
         <div
-          class="banner banner--ended"
+          class="ended-banner"
           id="ended-banner"
           role="status"
           aria-live="polite"
           hidden
         >
-          <span class="banner__icon" aria-hidden="true">⏰</span>
-          <span class="banner__text">시간이 다 됐어요</span>
+          <span class="ended-banner__icon" aria-hidden="true">⏰</span>
+          <span class="ended-banner__text">시간이 다 됐어요!</span>
           <button
             type="button"
-            class="banner__close"
+            class="ended-banner__close"
             id="btn-banner-close"
             aria-label="알림 닫기"
           >
-            닫기
+            ×
           </button>
         </div>
 
-        <!-- large display §5.1 -->
+        <!-- large display — BF-497 §4.3 -->
         <div
           class="display"
           id="display"
@@ -60,12 +62,12 @@
           aria-live="off"
           aria-label="남은 시간"
         >
-          <span class="display__minutes" id="disp-m">0</span>
+          <span class="display__minutes" id="disp-m">00</span>
           <span class="display__colon" aria-hidden="true">:</span>
           <span class="display__seconds" id="disp-s">00</span>
         </div>
 
-        <!-- input pair §5.2 (idle 만 노출) -->
+        <!-- input pair — BF-497 §4.4 (idle 만 노출) -->
         <div class="input-pair" id="input-pair">
           <div class="input-pair__field">
             <input
@@ -80,7 +82,7 @@
             />
             <span class="input-pair__label">분</span>
           </div>
-          <span class="input-pair__colon" aria-hidden="true">:</span>
+          <span class="input-pair__sep" aria-hidden="true">:</span>
           <div class="input-pair__field">
             <input
               type="number"
@@ -96,10 +98,10 @@
           </div>
         </div>
 
-        <!-- hint §4.7 (idle 0:00 만 노출) -->
+        <!-- hint — idle 0:00 만 노출 -->
         <p class="hint" id="hint">분과 초를 입력하세요</p>
 
-        <!-- controls §5.3 -->
+        <!-- controls — BF-497 §4.5 -->
         <div class="controls">
           <button
             type="button"
@@ -119,14 +121,14 @@
           </button>
         </div>
 
-        <!-- keyboard hint §7.2 -->
+        <!-- keyboard hint — BF-497 §8 -->
         <p class="kbd-hint">
           <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
         </p>
       </section>
     </main>
 
-    <!-- BF-488 · vanilla-static: IIFE, file:// 안전, type=module 금지 -->
+    <!-- BF-488/BF-497 · vanilla-static: IIFE, file:// 안전, type=module 금지 -->
     <script src="app.js"></script>
   </body>
 </html>
