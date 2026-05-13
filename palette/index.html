@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>컬러 팔레트</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // BF-464 · 다크 default 강제 (flicker 방지) — head 인라인
+      // clicker/index.html 의 패턴 복제 (다른 SPA 공통)
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {
+          // localStorage 사용 불가 환경 (private mode 등) — default 다크 유지
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">컬러 팔레트</h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="theme-toggle"
+          aria-label="라이트 테마로 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- 5개 컬러 슬롯 (AC §1: 다크 default + HEX·HSL 동시 표시) -->
+      <div class="slots" id="slots" role="list" aria-label="컬러 팔레트 슬롯">
+
+        <!-- 슬롯 1 -->
+        <article class="slot" id="slot-0" role="listitem">
+          <button
+            type="button"
+            class="slot__copy-btn"
+            data-index="0"
+            aria-label="슬롯 1 HEX 복사 (#a78bfa)"
+          >
+            <span
+              class="slot__swatch"
+              style="background-color: #a78bfa"
+              aria-hidden="true"
+            ></span>
+            <span class="slot__labels">
+              <span class="slot__hex">#a78bfa</span>
+              <span class="slot__hsl">hsl(255, 92%, 76%)</span>
+            </span>
+            <span class="slot__copy-icon" aria-hidden="true">⎘</span>
+          </button>
+          <label class="slot__edit" title="색상 변경">
+            <input
+              type="color"
+              class="slot__color-input"
+              data-index="0"
+              value="#a78bfa"
+              aria-label="슬롯 1 색상 변경"
+            />
+            <span class="slot__edit-icon" aria-hidden="true">✏</span>
+          </label>
+        </article>
+
+        <!-- 슬롯 2 -->
+        <article class="slot" id="slot-1" role="listitem">
+          <button
+            type="button"
+            class="slot__copy-btn"
+            data-index="1"
+            aria-label="슬롯 2 HEX 복사 (#38bdf8)"
+          >
+            <span
+              class="slot__swatch"
+              style="background-color: #38bdf8"
+              aria-hidden="true"
+            ></span>
+            <span class="slot__labels">
+              <span class="slot__hex">#38bdf8</span>
+              <span class="slot__hsl">hsl(198, 93%, 60%)</span>
+            </span>
+            <span class="slot__copy-icon" aria-hidden="true">⎘</span>
+          </button>
+          <label class="slot__edit" title="색상 변경">
+            <input
+              type="color"
+              class="slot__color-input"
+              data-index="1"
+              value="#38bdf8"
+              aria-label="슬롯 2 색상 변경"
+            />
+            <span class="slot__edit-icon" aria-hidden="true">✏</span>
+          </label>
+        </article>
+
+        <!-- 슬롯 3 -->
+        <article class="slot" id="slot-2" role="listitem">
+          <button
+            type="button"
+            class="slot__copy-btn"
+            data-index="2"
+            aria-label="슬롯 3 HEX 복사 (#fb7185)"
+          >
+            <span
+              class="slot__swatch"
+              style="background-color: #fb7185"
+              aria-hidden="true"
+            ></span>
+            <span class="slot__labels">
+              <span class="slot__hex">#fb7185</span>
+              <span class="slot__hsl">hsl(351, 95%, 71%)</span>
+            </span>
+            <span class="slot__copy-icon" aria-hidden="true">⎘</span>
+          </button>
+          <label class="slot__edit" title="색상 변경">
+            <input
+              type="color"
+              class="slot__color-input"
+              data-index="2"
+              value="#fb7185"
+              aria-label="슬롯 3 색상 변경"
+            />
+            <span class="slot__edit-icon" aria-hidden="true">✏</span>
+          </label>
+        </article>
+
+        <!-- 슬롯 4 -->
+        <article class="slot" id="slot-3" role="listitem">
+          <button
+            type="button"
+            class="slot__copy-btn"
+            data-index="3"
+            aria-label="슬롯 4 HEX 복사 (#34d399)"
+          >
+            <span
+              class="slot__swatch"
+              style="background-color: #34d399"
+              aria-hidden="true"
+            ></span>
+            <span class="slot__labels">
+              <span class="slot__hex">#34d399</span>
+              <span class="slot__hsl">hsl(158, 64%, 52%)</span>
+            </span>
+            <span class="slot__copy-icon" aria-hidden="true">⎘</span>
+          </button>
+          <label class="slot__edit" title="색상 변경">
+            <input
+              type="color"
+              class="slot__color-input"
+              data-index="3"
+              value="#34d399"
+              aria-label="슬롯 4 색상 변경"
+            />
+            <span class="slot__edit-icon" aria-hidden="true">✏</span>
+          </label>
+        </article>
+
+        <!-- 슬롯 5 -->
+        <article class="slot" id="slot-4" role="listitem">
+          <button
+            type="button"
+            class="slot__copy-btn"
+            data-index="4"
+            aria-label="슬롯 5 HEX 복사 (#fbbf24)"
+          >
+            <span
+              class="slot__swatch"
+              style="background-color: #fbbf24"
+              aria-hidden="true"
+            ></span>
+            <span class="slot__labels">
+              <span class="slot__hex">#fbbf24</span>
+              <span class="slot__hsl">hsl(43, 96%, 56%)</span>
+            </span>
+            <span class="slot__copy-icon" aria-hidden="true">⎘</span>
+          </button>
+          <label class="slot__edit" title="색상 변경">
+            <input
+              type="color"
+              class="slot__color-input"
+              data-index="4"
+              value="#fbbf24"
+              aria-label="슬롯 5 색상 변경"
+            />
+            <span class="slot__edit-icon" aria-hidden="true">✏</span>
+          </label>
+        </article>
+
+      </div><!-- /slots -->
+
+      <p class="palette-hint">슬롯 클릭 → HEX 복사 &nbsp;·&nbsp; ✏ 클릭 → 색상 변경 &nbsp;·&nbsp; <kbd>T</kbd> 테마</p>
+    </main>
+
+    <!-- 복사 피드백 toast (AC §4) -->
+    <div
+      id="copy-toast"
+      class="copy-toast is-hidden"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <!-- 비-module script — file:// CORS 안전 -->
+    <script src="./storage.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
