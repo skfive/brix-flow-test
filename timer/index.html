@@ -1,10 +1,22 @@
 <!doctype html>
-<html lang="ko" data-theme="light">
+<html lang="ko" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>타이머</title>
     <link rel="stylesheet" href="styles.css" />
+    <script>
+      // BF-467 · dark default + flicker 방지 — head 인라인
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {
+          // localStorage 불가 (private mode) — dark 유지
+        }
+      })();
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -13,10 +25,10 @@
         <button
           type="button"
           class="btn btn--ghost"
-          id="btn-theme"
-          aria-label="테마 전환"
+          id="theme-toggle"
+          aria-label="라이트 테마로 전환"
         >
-          🌙
+          ☀
         </button>
       </div>
     </header>
