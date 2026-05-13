@@ -29,6 +29,7 @@
   --color-timer-ended-bg: #3a1f22;
   --color-timer-ended-border: #7a3a3f;
   --color-timer-ended-text: #fcb7b7;
+  --color-timer-ended-flash: #ff6b6b;  /* BF-491 §2.1 flash 최대 밝기 (종료 진입 순간) */
 
   /* spacing (§2.3) */
   --space-1: 4px;
@@ -79,6 +80,7 @@
   --color-timer-ended-bg: #fff1f1;
   --color-timer-ended-border: #f4b5b5;
   --color-timer-ended-text: #9a2a2a;
+  --color-timer-ended-flash: #e53e3e;  /* BF-491 §2.2 flash 최대 밝기 (light용) */
   --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
@@ -264,12 +266,20 @@ button {
 .display.is-ended {
   color: var(--color-timer-ended-text);
   font-weight: 400;
-  animation: timer-pulse 1s ease-in-out 2;
+  /* BF-491 §4.6: flash 2회(300ms×2) → pulse 2회(500ms×2, 600ms delay) */
+  animation:
+    timer-flash 300ms ease-in-out 2,
+    timer-pulse 500ms ease-in-out 2 600ms;
 }
 @media (prefers-reduced-motion: reduce) {
   .display.is-ended {
     animation: none;
   }
+}
+@keyframes timer-flash {
+  0%   { color: var(--color-timer-ended-flash); }
+  50%  { color: var(--color-timer-ended-text);  }
+  100% { color: var(--color-timer-ended-flash); }
 }
 @keyframes timer-pulse {
   0%,
