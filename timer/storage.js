@@ -1,12 +1,11 @@
-// BF-407 · 타이머 localStorage 추상 utility
-// - 명세: docs/design/timer-BF-405.md
-// - key prefix: "timer:"
-// - 마지막 설정값: "timer:last" → JSON.stringify({ minutes, seconds })
+// BF-476 · 타이머 localStorage 추상 utility
+// - 명세: docs/design/timer-BF-473.md §7
+// - 마지막 설정값: "bf-timer-last-config" → JSON.stringify({ minutes, seconds })
+//   (BF-473 §9.1: bf- 접두어 통일, 이전 "timer:last" 키 → 마이그레이션 없이 폐기)
 // - 브라우저: globalThis.localStorage 주입 (default)
 // - 테스트: createMemoryStorage() 로 in-memory adapter 주입
 
-export const TIMER_PREFIX = "timer:";
-export const TIMER_LAST_KEY = TIMER_PREFIX + "last";
+export const TIMER_LAST_KEY = "bf-timer-last-config";
 
 /**
  * Web Storage API (localStorage) 호환 in-memory adapter.

@@ -73,19 +73,14 @@ if (_scopeSkip) {
     }
   });
 
-  test("BF-409 정적 AC2: localStorage key prefix 'timer:' / 'timer:last' 계약 유지", () => {
-    // 새로고침 복원 시나리오가 'timer:last' 키 자체를 가정.
+  test("BF-409 정적 AC2: localStorage key 'bf-timer-last-config' 계약 (BF-473 §7 키 변경)", () => {
+    // BF-473 §9.1: bf- 접두어 통일 → TIMER_LAST_KEY = "bf-timer-last-config"
     // 코드가 다른 key 로 옮겨가면 E2E 시나리오의 직접 검증부가 의미를 잃는다 — fact 잠금.
     const storageJs = fs.readFileSync(TIMER_STORAGE, "utf-8");
     assert.ok(
-      storageJs.includes('TIMER_PREFIX = "timer:"') ||
-        storageJs.includes("TIMER_PREFIX = 'timer:'"),
-      "storage.js 의 TIMER_PREFIX 가 'timer:' 가 아님",
-    );
-    assert.ok(
-      storageJs.includes('TIMER_LAST_KEY = TIMER_PREFIX + "last"') ||
-        storageJs.includes("TIMER_LAST_KEY = TIMER_PREFIX + 'last'"),
-      "storage.js 의 TIMER_LAST_KEY 합성식이 변경됨",
+      storageJs.includes('TIMER_LAST_KEY = "bf-timer-last-config"') ||
+        storageJs.includes("TIMER_LAST_KEY = 'bf-timer-last-config'"),
+      "storage.js 의 TIMER_LAST_KEY 가 'bf-timer-last-config' 가 아님 — BF-473 §7 키 변경 미반영",
     );
   });
 
@@ -207,16 +202,16 @@ if (_scopeSkip) {
         }
         console.log('[step] 리셋 → 0:05 (마지막 설정값 복귀) OK');
 
-        // 5. localStorage timer:last 가 {minutes:0, seconds:5} 로 저장돼 있어야 함 (시작 시 persistLast)
-        const lastRaw = await page.evaluate(() => localStorage.getItem('timer:last'));
+        // 5. localStorage bf-timer-last-config 가 {minutes:0, seconds:5} 로 저장돼 있어야 함 (시작 시 persistLast)
+        const lastRaw = await page.evaluate(() => localStorage.getItem('bf-timer-last-config'));
         if (!lastRaw) {
-          throw new Error('timer:last 키 미존재 — startOrResume 의 persistLast 누락');
+          throw new Error('bf-timer-last-config 키 미존재 — startOrResume 의 persistLast 누락');
         }
         const parsed = JSON.parse(lastRaw);
         if (parsed.minutes !== 0 || parsed.seconds !== 5) {
-          throw new Error('timer:last JSON 불일치: ' + lastRaw);
+          throw new Error('bf-timer-last-config JSON 불일치: ' + lastRaw);
         }
-        console.log('[step] localStorage timer:last={"minutes":0,"seconds":5} 확인 OK');
+        console.log('[step] localStorage bf-timer-last-config={"minutes":0,"seconds":5} 확인 OK');
 
         // 6. 새로고침 → localStorage 로부터 마지막 설정값 복원 (display 0:05)
         await page.reload();

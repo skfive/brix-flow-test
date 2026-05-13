@@ -1,31 +1,29 @@
-// BF-407 · timer localStorage 추상 utility 단위 테스트
-// 명세: docs/design/timer-BF-405.md
-// - key prefix: "timer:"
-// - 마지막 설정값: "timer:last" → { minutes, seconds }
+// BF-476 · timer localStorage 추상 utility 단위 테스트
+// 명세: docs/design/timer-BF-473.md §7
+// - 마지막 설정값: "bf-timer-last-config" → { minutes, seconds }
+// - BF-473 §9.1: bf- 접두어 통일 (이전 "timer:last" → 폐기)
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  TIMER_PREFIX,
   TIMER_LAST_KEY,
   createMemoryStorage,
   createTimerStore,
 } from "../timer/storage.js";
 
-test("storage: timer: prefix 로 저장 (Web Storage 키 검증)", () => {
+test("storage: bf-timer-last-config 키로 저장 (BF-473 §7 키 변경)", () => {
   const mem = createMemoryStorage();
   const store = createTimerStore(mem);
   store.saveLast({ minutes: 5, seconds: 0 });
   assert.equal(
-    mem.getItem(TIMER_PREFIX + "last"),
+    mem.getItem(TIMER_LAST_KEY),
     JSON.stringify({ minutes: 5, seconds: 0 }),
   );
 });
 
-test("storage: TIMER_LAST_KEY = timer:last (상수 노출 검증)", () => {
-  assert.equal(TIMER_LAST_KEY, "timer:last");
-  assert.equal(TIMER_PREFIX, "timer:");
+test("storage: TIMER_LAST_KEY = bf-timer-last-config (BF-473 §9.1 키 변경 확인)", () => {
+  assert.equal(TIMER_LAST_KEY, "bf-timer-last-config");
 });
 
 test("storage.loadLast: 저장 후 동일 값 반환", () => {
