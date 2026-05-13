@@ -6,15 +6,12 @@
     <title>타이머</title>
     <link rel="stylesheet" href="styles.css" />
     <script>
-      // BF-467 · dark default + flicker 방지 — head 인라인
       (function () {
         try {
           var saved = localStorage.getItem("bf-theme");
           var theme = saved === "light" || saved === "dark" ? saved : "dark";
           document.documentElement.setAttribute("data-theme", theme);
-        } catch (_e) {
-          // localStorage 불가 (private mode) — dark 유지
-        }
+        } catch (_e) {}
       })();
     </script>
   </head>
@@ -35,7 +32,7 @@
 
     <main class="page">
       <section class="card" aria-label="타이머">
-        <!-- 종료 배너 (hidden by default) -->
+        <!-- 종료 배너 §5.4 (hidden by default) -->
         <div
           class="banner banner--ended"
           id="ended-banner"
@@ -55,7 +52,7 @@
           </button>
         </div>
 
-        <!-- large display -->
+        <!-- large display §5.1 -->
         <div
           class="display"
           id="display"
@@ -68,7 +65,7 @@
           <span class="display__seconds" id="disp-s">00</span>
         </div>
 
-        <!-- input pair (idle 만 노출) -->
+        <!-- input pair §5.2 (idle 만 노출) -->
         <div class="input-pair" id="input-pair">
           <div class="input-pair__field">
             <input
@@ -99,10 +96,10 @@
           </div>
         </div>
 
-        <!-- hint (idle 0:00 만 노출) -->
+        <!-- hint §4.7 (idle 0:00 만 노출) -->
         <p class="hint" id="hint">분과 초를 입력하세요</p>
 
-        <!-- controls -->
+        <!-- controls §5.3 -->
         <div class="controls">
           <button
             type="button"
@@ -122,14 +119,14 @@
           </button>
         </div>
 
-        <!-- keyboard hint -->
+        <!-- keyboard hint §7.2 -->
         <p class="kbd-hint">
           <kbd>Space</kbd> 시작/정지 · <kbd>Esc</kbd> 리셋
         </p>
       </section>
     </main>
 
-    <!-- 비-module script — file:// CORS 안전 (vanilla-static) — BF-482 -->
-    <script src="script.js"></script>
+    <!-- BF-488 · vanilla-static: IIFE, file:// 안전, type=module 금지 -->
+    <script src="app.js"></script>
   </body>
 </html>
