@@ -100,12 +100,13 @@ test("BF-476 AC2: app.js 에 외부 CDN script/link 없음", () => {
   );
 });
 
-test("BF-476 AC2: index.html 이 app.js 를 type=module 없이 로드", () => {
+test("BF-476 AC2: index.html 이 app.js 또는 script.js 를 type=module 없이 로드", () => {
   const html = fs.readFileSync(TIMER_HTML, "utf-8");
-  // app.js 를 script src 로 로드하는지 확인
+  // app.js(BF-476) 또는 script.js(BF-482) 중 하나를 비-module script 로 로드해야 함
   assert.ok(
-    html.includes('src="app.js"') || html.includes("src='app.js'"),
-    "index.html 이 app.js 를 로드하지 않음",
+    html.includes('src="app.js"') || html.includes("src='app.js'") ||
+    html.includes('src="script.js"') || html.includes("src='script.js'"),
+    "index.html 이 app.js / script.js 를 로드하지 않음",
   );
   // type=module 금지
   assert.ok(

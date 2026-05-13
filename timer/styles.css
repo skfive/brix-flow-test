@@ -197,6 +197,16 @@ button {
 }
 
 /* ─────────────────── banner (§4.6) ─────────────────── */
+@keyframes banner-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.banner:not([hidden]) {
+  animation: banner-in 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .banner:not([hidden]) { animation: none; }
+}
 .banner {
   width: 100%;
   display: flex;
