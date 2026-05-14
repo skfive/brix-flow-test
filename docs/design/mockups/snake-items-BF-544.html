@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>snake-items-BF-544 · 지렁이게임 아이템 시각 디자인 시안</title>
+  <style>
+    /* ─── 기존 게임 토큰 (참조 재현) ─────────────────────── */
+    :root {
+      --bg-primary: #0d0d0d;
+      --player-body: #4cff80;
+      --player-head: #00cc44;
+      --cpu-body: #ff6b4c;
+      --cpu-head: #cc2200;
+
+      /* 배수 먹이 */
+      --food-1x: #ffcc00;
+      --food-2x: #00cfff;
+      --food-4x: #cc44ff;
+      --food-8x: #ff4444;
+
+      /* 이팩트 토큰 (BF-536) */
+      --fx-1x-primary: #ffcc00;
+      --fx-2x-primary: #00cfff;
+      --fx-4x-primary: #cc44ff;
+      --fx-8x-primary: #ff4444;
+      --fx-core-white: #ffffff;
+
+      /* ─── 아이템 시스템 신규 토큰 — BF-544 ─── */
+      --item-speed-primary:    #ffaa00;
+      --item-speed-glow:       rgba(255,170,0,0.40);
+      --item-speed-trail:      rgba(255,180,50,0.60);
+      --item-slow-primary:     #00ddcc;
+      --item-slow-glow:        rgba(0,221,204,0.40);
+      --item-burst-primary:    #ff6600;
+      --item-burst-glow:       rgba(255,102,0,0.45);
+      --item-burst-flash:      #ff9900;
+      --item-shield-primary:   #4488ff;
+      --item-shield-glow:      rgba(68,136,255,0.45);
+      --item-shield-break:     rgba(68,136,255,0.35);
+      --item-reverse-primary:  #22ffaa;
+      --item-reverse-glow:     rgba(34,255,170,0.40);
+      --item-blink-white:      rgba(255,255,255,0.90);
+      --hud-slot-bg:           rgba(0,0,0,0.65);
+      --hud-slot-border-empty: rgba(255,255,255,0.18);
+      --toast-bg:              rgba(13,13,13,0.88);
+    }
+
+    /* ─── 글로벌 리셋 ────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-primary);
+      color: #e0e0e0;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 0 0 60px;
+      overflow-x: hidden;
+    }
+
+    /* ─── 레이아웃 ──────────────────────────────────────── */
+    .page-title {
+      text-align: center;
+      padding: 28px 20px 8px;
+      font-size: 14px;
+      letter-spacing: 3px;
+      color: #4cff80;
+      text-shadow: 0 0 10px rgba(76,255,128,0.5);
+    }
+    .page-subtitle {
+      text-align: center;
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 1px;
+      margin-bottom: 36px;
+    }
+
+    section {
+      max-width: 960px;
+      margin: 0 auto 48px;
+      padding: 0 20px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #4cff80;
+      border-bottom: 1px solid rgba(76,255,128,0.2);
+      padding-bottom: 8px;
+      margin-bottom: 24px;
+    }
+
+    /* ─── 게임 그리드 시뮬레이션 ─────────────────────────── */
+    .game-grid {
+      background: var(--bg-primary);
+      border: 1px solid rgba(76,255,128,0.15);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-grid canvas { display: block; }
+
+    /* ─── §1 아이템 셀 쇼케이스 ─────────────────────────── */
+    .item-showcase {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .item-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      min-width: 140px;
+    }
+
+    .item-cell-preview {
+      position: relative;
+      width: 60px;
+      height: 60px;
+    }
+
+    .item-cell-preview canvas { border-radius: 4px; }
+
+    .item-name {
+      font-size: 11px;
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+    .item-id {
+      font-size: 9px;
+      color: #555;
+      letter-spacing: 1px;
+    }
+    .item-desc {
+      font-size: 10px;
+      color: #888;
+      text-align: center;
+      line-height: 1.5;
+      max-width: 120px;
+    }
+
+    .item-color-chip {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 4px;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    /* ─── §2 음식 vs 아이템 구별 비교 ──────────────────── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .compare-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .compare-card .compare-title {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    .compare-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    /* ─── §3 HUD 시뮬레이션 ──────────────────────────────── */
+    .hud-demo-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+
+    .hud-panel {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 20px 16px;
+      position: relative;
+      min-height: 200px;
+    }
+
+    .hud-panel-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #444;
+      margin-bottom: 16px;
+    }
+
+    /* 기존 HUD 복제 */
+    .hud-score-panel {
+      text-align: right;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .hud-player-val { color: #4cff80; font-size: 20px; font-weight: bold; }
+    .hud-cpu-val    { color: #ff6b4c; font-size: 20px; font-weight: bold; }
+    .hud-high-val   { color: #888; font-size: 12px; }
+
+    /* 버프 상태줄 */
+    #buff-bar-demo {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .buff-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,0,0,0.55);
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+    .buff-icon  { font-size: 13px; }
+    .buff-label { font-size: 10px; letter-spacing: 1px; opacity: 0.8; flex: 1; }
+    .buff-time  { font-size: 11px; font-weight: bold; min-width: 28px; text-align: right; }
+
+    .buff-progress-track {
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .buff-progress-bar {
+      height: 100%;
+      border-radius: 2px;
+      animation: buff-shrink 5s linear forwards;
+    }
+
+    @keyframes buff-shrink {
+      from { width: 100%; }
+      to   { width: 0%; }
+    }
+
+    .buff-speed  .buff-time,
+    .buff-speed  .buff-label { color: var(--item-speed-primary); }
+    .buff-speed  .buff-progress-bar { background: var(--item-speed-primary); }
+
+    .buff-slow   .buff-time,
+    .buff-slow   .buff-label { color: var(--item-slow-primary); }
+    .buff-slow   .buff-progress-bar { background: var(--item-slow-primary); }
+
+    .buff-burst  .buff-time,
+    .buff-burst  .buff-label { color: var(--item-burst-primary); }
+    .buff-burst  .buff-progress-bar { background: var(--item-burst-primary); }
+
+    /* 보유 슬롯 */
+    .slot-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+    }
+
+    .slot-label-txt {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.35);
+    }
+
+    .slot-box {
+      width: 52px;
+      height: 52px;
+      background: var(--hud-slot-bg);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      position: relative;
+      cursor: default;
+    }
+
+    .slot-box.empty {
+      border: 1px dashed var(--hud-slot-border-empty);
+    }
+    .slot-box.empty .slot-icon  { font-size: 18px; opacity: 0.2; }
+    .slot-box.empty .slot-z     { color: rgba(255,255,255,0.2); font-size: 9px; }
+
+    .slot-box.held-shield {
+      border: 2px solid var(--item-shield-primary);
+      box-shadow: 0 0 12px rgba(68,136,255,0.5);
+    }
+    .slot-box.held-shield .slot-icon { font-size: 22px; }
+    .slot-box.held-shield .slot-z    { color: var(--item-shield-primary); font-size: 10px; font-weight: bold; }
+    .slot-box.held-shield .slot-expire { color: #aaa; font-size: 9px; position: absolute; bottom: 3px; right: 5px; }
+
+    .slot-box.held-reverse {
+      border: 2px solid var(--item-reverse-primary);
+      box-shadow: 0 0 12px rgba(34,255,170,0.45);
+    }
+    .slot-box.held-reverse .slot-icon { font-size: 22px; }
+    .slot-box.held-reverse .slot-z    { color: var(--item-reverse-primary); font-size: 10px; font-weight: bold; }
+    .slot-box.held-reverse .slot-expire { color: #aaa; font-size: 9px; position: absolute; bottom: 3px; right: 5px; }
+
+    @keyframes slot-expiring {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+
+    /* ─── §4 토스트 알림 ─────────────────────────────────── */
+    .toast-demo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .toast {
+      background: var(--toast-bg);
+      border-radius: 6px;
+      padding: 8px 18px;
+      max-width: 280px;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .toast-speed   { color: #ffaa00; border: 1px solid rgba(255,170,0,0.35); }
+    .toast-slow    { color: #00ddcc; border: 1px solid rgba(0,221,204,0.35); }
+    .toast-burst   { color: #ff6600; border: 1px solid rgba(255,102,0,0.35); }
+    .toast-shield  { color: #4488ff; border: 1px solid rgba(68,136,255,0.35); }
+    .toast-reverse { color: #22ffaa; border: 1px solid rgba(34,255,170,0.35); }
+    .toast-expire  { color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.15); }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes toast-out {
+      from { opacity: 1; }
+      to   { opacity: 0; transform: translateY(-4px); }
+    }
+
+    .toast-live {
+      animation: toast-in 0.25s ease-out forwards;
+    }
+
+    /* ─── §5 Z 키 힌트 오버레이 ──────────────────────────── */
+    .z-hint-box {
+      background: rgba(0,0,0,0.80);
+      border-radius: 8px;
+      padding: 12px 22px;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .z-hint-box .zh-title { font-size: 13px; font-weight: bold; }
+    .z-hint-box .zh-desc  { font-size: 11px; color: #aaa; }
+    .z-key-badge {
+      display: inline-block;
+      background: var(--item-shield-primary);
+      color: #0d0d0d;
+      font-weight: bold;
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 3px;
+      margin: 0 2px;
+    }
+
+    /* ─── §6 이팩트 데모 ─────────────────────────────────── */
+    .effect-demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+    }
+
+    .effect-card {
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .effect-stage {
+      width: 120px;
+      height: 120px;
+      background: var(--bg-primary);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 4px;
+      position: relative;
+      overflow: visible;
+    }
+
+    .effect-card .eff-title { font-size: 11px; letter-spacing: 1px; font-weight: bold; }
+    .effect-card .eff-sub   { font-size: 9px; color: #666; text-align: center; line-height: 1.5; }
+
+    /* 파티클 이팩트 공통 */
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* SPEED_UP 파티클 */
+    @keyframes speed-particle {
+      0%   { transform: translate(0,0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0.3); opacity: 0; }
+    }
+    @keyframes speed-trail {
+      0%   { opacity: 0.7; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0.3); }
+    }
+    @keyframes speed-flash {
+      0%   { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* SLOW_DOWN 파티클 */
+    @keyframes slow-ring {
+      0%   { width: 0; height: 0; opacity: 1; }
+      100% { width: 100px; height: 100px; opacity: 0; }
+    }
+    @keyframes slow-particle {
+      0%   { transform: translate(0,0) rotate(45deg) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) rotate(45deg) scale(0); opacity: 0; }
+    }
+
+    /* LENGTH_BURST */
+    @keyframes burst-orange {
+      0%   { transform: translate(0,0) scale(1.3); opacity: 1; }
+      30%  { opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
+    @keyframes burst-ring {
+      0%   { width: 0; height: 0; opacity: 1; }
+      100% { width: 140px; height: 140px; opacity: 0; }
+    }
+    @keyframes burst-flash {
+      0%   { opacity: 0.22; }
+      100% { opacity: 0; }
+    }
+
+    /* SHIELD */
+    @keyframes shield-ring {
+      0%   { width: 0; height: 0; opacity: 1; }
+      100% { width: 88px; height: 88px; opacity: 0; }
+    }
+    @keyframes shield-particle {
+      0%   { transform: translate(0,0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
+    @keyframes shield-glow-pulse {
+      0%, 100% { opacity: 0.8; }
+      50%      { opacity: 0.3; }
+    }
+
+    /* REVERSE */
+    @keyframes swirl-particle {
+      0%   { transform: translate(0,0) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0) rotate(90deg); opacity: 0; }
+    }
+    @keyframes reverse-ring {
+      0%   { width: 0; height: 0; opacity: 1; }
+      100% { width: 72px; height: 72px; opacity: 0; }
+    }
+    @keyframes reverse-ring-pulse {
+      0%, 100% { opacity: 0.6; }
+      50%      { opacity: 0.12; }
+    }
+
+    /* 뱀 깜박임 (LENGTH_BURST) */
+    @keyframes snake-blink {
+      0%, 100% { background: #4cff80; }
+      50%      { background: rgba(255,255,255,0.90); }
+    }
+
+    /* 방패 글로우 */
+    .shield-glow-seg {
+      animation: shield-glow-pulse 1.5s ease-in-out infinite;
+    }
+
+    /* REVERSE 잔류 링 */
+    .reverse-active-ring {
+      animation: reverse-ring-pulse 1s ease-in-out infinite;
+    }
+
+    /* ─── 버튼 ───────────────────────────────────────────── */
+    .btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 7px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.12); }
+
+    .btn-speed   { border-color: rgba(255,170,0,0.5);    color: #ffaa00; }
+    .btn-slow    { border-color: rgba(0,221,204,0.5);    color: #00ddcc; }
+    .btn-burst   { border-color: rgba(255,102,0,0.5);    color: #ff6600; }
+    .btn-shield  { border-color: rgba(68,136,255,0.5);   color: #4488ff; }
+    .btn-reverse { border-color: rgba(34,255,170,0.5);   color: #22ffaa; }
+
+    /* ─── 컬러 토큰 레퍼런스 표 ──────────────────────────── */
+    .token-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .token-table th {
+      text-align: left;
+      color: #555;
+      font-size: 9px;
+      letter-spacing: 1px;
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .token-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: #ccc;
+    }
+    .token-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .color-swatch {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    /* ─── 분리선 ──────────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin: 8px 0 24px;
+    }
+
+    /* ─── 아이템 셀 크기 비교 (20px vs 60px 스케일) ──────── */
+    .scale-note {
+      font-size: 9px;
+      color: #444;
+      text-align: center;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* ─── 스크롤 토p 링크 ────────────────────────────────── */
+    .section-nav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+    .section-nav a {
+      color: #4cff80;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-decoration: none;
+      opacity: 0.6;
+    }
+    .section-nav a:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<h1 class="page-title">▌ 지렁이게임 아이템 시각 디자인 시안 ▐</h1>
+<p class="page-subtitle">BF-544 · designer: [이디자인] · 2026-05-14 · snake module</p>
+
+<nav class="section-nav">
+  <a href="#s1">① 아이템 셀</a>
+  <a href="#s2">② 배수 vs 아이템</a>
+  <a href="#s3">③ HUD 시뮬레이션</a>
+  <a href="#s4">④ 토스트 알림</a>
+  <a href="#s5">⑤ Z키 힌트</a>
+  <a href="#s6">⑥ 이팩트 데모</a>
+  <a href="#s7">⑦ 뱀 시각 효과</a>
+  <a href="#s8">⑧ 컬러 토큰</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- §1 보드 위 아이템 셀 아이콘 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="s1">
+  <div class="section-title">① 보드 위 아이템 셀 아이콘 (CELL = 20px, 여기선 3× 확대 표시)</div>
+  <div class="item-showcase">
+
+    <!-- SPEED_UP -->
+    <div class="item-card">
+      <canvas class="item-cell-preview" id="cvSpeed" width="60" height="60"></canvas>
+      <div class="item-name" style="color:#ffaa00">SPEED_UP</div>
+      <div class="item-id">즉시 발동형 · INSTANT</div>
+      <div class="item-desc">획득 즉시 이동속도 1.5×<br>5초 지속 (42틱)</div>
+      <div class="scale-note">실제 크기: 20×20 px</div>
+    </div>
+
+    <!-- SLOW_DOWN -->
+    <div class="item-card">
+      <canvas class="item-cell-preview" id="cvSlow" width="60" height="60"></canvas>
+      <div class="item-name" style="color:#00ddcc">SLOW_DOWN</div>
+      <div class="item-id">즉시 발동형 · INSTANT</div>
+      <div class="item-desc">획득 즉시 이동속도 0.5×<br>5초 지속 (약28틱)</div>
+      <div class="scale-note">실제 크기: 20×20 px</div>
+    </div>
+
+    <!-- LENGTH_BURST -->
+    <div class="item-card">
+      <canvas class="item-cell-preview" id="cvBurst" width="60" height="60"></canvas>
+      <div class="item-name" style="color:#ff6600">LENGTH_BURST</div>
+      <div class="item-id">즉시 발동형 · INSTANT</div>
+      <div class="item-desc">길이 현재 × 10 즉시 확장<br>5초 후 복귀</div>
+      <div class="scale-note">실제 크기: 20×20 px</div>
+    </div>
+
+    <!-- SHIELD -->
+    <div class="item-card">
+      <canvas class="item-cell-preview" id="cvShield" width="60" height="60"></canvas>
+      <div class="item-name" style="color:#4488ff">SHIELD</div>
+      <div class="item-id">보유형 · HOLDABLE · [Z]</div>
+      <div class="item-desc">다음 충돌 1회 무효화<br>30초 내 미사용 시 소멸</div>
+      <div class="scale-note">실제 크기: 20×20 px</div>
+    </div>
+
+    <!-- REVERSE -->
+    <div class="item-card">
+      <canvas class="item-cell-preview" id="cvReverse" width="60" height="60"></canvas>
+      <div class="item-name" style="color:#22ffaa">REVERSE</div>
+      <div class="item-id">보유형 · HOLDABLE · [Z]</div>
+      <div class="item-desc">CPU 이동 방향 3초 역전<br>30초 내 미사용 시 소멸</div>
+      <div class="scale-note">실제 크기: 20×20 px</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- §2 배수 먹이 vs 아이템 셀 구별 비교 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="s2">
+  <div class="section-title">② 배수 먹이 vs 아이템 셀 — 색/형태 구별 비교</div>
+  <div class="compare-grid">
+
+    <div class="compare-card">
+      <div class="compare-title">FOOD (배수 먹이)</div>
+      <div class="compare-row">
+        <canvas id="cvFood1" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#ffcc00">1× Gold</span>
+      </div>
+      <div class="compare-row">
+        <canvas id="cvFood2" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#00cfff">2× Cyan</span>
+      </div>
+      <div class="compare-row">
+        <canvas id="cvFood4" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#cc44ff">4× Purple</span>
+      </div>
+      <div class="compare-row">
+        <canvas id="cvFood8" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#ff4444">8× Red</span>
+      </div>
+    </div>
+
+    <div class="compare-card">
+      <div class="compare-title">ITEM (아이템 셀)</div>
+      <div class="compare-row">
+        <canvas id="cvItemSpeed2" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#ffaa00">SPEED_UP Amber</span>
+      </div>
+      <div class="compare-row">
+        <canvas id="cvItemSlow2" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#00ddcc">SLOW_DOWN Teal</span>
+      </div>
+      <div class="compare-row">
+        <canvas id="cvItemBurst2" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#ff6600">LENGTH_BURST Orange</span>
+      </div>
+      <div class="compare-row">
+        <canvas id="cvItemShield2" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#4488ff">SHIELD Blue</span>
+      </div>
+      <div class="compare-row">
+        <canvas id="cvItemReverse2" width="28" height="28"></canvas>
+        <span style="font-size:11px;color:#22ffaa">REVERSE Mint</span>
+      </div>
+    </div>
+
+    <div class="compare-card">
+      <div class="compare-title">혼합 보드 (실제 게임 환경)</div>
+      <canvas id="cvMixed" width="160" height="200"></canvas>
+      <div style="font-size:9px;color:#444;margin-top:8px;line-height:1.6;">
+        ● = 배수 먹이<br>
+        ★/⚡/⌛/◈/↩ = 아이템<br>
+        형태 + 색 두 가지로 구별
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- §3 HUD 시뮬레이션 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="s3">
+  <div class="section-title">③ HUD 시뮬레이션 — 버프 상태줄 + 보유 아이템 슬롯</div>
+  <div class="hud-demo-wrap">
+
+    <!-- 패널 A: 빈 상태 -->
+    <div class="hud-panel">
+      <div class="hud-panel-label">[ A ] 아이템 비활성 상태</div>
+      <div class="hud-score-panel">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:2px;">
+          <span style="font-size:11px;color:#4cff80;opacity:0.8">P</span>
+          <span class="hud-player-val">120</span>
+          <span style="color:#555;font-size:14px">|</span>
+          <span style="font-size:11px;color:#ff6b4c;opacity:0.8">CPU</span>
+          <span class="hud-cpu-val">80</span>
+        </div>
+        <div class="hud-high-val">HIGH 350</div>
+      </div>
+      <div class="slot-wrap">
+        <div class="slot-label-txt">HOLD</div>
+        <div class="slot-box empty">
+          <span class="slot-icon">—</span>
+          <span class="slot-z">[Z]</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 패널 B: SPEED_UP + LENGTH_BURST 버프 활성 + SHIELD 보유 -->
+    <div class="hud-panel">
+      <div class="hud-panel-label">[ B ] 버프 2개 활성 + 방패 보유</div>
+      <div class="hud-score-panel">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:2px;">
+          <span style="font-size:11px;color:#4cff80;opacity:0.8">P</span>
+          <span class="hud-player-val">200</span>
+          <span style="color:#555;font-size:14px">|</span>
+          <span style="font-size:11px;color:#ff6b4c;opacity:0.8">CPU</span>
+          <span class="hud-cpu-val">160</span>
+        </div>
+        <div class="hud-high-val">HIGH 350</div>
+      </div>
+      <div id="buff-bar-demo" style="margin-top:10px;">
+        <div class="buff-item buff-speed">
+          <span class="buff-icon">⚡</span>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;">
+              <span class="buff-label">SPEED</span>
+              <span class="buff-time" id="buff-time-speed">3.8s</span>
+            </div>
+            <div class="buff-progress-track">
+              <div class="buff-progress-bar" id="bp-speed" style="width:76%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="buff-item buff-burst">
+          <span class="buff-icon">🔥</span>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;">
+              <span class="buff-label">BURST</span>
+              <span class="buff-time" id="buff-time-burst">1.4s</span>
+            </div>
+            <div class="buff-progress-track">
+              <div class="buff-progress-bar" id="bp-burst" style="width:28%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slot-wrap">
+        <div class="slot-label-txt">HOLD</div>
+        <div class="slot-box held-shield">
+          <span class="slot-icon">🛡️</span>
+          <span class="slot-z">[Z]</span>
+          <span class="slot-expire">24s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 패널 C: SLOW_DOWN 버프 + REVERSE 보유 (만료 임박) -->
+    <div class="hud-panel">
+      <div class="hud-panel-label">[ C ] 슬로우 버프 + 역전탄 (만료 임박)</div>
+      <div class="hud-score-panel">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-bottom:2px;">
+          <span style="font-size:11px;color:#4cff80;opacity:0.8">P</span>
+          <span class="hud-player-val">50</span>
+          <span style="color:#555;font-size:14px">|</span>
+          <span style="font-size:11px;color:#ff6b4c;opacity:0.8">CPU</span>
+          <span class="hud-cpu-val">310</span>
+        </div>
+        <div class="hud-high-val">HIGH 350</div>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="buff-item buff-slow">
+          <span class="buff-icon">🐢</span>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;">
+              <span class="buff-label">SLOW</span>
+              <span class="buff-time">0.9s</span>
+            </div>
+            <div class="buff-progress-track">
+              <div class="buff-progress-bar" style="width:18%;animation:none;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slot-wrap">
+        <div class="slot-label-txt">HOLD</div>
+        <div class="slot-box held-reverse" style="animation: slot-expiring 0.4s ease-in-out infinite;">
+          <span class="slot-icon">🌀</span>
+          <span class="slot-z">[Z]</span>
+          <span class="slot-expire" style="color:#ff6644">3s</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- §4 토스트 알림 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="s4">
+  <div class="section-title">④ 토스트 알림 시안 — 획득 / 사용 / 소멸</div>
+  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+    <div class="toast-demo-list" id="toast-static">
+      <div class="toast toast-speed">⚡ 스피드업 획득!</div>
+      <div class="toast toast-slow">🐢 슬로우다운!</div>
+      <div class="toast toast-burst">🔥 길이폭발!</div>
+      <div class="toast toast-shield">🛡️ 방패 획득! [Z]로 사용</div>
+      <div class="toast toast-reverse">🌀 역전탄 획득! [Z]로 사용</div>
+      <div class="toast toast-shield" style="color:#88aaff;">🛡️ 방패 발동!</div>
+      <div class="toast toast-reverse" style="color:#99ffcc;">🌀 역전탄 발동!</div>
+      <div class="toast toast-expire">🛡️ 방패 소멸</div>
+      <div class="toast toast-expire" style="color:#ff8844;">⚠ [CPU] 아이템 소멸</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;">
+      <div style="font-size:10px;color:#555;letter-spacing:1px;margin-bottom:4px;">라이브 데모 — 버튼 클릭 시 토스트 등장</div>
+      <button class="btn btn-speed"   onclick="showToast('toast-speed',   '⚡ 스피드업 획득!')">스피드업 토스트</button>
+      <button class="btn btn-slow"    onclick="showToast('toast-slow',    '🐢 슬로우다운!')">슬로우다운 토스트</button>
+      <button class="btn btn-burst"   onclick="showToast('toast-burst',   '🔥 길이폭발!')">길이폭발 토스트</button>
+      <button class="btn btn-shield"  onclick="showToast('toast-shield',  '🛡️ 방패 획득! [Z]로 사용')">방패 토스트</button>
+      <button class="btn btn-reverse" onclick="showToast('toast-reverse', '🌀 역전탄 발동!')">역전탄 토스트</button>
+      <div id="toast-live-area" style="margin-top:10px;min-height:40px;position:relative;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- §5 Z 키 힌트 오버레이 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="s5">
+  <div class="section-title">⑤ Z 키 사용 안내 오버레이 — 첫 보유형 아이템 획득 시 1회 표시</div>
+  <div style="display:flex;gap:24px;flex-wrap:wrap;">
+    <div style="background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:9px;color:#444;letter-spacing:1px;">방패 획득 시</div>
+      <div class="z-hint-box" style="border:1px solid rgba(68,136,255,0.4);">
+        <div class="zh-title" style="color:#4488ff;">🛡️ 방패 획득!</div>
+        <div class="zh-desc"><span class="z-key-badge">Z</span> 키로 사용할 수 있습니다</div>
+      </div>
+    </div>
+    <div style="background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:9px;color:#444;letter-spacing:1px;">역전탄 획득 시</div>
+      <div class="z-hint-box" style="border:1px solid rgba(34,255,170,0.4);">
+        <div class="zh-title" style="color:#22ffaa;">🌀 역전탄 획득!</div>
+        <div class="zh-desc"><span class="z-key-badge" style="background:#22ffaa;">Z</span> 키로 사용할 수 있습니다</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#555;line-height:1.7;align-self:center;max-width:260px;">
+      • 위치: fixed, bottom 80px, 수평 중앙<br>
+      • 1.5초 표시 → 0.3초 fade-out<br>
+      • localStorage <code style="color:#aaa">bf-snake-z-hint-shown</code> 으로 1회만 표시<br>
+      • z-index: 12 (토스트와 동일)
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- §6 이팩트 모션 데모 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="s6">
+  <div class="section-title">⑥ 발동 이팩트 데모 — 버튼 클릭으로 재생</div>
+  <div class="effect-demo-grid">
+
+    <!-- SPEED_UP -->
+    <div class="effect-card">
+      <div class="effect-stage" id="stage-speed"></div>
+      <div class="eff-title" style="color:#ffaa00">⚡ SPEED_UP</div>
+      <div class="eff-sub">화면 플래시 80ms<br>6개 파티클 32px 방사<br>트레일 파티클</div>
+      <button class="btn btn-speed" onclick="playSpeedEffect()">재생</button>
+    </div>
+
+    <!-- SLOW_DOWN -->
+    <div class="effect-card">
+      <div class="effect-stage" id="stage-slow"></div>
+      <div class="eff-title" style="color:#00ddcc">🐢 SLOW_DOWN</div>
+      <div class="eff-sub">냉기 링 확장 400ms<br>4개 얼음 파티클<br>뱀 opacity 0.75</div>
+      <button class="btn btn-slow" onclick="playSlowEffect()">재생</button>
+    </div>
+
+    <!-- LENGTH_BURST -->
+    <div class="effect-card">
+      <div class="effect-stage" id="stage-burst"></div>
+      <div class="eff-title" style="color:#ff6600">🔥 LENGTH_BURST</div>
+      <div class="eff-sub">폭발 링 500ms<br>12개 파티클 50px<br>화면 플래시 100ms</div>
+      <button class="btn btn-burst" onclick="playBurstEffect()">재생</button>
+    </div>
+
+    <!-- SHIELD -->
+    <div class="effect-card">
+      <div class="effect-stage" id="stage-shield"></div>
+      <div class="eff-title" style="color:#4488ff">🛡️ SHIELD 발동</div>
+      <div class="eff-sub">방패 링 파동 350ms<br>8개 파티클<br>뱀 글로우 pulse</div>
+      <button class="btn btn-shield" onclick="playShieldEffect()">재생</button>
+    </div>
+
+    <!-- REVERSE -->
+    <div class="effect-card">
+      <div class="effect-stage" id="stage-reverse"></div>
+      <div class="eff-title" style="color:#22ffaa">🌀 REVERSE 발동</div>
+      <div class="eff-sub">소용돌이 16개 파티클<br>링 확장 + 잔류 링<br>화면 플래시 80ms</div>
+      <button class="btn btn-reverse" onclick="playReverseEffect()">재생</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- §7 뱀 시각 효과 — LENGTH_BURST 깜박임 / SHIELD 글로우 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="s7">
+  <div class="section-title">⑦ 아이템 활성 중 뱀 시각 효과</div>
+  <div style="display:flex;gap:28px;flex-wrap:wrap;">
+
+    <!-- LENGTH_BURST 깜박임 -->
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+      <div style="font-size:10px;color:#555;letter-spacing:1px;">LENGTH_BURST 활성 — 뱀 몸통 깜박임 (0.5s)</div>
+      <div style="display:flex;gap:3px;align-items:center;">
+        <div style="width:16px;height:16px;border-radius:3px;background:#00cc44;box-shadow:0 0 4px rgba(0,200,68,0.4);"></div>
+        <div style="width:16px;height:16px;border-radius:3px;animation:snake-blink 0.5s step-end infinite;background:#4cff80;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;animation:snake-blink 0.5s step-end infinite 0.1s;background:#4cff80;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;animation:snake-blink 0.5s step-end infinite 0.2s;background:#4cff80;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;animation:snake-blink 0.5s step-end infinite 0.3s;background:#4cff80;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;animation:snake-blink 0.5s step-end infinite 0.4s;background:#4cff80;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;animation:snake-blink 0.5s step-end infinite 0.45s;background:#4cff80;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;animation:snake-blink 0.5s step-end infinite 0.48s;background:#4cff80;"></div>
+      </div>
+      <div style="font-size:9px;color:#444;">헤드(고정 #00cc44) + 몸통(깜박임)</div>
+      <div style="font-size:9px;color:#ff6600;">복귀 시: 즉시 정상 색 전환</div>
+    </div>
+
+    <!-- SHIELD 글로우 -->
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+      <div style="font-size:10px;color:#555;letter-spacing:1px;">SHIELD 활성 — 뱀 외곽 파란 글로우 pulse</div>
+      <div style="display:flex;gap:3px;align-items:center;">
+        <div style="width:16px;height:16px;border-radius:3px;background:#00cc44;outline:3px solid rgba(68,136,255,0.8);outline-offset:1px;animation:shield-glow-pulse 1.5s ease-in-out infinite;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;background:#4cff80;outline:3px solid rgba(68,136,255,0.8);outline-offset:1px;animation:shield-glow-pulse 1.5s ease-in-out infinite 0.1s;" class="shield-glow-seg"></div>
+        <div style="width:16px;height:16px;border-radius:3px;background:#3cdc80;outline:3px solid rgba(68,136,255,0.8);outline-offset:1px;animation:shield-glow-pulse 1.5s ease-in-out infinite 0.2s;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;background:#2ccc70;outline:3px solid rgba(68,136,255,0.8);outline-offset:1px;animation:shield-glow-pulse 1.5s ease-in-out infinite 0.3s;"></div>
+        <div style="width:16px;height:16px;border-radius:3px;background:#2ccc70;outline:3px solid rgba(68,136,255,0.8);outline-offset:1px;animation:shield-glow-pulse 1.5s ease-in-out infinite 0.4s;"></div>
+      </div>
+      <div style="font-size:9px;color:#444;">strokeStyle: rgba(68,136,255, pulse), lineWidth 3</div>
+      <div style="font-size:9px;color:#4488ff;">방패 방어 발동 시: 파란 스크린 플래시</div>
+    </div>
+
+    <!-- REVERSE 활성 CPU 링 -->
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+      <div style="font-size:10px;color:#555;letter-spacing:1px;">REVERSE 활성 (3초) — CPU 주변 잔류 링</div>
+      <div style="position:relative;width:80px;height:60px;">
+        <div style="display:flex;gap:2px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">
+          <div style="width:14px;height:14px;border-radius:3px;background:#cc2200;border:1px solid rgba(255,255,255,0.4);"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(210,60,60,0.6);"></div>
+          <div style="width:14px;height:14px;border-radius:3px;background:rgba(210,60,60,0.5);"></div>
+        </div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;border:1px solid rgba(34,255,170,0.30);border-radius:50%;" class="reverse-active-ring"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border:1px solid rgba(34,255,170,0.15);border-radius:50%;" class="reverse-active-ring" style="animation-delay:0.3s;"></div>
+      </div>
+      <div style="font-size:9px;color:#444;">CPU 헤드 추적 잔류 링 (pulse)</div>
+      <div style="font-size:9px;color:#22ffaa;">3초 경과 후 ring 사라짐</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- §8 컬러 토큰 레퍼런스 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="s8">
+  <div class="section-title">⑧ 컬러 토큰 레퍼런스 — BF-544 신규 정의</div>
+  <table class="token-table">
+    <thead>
+      <tr>
+        <th>CSS 변수</th>
+        <th>HEX / rgba</th>
+        <th>용도</th>
+        <th>충돌 방지</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><code>--item-speed-primary</code></td>  <td><span class="color-swatch" style="background:#ffaa00;box-shadow:0 0 4px #ffaa00;"></span>#ffaa00</td>  <td>SPEED_UP 주색·파티클</td>      <td>1×(#ffcc00) 대비 주황 기조</td></tr>
+      <tr><td><code>--item-speed-glow</code></td>     <td>rgba(255,170,0,0.40)</td>   <td>SPEED_UP 광채 링</td>          <td>—</td></tr>
+      <tr><td><code>--item-speed-trail</code></td>    <td>rgba(255,180,50,0.60)</td>  <td>SPEED_UP 트레일 파티클</td>    <td>—</td></tr>
+      <tr><td><code>--item-slow-primary</code></td>   <td><span class="color-swatch" style="background:#00ddcc;box-shadow:0 0 4px #00ddcc;"></span>#00ddcc</td>   <td>SLOW_DOWN 주색</td>           <td>2×(#00cfff) 대비 그린 기조</td></tr>
+      <tr><td><code>--item-slow-glow</code></td>      <td>rgba(0,221,204,0.40)</td>   <td>SLOW_DOWN 광채·냉기 링</td>   <td>—</td></tr>
+      <tr><td><code>--item-burst-primary</code></td>  <td><span class="color-swatch" style="background:#ff6600;box-shadow:0 0 4px #ff6600;"></span>#ff6600</td>   <td>LENGTH_BURST 주색</td>        <td>8×(#ff4444), 4×(#cc44ff) 모두 구별</td></tr>
+      <tr><td><code>--item-burst-glow</code></td>     <td>rgba(255,102,0,0.45)</td>   <td>LENGTH_BURST 광채·링</td>     <td>—</td></tr>
+      <tr><td><code>--item-burst-flash</code></td>    <td><span class="color-swatch" style="background:#ff9900;box-shadow:0 0 4px #ff9900;"></span>#ff9900</td>   <td>LENGTH_BURST 깜박임 교대색</td><td>—</td></tr>
+      <tr><td><code>--item-shield-primary</code></td> <td><span class="color-swatch" style="background:#4488ff;box-shadow:0 0 4px #4488ff;"></span>#4488ff</td>   <td>SHIELD 주색·방패 글로우</td>  <td>기존 팔레트 순청색 없음</td></tr>
+      <tr><td><code>--item-shield-glow</code></td>    <td>rgba(68,136,255,0.45)</td>  <td>SHIELD 뱀 외곽선·링</td>      <td>—</td></tr>
+      <tr><td><code>--item-shield-break</code></td>   <td>rgba(68,136,255,0.35)</td>  <td>방패 충돌 방어 플래시</td>    <td>—</td></tr>
+      <tr><td><code>--item-reverse-primary</code></td><td><span class="color-swatch" style="background:#22ffaa;box-shadow:0 0 4px #22ffaa;"></span>#22ffaa</td>  <td>REVERSE 주색·소용돌이</td>    <td>player(#4cff80) 대비 청록 분리</td></tr>
+      <tr><td><code>--item-reverse-glow</code></td>   <td>rgba(34,255,170,0.40)</td>  <td>REVERSE 잔류 링</td>          <td>—</td></tr>
+      <tr><td><code>--item-blink-white</code></td>    <td>rgba(255,255,255,0.90)</td> <td>LENGTH_BURST 깜박임 흰색</td> <td>—</td></tr>
+      <tr><td><code>--hud-slot-bg</code></td>         <td>rgba(0,0,0,0.65)</td>       <td>보유 슬롯 배경</td>           <td>—</td></tr>
+      <tr><td><code>--hud-slot-border-empty</code></td><td>rgba(255,255,255,0.18)</td><td>빈 슬롯 점선 테두리</td>      <td>—</td></tr>
+      <tr><td><code>--toast-bg</code></td>            <td>rgba(13,13,13,0.88)</td>    <td>토스트 배경</td>              <td>--bg-primary 와 같은 계열</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- JavaScript — Canvas 렌더링 + 이팩트 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script>
+// ─── 공통 헬퍼 ────────────────────────────────────────────────
+
+/** 60px 캔버스에 아이템 셀 그리기 (실제 CELL=20px 의 3× 스케일) */
+function drawItemCell(canvasId, type) {
+  const cv  = document.getElementById(canvasId);
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const S   = 3; // scale factor
+  const cx  = 30, cy = 30;
+
+  const COLORS = {
+    SPEED_UP:     { primary: '#ffaa00', glow: 'rgba(255,170,0,0.40)' },
+    SLOW_DOWN:    { primary: '#00ddcc', glow: 'rgba(0,221,204,0.40)' },
+    LENGTH_BURST: { primary: '#ff6600', glow: 'rgba(255,102,0,0.45)' },
+    SHIELD:       { primary: '#4488ff', glow: 'rgba(68,136,255,0.45)' },
+    REVERSE:      { primary: '#22ffaa', glow: 'rgba(34,255,170,0.40)' },
+  };
+
+  const { primary, glow } = COLORS[type];
+
+  ctx.clearRect(0, 0, 60, 60);
+
+  // 배경 격자
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, 60, 60);
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 60; i += 20) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 60); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(60, i); ctx.stroke();
+  }
+
+  // [1] 배경 원 (75% opacity)
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8 * S, 0, Math.PI * 2);
+  ctx.fillStyle = primary + 'bf';
+  ctx.fill();
+
+  // [2] 외곽 광채 링
+  ctx.beginPath();
+  ctx.arc(cx, cy, 9 * S, 0, Math.PI * 2);
+  ctx.strokeStyle = glow;
+  ctx.lineWidth = 2 * S;
+  ctx.stroke();
+
+  // [3] 아이콘
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  drawIcon(ctx, type, cx, cy, S);
+}
+
+function drawIcon(ctx, type, cx, cy, S) {
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+
+  switch (type) {
+    case 'SPEED_UP': {
+      // 번개 Z 폴리곤
+      ctx.beginPath();
+      ctx.moveTo(cx + 2*S, cy - 5*S);
+      ctx.lineTo(cx - 1*S, cy);
+      ctx.lineTo(cx + 1*S, cy);
+      ctx.lineTo(cx - 2*S, cy + 5*S);
+      ctx.lineTo(cx + 1.5*S, cy + 1*S);
+      ctx.lineTo(cx + 0.5*S, cy + 1*S);
+      ctx.lineTo(cx + 3*S, cy - 1*S);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'SLOW_DOWN': {
+      // 모래시계 상단 역삼각형
+      ctx.beginPath();
+      ctx.moveTo(cx - 4*S, cy - 5*S);
+      ctx.lineTo(cx + 4*S, cy - 5*S);
+      ctx.lineTo(cx, cy - 0.5*S);
+      ctx.closePath();
+      ctx.fill();
+      // 하단 정삼각형
+      ctx.beginPath();
+      ctx.moveTo(cx - 4*S, cy + 5*S);
+      ctx.lineTo(cx + 4*S, cy + 5*S);
+      ctx.lineTo(cx, cy + 0.5*S);
+      ctx.closePath();
+      ctx.fill();
+      // 허리 수평선
+      ctx.fillRect(cx - 4*S, cy - 1, 8*S, 2);
+      break;
+    }
+    case 'LENGTH_BURST': {
+      // 8각 폭발 별
+      const arms = 8;
+      ctx.beginPath();
+      for (let i = 0; i < arms; i++) {
+        const outerA = (i / arms) * Math.PI * 2 - Math.PI / 2;
+        const innerA = outerA + Math.PI / arms;
+        const ox = cx + Math.cos(outerA) * 5 * S;
+        const oy = cy + Math.sin(outerA) * 5 * S;
+        const ix = cx + Math.cos(innerA) * 2.2 * S;
+        const iy = cy + Math.sin(innerA) * 2.2 * S;
+        if (i === 0) ctx.moveTo(ox, oy); else ctx.lineTo(ox, oy);
+        ctx.lineTo(ix, iy);
+      }
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'SHIELD': {
+      // 육각 방패
+      ctx.beginPath();
+      ctx.moveTo(cx,         cy - 6*S);
+      ctx.lineTo(cx + 4*S,  cy - 3*S);
+      ctx.lineTo(cx + 4*S,  cy + 2*S);
+      ctx.lineTo(cx,         cy + 5.5*S);
+      ctx.lineTo(cx - 4*S,  cy + 2*S);
+      ctx.lineTo(cx - 4*S,  cy - 3*S);
+      ctx.closePath();
+      ctx.fill();
+      // 방패 중앙 십자 (배경색으로 음각)
+      ctx.fillStyle = COLORS_MAP.SHIELD.primary;
+      ctx.fillRect(cx - 1, cy - 3*S, 2, 5.5*S);
+      ctx.fillRect(cx - 3*S, cy - 0.8, 6*S, 1.6);
+      break;
+    }
+    case 'REVERSE': {
+      // 반원 + 화살표 머리
+      ctx.beginPath();
+      ctx.arc(cx, cy + 1*S, 4*S, Math.PI, 0, false);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // 화살표 머리 (왼쪽)
+      ctx.beginPath();
+      ctx.moveTo(cx - 4*S,     cy + 1*S);
+      ctx.lineTo(cx - 6.5*S,  cy - 2*S);
+      ctx.lineTo(cx - 6.5*S,  cy + 2.5*S);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+const COLORS_MAP = {
+  SPEED_UP:     { primary: '#ffaa00', glow: 'rgba(255,170,0,0.40)' },
+  SLOW_DOWN:    { primary: '#00ddcc', glow: 'rgba(0,221,204,0.40)' },
+  LENGTH_BURST: { primary: '#ff6600', glow: 'rgba(255,102,0,0.45)' },
+  SHIELD:       { primary: '#4488ff', glow: 'rgba(68,136,255,0.45)' },
+  REVERSE:      { primary: '#22ffaa', glow: 'rgba(34,255,170,0.40)' },
+};
+
+// ─── 28px 작은 아이템 셀 그리기 ──────────────────────────────
+
+function drawSmallItemCell(canvasId, type) {
+  const cv  = document.getElementById(canvasId);
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const cx = 14, cy = 14;
+  const { primary, glow } = COLORS_MAP[type] || COLORS_MAP.SPEED_UP;
+
+  ctx.clearRect(0, 0, 28, 28);
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, 28, 28);
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+  ctx.fillStyle = primary + 'bf';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+  ctx.strokeStyle = glow;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  drawIcon(ctx, type, cx, cy, 1);
+}
+
+function drawSmallFoodCell(canvasId, multiplier, fillColor) {
+  const cv  = document.getElementById(canvasId);
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const cx = 14, cy = 14, r = 7;
+
+  ctx.clearRect(0, 0, 28, 28);
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, 28, 28);
+
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  grd.addColorStop(0,   '#ffffff');
+  grd.addColorStop(0.4, fillColor);
+  grd.addColorStop(1,   fillColor);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grd;
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 8px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(multiplier + '×', cx, cy);
+}
+
+// ─── 혼합 보드 ────────────────────────────────────────────────
+
+function drawMixedBoard() {
+  const cv  = document.getElementById('cvMixed');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const CELL = 20;
+
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, 0, 160, 200);
+
+  // 격자
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= 160; x += CELL) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 200); ctx.stroke();
+  }
+  for (let y = 0; y <= 200; y += CELL) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(160, y); ctx.stroke();
+  }
+
+  // 배수 먹이 4종
+  const foods = [
+    { x: 1, y: 1, m: 1, c: '#ffcc00' },
+    { x: 4, y: 1, m: 2, c: '#00cfff' },
+    { x: 1, y: 4, m: 4, c: '#cc44ff' },
+    { x: 4, y: 4, m: 8, c: '#ff4444' },
+  ];
+  foods.forEach(f => {
+    const cx = f.x * CELL + CELL / 2;
+    const cy = f.y * CELL + CELL / 2;
+    const r  = 7;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grd.addColorStop(0, '#ffffff');
+    grd.addColorStop(0.4, f.c);
+    grd.addColorStop(1, f.c);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(f.m + '×', cx, cy);
+  });
+
+  // 아이템 5종
+  const items = [
+    { x: 1, y: 7, type: 'SPEED_UP' },
+    { x: 4, y: 7, type: 'SLOW_DOWN' },
+    { x: 1, y: 4, type: 'LENGTH_BURST' }, // 아래 덮어씌움 방지 위해 다른 좌표
+    { x: 6, y: 1, type: 'SHIELD' },
+    { x: 6, y: 4, type: 'REVERSE' },
+  ];
+  items.forEach(item => {
+    const cx = item.x * CELL + CELL / 2;
+    const cy = item.y * CELL + CELL / 2;
+    const { primary, glow } = COLORS_MAP[item.type];
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.fillStyle = primary + 'bf';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    ctx.strokeStyle = glow;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    drawIcon(ctx, item.type, cx, cy, 1);
+  });
+
+  // 플레이어 지렁이 (3칸)
+  [[2,2],[2,3],[2,4]].forEach((seg, i) => {
+    ctx.fillStyle = i === 0 ? '#00cc44' : `rgba(60,210,100,${0.85 - i*0.15})`;
+    ctx.beginPath();
+    ctx.roundRect(seg[0]*CELL+1, seg[1]*CELL+1, CELL-2, CELL-2, 3);
+    ctx.fill();
+  });
+}
+
+// ─── 이팩트 함수 ─────────────────────────────────────────────
+
+function makeParticle(stage, cx, cy, color, size, angle, travel, duration, animName, delay, shape) {
+  const el = document.createElement('div');
+  const rad = angle * Math.PI / 180;
+  const tx = Math.round(Math.cos(rad) * travel);
+  const ty = Math.round(Math.sin(rad) * travel);
+  el.style.cssText = `
+    position:absolute;
+    left:${cx - size/2}px;top:${cy - size/2}px;
+    width:${size}px;height:${size}px;
+    background:${color};
+    border-radius:${shape === 'diamond' ? '0' : '50%'};
+    pointer-events:none;
+    --tx:${tx}px;--ty:${ty}px;
+    animation:${animName} ${duration}ms cubic-bezier(0,0.9,0.2,1) ${delay}ms forwards;
+  `;
+  if (shape === 'diamond') el.style.transform = 'rotate(45deg)';
+  stage.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+function makeRing(stage, cx, cy, color, animName, duration, delay) {
+  const el = document.createElement('div');
+  el.style.cssText = `
+    position:absolute;left:${cx}px;top:${cy}px;
+    width:0;height:0;
+    border:2px solid ${color};
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    animation:${animName} ${duration}ms cubic-bezier(0.05,0.7,0.25,1) ${delay}ms forwards;
+  `;
+  stage.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+function makeFlash(stage, color, duration) {
+  const el = document.createElement('div');
+  el.style.cssText = `
+    position:absolute;inset:0;
+    background:${color};
+    pointer-events:none;
+    animation:speed-flash ${duration}ms ease-out forwards;
+  `;
+  stage.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+const stageCX = 60, stageCY = 60;
+
+function playSpeedEffect() {
+  const stage = document.getElementById('stage-speed');
+  makeFlash(stage, 'rgba(255,170,0,0.22)', 80);
+  for (let i = 0; i < 6; i++) {
+    makeParticle(stage, stageCX, stageCY, i%2===0?'#ffaa00':'#ffcc44', 6, i*60, 32, 300, 'speed-particle', 0, 'circle');
+  }
+  // 중심 플래시
+  const c = document.createElement('div');
+  c.style.cssText = `position:absolute;left:${stageCX}px;top:${stageCY}px;width:8px;height:8px;background:#ffaa00;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;animation:speed-flash 120ms ease-out forwards;`;
+  stage.appendChild(c);
+  c.addEventListener('animationend', () => c.remove(), { once: true });
+}
+
+function playSlowEffect() {
+  const stage = document.getElementById('stage-slow');
+  makeRing(stage, stageCX, stageCY, '#00ddcc', 'slow-ring', 400, 0);
+  for (let i = 0; i < 4; i++) {
+    makeParticle(stage, stageCX, stageCY, '#00ddcc', 6, i*90+45, 22, 350, 'slow-particle', 0, 'diamond');
+  }
+  // 중심
+  const c = document.createElement('div');
+  c.style.cssText = `position:absolute;left:${stageCX}px;top:${stageCY}px;width:8px;height:8px;background:#00ddcc;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;animation:speed-flash 150ms ease-out forwards;`;
+  stage.appendChild(c);
+  c.addEventListener('animationend', () => c.remove(), { once: true });
+}
+
+function playBurstEffect() {
+  const stage = document.getElementById('stage-burst');
+  makeFlash(stage, 'rgba(255,102,0,0.22)', 100);
+  makeRing(stage, stageCX, stageCY, '#ff6600', 'burst-ring', 500, 0);
+  for (let i = 0; i < 12; i++) {
+    const color = i % 2 === 0 ? '#ff6600' : '#ff9900';
+    makeParticle(stage, stageCX, stageCY, color, 8, i*30, 50, 550, 'burst-orange', 0, 'circle');
+  }
+}
+
+function playShieldEffect() {
+  const stage = document.getElementById('stage-shield');
+  makeRing(stage, stageCX, stageCY, '#4488ff', 'shield-ring', 350, 0);
+  for (let i = 0; i < 8; i++) {
+    makeParticle(stage, stageCX, stageCY, i%2===0?'#4488ff':'#88aaff', 5, i*45, 26, 400, 'shield-particle', 0, 'diamond');
+  }
+  // 글로우 표현 — 뱀 시뮬레이션
+  const snake = document.createElement('div');
+  snake.style.cssText = `
+    position:absolute;left:${stageCX-24}px;top:${stageCY-8}px;
+    width:16px;height:16px;border-radius:3px;
+    background:#00cc44;
+    outline:3px solid rgba(68,136,255,0.8);outline-offset:1px;
+    animation:shield-glow-pulse 1.5s ease-in-out 3 forwards;
+    pointer-events:none;
+  `;
+  stage.appendChild(snake);
+  snake.addEventListener('animationend', () => snake.remove(), { once: true });
+}
+
+function playReverseEffect() {
+  const stage = document.getElementById('stage-reverse');
+  makeFlash(stage, 'rgba(34,255,170,0.18)', 80);
+  makeRing(stage, stageCX, stageCY, '#22ffaa', 'reverse-ring', 400, 0);
+  for (let i = 0; i < 16; i++) {
+    const angle = (i / 16) * 360;
+    makeParticle(stage, stageCX, stageCY, '#22ffaa', 5, angle, 32, 600, 'swirl-particle', 0, 'circle');
+  }
+  // 잔류 링 (3초)
+  const rl = document.createElement('div');
+  rl.style.cssText = `
+    position:absolute;
+    left:${stageCX}px;top:${stageCY}px;
+    width:36px;height:36px;
+    border:1px solid rgba(34,255,170,0.30);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    animation:reverse-ring-pulse 1s ease-in-out 3 forwards;
+  `;
+  stage.appendChild(rl);
+  rl.addEventListener('animationend', () => rl.remove(), { once: true });
+}
+
+// ─── 토스트 라이브 데모 ────────────────────────────────────────
+
+function showToast(cls, msg) {
+  const area = document.getElementById('toast-live-area');
+  const existing = area.querySelector('.toast-live');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = `toast ${cls} toast-live`;
+  el.textContent = msg;
+  area.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'toast-out 0.3s ease-in forwards';
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  }, 1500);
+}
+
+// ─── 버프 타이머 애니메이션 ──────────────────────────────────
+
+let buffSpeedMs = 3800, buffBurstMs = 1400;
+const SPEED_TOTAL = 5000, BURST_TOTAL = 5000;
+
+function tickBuffs() {
+  buffSpeedMs = Math.max(0, buffSpeedMs - 120);
+  buffBurstMs = Math.max(0, buffBurstMs - 120);
+
+  const ts = document.getElementById('buff-time-speed');
+  const tb = document.getElementById('buff-time-burst');
+  const bs = document.getElementById('bp-speed');
+  const bb = document.getElementById('bp-burst');
+
+  if (ts) ts.textContent = (buffSpeedMs / 1000).toFixed(1) + 's';
+  if (tb) tb.textContent = (buffBurstMs / 1000).toFixed(1) + 's';
+  if (bs) { bs.style.transition = 'none'; bs.style.width = (buffSpeedMs / SPEED_TOTAL * 100).toFixed(1) + '%'; }
+  if (bb) { bb.style.transition = 'none'; bb.style.width = (buffBurstMs / BURST_TOTAL * 100).toFixed(1) + '%'; }
+
+  if (buffSpeedMs === 0 && buffBurstMs === 0) {
+    buffSpeedMs = 5000; buffBurstMs = 2800; // 루프
+  }
+}
+
+// ─── 초기 렌더 ────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', () => {
+  // 60px 아이템 셀 (§1)
+  drawItemCell('cvSpeed',   'SPEED_UP');
+  drawItemCell('cvSlow',    'SLOW_DOWN');
+  drawItemCell('cvBurst',   'LENGTH_BURST');
+  drawItemCell('cvShield',  'SHIELD');
+  drawItemCell('cvReverse', 'REVERSE');
+
+  // 28px 비교 표 (§2)
+  drawSmallFoodCell('cvFood1', 1, '#ffcc00');
+  drawSmallFoodCell('cvFood2', 2, '#00cfff');
+  drawSmallFoodCell('cvFood4', 4, '#cc44ff');
+  drawSmallFoodCell('cvFood8', 8, '#ff4444');
+
+  drawSmallItemCell('cvItemSpeed2',   'SPEED_UP');
+  drawSmallItemCell('cvItemSlow2',    'SLOW_DOWN');
+  drawSmallItemCell('cvItemBurst2',   'LENGTH_BURST');
+  drawSmallItemCell('cvItemShield2',  'SHIELD');
+  drawSmallItemCell('cvItemReverse2', 'REVERSE');
+
+  // 혼합 보드 (§2)
+  drawMixedBoard();
+
+  // 버프 타이머
+  setInterval(tickBuffs, 120);
+});
+</script>
+</body>
+</html>
