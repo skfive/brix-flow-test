@@ -1,6 +1,10 @@
 // BF-504 · Snake 게임 순수 로직 유틸 (no DOM, no canvas)
 // - DOM/Canvas 의존성 없음 → node:test 단위 테스트 가능 (ES module export)
 // - 명세: BF-504 acceptance criteria
+//
+// BF-530 · CPU 지렁이 AI + 경쟁 게임 로직 추가
+// - s1 명세(BF-527): chooseCpuDirection 스코어 기반 AI (safeLen + foodScore)
+// - s2 명세(BF-529): tickFull — T1~T4 충돌 검사 + 승패 판정 + deathCause 기록
 
 /** 기본 셀 크기 (px). 렌더러에서 사용. */
 export const CELL = 20;
@@ -19,12 +23,34 @@ export const DIR = {
 };
 
 // ─────────────────────────────────────────────────────────────
+// 난이도 파라미터 (s1 §2)
+// ─────────────────────────────────────────────────────────────
+const DIFFICULTY_PARAMS = {
+  normal: {
+    tickIntervalMs:       120,
+    visionRange:          8,
+    avoidanceThreshold:   5,
+    respawnDelayTicks:    20,
+    foodPriorityWeight:   0.7,
+  },
+  easy: {
+    tickIntervalMs:       240,
+    visionRange:          3,
+    avoidanceThreshold:   2,
+    respawnDelayTicks:    10,
+    foodPriorityWeight:   0.4,
+  },
+};
+
+// ─────────────────────────────────────────────────────────────
 // 상태 생성
 // ─────────────────────────────────────────────────────────────
 
 /**
  * 게임 초기 상태 생성.
- * snake 는 중앙에서 오른쪽을 향해 3칸으로 시작.
+ * BF-530: CPU 지렁이 필드(cpu, cpuDir, cpuScore, result, deathCause) 추가.
+ * player snake 는 중앙에서 오른쪽 향해 3칸, CPU 는 우하단 3/4 영역에서 왼쪽 향해 3칸.
+ *
  * @param {number} cols  격자 열 수
  * @param {number} rows  격자 행 수
  * @param {number} [highScore=0]  유지할 high score
@@ -38,16 +64,32 @@ export function createInitialState(cols, rows, highScore = 0) {
     { x: midX - 1, y: midY },
     { x: midX - 2, y: midY },
   ];
+
+  // CPU 시작 위치: 오른쪽 하단 3/4 영역 (player 와 겹치지 않도록)
+  // head(cpuX), body(cpuX+1), tail(cpuX+2) — cpuDir=LEFT 이므로 tail 이 오른쪽
+  const cpuX = Math.max(0, Math.min(cols - 3, Math.floor(cols * 3 / 4) - 1));
+  const cpuY = Math.max(0, Math.min(rows - 1, Math.floor(rows * 3 / 4)));
+  const cpu = [
+    { x: cpuX,     y: cpuY },
+    { x: cpuX + 1, y: cpuY },
+    { x: cpuX + 2, y: cpuY },
+  ].filter(c => c.x >= 0 && c.x < cols && c.y >= 0 && c.y < rows);
+
   return {
     cols,
     rows,
     snake,
-    dir:      DIR.RIGHT,
-    nextDir:  DIR.RIGHT,
-    food:     spawnFoodCell(cols, rows, snake),
-    score:    0,
+    dir:        DIR.RIGHT,
+    nextDir:    DIR.RIGHT,
+    cpu,
+    cpuDir:     DIR.LEFT,
+    food:       spawnFoodCell(cols, rows, [...snake, ...cpu]),
+    score:      0,
+    cpuScore:   0,
     highScore,
-    status:   "playing", // 'playing' | 'gameover'
+    status:     "playing", // 'playing' | 'paused' | 'gameover'
+    result:     null,      // null | 'player_win' | 'cpu_win' | 'draw'
+    deathCause: null,      // null | 'wall' | 'self' | 'cpu_body' | 'head_on' | 'timeout'
   };
 }
 
@@ -61,7 +103,7 @@ export function createInitialState(cols, rows, highScore = 0) {
  *
  * @param {number} cols
  * @param {number} rows
- * @param {Array<{x:number,y:number}>} snake
+ * @param {Array<{x:number,y:number}>} snake  점유된 셀 목록 (player + CPU 포함 가능)
  * @returns {{x:number,y:number}|null}
  */
 export function spawnFoodCell(cols, rows, snake) {
@@ -111,7 +153,6 @@ export function isWallCollision(head, cols, rows) {
 
 /**
  * 머리가 자기 몸(snake 배열의 임의 세그먼트)과 충돌했는지 반환.
- * snake 는 이미 새 머리가 추가되기 전 상태를 전달해야 함.
  *
  * @param {{x:number,y:number}} head  새 머리 위치
  * @param {Array<{x:number,y:number}>} body  현재 snake 전체 (꼬리 포함)
@@ -122,13 +163,13 @@ export function isSelfCollision(head, body) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 게임 틱 (1 스텝 진행)
+// 게임 틱 — 플레이어 단독 (하위 호환성 유지, BF-504~BF-526)
 // ─────────────────────────────────────────────────────────────
 
 /**
- * 1 프레임 게임 로직 진행.
- * - status !== 'playing' 이면 그대로 반환.
- * - 이동 → 벽 충돌 → 자기 몸 충돌 → 먹이 수집 → 꼬리 제거 순으로 처리.
+ * 1 프레임 게임 로직 진행 (플레이어만, CPU 제외).
+ * - BF-504~BF-526 테스트 하위 호환성 유지.
+ * - BF-530 경쟁 모드에서는 tickFull() 을 사용한다.
  *
  * @param {GameState} state
  * @returns {GameState}
@@ -146,7 +187,7 @@ export function tick(state) {
     return { ...state, dir, status: "gameover", highScore: newHighScore };
   }
 
-  // 자기 몸 충돌 — 전체 body 검사 (머리가 꼬리 위치로 이동하는 경우도 충돌 처리)
+  // 자기 몸 충돌
   if (isSelfCollision(newHead, state.snake)) {
     const newHighScore = Math.max(state.highScore, state.score);
     return { ...state, dir, status: "gameover", highScore: newHighScore };
@@ -160,10 +201,8 @@ export function tick(state) {
 
   let newSnake;
   if (ateFood) {
-    // 꼬리를 제거하지 않아 길이 +1
     newSnake = [newHead, ...state.snake];
   } else {
-    // 꼬리 제거 → 길이 유지
     newSnake = [newHead, ...state.snake.slice(0, -1)];
   }
 
@@ -184,11 +223,259 @@ export function tick(state) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// CPU AI — 전방 시야 탐색 (s1 §3.3)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 주어진 방향으로 최대 maxDepth 칸을 직선 탐색해 안전한 거리(safeLen)를 반환.
+ * 장애물(벽·점유 셀)을 만나면 즉시 멈춘다.
+ *
+ * @param {{x:number,y:number}} cpuHead
+ * @param {{x:number,y:number}} dir
+ * @param {number} maxDepth
+ * @param {number} cols
+ * @param {number} rows
+ * @param {Set<string>} occupiedSet
+ * @returns {number}
+ */
+function lookAhead(cpuHead, dir, maxDepth, cols, rows, occupiedSet) {
+  let pos = cpuHead;
+  let count = 0;
+  while (count < maxDepth) {
+    pos = { x: pos.x + dir.x, y: pos.y + dir.y };
+    if (isWallCollision(pos, cols, rows) || occupiedSet.has(`${pos.x},${pos.y}`)) break;
+    count++;
+  }
+  return count;
+}
+
+// ─────────────────────────────────────────────────────────────
+// CPU AI — 음식 방향 점수 (s1 §3.4)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 후보 방향 선택 시 음식에 가까워지는 정도를 점수로 반환.
+ * 가까워지면 1.0, 같은 거리 0.5, 멀어지면 0.0.
+ *
+ * @param {{x:number,y:number}} cpuHead
+ * @param {{x:number,y:number}} candidateDir
+ * @param {{x:number,y:number}|null} food
+ * @returns {number}
+ */
+function computeFoodScore(cpuHead, candidateDir, food) {
+  if (!food) return 0;
+  const nextPos = { x: cpuHead.x + candidateDir.x, y: cpuHead.y + candidateDir.y };
+  const distBefore = Math.abs(cpuHead.x - food.x) + Math.abs(cpuHead.y - food.y);
+  const distAfter  = Math.abs(nextPos.x - food.x) + Math.abs(nextPos.y - food.y);
+  if (distAfter < distBefore) return 1.0;
+  if (distAfter === distBefore) return 0.5;
+  return 0.0;
+}
+
+// ─────────────────────────────────────────────────────────────
+// CPU AI — 방향 결정 (s1 §3.1~§3.2)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * CPU 지렁이의 다음 이동 방향 결정 (스코어 기반 greedy — s1 §3 normal 난이도 기본).
+ *
+ * 알고리즘:
+ * 1. getValidDirections: 반대 방향 + 즉시 벽/점유 셀 제거 (s1 §3.2)
+ * 2. 각 후보에 lookAhead(safeLen) + computeFoodScore 계산 (s1 §3.3~§3.4)
+ * 3. avoidanceThreshold 미만이면 대폭 감점, 이상이면 생존·음식 가중치 합산
+ * 4. 최고 점수 방향 반환 (동점 시 배열 앞 항목 우선)
+ * 5. 후보 없으면 현재 방향 유지 (s1 §5.1)
+ *
+ * @param {GameState} state
+ * @param {"normal"|"easy"} [difficulty="normal"]
+ * @returns {{x:number,y:number}}
+ */
+export function cpuChooseDir(state, difficulty = "normal") {
+  const { cpu, cpuDir, snake, food, cols, rows } = state;
+  if (!cpu || cpu.length === 0) return cpuDir;
+
+  const params  = DIFFICULTY_PARAMS[difficulty] ?? DIFFICULTY_PARAMS.normal;
+  const cpuHead = cpu[0];
+  const allDirs = [DIR.UP, DIR.DOWN, DIR.LEFT, DIR.RIGHT];
+
+  // 점유 셀: player 전체 + CPU 몸통(머리 제외 — 머리는 이동 후 위치)
+  const occupiedSet = new Set([
+    ...snake.map(s => `${s.x},${s.y}`),
+    ...cpu.slice(1).map(s => `${s.x},${s.y}`),
+  ]);
+
+  // §3.2 유효 방향 후보: 반대 방향 제거 + 즉시 충돌 제거
+  const candidates = allDirs.filter(d => {
+    // 반대 방향 (자살) 제거
+    if (d.x + cpuDir.x === 0 && d.y + cpuDir.y === 0) return false;
+    const nx = cpuHead.x + d.x;
+    const ny = cpuHead.y + d.y;
+    if (isWallCollision({ x: nx, y: ny }, cols, rows)) return false;
+    if (occupiedSet.has(`${nx},${ny}`)) return false;
+    return true;
+  });
+
+  // §5.1 탈출 불가 → 현재 방향 유지
+  if (candidates.length === 0) return cpuDir;
+
+  // §3.1 각 후보 점수 계산
+  const scored = candidates.map(dir => {
+    const safeLen   = lookAhead(cpuHead, dir, params.visionRange, cols, rows, occupiedSet);
+    const foodScore = computeFoodScore(cpuHead, dir, food);
+    let score;
+    if (safeLen < params.avoidanceThreshold) {
+      score = safeLen * 0.1; // 위험 경로 대폭 감점
+    } else {
+      score = safeLen   * (1 - params.foodPriorityWeight)
+            + foodScore * params.foodPriorityWeight;
+    }
+    return { dir, score };
+  });
+
+  // 최고 점수 방향 선택 (내림차순, 동점 시 앞 항목 우선)
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].dir;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 경쟁 게임 틱 — player + CPU 동시 처리 (BF-530, s2 §2~§3)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 1 프레임 경쟁 게임 로직 진행 (player + CPU 동시 처리).
+ *
+ * 충돌 검사 순서 (s2 §2 주의):
+ *   T4 (head-on) → T1 (벽) → T2 (자기 몸) → T3 (상대방 몸통)
+ *
+ * 승패 판정 (s2 §3):
+ *   player 사망 & CPU 생존 → result: "cpu_win"
+ *   CPU 사망 & player 생존 → result: "player_win"
+ *   동시 사망               → result: "draw"
+ *
+ * KPI 지원 (s2 §6-1):
+ *   deathCause: "wall" | "self" | "cpu_body" | "head_on" | null
+ *
+ * @param {GameState} state
+ * @param {"normal"|"easy"} [difficulty="normal"]
+ * @returns {GameState}
+ */
+export function tickFull(state, difficulty = "normal") {
+  if (state.status !== "playing") return state;
+
+  // ── 1. CPU 방향 결정 ─────────────────────────────────────
+  const newCpuDir = cpuChooseDir(state, difficulty);
+  const cpuHead   = state.cpu[0];
+  const newCpuHead = { x: cpuHead.x + newCpuDir.x, y: cpuHead.y + newCpuDir.y };
+
+  // ── 2. 플레이어 이동 방향 ─────────────────────────────────
+  const dir    = state.nextDir;
+  const head   = state.snake[0];
+  const newHead = { x: head.x + dir.x, y: head.y + dir.y };
+
+  // ── 3. 충돌 검사 (T4 우선 — s2 §2 주의) ──────────────────
+  // T4: 두 머리가 동일 셀로 이동 (head-on)
+  const headOn =
+    newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+
+  // T1: 벽 충돌
+  const playerHitWall = isWallCollision(newHead,    state.cols, state.rows);
+  const cpuHitWall    = isWallCollision(newCpuHead, state.cols, state.rows);
+
+  // T2: 자기 몸 충돌
+  const playerHitSelf = isSelfCollision(newHead,    state.snake);
+  const cpuHitSelf    = isSelfCollision(newCpuHead, state.cpu);
+
+  // T3: 상대방 몸통 충돌 (T4 아닌 경우만)
+  const playerHitCPU =
+    !headOn && state.cpu.some(s => s.x === newHead.x    && s.y === newHead.y);
+  const cpuHitPlayer =
+    !headOn && state.snake.some(s => s.x === newCpuHead.x && s.y === newCpuHead.y);
+
+  const playerDead = headOn || playerHitWall || playerHitSelf || playerHitCPU;
+  const cpuDead    = headOn || cpuHitWall    || cpuHitSelf    || cpuHitPlayer;
+
+  // ── 4. 게임 종료 처리 ─────────────────────────────────────
+  if (playerDead || cpuDead) {
+    let result;
+    let deathCause = null;
+
+    if (playerDead && cpuDead) {
+      result = "draw";
+      deathCause = headOn ? "head_on" : (playerHitWall ? "wall" : playerHitSelf ? "self" : "cpu_body");
+    } else if (playerDead) {
+      result = "cpu_win";
+      if (headOn)          deathCause = "head_on";
+      else if (playerHitWall)  deathCause = "wall";
+      else if (playerHitSelf)  deathCause = "self";
+      else if (playerHitCPU)   deathCause = "cpu_body";
+    } else {
+      result = "player_win";
+      deathCause = null; // 플레이어는 생존
+    }
+
+    const newHighScore = Math.max(state.highScore, state.score);
+    return {
+      ...state,
+      dir,
+      cpuDir:     newCpuDir,
+      status:     "gameover",
+      highScore:  newHighScore,
+      result,
+      deathCause,
+    };
+  }
+
+  // ── 5. 먹이 처리 ─────────────────────────────────────────
+  // player 가 먼저 수집, CPU 는 player 가 먹지 않은 경우만 수집 (s2 §4-1)
+  const playerAteFood =
+    state.food !== null &&
+    newHead.x === state.food.x &&
+    newHead.y === state.food.y;
+
+  const cpuAteFood =
+    state.food !== null &&
+    !playerAteFood &&
+    newCpuHead.x === state.food.x &&
+    newCpuHead.y === state.food.y;
+
+  const newSnake = playerAteFood
+    ? [newHead, ...state.snake]
+    : [newHead, ...state.snake.slice(0, -1)];
+
+  const newCPU = cpuAteFood
+    ? [newCpuHead, ...state.cpu]
+    : [newCpuHead, ...state.cpu.slice(0, -1)];
+
+  const newScore    = playerAteFood ? state.score    + 10 : state.score;
+  const newCPUScore = cpuAteFood    ? state.cpuScore + 10 : state.cpuScore;
+
+  // 새 food: 두 지렁이 모두 피해서 스폰 (s2 EC-1)
+  const newFood = (playerAteFood || cpuAteFood)
+    ? spawnFoodCell(state.cols, state.rows, [...newSnake, ...newCPU])
+    : state.food;
+
+  return {
+    ...state,
+    snake:      newSnake,
+    dir,
+    cpu:        newCPU,
+    cpuDir:     newCpuDir,
+    food:       newFood,
+    score:      newScore,
+    cpuScore:   newCPUScore,
+    highScore:  Math.max(state.highScore, newScore),
+    status:     "playing",
+    result:     null,
+    deathCause: null,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 // 재시작
 // ─────────────────────────────────────────────────────────────
 
 /**
- * 게임 재시작 (highScore 유지).
+ * 게임 재시작 (highScore 유지, CPU 상태도 초기화).
  *
  * @param {GameState} state  현재 상태 (cols/rows/highScore 참조)
  * @returns {GameState}

@@ -7,6 +7,8 @@
 //   <script src="./game.js"> (type 속성 없음) 로 로드.
 //   CELL / LS_HIGH_SCORE_KEY / DIR / 로직 함수들은 index.html 인라인 IIFE 가
 //   globalThis 에 설정 → 아래 구조 분해로 참조. file:// / http:// 모두 동일하게 동작.
+//
+// BF-530: CPU 지렁이 렌더링 + 경쟁 게임 KPI (s2 §5, §6) 추가
 
 const {
   CELL,
@@ -15,33 +17,48 @@ const {
   createInitialState,
   changeDirection,
   tick,
+  tickFull,
+  cpuChooseDir,
   restartGame,
 } = globalThis;
 
 // ─────────────────────────────────────────────────────────────
 // DOM 참조
 // ─────────────────────────────────────────────────────────────
-const canvas = document.getElementById("game-canvas");
-const ctx    = canvas.getContext("2d");
+const canvas    = document.getElementById("game-canvas");
+const ctx       = canvas.getContext("2d");
 
-const hudScoreEl    = document.getElementById("hud-score-value");
-const hudHighEl     = document.getElementById("hud-high-value");
-const goOverlay     = document.getElementById("gameover-overlay");
-const goScoreEl     = document.getElementById("go-score");
+// HUD — BF-530 s2 §5-3 (PLAYER / CPU 이중 점수판)
+const hudPlayerScoreEl = document.getElementById("hud-player-score");
+const hudCPUScoreEl    = document.getElementById("hud-cpu-score");
+const hudHighEl        = document.getElementById("hud-high-value");
+// BF-504/514/518 하위 호환 별칭 (hidden, hud-player-score 와 동기화)
+const hudScoreValueEl  = document.getElementById("hud-score-value");
+
+// 게임 결과 오버레이 — BF-530 s2 §5-4
+const goOverlay    = document.getElementById("gameover-overlay");
+const goResultEl   = document.getElementById("go-result");
+const goScoreEl    = document.getElementById("go-score");
+const goCPUScoreEl = document.getElementById("go-cpu-score");
+
+// PAUSED 오버레이 — BF-524
 const pausedOverlay = document.getElementById("paused-overlay");
 
 // ─────────────────────────────────────────────────────────────
 // 게임 상태
 // ─────────────────────────────────────────────────────────────
 let state;
-let rafId = null;
+let rafId  = null;
 let lastTs = 0;
 
 /** 틱 간격 (ms) — 이 값마다 게임 로직 1 스텝 */
 const TICK_MS = 120;
 
+/** 제한 시간 (ms) — s2 §1 T5 */
+const GAME_DURATION_MS = 120000;
+
 // ─────────────────────────────────────────────────────────────
-// KPI 측정 변수 — BF-526 AC §4
+// KPI 측정 변수 — BF-526 (pause) + BF-530 (competition)
 // ─────────────────────────────────────────────────────────────
 /** 이번 게임 세션의 멈춤/재개 토글 횟수 */
 let pauseToggleCount = 0;
@@ -49,9 +66,15 @@ let pauseToggleCount = 0;
 let pauseStartTs = 0;
 /** 이번 게임 세션의 누적 멈춤 시간 (ms) */
 let totalPausedMs = 0;
+/** 이번 게임 시작 타임스탬프 (멈춤 구간 제외 생존시간 측정용) */
+let gameStartTs = 0;
 
-/** sessionStorage 키 */
+/** sessionStorage 키 (BF-526) */
 const SS_PAUSE_KPI_KEY = "bf-snake-pause-kpi";
+
+/** localStorage 키 — BF-530 KPI (s2 §6-2) */
+const COMP_KPI_KEY   = "bf-snake-comp-kpi";
+const COMP_STATS_KEY = "bf-snake-comp-stats";
 
 // ─────────────────────────────────────────────────────────────
 // localStorage 헬퍼
@@ -72,6 +95,61 @@ function saveHighScore(score) {
   } catch (_) {
     // private mode 등 — 무시
   }
+}
+
+/** KPI 누적 통계 로드 (s2 §6-2-2) */
+function loadCompStats() {
+  try {
+    const v = localStorage.getItem(COMP_STATS_KEY);
+    if (v) return JSON.parse(v);
+  } catch (_) { /* ignore */ }
+  return { totalGames: 0, wins: 0, losses: 0, draws: 0, totalDeaths: 0, cpuCollisionDeaths: 0 };
+}
+
+/** KPI 기록 — 게임 종료 시 호출 (s2 §6-2) */
+function logKPI() {
+  const survivalMs = Math.round(performance.now() - gameStartTs - totalPausedMs);
+  const result     = state.result; // "player_win" | "cpu_win" | "draw" | null
+  const deathCause = state.deathCause;
+
+  // ── 직전 게임 KPI (bf-snake-comp-kpi) ──────────────────
+  const kpiEntry = {
+    survivalMs,
+    result:      result === "player_win" ? "win" : result === "cpu_win" ? "lose" : "draw",
+    playerScore: state.score,
+    cpuScore:    state.cpuScore,
+    deathCause:  deathCause,
+    cpuCollision: deathCause === "cpu_body" || deathCause === "head_on",
+    timestamp:   Date.now(),
+  };
+  try { localStorage.setItem(COMP_KPI_KEY, JSON.stringify(kpiEntry)); } catch (_) { /* EC-5 */ }
+
+  // ── 누적 통계 (bf-snake-comp-stats) ────────────────────
+  const stats = loadCompStats();
+  stats.totalGames++;
+  if (result === "player_win")      stats.wins++;
+  else if (result === "cpu_win")    stats.losses++;
+  else                              stats.draws++;
+
+  if (result !== "player_win" && deathCause && deathCause !== "timeout") {
+    stats.totalDeaths++;
+    if (kpiEntry.cpuCollision) stats.cpuCollisionDeaths++;
+  }
+  try { localStorage.setItem(COMP_STATS_KEY, JSON.stringify(stats)); } catch (_) { /* EC-5 */ }
+
+  // ── console 출력 (s2 §6-2-3) ────────────────────────────
+  const winRate =
+    stats.totalGames > 0
+      ? ((stats.wins / stats.totalGames) * 100).toFixed(1)
+      : "0.0";
+  console.log(
+    `[BF-529 KPI] 결과: ${kpiEntry.result} | 생존시간: ${survivalMs}ms | P:${state.score} vs CPU:${state.cpuScore} | 사망원인: ${deathCause} | 승률: ${winRate}%(${stats.wins}/${stats.totalGames})`
+  );
+
+  // ── BF-526 멈춤 KPI console ──────────────────────────────
+  console.log(
+    `[BF-526 KPI] 멈춤/재개 토글 ${pauseToggleCount}회, 누적 멈춤 ${Math.round(totalPausedMs)}ms`,
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -114,11 +192,11 @@ function drawBackground() {
   }
 }
 
-/** 지렁이 */
+/** 플레이어 지렁이 — 초록 계열 (#4cff80 / #00cc44) */
 function drawSnake() {
   state.snake.forEach((seg, i) => {
     const alpha = i === 0 ? 1 : 0.85 - (i / state.snake.length) * 0.4;
-    ctx.fillStyle = i === 0 ? "#4cff80" : `rgba(60,210,100,${alpha})`;
+    ctx.fillStyle = i === 0 ? "#00cc44" : `rgba(60,210,100,${alpha})`;
     ctx.beginPath();
     ctx.roundRect(
       seg.x * CELL + 1,
@@ -129,27 +207,77 @@ function drawSnake() {
     );
     ctx.fill();
 
-    // 머리 눈 표시
+    // 헤드 테두리 (2px) — s2 §5-1
     if (i === 0) {
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.lineWidth   = 2;
+      ctx.beginPath();
+      ctx.roundRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2, 4);
+      ctx.stroke();
+
+      // 눈
       ctx.fillStyle = "#0d0d0d";
       const eyeSize = 3;
       const dir = state.dir;
-      // 방향에 따라 눈 위치 결정
       let e1x, e1y, e2x, e2y;
       if (dir.x === 1) {
-        // 오른쪽
         e1x = seg.x * CELL + CELL - 6; e1y = seg.y * CELL + 4;
         e2x = seg.x * CELL + CELL - 6; e2y = seg.y * CELL + CELL - 4 - eyeSize;
       } else if (dir.x === -1) {
-        // 왼쪽
         e1x = seg.x * CELL + 3;        e1y = seg.y * CELL + 4;
         e2x = seg.x * CELL + 3;        e2y = seg.y * CELL + CELL - 4 - eyeSize;
       } else if (dir.y === -1) {
-        // 위
         e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + 3;
         e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + 3;
       } else {
-        // 아래
+        e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + CELL - 6;
+        e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + CELL - 6;
+      }
+      ctx.fillRect(e1x, e1y, eyeSize, eyeSize);
+      ctx.fillRect(e2x, e2y, eyeSize, eyeSize);
+    }
+  });
+}
+
+/** CPU 지렁이 — 주황-빨강 계열 (#ff6b4c / #cc2200) — s2 §5-1 */
+function drawCpuSnake() {
+  if (!state.cpu || state.cpu.length === 0) return;
+  state.cpu.forEach((seg, i) => {
+    const alpha = i === 0 ? 1 : 0.85 - (i / state.cpu.length) * 0.4;
+    ctx.fillStyle = i === 0 ? "#cc2200" : `rgba(210,60,60,${alpha})`;
+    ctx.beginPath();
+    ctx.roundRect(
+      seg.x * CELL + 1,
+      seg.y * CELL + 1,
+      CELL - 2,
+      CELL - 2,
+      4,
+    );
+    ctx.fill();
+
+    // 헤드 테두리 (2px) — s2 §5-1
+    if (i === 0) {
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.lineWidth   = 2;
+      ctx.beginPath();
+      ctx.roundRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2, 4);
+      ctx.stroke();
+
+      // CPU 눈
+      ctx.fillStyle = "#0d0d0d";
+      const eyeSize = 3;
+      const dir = state.cpuDir;
+      let e1x, e1y, e2x, e2y;
+      if (dir.x === 1) {
+        e1x = seg.x * CELL + CELL - 6; e1y = seg.y * CELL + 4;
+        e2x = seg.x * CELL + CELL - 6; e2y = seg.y * CELL + CELL - 4 - eyeSize;
+      } else if (dir.x === -1) {
+        e1x = seg.x * CELL + 3;        e1y = seg.y * CELL + 4;
+        e2x = seg.x * CELL + 3;        e2y = seg.y * CELL + CELL - 4 - eyeSize;
+      } else if (dir.y === -1) {
+        e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + 3;
+        e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + 3;
+      } else {
         e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + CELL - 6;
         e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + CELL - 6;
       }
@@ -186,10 +314,12 @@ function drawFood() {
   ctx.stroke();
 }
 
-/** HUD 업데이트 */
+/** HUD 업데이트 — BF-530 s2 §5-3 양쪽 점수 */
 function updateHUD() {
-  hudScoreEl.textContent = state.score;
-  hudHighEl.textContent  = state.highScore;
+  hudPlayerScoreEl.textContent = state.score;
+  if (hudScoreValueEl) hudScoreValueEl.textContent = state.score; // BF-504 하위 호환
+  hudCPUScoreEl.textContent    = state.cpuScore;
+  hudHighEl.textContent        = state.highScore;
 }
 
 /** 전체 프레임 렌더 */
@@ -197,16 +327,28 @@ function render() {
   drawBackground();
   drawFood();
   drawSnake();
+  drawCpuSnake();
   updateHUD();
 }
 
 // ─────────────────────────────────────────────────────────────
-// Game Over 처리
+// Game Over / 결과 오버레이 처리 — BF-530 s2 §5-4
 // ─────────────────────────────────────────────────────────────
 function showGameOver() {
-  goScoreEl.textContent = state.score;
+  // 결과 텍스트 + 색상 (s2 §5-4)
+  const resultMap = {
+    player_win: { text: "YOU WIN",  color: "#4cff80" },
+    cpu_win:    { text: "YOU LOSE", color: "#ff4c4c" },
+    draw:       { text: "DRAW",     color: "#ffcc44" },
+  };
+  const info = resultMap[state.result] || { text: "GAME OVER", color: "#ffffff" };
+  goResultEl.textContent  = info.text;
+  goResultEl.style.color  = info.color;
+  goScoreEl.textContent    = state.score;
+  goCPUScoreEl.textContent = state.cpuScore;
   goOverlay.removeAttribute("hidden");
   saveHighScore(state.highScore);
+  logKPI();
 }
 
 function hideGameOver() {
@@ -254,9 +396,6 @@ function togglePause() {
     } catch (_) {
       // private mode 등 — 무시
     }
-    console.log(
-      `[BF-526 KPI] 멈춤/재개 토글 ${pauseToggleCount}회, 누적 멈춤 ${Math.round(totalPausedMs)}ms`,
-    );
 
     hidePaused();
     state = Object.assign({}, state, { status: "playing" });
@@ -265,7 +404,7 @@ function togglePause() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 게임 루프 (rAF + 틱 타이머)
+// 게임 루프 (rAF + 틱 타이머) — BF-530: tickFull + T5 제한 시간
 // ─────────────────────────────────────────────────────────────
 function loop(ts) {
   if (state.status !== "playing") return;
@@ -279,7 +418,28 @@ function loop(ts) {
   }
   lastTs = ts - (elapsed % TICK_MS);
 
-  state = tick(state);
+  // T5: 제한 시간 초과 → 점수 비교 (s2 §2, §3-2)
+  const survivedMs = performance.now() - gameStartTs - totalPausedMs;
+  if (survivedMs >= GAME_DURATION_MS) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+    let result;
+    if      (state.score > state.cpuScore) result = "player_win";
+    else if (state.score < state.cpuScore) result = "cpu_win";
+    else                                    result = "draw";
+    state = Object.assign({}, state, {
+      status:     "gameover",
+      result,
+      deathCause: "timeout",
+      highScore:  Math.max(state.highScore, state.score),
+    });
+    render();
+    showGameOver();
+    return;
+  }
+
+  // tickFull: player + CPU 동시 1 스텝 (BF-530)
+  state = tickFull(state);
   render();
 
   if (state.status === "gameover") {
@@ -305,16 +465,20 @@ function initGame() {
   const hs = loadHighScore();
   state = createInitialState(cols, rows, hs);
   hideGameOver();
+  // KPI 타이머 시작
+  gameStartTs   = performance.now();
+  totalPausedMs = 0;
   render();
   startLoop();
 }
 
 function doRestart() {
   hideGameOver();
-  // KPI 초기화 — 새 게임마다 리셋 (BF-526 AC §4)
+  // KPI 초기화 — 새 게임마다 리셋 (BF-526 AC §4 + BF-530)
   pauseToggleCount = 0;
   pauseStartTs     = 0;
   totalPausedMs    = 0;
+  gameStartTs      = performance.now();
   state = restartGame(state);
   saveHighScore(state.highScore);
   startLoop();
@@ -372,6 +536,8 @@ window.addEventListener("resize", () => {
   state = createInitialState(cols, rows, hs);
   if (rafId !== null) cancelAnimationFrame(rafId);
   hideGameOver();
+  gameStartTs   = performance.now();
+  totalPausedMs = 0;
   startLoop();
 });
 

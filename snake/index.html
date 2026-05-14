@@ -10,19 +10,36 @@
     <!-- 전체 화면 캔버스 (100vw × 100vh) — BF-504 AC §1 -->
     <canvas id="game-canvas" aria-label="Snake 게임 캔버스"></canvas>
 
-    <!-- HUD: 우측 상단 Score / High Score — BF-504 AC §1 -->
+    <!-- HUD: 우측 상단 PLAYER / CPU 점수 동시 표시 — BF-530 s2 §5-3 -->
+    <!-- hud-score-value: BF-504/514/518 하위 호환 별칭 (hud-player-score 와 동기화) -->
     <div id="hud" aria-live="polite" aria-label="점수 현황">
-      <div class="hud-score" id="hud-score-value" aria-label="현재 점수">0</div>
-      <div class="hud-high">
-        Best: <span id="hud-high-value">0</span>
+      <div class="hud-row">
+        <span class="hud-label player-label">PLAYER</span>
+        <span class="hud-score player-score" id="hud-player-score" aria-label="플레이어 점수">0</span>
+        <span class="hud-divider">|</span>
+        <span class="hud-label cpu-label">CPU</span>
+        <span class="hud-score cpu-score" id="hud-cpu-score" aria-label="CPU 점수">0</span>
       </div>
+      <div class="hud-high">Best: <span id="hud-high-value">0</span></div>
+      <!-- BF-504/514/518 회귀 가드: hud-score-value 별칭 (hidden) -->
+      <span id="hud-score-value" hidden aria-hidden="true">0</span>
     </div>
 
-    <!-- Game Over 오버레이 — BF-504 AC §4 -->
-    <div id="gameover-overlay" hidden role="dialog" aria-modal="true" aria-label="게임 오버">
+    <!-- 범례: 좌하단 고정 — BF-530 s2 §5-2 -->
+    <div id="competition-legend" aria-label="지렁이 범례">
+      <span class="legend-item player">● PLAYER</span>
+      <span class="legend-item cpu">● CPU</span>
+    </div>
+
+    <!-- Game Over 오버레이 (경쟁 모드 확장) — BF-530 s2 §5-4 / BF-504 회귀 호환 -->
+    <div id="gameover-overlay" hidden role="dialog" aria-modal="true" aria-label="게임 결과">
       <div class="gameover-box">
-        <h2>Game Over</h2>
-        <p class="go-score">Score: <span id="go-score">0</span></p>
+        <h2 id="go-result">YOU WIN</h2>
+        <p class="go-score">
+          PLAYER: <span id="go-score">0</span>
+          &nbsp;vs&nbsp;
+          CPU: <span id="go-cpu-score">0</span>
+        </p>
         <p class="go-hint">Press Space to restart</p>
       </div>
     </div>
@@ -35,10 +52,8 @@
       </div>
     </div>
 
-    <!-- BF-518: file:// CORS 회避 — 인라인 로직 글로벌 폴백 스크립트
-         game.js 의 dynamic import('./logic.js') 가 file:// CORS 차단될 때
-         globalThis 에서 아래 변수들을 참조함. HTTP 서빙 시에는 dynamic import 성공으로
-         이 인라인 글로벌은 사용되지 않음 (중복 실행 없음). -->
+    <!-- BF-518: file:// CORS 회피 — 인라인 로직 글로벌 폴백 스크립트
+         BF-530: cpuChooseDir / tickFull / 확장된 createInitialState 추가 -->
     <script>
     (function () {
       "use strict";
@@ -50,6 +65,20 @@
         LEFT:  { x: -1, y:  0 },
         RIGHT: { x:  1, y:  0 },
       };
+
+      // ── 난이도 파라미터 (s1 §2) ──────────────────────────────
+      var DIFFICULTY_PARAMS = {
+        normal: { tickIntervalMs: 120, visionRange: 8,  avoidanceThreshold: 5,  respawnDelayTicks: 20, foodPriorityWeight: 0.7 },
+        easy:   { tickIntervalMs: 240, visionRange: 3,  avoidanceThreshold: 2,  respawnDelayTicks: 10, foodPriorityWeight: 0.4 },
+      };
+
+      function isWallCollision(head, cols, rows) {
+        return head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows;
+      }
+
+      function isSelfCollision(head, body) {
+        return body.some(function (seg) { return seg.x === head.x && seg.y === head.y; });
+      }
 
       function spawnFoodCell(cols, rows, snake) {
         var occupied = new Set(snake.map(function (c) { return c.x + "," + c.y; }));
@@ -63,6 +92,7 @@
         return empty[Math.floor(Math.random() * empty.length)];
       }
 
+      // BF-530: CPU 지렁이 포함 초기 상태
       function createInitialState(cols, rows, highScore) {
         if (highScore === undefined) highScore = 0;
         var midX = Math.floor(cols / 2);
@@ -72,16 +102,28 @@
           { x: midX - 1, y: midY },
           { x: midX - 2, y: midY },
         ];
+        var cpuX = Math.max(0, Math.min(cols - 3, Math.floor(cols * 3 / 4) - 1));
+        var cpuY = Math.max(0, Math.min(rows - 1, Math.floor(rows * 3 / 4)));
+        var cpu = [
+          { x: cpuX,     y: cpuY },
+          { x: cpuX + 1, y: cpuY },
+          { x: cpuX + 2, y: cpuY },
+        ].filter(function(c) { return c.x >= 0 && c.x < cols && c.y >= 0 && c.y < rows; });
         return {
-          cols:      cols,
-          rows:      rows,
-          snake:     snake,
-          dir:       DIR.RIGHT,
-          nextDir:   DIR.RIGHT,
-          food:      spawnFoodCell(cols, rows, snake),
-          score:     0,
-          highScore: highScore,
-          status:    "playing",
+          cols:       cols,
+          rows:       rows,
+          snake:      snake,
+          dir:        DIR.RIGHT,
+          nextDir:    DIR.RIGHT,
+          cpu:        cpu,
+          cpuDir:     DIR.LEFT,
+          food:       spawnFoodCell(cols, rows, snake.concat(cpu)),
+          score:      0,
+          cpuScore:   0,
+          highScore:  highScore,
+          status:     "playing",
+          result:     null,
+          deathCause: null,
         };
       }
 
@@ -89,14 +131,6 @@
         var cur = state.dir;
         if (cur.x + newDir.x === 0 && cur.y + newDir.y === 0) return state;
         return Object.assign({}, state, { nextDir: newDir });
-      }
-
-      function isWallCollision(head, cols, rows) {
-        return head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows;
-      }
-
-      function isSelfCollision(head, body) {
-        return body.some(function (seg) { return seg.x === head.x && seg.y === head.y; });
       }
 
       function tick(state) {
@@ -135,7 +169,153 @@
         return createInitialState(state.cols, state.rows, state.highScore);
       }
 
-      // game.js dynamic import 실패(file:// CORS) 시 globalThis 에서 참조 (BF-518)
+      // ── CPU AI (s1 §3) ────────────────────────────────────────
+
+      function lookAhead(cpuHead, dir, maxDepth, cols, rows, occupiedSet) {
+        var pos = cpuHead;
+        var count = 0;
+        while (count < maxDepth) {
+          pos = { x: pos.x + dir.x, y: pos.y + dir.y };
+          if (isWallCollision(pos, cols, rows) || occupiedSet.has(pos.x + "," + pos.y)) break;
+          count++;
+        }
+        return count;
+      }
+
+      function computeFoodScore(cpuHead, candidateDir, food) {
+        if (!food) return 0;
+        var nextPos = { x: cpuHead.x + candidateDir.x, y: cpuHead.y + candidateDir.y };
+        var distBefore = Math.abs(cpuHead.x - food.x) + Math.abs(cpuHead.y - food.y);
+        var distAfter  = Math.abs(nextPos.x - food.x) + Math.abs(nextPos.y - food.y);
+        if (distAfter < distBefore) return 1.0;
+        if (distAfter === distBefore) return 0.5;
+        return 0.0;
+      }
+
+      function cpuChooseDir(state, difficulty) {
+        if (!difficulty) difficulty = "normal";
+        var cpu = state.cpu;
+        var cpuDir = state.cpuDir;
+        var snake = state.snake;
+        var food = state.food;
+        var cols = state.cols;
+        var rows = state.rows;
+        if (!cpu || cpu.length === 0) return cpuDir;
+        var params = DIFFICULTY_PARAMS[difficulty] || DIFFICULTY_PARAMS.normal;
+        var cpuHead = cpu[0];
+        var allDirs = [DIR.UP, DIR.DOWN, DIR.LEFT, DIR.RIGHT];
+        var occupiedSet = new Set();
+        snake.forEach(function(s) { occupiedSet.add(s.x + "," + s.y); });
+        cpu.slice(1).forEach(function(s) { occupiedSet.add(s.x + "," + s.y); });
+        var candidates = allDirs.filter(function(d) {
+          if (d.x + cpuDir.x === 0 && d.y + cpuDir.y === 0) return false;
+          var nx = cpuHead.x + d.x;
+          var ny = cpuHead.y + d.y;
+          if (isWallCollision({ x: nx, y: ny }, cols, rows)) return false;
+          if (occupiedSet.has(nx + "," + ny)) return false;
+          return true;
+        });
+        if (candidates.length === 0) return cpuDir;
+        var scored = candidates.map(function(dir) {
+          var safeLen   = lookAhead(cpuHead, dir, params.visionRange, cols, rows, occupiedSet);
+          var foodScore = computeFoodScore(cpuHead, dir, food);
+          var score;
+          if (safeLen < params.avoidanceThreshold) {
+            score = safeLen * 0.1;
+          } else {
+            score = safeLen   * (1 - params.foodPriorityWeight)
+                  + foodScore * params.foodPriorityWeight;
+          }
+          return { dir: dir, score: score };
+        });
+        scored.sort(function(a, b) { return b.score - a.score; });
+        return scored[0].dir;
+      }
+
+      // ── 경쟁 게임 틱 (s2 §2~§3) ─────────────────────────────
+
+      function tickFull(state, difficulty) {
+        if (!difficulty) difficulty = "normal";
+        if (state.status !== "playing") return state;
+
+        var newCpuDir  = cpuChooseDir(state, difficulty);
+        var cpuHead    = state.cpu[0];
+        var newCpuHead = { x: cpuHead.x + newCpuDir.x, y: cpuHead.y + newCpuDir.y };
+        var dir        = state.nextDir;
+        var head       = state.snake[0];
+        var newHead    = { x: head.x + dir.x, y: head.y + dir.y };
+
+        // T4: head-on
+        var headOn = newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+
+        var playerHitWall = isWallCollision(newHead,    state.cols, state.rows);
+        var cpuHitWall    = isWallCollision(newCpuHead, state.cols, state.rows);
+        var playerHitSelf = isSelfCollision(newHead,    state.snake);
+        var cpuHitSelf    = isSelfCollision(newCpuHead, state.cpu);
+        var playerHitCPU  = !headOn && state.cpu.some(function(s)   { return s.x === newHead.x    && s.y === newHead.y; });
+        var cpuHitPlayer  = !headOn && state.snake.some(function(s) { return s.x === newCpuHead.x && s.y === newCpuHead.y; });
+
+        var playerDead = headOn || playerHitWall || playerHitSelf || playerHitCPU;
+        var cpuDead    = headOn || cpuHitWall    || cpuHitSelf    || cpuHitPlayer;
+
+        if (playerDead || cpuDead) {
+          var result, deathCause = null;
+          if (playerDead && cpuDead) {
+            result = "draw";
+            deathCause = headOn ? "head_on" : (playerHitWall ? "wall" : playerHitSelf ? "self" : "cpu_body");
+          } else if (playerDead) {
+            result = "cpu_win";
+            if (headOn)          deathCause = "head_on";
+            else if (playerHitWall)  deathCause = "wall";
+            else if (playerHitSelf)  deathCause = "self";
+            else if (playerHitCPU)   deathCause = "cpu_body";
+          } else {
+            result = "player_win";
+            deathCause = null;
+          }
+          var newHighScore = Math.max(state.highScore, state.score);
+          return Object.assign({}, state, {
+            dir:        dir,
+            cpuDir:     newCpuDir,
+            status:     "gameover",
+            highScore:  newHighScore,
+            result:     result,
+            deathCause: deathCause,
+          });
+        }
+
+        var playerAteFood = state.food !== null && newHead.x === state.food.x && newHead.y === state.food.y;
+        var cpuAteFood    = state.food !== null && !playerAteFood && newCpuHead.x === state.food.x && newCpuHead.y === state.food.y;
+
+        var newSnake = playerAteFood
+          ? [newHead].concat(state.snake)
+          : [newHead].concat(state.snake.slice(0, -1));
+        var newCPU = cpuAteFood
+          ? [newCpuHead].concat(state.cpu)
+          : [newCpuHead].concat(state.cpu.slice(0, -1));
+
+        var newScore    = playerAteFood ? state.score    + 10 : state.score;
+        var newCPUScore = cpuAteFood    ? state.cpuScore + 10 : state.cpuScore;
+        var newFood     = (playerAteFood || cpuAteFood)
+          ? spawnFoodCell(state.cols, state.rows, newSnake.concat(newCPU))
+          : state.food;
+
+        return Object.assign({}, state, {
+          snake:      newSnake,
+          dir:        dir,
+          cpu:        newCPU,
+          cpuDir:     newCpuDir,
+          food:       newFood,
+          score:      newScore,
+          cpuScore:   newCPUScore,
+          highScore:  Math.max(state.highScore, newScore),
+          status:     "playing",
+          result:     null,
+          deathCause: null,
+        });
+      }
+
+      // game.js 에서 globalThis 로 참조 (BF-518/522)
       Object.assign(globalThis, {
         CELL:               CELL,
         LS_HIGH_SCORE_KEY:  LS_HIGH_SCORE_KEY,
@@ -146,13 +326,14 @@
         isWallCollision:    isWallCollision,
         isSelfCollision:    isSelfCollision,
         tick:               tick,
+        tickFull:           tickFull,
+        cpuChooseDir:       cpuChooseDir,
         restartGame:        restartGame,
       });
     })();
     </script>
 
-    <!-- game.js 로드: type 속성 없음 → file:// 프로토콜 CORS 차단 해소 (BF-522)
-         BF-518 인라인 IIFE 가 globalThis 에 로직 변수 주입 → game.js 에서 구조 분해 참조 -->
+    <!-- game.js 로드: type 속성 없음 → file:// 프로토콜 CORS 차단 해소 (BF-522) -->
     <script src="./game.js"></script>
   </body>
 </html>

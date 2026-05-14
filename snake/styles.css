@@ -1,4 +1,5 @@
-/* BF-504 · Snake 게임 스타일 */
+/* BF-504 · Snake 게임 스타일
+ * BF-530 · CPU 지렁이 색상 + 범례 + 경쟁 HUD (s2 §5) */
 
 /* ─── 전역 리셋 ─────────────────────────────────────── */
 *,
@@ -25,7 +26,7 @@ body {
   height: 100vh;
 }
 
-/* ─── HUD: 점수 표시 (우측 상단) ────────────────────── */
+/* ─── HUD: 경쟁 점수판 (우측 상단) — BF-530 s2 §5-3 ── */
 #hud {
   position: fixed;
   top: 16px;
@@ -36,18 +37,67 @@ body {
   text-align: right;
   pointer-events: none;
   z-index: 10;
-  text-shadow: 0 0 6px rgba(0, 255, 100, 0.5);
+  text-shadow: 0 0 6px rgba(0, 255, 100, 0.4);
 }
 
-#hud .hud-score {
+.hud-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.hud-label {
+  font-size: 11px;
+  letter-spacing: 1px;
+  opacity: 0.85;
+}
+
+.hud-score {
   font-size: 22px;
   font-weight: bold;
-  color: #4cff80;
+}
+
+.player-label,
+.player-score {
+  color: #4cff80;   /* s2 §5-3 */
+}
+
+.cpu-label,
+.cpu-score {
+  color: #ff6b4c;   /* s2 §5-3 */
+}
+
+.hud-divider {
+  color: #555;
+  font-size: 18px;
 }
 
 #hud .hud-high {
   font-size: 13px;
   color: #aaa;
+  margin-top: 2px;
+}
+
+/* ─── 범례: 좌하단 고정 — BF-530 s2 §5-2 ───────────── */
+#competition-legend {
+  position: fixed;
+  bottom: 16px;
+  left: 20px;
+  font-size: 13px;
+  color: #e0e0e0;
+  display: flex;
+  gap: 16px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.legend-item.player {
+  color: #4cff80;   /* s2 §5-2 */
+}
+
+.legend-item.cpu {
+  color: #ff6b4c;   /* s2 §5-2 */
 }
 
 /* ─── Game Over 오버레이 (중앙) ──────────────────────── */
@@ -78,7 +128,7 @@ body {
 
 .gameover-box h2 {
   font-size: 2.4rem;
-  color: #ff4c4c;
+  color: #4cff80;   /* 기본값, game.js 에서 동적으로 변경 */
   letter-spacing: 2px;
   margin-bottom: 12px;
 }
