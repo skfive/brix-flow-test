@@ -32,6 +32,8 @@ const ctx       = canvas.getContext("2d");
 const hudPlayerScoreEl = document.getElementById("hud-player-score");
 const hudCPUScoreEl    = document.getElementById("hud-cpu-score");
 const hudHighEl        = document.getElementById("hud-high-value");
+// BF-504/514/518 하위 호환 별칭 (hidden, hud-player-score 와 동기화)
+const hudScoreValueEl  = document.getElementById("hud-score-value");
 
 // 게임 결과 오버레이 — BF-530 s2 §5-4
 const goOverlay    = document.getElementById("gameover-overlay");
@@ -315,6 +317,7 @@ function drawFood() {
 /** HUD 업데이트 — BF-530 s2 §5-3 양쪽 점수 */
 function updateHUD() {
   hudPlayerScoreEl.textContent = state.score;
+  if (hudScoreValueEl) hudScoreValueEl.textContent = state.score; // BF-504 하위 호환
   hudCPUScoreEl.textContent    = state.cpuScore;
   hudHighEl.textContent        = state.highScore;
 }

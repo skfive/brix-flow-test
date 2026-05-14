@@ -11,6 +11,7 @@
     <canvas id="game-canvas" aria-label="Snake 게임 캔버스"></canvas>
 
     <!-- HUD: 우측 상단 PLAYER / CPU 점수 동시 표시 — BF-530 s2 §5-3 -->
+    <!-- hud-score-value: BF-504/514/518 하위 호환 별칭 (hud-player-score 와 동기화) -->
     <div id="hud" aria-live="polite" aria-label="점수 현황">
       <div class="hud-row">
         <span class="hud-label player-label">PLAYER</span>
@@ -20,6 +21,8 @@
         <span class="hud-score cpu-score" id="hud-cpu-score" aria-label="CPU 점수">0</span>
       </div>
       <div class="hud-high">Best: <span id="hud-high-value">0</span></div>
+      <!-- BF-504/514/518 회귀 가드: hud-score-value 별칭 (hidden) -->
+      <span id="hud-score-value" hidden aria-hidden="true">0</span>
     </div>
 
     <!-- 범례: 좌하단 고정 — BF-530 s2 §5-2 -->
@@ -28,7 +31,7 @@
       <span class="legend-item cpu">● CPU</span>
     </div>
 
-    <!-- 게임 결과 오버레이 (경쟁 모드 확장) — BF-530 s2 §5-4 -->
+    <!-- Game Over 오버레이 (경쟁 모드 확장) — BF-530 s2 §5-4 / BF-504 회귀 호환 -->
     <div id="gameover-overlay" hidden role="dialog" aria-modal="true" aria-label="게임 결과">
       <div class="gameover-box">
         <h2 id="go-result">YOU WIN</h2>
