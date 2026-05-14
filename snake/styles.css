@@ -240,3 +240,97 @@ body {
   color: #888;
   letter-spacing: 1px;
 }
+
+/* ─── 이팩트 레이어 — BF-536 ─────────────────────────── */
+#effect-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  overflow: hidden;
+}
+
+:root {
+  --fx-1x-primary: #ffcc00;
+  --fx-1x-light:   #fff3a0;
+  --fx-2x-primary: #00cfff;
+  --fx-2x-light:   #80e8ff;
+  --fx-4x-primary: #cc44ff;
+  --fx-4x-mid:     #e080ff;
+  --fx-4x-light:   #ffaaff;
+  --fx-8x-primary: #ff4444;
+  --fx-8x-orange:  #ff8800;
+  --fx-8x-gold:    #ffcc00;
+  --fx-core-white: #ffffff;
+}
+
+/* ─── 이팩트 애니메이션 키프레임 — BF-537 ─────────────── */
+
+/* 1× 골든 스파클 */
+@keyframes fx-sparkle-particle {
+  0%   { transform: translate(0,0) scale(1);   opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.4); opacity: 0; }
+}
+@keyframes fx-sparkle-center {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+
+/* 2× 사이언 다이아몬드 */
+@keyframes fx-pop-particle {
+  0%   { transform: translate(0,0) rotate(45deg) scale(1); opacity: 1; }
+  15%  { opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) rotate(105deg) scale(0); opacity: 0; }
+}
+
+/* 4× 퍼플 버스트 */
+@keyframes fx-burst-inner {
+  0%   { transform: translate(0,0) scale(1.2); opacity: 1; }
+  30%  { opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+@keyframes fx-burst-ring {
+  0%   { width: 0; height: 0; opacity: 1; }
+  100% { width: 88px; height: 88px; opacity: 0; }
+}
+
+/* 공통 스크린 플래시 */
+@keyframes fx-screen-flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* 8× 화면 흔들림 */
+@keyframes fx-screen-shake {
+  0%,100% { transform: translate(0,0); }
+  20%     { transform: translate(-4px, 2px); }
+  40%     { transform: translate(4px, -2px); }
+  60%     { transform: translate(-3px, 3px); }
+  80%     { transform: translate(3px, -3px); }
+}
+
+/* 8× 메가 블라스트 — 주 파티클 */
+@keyframes fx-mega-main {
+  0%   { transform: translate(0,0) scale(1.5); opacity: 1; }
+  35%  { opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+/* 8× 메가 블라스트 — 드리프트 별 */
+@keyframes fx-mega-drift {
+  0%   { transform: translate(0,0) scale(1); opacity: 1; }
+  45%  { opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.3); opacity: 0; }
+}
+
+/* 8× 쇼크웨이브 링 1 (반지름 0→60px) */
+@keyframes fx-shock1 {
+  0%   { width: 0; height: 0; opacity: 1; }
+  100% { width: 120px; height: 120px; opacity: 0; }
+}
+
+/* 8× 쇼크웨이브 링 2 (반지름 0→90px) */
+@keyframes fx-shock2 {
+  0%   { width: 0; height: 0; opacity: 1; }
+  100% { width: 180px; height: 180px; opacity: 0; }
+}

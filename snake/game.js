@@ -81,6 +81,9 @@ const COMP_STATS_KEY = "bf-snake-comp-stats";
 const MULT_KPI_KEY   = "bf-snake-multiplier-kpi";
 const MULT_STATS_KEY = "bf-snake-multiplier-stats";
 
+/** localStorage 키 — BF-537 이팩트 트리거 KPI */
+const EFFECT_KPI_KEY = "bf-snake-effect-kpi";
+
 // ─────────────────────────────────────────────────────────────
 // localStorage 헬퍼
 // ─────────────────────────────────────────────────────────────
@@ -156,6 +159,11 @@ function logKPI() {
     `[BF-526 KPI] 멈춤/재개 토글 ${pauseToggleCount}회, 누적 멈춤 ${Math.round(totalPausedMs)}ms`,
   );
 
+  // ── BF-537 이팩트 트리거 KPI ──────────────────────────────
+  const fxTotal = Object.values(effectTriggerCount).reduce((s, v) => s + v, 0);
+  const fxStr   = [1, 2, 4, 8].map(m => `${m}×:${effectTriggerCount[String(m)]}회`).join(" ");
+  console.log(`[BF-537 KPI] 이팩트 트리거 — ${fxStr} | 총합:${fxTotal}회`);
+
   // ── BF-531 배수 통계 KPI (명세 §9-1~§9-2) ────────────────
   const mStats = state.multiplierStats;
   if (mStats) {
@@ -222,6 +230,364 @@ function logKPI() {
       return `${m}×:${rate}%`;
     }).join(" ");
     console.log(`[BF-531 KPI] 수집률 — ${eatRateStr}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 이팩트 렌더링 — BF-537
+// ─────────────────────────────────────────────────────────────
+
+/** 이팩트 on/off 토글 플래그.
+ *  false 로 설정하면 triggerEffect 가 완전히 무효화되어 기존 게임 동작과 동일 (롤백 가능).
+ *  브라우저 콘솔에서 EFFECTS_ENABLED = false 로 즉시 비활성화 가능. */
+let EFFECTS_ENABLED = true;
+
+/** 세션 내 이팩트 트리거 카운트 (배수별 누적, localStorage 동기화) */
+const effectTriggerCount = { "1": 0, "2": 0, "4": 0, "8": 0 };
+
+const effectLayer = document.getElementById("effect-layer");
+
+/** 이팩트 KPI — localStorage 에 누적 카운트 저장 */
+function saveEffectKPI() {
+  try {
+    localStorage.setItem(EFFECT_KPI_KEY, JSON.stringify(effectTriggerCount));
+  } catch (_) { /* EC-5: private mode 등 — 무시 */ }
+}
+
+// ── 헬퍼 ──────────────────────────────────────────────────────
+
+/** 스크린 플래시 오버레이 (4×/8× 공용) */
+function triggerScreenFlash(color, durationMs) {
+  const el = document.createElement("div");
+  el.className = "fx-flash";
+  el.style.cssText = `
+    position: fixed; inset: 0;
+    background: ${color};
+    pointer-events: none;
+    z-index: 16;
+    animation: fx-screen-flash ${durationMs}ms ease-out forwards;
+  `;
+  document.body.appendChild(el);
+  el.addEventListener("animationend", () => el.remove(), { once: true });
+}
+
+/** 화면 흔들림 (8× 전용) — body 에 적용, canvas 좌표 영향 없음 */
+function triggerScreenShake() {
+  document.body.style.animation = "fx-screen-shake 200ms ease-in-out";
+  setTimeout(() => { document.body.style.animation = ""; }, 200);
+}
+
+// ── 배수별 이팩트 함수 ────────────────────────────────────────
+
+/** 1× — 골든 스파클 (명세 §5-1) */
+function triggerSparkle(cx, cy) {
+  // 중심 플래시 (8px, 120ms)
+  const center = document.createElement("div");
+  center.className = "fx-particle fx-1x";
+  center.style.cssText = `
+    position: absolute;
+    left: ${cx}px; top: ${cy}px;
+    width: 8px; height: 8px;
+    background: #ffcc00;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: fx-sparkle-center 120ms ease-out forwards;
+  `;
+  effectLayer.appendChild(center);
+  center.addEventListener("animationend", () => center.remove(), { once: true });
+
+  // 6개 방사형 파티클 — 60° 간격, travel 28px
+  const colors = ["#ffcc00", "#fff3a0"];
+  for (let i = 0; i < 6; i++) {
+    const angle = (i * 60) * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 28);
+    const ty    = Math.round(Math.sin(angle) * 28);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-1x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 3}px; top: ${cy - 3}px;
+      width: 6px; height: 6px;
+      background: ${colors[i % 2]};
+      border-radius: 50%;
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-sparkle-particle 380ms cubic-bezier(0.2,0.6,0.4,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
+
+/** 2× — 사이언 다이아몬드 (명세 §5-2) */
+function triggerPop(cx, cy) {
+  // 중심 플래시 (#fff, 10px, 150ms)
+  const center = document.createElement("div");
+  center.className = "fx-particle fx-2x";
+  center.style.cssText = `
+    position: absolute;
+    left: ${cx}px; top: ${cy}px;
+    width: 10px; height: 10px;
+    background: #ffffff;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: fx-sparkle-center 150ms ease-out forwards;
+  `;
+  effectLayer.appendChild(center);
+  center.addEventListener("animationend", () => center.remove(), { once: true });
+
+  // 8개 다이아몬드 파티클 — 45° 간격, travel 44px
+  const colors = ["#00cfff", "#80e8ff"];
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * 45) * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 44);
+    const ty    = Math.round(Math.sin(angle) * 44);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-2x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 3.5}px; top: ${cy - 3.5}px;
+      width: 7px; height: 7px;
+      background: ${colors[i % 2]};
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-pop-particle 480ms cubic-bezier(0.1,0.7,0.3,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
+
+/** 4× — 퍼플 버스트 (명세 §5-3) */
+function triggerBurst(cx, cy) {
+  // 스크린 플래시 (rgba(180,60,255,0.15), 60ms)
+  triggerScreenFlash("rgba(180,60,255,0.15)", 60);
+
+  // 중심 링 확장 (border: 2px solid #cc44ff, 0→44px 반지름, 350ms)
+  const ring = document.createElement("div");
+  ring.className = "fx-ring fx-4x";
+  ring.style.cssText = `
+    position: absolute;
+    left: ${cx}px; top: ${cy}px;
+    width: 0; height: 0;
+    border: 2px solid #cc44ff;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: fx-burst-ring 350ms cubic-bezier(0.05,0.7,0.25,1) forwards;
+  `;
+  effectLayer.appendChild(ring);
+  ring.addEventListener("animationend", () => ring.remove(), { once: true });
+
+  const starClip = "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)";
+
+  // 내부 링 — 6개 별, 60° 간격, travel 30px
+  for (let i = 0; i < 6; i++) {
+    const angle = (i * 60) * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 30);
+    const ty    = Math.round(Math.sin(angle) * 30);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-4x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 5}px; top: ${cy - 5}px;
+      width: 10px; height: 10px;
+      background: #cc44ff;
+      clip-path: ${starClip};
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-burst-inner 620ms cubic-bezier(0.05,0.7,0.25,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+
+  // 외부 링 — 6개 별, 30° 오프셋, travel 62px, 50ms 딜레이
+  for (let i = 0; i < 6; i++) {
+    const angle = (i * 60 + 30) * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 62);
+    const ty    = Math.round(Math.sin(angle) * 62);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-4x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 5}px; top: ${cy - 5}px;
+      width: 10px; height: 10px;
+      background: #e080ff;
+      clip-path: ${starClip};
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-burst-inner 620ms cubic-bezier(0.05,0.7,0.25,1) 50ms forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+
+  // 위성 원 — 4개, 90° 간격, travel 42px
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * 90) * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 42);
+    const ty    = Math.round(Math.sin(angle) * 42);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-4x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 4}px; top: ${cy - 4}px;
+      width: 8px; height: 8px;
+      background: #ffaaff;
+      border-radius: 50%;
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-burst-inner 620ms cubic-bezier(0.05,0.7,0.25,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
+
+/** 8× — 메가 블라스트 (명세 §5-4) */
+function triggerMegaBlast(cx, cy) {
+  // 스크린 플래시 (rgba(255,68,68,0.25), 100ms)
+  triggerScreenFlash("rgba(255,68,68,0.25)", 100);
+  // 화면 흔들림 ±4px / 200ms
+  triggerScreenShake();
+
+  // 쇼크웨이브 링 1 — border: 2px solid #ff4444, 0→60px 반지름, 400ms
+  const sw1 = document.createElement("div");
+  sw1.className = "fx-ring fx-8x";
+  sw1.style.cssText = `
+    position: absolute;
+    left: ${cx}px; top: ${cy}px;
+    width: 0; height: 0;
+    border: 2px solid #ff4444;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: fx-shock1 400ms cubic-bezier(0,0.9,0.2,1) forwards;
+  `;
+  effectLayer.appendChild(sw1);
+  sw1.addEventListener("animationend", () => sw1.remove(), { once: true });
+
+  // 쇼크웨이브 링 2 — rgba(255,136,0,0.6), 0→90px, 600ms, 100ms 딜레이
+  const sw2 = document.createElement("div");
+  sw2.className = "fx-ring fx-8x";
+  sw2.style.cssText = `
+    position: absolute;
+    left: ${cx}px; top: ${cy}px;
+    width: 0; height: 0;
+    border: 2px solid rgba(255,136,0,0.6);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: fx-shock2 600ms cubic-bezier(0,0.9,0.2,1) 100ms forwards;
+  `;
+  effectLayer.appendChild(sw2);
+  sw2.addEventListener("animationend", () => sw2.remove(), { once: true });
+
+  // 내부 불꽃 파티클 — 8개, 45° 간격, travel 52px, 840ms
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * 45) * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 52);
+    const ty    = Math.round(Math.sin(angle) * 52);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-8x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 5}px; top: ${cy - 7}px;
+      width: 10px; height: 14px;
+      background: linear-gradient(to bottom, #ff4444, #ff8800);
+      border-radius: 80% 20% 80% 20%;
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-mega-main 840ms cubic-bezier(0,0.9,0.2,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+
+  // 외부 원 파티클 — 8개, 22.5° 오프셋, travel 96px, 840ms
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * 45 + 22.5) * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 96);
+    const ty    = Math.round(Math.sin(angle) * 96);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-8x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 4}px; top: ${cy - 4}px;
+      width: 8px; height: 8px;
+      background: #ff8800;
+      border-radius: 50%;
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-mega-main 840ms cubic-bezier(0,0.9,0.2,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+
+  // 드리프트 별 — 4개, 위쪽 방향 중심, travel 80px, 1100ms (linear)
+  const driftAngles = [-90, -60, -120, -75];
+  for (let i = 0; i < 4; i++) {
+    const angle = driftAngles[i] * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 80);
+    const ty    = Math.round(Math.sin(angle) * 80);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-8x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 6}px; top: ${cy - 6}px;
+      width: 12px; height: 12px;
+      background: #ffcc00;
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-mega-drift 1100ms linear forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+
+  // 스파크 — 4방향, 직선 (2×16px), travel 36px, 840ms
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * 90) * Math.PI / 180;
+    const tx    = Math.round(Math.cos(angle) * 36);
+    const ty    = Math.round(Math.sin(angle) * 36);
+    const el    = document.createElement("div");
+    el.className = "fx-particle fx-8x";
+    el.style.cssText = `
+      position: absolute;
+      left: ${cx - 1}px; top: ${cy - 8}px;
+      width: 2px; height: 16px;
+      background: #ffffff;
+      pointer-events: none;
+      --tx: ${tx}px; --ty: ${ty}px;
+      animation: fx-mega-main 840ms cubic-bezier(0,0.9,0.2,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
+
+/**
+ * 파티클 이팩트 트리거 — 메인 디스패처 (명세 §6-3)
+ * @param {number} cx  이팩트 원점 X (px, 뷰포트 기준)
+ * @param {number} cy  이팩트 원점 Y (px, 뷰포트 기준)
+ * @param {1|2|4|8} multiplier
+ */
+function triggerEffect(cx, cy, multiplier) {
+  if (!EFFECTS_ENABLED) return;                 // on/off 토글 — off 시 기존 동작 완전 동일
+
+  // KPI 트리거 카운트 누적 (AC-3)
+  const k = String(multiplier);
+  effectTriggerCount[k] = (effectTriggerCount[k] || 0) + 1;
+  saveEffectKPI();
+
+  switch (multiplier) {
+    case 1: triggerSparkle(cx, cy);    break;
+    case 2: triggerPop(cx, cy);        break;
+    case 4: triggerBurst(cx, cy);      break;
+    case 8: triggerMegaBlast(cx, cy);  break;
   }
 }
 
@@ -552,7 +918,16 @@ function loop(ts) {
   }
 
   // tickFull: player + CPU 동시 1 스텝 (BF-530)
+  const prevFood = state.food;            // BF-537: 수집 감지용 스냅샷
   state = tickFull(state);
+
+  // BF-537: 먹이 수집 감지 → 이팩트 트리거 (명세 §6-4)
+  // prevFood !== null && state.food !== prevFood → 수집 발생 (새 food 스폰 또는 null)
+  if (prevFood !== null && state.food !== prevFood) {
+    const { x, y, multiplier } = prevFood;
+    triggerEffect(x * CELL + CELL / 2, y * CELL + CELL / 2, multiplier);
+  }
+
   render();
 
   if (state.status === "gameover") {
@@ -592,6 +967,8 @@ function doRestart() {
   pauseStartTs     = 0;
   totalPausedMs    = 0;
   gameStartTs      = performance.now();
+  // BF-537: 이팩트 카운트 리셋
+  for (const k of ["1", "2", "4", "8"]) effectTriggerCount[k] = 0;
   state = restartGame(state);
   saveHighScore(state.highScore);
   startLoop();
