@@ -1,0 +1,96 @@
+/* BF-504 · Snake 게임 스타일 */
+
+/* ─── 전역 리셋 ─────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0d0d;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* ─── 캔버스 (전체 화면) ─────────────────────────────── */
+#game-canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ─── HUD: 점수 표시 (우측 상단) ────────────────────── */
+#hud {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  color: #e0e0e0;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: right;
+  pointer-events: none;
+  z-index: 10;
+  text-shadow: 0 0 6px rgba(0, 255, 100, 0.5);
+}
+
+#hud .hud-score {
+  font-size: 22px;
+  font-weight: bold;
+  color: #4cff80;
+}
+
+#hud .hud-high {
+  font-size: 13px;
+  color: #aaa;
+}
+
+/* ─── Game Over 오버레이 (중앙) ──────────────────────── */
+#gameover-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 20;
+  pointer-events: none;
+}
+
+#gameover-overlay[hidden] {
+  display: none;
+}
+
+.gameover-box {
+  background: #111;
+  border: 2px solid #4cff80;
+  border-radius: 12px;
+  padding: 36px 52px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(76, 255, 128, 0.3);
+}
+
+.gameover-box h2 {
+  font-size: 2.4rem;
+  color: #ff4c4c;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.gameover-box .go-score {
+  font-size: 1.4rem;
+  color: #e0e0e0;
+  margin-bottom: 8px;
+}
+
+.gameover-box .go-hint {
+  font-size: 1rem;
+  color: #888;
+  letter-spacing: 1px;
+}
