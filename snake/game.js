@@ -41,6 +41,19 @@ let lastTs = 0;
 const TICK_MS = 120;
 
 // ─────────────────────────────────────────────────────────────
+// KPI 측정 변수 — BF-526 AC §4
+// ─────────────────────────────────────────────────────────────
+/** 이번 게임 세션의 멈춤/재개 토글 횟수 */
+let pauseToggleCount = 0;
+/** 현재 멈춤 구간 시작 타임스탬프 (ms, performance.now()) */
+let pauseStartTs = 0;
+/** 이번 게임 세션의 누적 멈춤 시간 (ms) */
+let totalPausedMs = 0;
+
+/** sessionStorage 키 */
+const SS_PAUSE_KPI_KEY = "bf-snake-pause-kpi";
+
+// ─────────────────────────────────────────────────────────────
 // localStorage 헬퍼
 // ─────────────────────────────────────────────────────────────
 function loadHighScore() {
@@ -213,6 +226,7 @@ function hidePaused() {
 
 /** 멈춤/재개 토글 — playing ↔ paused.
  *  playing 이 아닌 상태 (gameover 등) 에서는 동작 안 함 (AC §3).
+ *  BF-526 AC §4: 토글 횟수 · 누적 멈춤 시간 KPI 를 sessionStorage + console 에 기록.
  */
 function togglePause() {
   if (state.status === "playing") {
@@ -221,10 +235,29 @@ function togglePause() {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
+    // KPI: 멈춤 시작 타임스탬프 기록 + 토글 횟수 증가
+    pauseToggleCount++;
+    pauseStartTs = performance.now();
+
     state = Object.assign({}, state, { status: "paused" });
     render();      // 현재 프레임 유지 (지렁이·먹이 고정)
     showPaused();
   } else if (state.status === "paused") {
+    // KPI: 누적 멈춤 시간 계산 → sessionStorage 저장 + console 기록
+    const pausedMs = performance.now() - pauseStartTs;
+    totalPausedMs += pausedMs;
+    try {
+      sessionStorage.setItem(
+        SS_PAUSE_KPI_KEY,
+        JSON.stringify({ toggleCount: pauseToggleCount, totalPausedMs: Math.round(totalPausedMs) }),
+      );
+    } catch (_) {
+      // private mode 등 — 무시
+    }
+    console.log(
+      `[BF-526 KPI] 멈춤/재개 토글 ${pauseToggleCount}회, 누적 멈춤 ${Math.round(totalPausedMs)}ms`,
+    );
+
     hidePaused();
     state = Object.assign({}, state, { status: "playing" });
     startLoop();   // lastTs 리셋 후 RAF 재시작 → 위치·방향·점수 보존
@@ -278,6 +311,10 @@ function initGame() {
 
 function doRestart() {
   hideGameOver();
+  // KPI 초기화 — 새 게임마다 리셋 (BF-526 AC §4)
+  pauseToggleCount = 0;
+  pauseStartTs     = 0;
+  totalPausedMs    = 0;
   state = restartGame(state);
   saveHighScore(state.highScore);
   startLoop();
