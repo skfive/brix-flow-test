@@ -1600,7 +1600,7 @@ function loop(ts) {
     nextItemSpawnTs = nowMs + ivMs;
   }
 
-  // ── 게임 틱 — tickWithItems (BF-545) ─────────────────────
+  // ── 게임 틱 — tickWithItems (BF-545; 이전: tickFull(state)) ─────────────────────
   const prevFood     = state.food;           // BF-537: 수집 감지용 스냅샷
   const prevItem     = state.item;           // BF-545: 아이템 획득 감지용
   const prevAcqCount = prevItem
