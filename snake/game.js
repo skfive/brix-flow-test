@@ -24,10 +24,11 @@ const {
 const canvas = document.getElementById("game-canvas");
 const ctx    = canvas.getContext("2d");
 
-const hudScoreEl = document.getElementById("hud-score-value");
-const hudHighEl  = document.getElementById("hud-high-value");
-const goOverlay  = document.getElementById("gameover-overlay");
-const goScoreEl  = document.getElementById("go-score");
+const hudScoreEl    = document.getElementById("hud-score-value");
+const hudHighEl     = document.getElementById("hud-high-value");
+const goOverlay     = document.getElementById("gameover-overlay");
+const goScoreEl     = document.getElementById("go-score");
+const pausedOverlay = document.getElementById("paused-overlay");
 
 // ─────────────────────────────────────────────────────────────
 // 게임 상태
@@ -200,6 +201,37 @@ function hideGameOver() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// PAUSED 오버레이 처리 — BF-524
+// ─────────────────────────────────────────────────────────────
+function showPaused() {
+  pausedOverlay.removeAttribute("hidden");
+}
+
+function hidePaused() {
+  pausedOverlay.setAttribute("hidden", "");
+}
+
+/** 멈춤/재개 토글 — playing ↔ paused.
+ *  playing 이 아닌 상태 (gameover 등) 에서는 동작 안 함 (AC §3).
+ */
+function togglePause() {
+  if (state.status === "playing") {
+    // 게임 루프 즉시 중단
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    state = Object.assign({}, state, { status: "paused" });
+    render();      // 현재 프레임 유지 (지렁이·먹이 고정)
+    showPaused();
+  } else if (state.status === "paused") {
+    hidePaused();
+    state = Object.assign({}, state, { status: "playing" });
+    startLoop();   // lastTs 리셋 후 RAF 재시작 → 위치·방향·점수 보존
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // 게임 루프 (rAF + 틱 타이머)
 // ─────────────────────────────────────────────────────────────
 function loop(ts) {
@@ -267,6 +299,7 @@ const KEY_DIR = {
 };
 
 window.addEventListener("keydown", (e) => {
+  // ① 게임 오버 상태: Space → 재시작 (AC §3 — 멈춤/재개와 충돌 없음, early-return)
   if (state.status === "gameover") {
     if (e.code === "Space") {
       e.preventDefault();
@@ -275,10 +308,20 @@ window.addEventListener("keydown", (e) => {
     return;
   }
 
-  const dir = KEY_DIR[e.key];
-  if (dir) {
+  // ② 멈춤/재개 토글 — playing 또는 paused 상태에서만 (AC §1, §2)
+  if (e.code === "Space") {
     e.preventDefault();
-    state = changeDirection(state, dir);
+    togglePause();
+    return;
+  }
+
+  // ③ 방향키는 playing 상태에서만 허용 (paused 중 방향 변경 불가)
+  if (state.status === "playing") {
+    const dir = KEY_DIR[e.key];
+    if (dir) {
+      e.preventDefault();
+      state = changeDirection(state, dir);
+    }
   }
 });
 

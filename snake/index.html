@@ -27,6 +27,14 @@
       </div>
     </div>
 
+    <!-- PAUSED 오버레이 — BF-524 -->
+    <div id="paused-overlay" hidden role="dialog" aria-modal="true" aria-label="일시정지">
+      <div class="paused-box">
+        <h2>PAUSED</h2>
+        <p class="paused-hint">Press Space to resume</p>
+      </div>
+    </div>
+
     <!-- BF-518: file:// CORS 회避 — 인라인 로직 글로벌 폴백 스크립트
          game.js 의 dynamic import('./logic.js') 가 file:// CORS 차단될 때
          globalThis 에서 아래 변수들을 참조함. HTTP 서빙 시에는 dynamic import 성공으로
