@@ -499,9 +499,16 @@ export function tickFull(state, difficulty = "normal") {
   const newHead = { x: head.x + dir.x, y: head.y + dir.y };
 
   // ── 3. 충돌 검사 (T4 우선 — s2 §2 주의) ──────────────────
-  // T4: 두 머리가 동일 셀로 이동 (head-on)
-  const headOn =
+  // T4: 두 머리가 동일 셀로 이동 (head-on, BF-572)
+  const headOnNormal =
     newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+
+  // T4-SWAP: 교차 이동 — 두 머리가 서로 위치를 교환 (BF-572)
+  const headOnSwap =
+    newHead.x === cpuHead.x  && newHead.y === cpuHead.y &&
+    newCpuHead.x === head.x  && newCpuHead.y === head.y;
+
+  const headOn = headOnNormal || headOnSwap;
 
   // T1: 벽 충돌
   const playerHitWall = isWallCollision(newHead,    state.cols, state.rows);
@@ -511,14 +518,9 @@ export function tickFull(state, difficulty = "normal") {
   const playerHitSelf = isSelfCollision(newHead,    state.snake);
   const cpuHitSelf    = isSelfCollision(newCpuHead, state.cpu);
 
-  // T3: 상대방 몸통 충돌 (T4 아닌 경우만)
-  const playerHitCPU =
-    !headOn && state.cpu.some(s => s.x === newHead.x    && s.y === newHead.y);
-  const cpuHitPlayer =
-    !headOn && state.snake.some(s => s.x === newCpuHead.x && s.y === newCpuHead.y);
-
-  const playerDead = headOn || playerHitWall || playerHitSelf || playerHitCPU;
-  const cpuDead    = headOn || cpuHitWall    || cpuHitSelf    || cpuHitPlayer;
+  // T3 제거 — 상대방 몸통 통과 허용 (BF-572)
+  const playerDead = headOn || playerHitWall || playerHitSelf;
+  const cpuDead    = headOn || cpuHitWall    || cpuHitSelf;
 
   // ── 4. 게임 종료 처리 ─────────────────────────────────────
   if (playerDead || cpuDead) {
@@ -527,13 +529,12 @@ export function tickFull(state, difficulty = "normal") {
 
     if (playerDead && cpuDead) {
       result = "draw";
-      deathCause = headOn ? "head_on" : (playerHitWall ? "wall" : playerHitSelf ? "self" : "cpu_body");
+      deathCause = headOn ? "head_on" : (playerHitWall ? "wall" : "self");
     } else if (playerDead) {
       result = "cpu_win";
-      if (headOn)          deathCause = "head_on";
+      if (headOn)              deathCause = "head_on";
       else if (playerHitWall)  deathCause = "wall";
       else if (playerHitSelf)  deathCause = "self";
-      else if (playerHitCPU)   deathCause = "cpu_body";
     } else {
       result = "player_win";
       deathCause = null; // 플레이어는 생존
@@ -1007,20 +1008,24 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
 
   // ── 3. 충돌 검사 ──────────────────────────────────────────
   // T4: head-on (양쪽 모두 이동할 때만 가능)
-  const headOn = movePlayer && moveCpu &&
+  const headOnNormal = movePlayer && moveCpu &&
     newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+
+  // T4-SWAP: 교차 이동 — 두 머리가 서로 위치를 교환 (BF-572)
+  const headOnSwap = movePlayer && moveCpu &&
+    newHead.x === cpuHead.x  && newHead.y === cpuHead.y &&
+    newCpuHead.x === head.x  && newCpuHead.y === head.y;
+
+  const headOn = headOnNormal || headOnSwap;
 
   const playerHitWall = movePlayer && isWallCollision(newHead,    s.cols, s.rows);
   const cpuHitWall    = moveCpu   && isWallCollision(newCpuHead,  s.cols, s.rows);
   const playerHitSelf = movePlayer && isSelfCollision(newHead,    s.snake);
   const cpuHitSelf    = moveCpu   && isSelfCollision(newCpuHead,  s.cpu);
-  const playerHitCPU  = movePlayer && !headOn &&
-    s.cpu.some(seg => seg.x === newHead.x    && seg.y === newHead.y);
-  const cpuHitPlayer  = moveCpu   && !headOn &&
-    s.snake.some(seg => seg.x === newCpuHead.x && seg.y === newCpuHead.y);
+  // T3 제거 — 상대방 몸통 통과 허용 (BF-572)
 
-  let playerDead = headOn || playerHitWall || playerHitSelf || playerHitCPU;
-  const cpuDead  = headOn || cpuHitWall    || cpuHitSelf    || cpuHitPlayer;
+  let playerDead = headOn || playerHitWall || playerHitSelf;
+  const cpuDead  = headOn || cpuHitWall    || cpuHitSelf;
 
   // ── 4. SHIELD 인터셉트 (명세 §4-2) ───────────────────────
   let shieldTriggered = false;
@@ -1037,14 +1042,12 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
       result     = "draw";
       deathCause = headOn ? "head_on"
         : playerHitWall ? "wall"
-        : playerHitSelf ? "self"
-        : "cpu_body";
+        : "self";
     } else if (playerDead) {
       result = "cpu_win";
       if      (headOn)          deathCause = "head_on";
       else if (playerHitWall)   deathCause = "wall";
       else if (playerHitSelf)   deathCause = "self";
-      else if (playerHitCPU)    deathCause = "cpu_body";
     } else {
       result     = "player_win";
       deathCause = null;
