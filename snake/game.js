@@ -1,16 +1,24 @@
 // BF-504 · Snake 게임 DOM/Canvas 컨트롤러
 // - logic.js 의 순수 로직을 이용해 캔버스 렌더링 + 이벤트 처리
 // - localStorage High Score 영속
+//
+// BF-518: static import → dynamic import() + globalThis 폴백
+//   file:// 환경(Chrome 91+)에서 ES module의 cross-origin import가 CORS로 차단됨.
+//   dynamic import()는 Promise 반환 → catch 가능 → index.html 인라인 글로벌로 폴백.
+//   HTTP 서빙 환경에서는 dynamic import 성공 → ES module exports 그대로 사용.
 
-import {
-  CELL,
-  LS_HIGH_SCORE_KEY,
-  DIR,
-  createInitialState,
-  changeDirection,
-  tick,
-  restartGame,
-} from "./logic.js";
+let CELL, LS_HIGH_SCORE_KEY, DIR, createInitialState, changeDirection, tick, restartGame;
+
+try {
+  // HTTP / 로컬 dev-server 환경: import 성공
+  const _logic = await import("./logic.js");
+  ({ CELL, LS_HIGH_SCORE_KEY, DIR, createInitialState, changeDirection, tick, restartGame } =
+    _logic);
+} catch (_) {
+  // file:// CORS 차단 시: index.html 인라인 스크립트가 globalThis 에 주입한 변수 사용 (BF-518)
+  ({ CELL, LS_HIGH_SCORE_KEY, DIR, createInitialState, changeDirection, tick, restartGame } =
+    globalThis);
+}
 
 // ─────────────────────────────────────────────────────────────
 // DOM 참조
