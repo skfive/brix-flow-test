@@ -253,6 +253,11 @@ const KEY_DIR = {
   ArrowDown:  DIR.DOWN,
   ArrowLeft:  DIR.LEFT,
   ArrowRight: DIR.RIGHT,
+  // WASD 지원 — BF-514 AC §2
+  w: DIR.UP,    W: DIR.UP,
+  s: DIR.DOWN,  S: DIR.DOWN,
+  a: DIR.LEFT,  A: DIR.LEFT,
+  d: DIR.RIGHT, D: DIR.RIGHT,
 };
 
 window.addEventListener("keydown", (e) => {
