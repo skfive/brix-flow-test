@@ -21,6 +21,18 @@ const {
   tickFull,
   cpuChooseDir,
   restartGame,
+  // BF-545: 아이템 시스템
+  ITEMS_ENABLED,
+  ITEM_SPAWN_RATE,
+  ITEM_CATEGORY,
+  ITEM_DURATION_MS,
+  ITEM_LIFESPAN_MS,
+  createItemStats,
+  pickItemType,
+  spawnItemCell,
+  useHeldItem,
+  updateItemTimers,
+  tickWithItems,
 } = globalThis;
 
 // ─────────────────────────────────────────────────────────────
@@ -44,6 +56,15 @@ const goCPUScoreEl = document.getElementById("go-cpu-score");
 
 // PAUSED 오버레이 — BF-524
 const pausedOverlay = document.getElementById("paused-overlay");
+
+// 아이템 HUD — BF-545
+const buffBarEl     = document.getElementById("buff-bar");
+const itemSlotHudEl = document.getElementById("item-slot-hud");
+const slotBoxEl     = itemSlotHudEl ? itemSlotHudEl.querySelector(".slot-box")      : null;
+const slotIconEl    = itemSlotHudEl ? itemSlotHudEl.querySelector(".slot-icon")     : null;
+const slotKeyHintEl = itemSlotHudEl ? itemSlotHudEl.querySelector(".slot-key-hint") : null;
+const slotExpireEl  = itemSlotHudEl ? itemSlotHudEl.querySelector(".slot-expire")   : null;
+const toastContainerEl = document.getElementById("toast-container");
 
 // ─────────────────────────────────────────────────────────────
 // 게임 상태
@@ -83,6 +104,29 @@ const MULT_STATS_KEY = "bf-snake-multiplier-stats";
 
 /** localStorage 키 — BF-537 이팩트 트리거 KPI */
 const EFFECT_KPI_KEY = "bf-snake-effect-kpi";
+
+/** localStorage 키 — BF-545 아이템 시스템 KPI (명세 §10-1, §10-2) */
+const ITEM_STATS_KEY = "bf-snake-item-stats";
+const ITEM_KPI_KEY   = "bf-snake-item-kpi";
+
+/** Z 키 힌트 localStorage 플래그 (명세 §6-7) */
+const Z_HINT_KEY = "bf-snake-z-hint-shown";
+
+// ── 아이템 스폰 타이머 변수 ────────────────────────────────────
+/** 아이템 최초 스폰 지연 — 게임 시작 후 20초 (명세 §6-1) */
+const ITEM_FIRST_SPAWN_DELAY_MS  = 20000;
+/** 이후 스폰 간격 — 30±5초 (명세 §6-1) */
+const ITEM_SPAWN_INTERVAL_MIN_MS = 25000;
+const ITEM_SPAWN_INTERVAL_MAX_MS = 35000;
+
+/** 다음 아이템 스폰 예정 타임스탬프 (performance.now 기준). -1 = 비활성 */
+let nextItemSpawnTs = -1;
+
+// ── 속도 효과 Tick Accumulator ─────────────────────────────────
+/** 플레이어 전용 tick accumulator (ms). 속도 효과에 따라 독립 tick 처리 */
+let playerTickAccum = 0;
+/** CPU 전용 tick accumulator (ms) */
+let cpuTickAccum    = 0;
 
 // ─────────────────────────────────────────────────────────────
 // localStorage 헬퍼
@@ -230,6 +274,60 @@ function logKPI() {
       return `${m}×:${rate}%`;
     }).join(" ");
     console.log(`[BF-531 KPI] 수집률 — ${eatRateStr}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 아이템 KPI 로깅 — BF-545 (명세 §10-1, §10-2)
+// ─────────────────────────────────────────────────────────────
+
+/** 아이템 누적 통계 로드 */
+function loadItemStats() {
+  try {
+    const v = localStorage.getItem(ITEM_STATS_KEY);
+    if (v) return JSON.parse(v);
+  } catch (_) { /* ignore */ }
+  return createItemStats ? createItemStats() : {};
+}
+
+/** 아이템 KPI 세션 기록 + 누적 통계 저장 (명세 §10-1, §10-2) */
+function logItemKPI() {
+  if (!state.itemStats) return;
+
+  const iStats = state.itemStats;
+
+  // 누적 통계 업데이트 (bf-snake-item-stats)
+  const accumulated = loadItemStats();
+  for (const t of ["SPEED_UP", "SLOW_DOWN", "LENGTH_BURST", "SHIELD", "REVERSE"]) {
+    if (!accumulated[t]) accumulated[t] = {};
+    for (const k of Object.keys(iStats[t] || {})) {
+      accumulated[t][k] = (accumulated[t][k] || 0) + (iStats[t][k] || 0);
+    }
+  }
+  try { localStorage.setItem(ITEM_STATS_KEY, JSON.stringify(accumulated)); } catch (_) { /* ignore */ }
+
+  // 세션 KPI (bf-snake-item-kpi)
+  const totalAcquired = ["SPEED_UP","SLOW_DOWN","LENGTH_BURST","SHIELD","REVERSE"]
+    .reduce((s, t) => s + (iStats[t]?.acquired || 0), 0);
+  const totalUsed = (iStats.SHIELD?.used || 0) + (iStats.REVERSE?.used || 0);
+  const totalExpired = ["SPEED_UP","SLOW_DOWN","LENGTH_BURST","SHIELD","REVERSE"]
+    .reduce((s, t) => s + (iStats[t]?.expired || 0), 0);
+
+  const kpiEntry = {
+    timestamp:      Date.now(),
+    itemsEnabled:   !!ITEMS_ENABLED,
+    itemsAcquired:  totalAcquired,
+    itemsUsed:      totalUsed,
+    itemsExpired:   totalExpired,
+    perType:        iStats,
+  };
+  try { localStorage.setItem(ITEM_KPI_KEY, JSON.stringify(kpiEntry)); } catch (_) { /* ignore */ }
+
+  // console 출력
+  if (totalAcquired > 0) {
+    const acqStr = ["SPEED_UP","SLOW_DOWN","LENGTH_BURST","SHIELD","REVERSE"]
+      .map(t => `${t}:${iStats[t]?.acquired || 0}`).join(" ");
+    console.log(`[BF-545 KPI] 아이템 획득: ${acqStr} | 총:${totalAcquired} 사용:${totalUsed} 만료:${totalExpired}`);
   }
 }
 
@@ -569,6 +667,209 @@ function triggerMegaBlast(cx, cy) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// 아이템 이팩트 — BF-545 (명세 §5-6, §5-7)
+// ─────────────────────────────────────────────────────────────
+
+/** SPEED_UP 발동 이팩트 (명세 §5-6) */
+function triggerSpeedEffect(cx, cy) {
+  // 화면 플래시
+  triggerScreenFlash("rgba(255,170,0,0.18)", 80);
+  // 중심 플래시 원
+  const center = document.createElement("div");
+  center.style.cssText = `
+    position:absolute; left:${cx}px; top:${cy}px;
+    width:8px; height:8px;
+    background:#ffaa00; border-radius:50%;
+    pointer-events:none;
+    animation:fx-sparkle-center 120ms ease-out forwards;
+  `;
+  effectLayer.appendChild(center);
+  center.addEventListener("animationend", () => center.remove(), { once: true });
+  // 6개 방사형 파티클
+  for (let i = 0; i < 6; i++) {
+    const angle = (i * 60) * Math.PI / 180;
+    const tx = Math.round(Math.cos(angle) * 32);
+    const ty = Math.round(Math.sin(angle) * 32);
+    const el = document.createElement("div");
+    el.style.cssText = `
+      position:absolute; left:${cx-3}px; top:${cy-3}px;
+      width:6px; height:6px;
+      background:#ffaa00; border-radius:50%;
+      pointer-events:none;
+      --tx:${tx}px; --ty:${ty}px;
+      animation:fx-item-particle 300ms cubic-bezier(0.2,0.6,0.4,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
+
+/** SLOW_DOWN 발동 이팩트 (명세 §5-6) */
+function triggerSlowEffect(cx, cy) {
+  // 냉기 링 확장
+  const ring = document.createElement("div");
+  ring.style.cssText = `
+    position:absolute; left:${cx}px; top:${cy}px;
+    width:0; height:0;
+    border:2px solid #00ddcc; border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    animation:fx-slow-ring 400ms cubic-bezier(0.05,0.7,0.25,1) forwards;
+  `;
+  effectLayer.appendChild(ring);
+  ring.addEventListener("animationend", () => ring.remove(), { once: true });
+  // 4개 다이아몬드 파티클
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * 90) * Math.PI / 180;
+    const tx = Math.round(Math.cos(angle) * 22);
+    const ty = Math.round(Math.sin(angle) * 22);
+    const el = document.createElement("div");
+    el.style.cssText = `
+      position:absolute; left:${cx-3}px; top:${cy-3}px;
+      width:6px; height:6px;
+      background:#00ddcc;
+      transform:rotate(45deg);
+      pointer-events:none;
+      --tx:${tx}px; --ty:${ty}px;
+      animation:fx-item-particle 350ms cubic-bezier(0.2,0.6,0.4,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+  // 중심 청록 플래시
+  const center = document.createElement("div");
+  center.style.cssText = `
+    position:absolute; left:${cx}px; top:${cy}px;
+    width:8px; height:8px;
+    background:#00ddcc; border-radius:50%;
+    pointer-events:none;
+    animation:fx-sparkle-center 150ms ease-out forwards;
+  `;
+  effectLayer.appendChild(center);
+  center.addEventListener("animationend", () => center.remove(), { once: true });
+}
+
+/** LENGTH_BURST 발동 이팩트 (명세 §5-6) */
+function triggerBurstEffect(cx, cy) {
+  triggerScreenFlash("rgba(255,102,0,0.22)", 100);
+  // 폭발 링
+  const ring = document.createElement("div");
+  ring.style.cssText = `
+    position:absolute; left:${cx}px; top:${cy}px;
+    width:0; height:0;
+    border:2px solid #ff6600; border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    animation:fx-item-ring 500ms cubic-bezier(0,0.9,0.2,1) forwards;
+  `;
+  effectLayer.appendChild(ring);
+  ring.addEventListener("animationend", () => ring.remove(), { once: true });
+  // 12개 폭발 파티클
+  const colors = ["#ff6600", "#ff9900"];
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * 30) * Math.PI / 180;
+    const tx = Math.round(Math.cos(angle) * 50);
+    const ty = Math.round(Math.sin(angle) * 50);
+    const el = document.createElement("div");
+    el.style.cssText = `
+      position:absolute; left:${cx-4}px; top:${cy-4}px;
+      width:8px; height:8px;
+      background:${colors[i % 2]}; border-radius:50%;
+      pointer-events:none;
+      --tx:${tx}px; --ty:${ty}px;
+      animation:fx-burst-orange 550ms cubic-bezier(0,0.9,0.2,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
+
+/** SHIELD 발동 이팩트 (명세 §5-7) */
+function triggerShieldEffect(cx, cy) {
+  // 방패 링 파동
+  const ring = document.createElement("div");
+  ring.style.cssText = `
+    position:absolute; left:${cx}px; top:${cy}px;
+    width:0; height:0;
+    border:2px solid #4488ff; border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    animation:fx-item-ring 350ms cubic-bezier(0.05,0.7,0.25,1) forwards;
+  `;
+  effectLayer.appendChild(ring);
+  ring.addEventListener("animationend", () => ring.remove(), { once: true });
+  // 8개 파란 파티클
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * 45) * Math.PI / 180;
+    const tx = Math.round(Math.cos(angle) * 26);
+    const ty = Math.round(Math.sin(angle) * 26);
+    const el = document.createElement("div");
+    el.style.cssText = `
+      position:absolute; left:${cx-2.5}px; top:${cy-2.5}px;
+      width:5px; height:5px;
+      background:#4488ff;
+      transform:rotate(45deg);
+      pointer-events:none;
+      --tx:${tx}px; --ty:${ty}px;
+      animation:fx-item-particle 400ms cubic-bezier(0.2,0.6,0.4,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
+
+/** REVERSE 발동 이팩트 (명세 §5-7) */
+function triggerReverseEffect(cx, cy) {
+  triggerScreenFlash("rgba(34,255,170,0.15)", 80);
+  // 소용돌이 링
+  const ring = document.createElement("div");
+  ring.style.cssText = `
+    position:absolute; left:${cx}px; top:${cy}px;
+    width:0; height:0;
+    border:2px solid #22ffaa; border-radius:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    animation:fx-item-ring 400ms cubic-bezier(0.05,0.7,0.25,1) forwards;
+  `;
+  effectLayer.appendChild(ring);
+  ring.addEventListener("animationend", () => ring.remove(), { once: true });
+  // 16개 소용돌이 파티클
+  for (let i = 0; i < 16; i++) {
+    const angle = (i * 22.5) * Math.PI / 180;
+    const tx = Math.round(Math.cos(angle + Math.PI / 2) * 32);
+    const ty = Math.round(Math.sin(angle + Math.PI / 2) * 32);
+    const el = document.createElement("div");
+    el.style.cssText = `
+      position:absolute; left:${cx-2.5}px; top:${cy-2.5}px;
+      width:5px; height:5px;
+      background:#22ffaa; border-radius:50%;
+      pointer-events:none;
+      --tx:${tx}px; --ty:${ty}px;
+      animation:fx-swirl-particle 600ms cubic-bezier(0.2,0.6,0.4,1) forwards;
+    `;
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
+
+/**
+ * 아이템 이팩트 트리거 메인 디스패처 (명세 §6-6).
+ * @param {number} cx
+ * @param {number} cy
+ * @param {string} type  아이템 타입
+ */
+function triggerItemEffect(cx, cy, type) {
+  if (!EFFECTS_ENABLED) return;
+  switch (type) {
+    case "SPEED_UP":     triggerSpeedEffect(cx, cy);   break;
+    case "SLOW_DOWN":    triggerSlowEffect(cx, cy);    break;
+    case "LENGTH_BURST": triggerBurstEffect(cx, cy);   break;
+    case "SHIELD":       triggerShieldEffect(cx, cy);  break;
+    case "REVERSE":      triggerReverseEffect(cx, cy); break;
+  }
+}
+
 /**
  * 파티클 이팩트 트리거 — 메인 디스패처 (명세 §6-3)
  * @param {number} cx  이팩트 원점 X (px, 뷰포트 기준)
@@ -610,6 +911,305 @@ function getGridSize() {
 // 렌더링
 // ─────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────
+// 아이템 캔버스 렌더링 — BF-545 (명세 §5-1, §6-3)
+// ─────────────────────────────────────────────────────────────
+
+/** 아이템 컬러 팔레트 (명세 §6-3) */
+const ITEM_COLORS = {
+  SPEED_UP:     { primary: "#ffaa00", glow: "rgba(255,170,0,0.40)" },
+  SLOW_DOWN:    { primary: "#00ddcc", glow: "rgba(0,221,204,0.40)" },
+  LENGTH_BURST: { primary: "#ff6600", glow: "rgba(255,102,0,0.45)" },
+  SHIELD:       { primary: "#4488ff", glow: "rgba(68,136,255,0.45)" },
+  REVERSE:      { primary: "#22ffaa", glow: "rgba(34,255,170,0.40)" },
+};
+
+/**
+ * 아이콘 Canvas Path 렌더링 (명세 §5-1 개별 path).
+ * ctx.fillStyle 은 호출 전 "#ffffff" 으로 세팅되어 있어야 함.
+ */
+function drawItemIcon(iconCtx, type, cx, cy) {
+  iconCtx.fillStyle = "#ffffff";
+  switch (type) {
+    case "SPEED_UP": {
+      // 번개 폴리곤 (명세 §5-1 SPEED_UP)
+      iconCtx.beginPath();
+      iconCtx.moveTo(cx + 2, cy - 5);
+      iconCtx.lineTo(cx - 1, cy);
+      iconCtx.lineTo(cx + 1, cy);
+      iconCtx.lineTo(cx - 2, cy + 5);
+      iconCtx.lineTo(cx + 1, cy + 1);
+      iconCtx.lineTo(cx + 0, cy + 1);
+      iconCtx.closePath();
+      iconCtx.fillStyle = "#ffffff";
+      iconCtx.fill();
+      break;
+    }
+    case "SLOW_DOWN": {
+      // 모래시계 (명세 §5-1 SLOW_DOWN)
+      iconCtx.fillStyle = "#ffffff";
+      iconCtx.beginPath();
+      iconCtx.moveTo(cx - 4, cy - 5); iconCtx.lineTo(cx + 4, cy - 5);
+      iconCtx.lineTo(cx, cy);
+      iconCtx.closePath();
+      iconCtx.fill();
+      iconCtx.beginPath();
+      iconCtx.moveTo(cx - 4, cy + 5); iconCtx.lineTo(cx + 4, cy + 5);
+      iconCtx.lineTo(cx, cy);
+      iconCtx.closePath();
+      iconCtx.fillStyle = "#ffffff";
+      iconCtx.fill();
+      iconCtx.fillRect(cx - 4, cy - 1, 8, 2);
+      break;
+    }
+    case "LENGTH_BURST": {
+      // 8방향 스타 버스트 (명세 §5-1 LENGTH_BURST)
+      const arms = 8;
+      iconCtx.beginPath();
+      for (let i = 0; i < arms; i++) {
+        const outerR = 5, innerR = 2;
+        const outerA = (i / arms) * Math.PI * 2 - Math.PI / 2;
+        const innerA = outerA + Math.PI / arms;
+        if (i === 0) iconCtx.moveTo(cx + Math.cos(outerA) * outerR, cy + Math.sin(outerA) * outerR);
+        else         iconCtx.lineTo(cx + Math.cos(outerA) * outerR, cy + Math.sin(outerA) * outerR);
+        iconCtx.lineTo(cx + Math.cos(innerA) * innerR, cy + Math.sin(innerA) * innerR);
+      }
+      iconCtx.closePath();
+      iconCtx.fillStyle = "#ffffff";
+      iconCtx.fill();
+      break;
+    }
+    case "SHIELD": {
+      // 육각형 방패 (명세 §5-1 SHIELD)
+      iconCtx.beginPath();
+      iconCtx.moveTo(cx, cy - 6);
+      iconCtx.lineTo(cx + 4, cy - 3);
+      iconCtx.lineTo(cx + 4, cy + 2);
+      iconCtx.lineTo(cx, cy + 5);
+      iconCtx.lineTo(cx - 4, cy + 2);
+      iconCtx.lineTo(cx - 4, cy - 3);
+      iconCtx.closePath();
+      iconCtx.fillStyle = "#ffffff";
+      iconCtx.fill();
+      // 방패 중앙 십자
+      iconCtx.fillStyle = "#4488ff";
+      iconCtx.fillRect(cx - 1, cy - 3, 2, 6);
+      iconCtx.fillRect(cx - 3, cy - 1, 6, 2);
+      break;
+    }
+    case "REVERSE": {
+      // 역방향 화살표 (명세 §5-1 REVERSE)
+      iconCtx.beginPath();
+      iconCtx.arc(cx, cy, 4, Math.PI, 0, false);
+      iconCtx.strokeStyle = "#ffffff";
+      iconCtx.lineWidth = 2;
+      iconCtx.stroke();
+      iconCtx.beginPath();
+      iconCtx.moveTo(cx - 4, cy);
+      iconCtx.lineTo(cx - 6, cy - 3);
+      iconCtx.lineTo(cx - 6, cy + 1);
+      iconCtx.closePath();
+      iconCtx.fillStyle = "#ffffff";
+      iconCtx.fill();
+      break;
+    }
+  }
+}
+
+/**
+ * 보드 위 아이템 셀 렌더링 (명세 §6-3).
+ * FIXME(BF-545): §5-1 명세의 drawItem 구현
+ */
+function drawItem() {
+  const item = state.item;
+  if (!item) return;
+
+  const cx = item.x * CELL + CELL / 2;
+  const cy = item.y * CELL + CELL / 2;
+  const { primary, glow } = ITEM_COLORS[item.type] || ITEM_COLORS.SPEED_UP;
+
+  // [1] 배경 원 (75% opacity ≈ bf hex)
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+  ctx.fillStyle = primary + "bf";
+  ctx.fill();
+
+  // [2] 외곽 광채 링
+  ctx.beginPath();
+  ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+  ctx.strokeStyle = glow;
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+
+  // [3] 아이콘
+  drawItemIcon(ctx, item.type, cx, cy);
+
+  // [4] 만료 임박 깜박임 (3초 미만)
+  const msLeft = item.expiresAt - Date.now();
+  if (msLeft < 3000 && Math.floor(Date.now() / 500) % 2 === 1) {
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    ctx.fillStyle = "#0d0d0d";
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// HUD 업데이트 함수 — BF-545
+// ─────────────────────────────────────────────────────────────
+
+/** 토스트 알림 표시 (명세 §5-5) */
+function showToast(message, cssClass) {
+  if (!toastContainerEl) return;
+  const el = document.createElement("div");
+  el.className = `toast ${cssClass}`;
+  el.textContent = message;
+  toastContainerEl.appendChild(el);
+  // 1.5s 표시 + 0.3s fade-out → 총 1.8s 후 제거
+  setTimeout(() => el.remove(), 1800);
+}
+
+/** Z 키 힌트 오버레이 (명세 §5-4, §6-7) */
+function maybeShowZHint(itemType) {
+  try {
+    if (localStorage.getItem(Z_HINT_KEY)) return;
+    const colorMap = {
+      SHIELD:  "#4488ff",
+      REVERSE: "#22ffaa",
+    };
+    const color = colorMap[itemType] || "#ffffff";
+    const iconMap = { SHIELD: "🛡️", REVERSE: "🌀" };
+    const icon  = iconMap[itemType] || "";
+    const el    = document.createElement("div");
+    el.style.cssText = `
+      position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,0.80);
+      border:1px solid ${color};
+      border-radius:8px; padding:10px 20px;
+      font-family:'Courier New',monospace; font-size:13px;
+      color:${color}; z-index:12; pointer-events:none;
+      animation:toast-in 0.25s ease-out forwards;
+    `;
+    el.innerHTML = `${icon} 획득! <span style="background:${color};color:#0d0d0d;padding:1px 5px;border-radius:3px;font-weight:bold;">Z</span> 키로 사용`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1800);
+    localStorage.setItem(Z_HINT_KEY, "1");
+  } catch (_) { /* private mode — 무시 */ }
+}
+
+/** 버프 상태줄 업데이트 (명세 §5-2) */
+function updateBuffBar() {
+  if (!buffBarEl) return;
+
+  const nowMs    = Date.now();
+  const stack    = state.speedStack || [];
+  const burst    = state.lengthBurstActive;
+  const burstEnd = state.lengthBurstEndMs || 0;
+
+  // 활성 버프 목록 수집
+  const activeBuffs = [];
+
+  // speedStack에서 player 효과 추출
+  const playerSpeedEntries = stack.filter(e => e.target === "player");
+  for (const e of playerSpeedEntries) {
+    const remainMs = Math.max(0, e.expiresAtMs - nowMs);
+    const totalMs  = ITEM_DURATION_MS ? ITEM_DURATION_MS[e.type] : 5000;
+    activeBuffs.push({ type: e.type, remainMs, totalMs });
+  }
+
+  // LENGTH_BURST
+  if (burst && burstEnd > nowMs) {
+    const remainMs = Math.max(0, burstEnd - nowMs);
+    activeBuffs.push({ type: "LENGTH_BURST", remainMs, totalMs: 5000 });
+  }
+
+  // 숨기기/보이기
+  if (activeBuffs.length === 0) {
+    buffBarEl.setAttribute("hidden", "");
+    return;
+  }
+  buffBarEl.removeAttribute("hidden");
+
+  // DOM 재구성
+  const cssClassMap = {
+    SPEED_UP:     "buff-speed",
+    SLOW_DOWN:    "buff-slow",
+    LENGTH_BURST: "buff-burst",
+  };
+  const iconMap = { SPEED_UP: "⚡", SLOW_DOWN: "🐢", LENGTH_BURST: "🔥" };
+  const labelMap = { SPEED_UP: "SPEED", SLOW_DOWN: "SLOW", LENGTH_BURST: "BURST" };
+
+  // 기존 항목과 비교해 최소 업데이트
+  buffBarEl.innerHTML = "";
+  for (const { type, remainMs, totalMs } of activeBuffs) {
+    const pct       = Math.max(0, Math.min(100, (remainMs / totalMs) * 100));
+    const secStr    = (remainMs / 1000).toFixed(1) + "s";
+    const isExpiring = remainMs < 1000;
+    const div = document.createElement("div");
+    div.className = `buff-item ${cssClassMap[type] || ""}`;
+    div.dataset.expiring = isExpiring ? "true" : "false";
+    div.innerHTML = `
+      <span class="buff-icon">${iconMap[type] || ""}</span>
+      <span class="buff-label">${labelMap[type] || type}</span>
+      <div class="buff-progress-track">
+        <div class="buff-progress-bar" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <span class="buff-time">${secStr}</span>
+    `;
+    buffBarEl.appendChild(div);
+  }
+
+  // #buff-bar top 동적 계산 (명세 §4-2, F-2)
+  const hudRect = document.getElementById("hud").getBoundingClientRect();
+  buffBarEl.style.top = (hudRect.bottom + 10) + "px";
+}
+
+/** 보유 아이템 슬롯 HUD 업데이트 (명세 §5-3) */
+function updateItemSlotHUD() {
+  if (!slotBoxEl) return;
+
+  const nowMs   = Date.now();
+  const held    = state.heldItem;
+
+  if (!held) {
+    slotBoxEl.dataset.state    = "empty";
+    slotBoxEl.dataset.expiring = "false";
+    slotBoxEl.removeAttribute("style");
+    if (slotIconEl)    slotIconEl.textContent    = "—";
+    if (slotKeyHintEl) slotKeyHintEl.style.color  = "rgba(255,255,255,0.25)";
+    if (slotExpireEl)  slotExpireEl.textContent   = "";
+    return;
+  }
+
+  const colorMap = { SHIELD: "#4488ff", REVERSE: "#22ffaa" };
+  const iconMap  = { SHIELD: "🛡️",    REVERSE: "🌀" };
+  const color    = colorMap[held.type] || "#ffffff";
+  const icon     = iconMap[held.type]  || "?";
+  const remainMs = Math.max(0, held.expiresAt - nowMs);
+  const remainSec = Math.ceil(remainMs / 1000);
+  const isExpiring = remainMs < 5000;
+
+  slotBoxEl.dataset.state    = `held-${held.type.toLowerCase()}`;
+  slotBoxEl.dataset.expiring = isExpiring ? "true" : "false";
+  slotBoxEl.style.border     = `2px solid ${color}`;
+  slotBoxEl.style.boxShadow  = `0 0 10px ${color}88`;
+
+  if (slotIconEl)    slotIconEl.textContent   = icon;
+  if (slotKeyHintEl) {
+    slotKeyHintEl.textContent = "[Z]";
+    slotKeyHintEl.style.color = color;
+  }
+  if (slotExpireEl)  slotExpireEl.textContent  = `${remainSec}s`;
+  if (isExpiring && slotExpireEl) slotExpireEl.style.color = "#ff4444";
+  else if (slotExpireEl)          slotExpireEl.style.color = "#aaa";
+}
+
+// ─────────────────────────────────────────────────────────────
+// 배경 격자
+// ─────────────────────────────────────────────────────────────
+
 /** 배경 격자 */
 function drawBackground() {
   ctx.fillStyle = "#0d0d0d";
@@ -633,9 +1233,15 @@ function drawBackground() {
 
 /** 플레이어 지렁이 — 초록 계열 (#4cff80 / #00cc44) */
 function drawSnake() {
+  // BF-545: LENGTH_BURST 깜박임 효과 — 0.5초 주기로 흰색↔초록 (명세 §5-8)
+  const isLengthBurstActive = state.lengthBurstActive ?? false;
+  const blinkOn = isLengthBurstActive && (Math.floor(performance.now() / 500) % 2 === 0);
+
   state.snake.forEach((seg, i) => {
     const alpha = i === 0 ? 1 : 0.85 - (i / state.snake.length) * 0.4;
-    ctx.fillStyle = i === 0 ? "#00cc44" : `rgba(60,210,100,${alpha})`;
+    // LENGTH_BURST 중 깜박임: 흰색(0.9α)↔일반 초록
+    const burstFill = (isLengthBurstActive && blinkOn) ? "rgba(255,255,255,0.90)" : null;
+    ctx.fillStyle = burstFill ?? (i === 0 ? "#00cc44" : `rgba(60,210,100,${alpha})`);
     ctx.beginPath();
     ctx.roundRect(
       seg.x * CELL + 1,
@@ -648,6 +1254,16 @@ function drawSnake() {
 
     // 헤드 테두리 (2px) — s2 §5-1
     if (i === 0) {
+      // BF-545: SHIELD 글로우 — 파란 외곽선 pulse (명세 §5-9)
+      if (state.shieldActive) {
+        const glowAlpha = 0.4 + 0.3 * Math.abs(Math.sin(performance.now() / 750));
+        ctx.strokeStyle = `rgba(68,136,255,${glowAlpha.toFixed(2)})`;
+        ctx.lineWidth   = 3;
+        ctx.beginPath();
+        ctx.roundRect(seg.x * CELL, seg.y * CELL, CELL, CELL, 4);
+        ctx.stroke();
+      }
+
       ctx.strokeStyle = "rgba(255,255,255,0.5)";
       ctx.lineWidth   = 2;
       ctx.beginPath();
@@ -681,9 +1297,14 @@ function drawSnake() {
 /** CPU 지렁이 — 주황-빨강 계열 (#ff6b4c / #cc2200) — s2 §5-1 */
 function drawCpuSnake() {
   if (!state.cpu || state.cpu.length === 0) return;
+  // BF-545: CPU LENGTH_BURST 깜박임 효과 (명세 §5-8)
+  const isCpuBurstActive = state.cpuLengthBurstActive ?? false;
+  const cpuBlinkOn = isCpuBurstActive && (Math.floor(performance.now() / 500) % 2 === 0);
+
   state.cpu.forEach((seg, i) => {
     const alpha = i === 0 ? 1 : 0.85 - (i / state.cpu.length) * 0.4;
-    ctx.fillStyle = i === 0 ? "#cc2200" : `rgba(210,60,60,${alpha})`;
+    const cpuBurstFill = (isCpuBurstActive && cpuBlinkOn) ? "rgba(255,200,150,0.90)" : null;
+    ctx.fillStyle = cpuBurstFill ?? (i === 0 ? "#cc2200" : `rgba(210,60,60,${alpha})`);
     ctx.beginPath();
     ctx.roundRect(
       seg.x * CELL + 1,
@@ -804,10 +1425,13 @@ function updateMultiplierStatsUI() {
 function render() {
   drawBackground();
   drawFood();
+  drawItem();           // BF-545: 보드 위 아이템 렌더링
   drawSnake();
   drawCpuSnake();
   updateHUD();
   updateMultiplierStatsUI();
+  updateBuffBar();      // BF-545: 버프 상태바 (즉시발동 효과 타이머)
+  updateItemSlotHUD();  // BF-545: 보유 아이템 슬롯 HUD
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -828,6 +1452,7 @@ function showGameOver() {
   goOverlay.removeAttribute("hidden");
   saveHighScore(state.highScore);
   logKPI();
+  logItemKPI();  // BF-545: 아이템 KPI 세션 기록
 }
 
 function hideGameOver() {
@@ -878,24 +1503,53 @@ function togglePause() {
 
     hidePaused();
     state = Object.assign({}, state, { status: "playing" });
+    // BF-545: 일시정지 해제 시 tick accumulator 리셋 (긴 정지 후 burst 방지)
+    playerTickAccum = 0;
+    cpuTickAccum    = 0;
     startLoop();   // lastTs 리셋 후 RAF 재시작 → 위치·방향·점수 보존
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// 게임 루프 (rAF + 틱 타이머) — BF-530: tickFull + T5 제한 시간
+// 게임 루프 (rAF + 틱 타이머) — BF-530: tickFull → BF-545: tickWithItems
 // ─────────────────────────────────────────────────────────────
 function loop(ts) {
   if (state.status !== "playing") return;
 
   rafId = requestAnimationFrame(loop);
 
-  const elapsed = ts - lastTs;
-  if (elapsed < TICK_MS) {
+  // BF-545: elapsed 를 각 entity accumulator 에 누적 (최대 200ms 캡)
+  const elapsed = Math.min(ts - lastTs, 200);
+  lastTs = ts;
+
+  playerTickAccum += elapsed;
+  cpuTickAccum    += elapsed;
+
+  // ── 속도 효과 틱 간격 계산 ─────────────────────────────────
+  const playerSpeedStack  = (state.speedStack || []).filter(e => e.target === "player");
+  const hasPlayerSpeedUp  = playerSpeedStack.some(e => e.type === "SPEED_UP");
+  const hasPlayerSlowDown = playerSpeedStack.some(e => e.type === "SLOW_DOWN");
+  const playerTickInterval = hasPlayerSpeedUp  ? TICK_MS / 2
+                           : hasPlayerSlowDown ? TICK_MS * 2
+                           : TICK_MS;
+
+  const cpuSpeedStack  = (state.speedStack || []).filter(e => e.target === "cpu");
+  const hasCpuSpeedUp  = cpuSpeedStack.some(e => e.type === "SPEED_UP");
+  const hasCpuSlowDown = cpuSpeedStack.some(e => e.type === "SLOW_DOWN");
+  const cpuTickInterval = hasCpuSpeedUp  ? TICK_MS / 2
+                        : hasCpuSlowDown ? TICK_MS * 2
+                        : TICK_MS;
+
+  const movePlayer = playerTickAccum >= playerTickInterval;
+  const moveCpu    = cpuTickAccum    >= cpuTickInterval;
+
+  if (!movePlayer && !moveCpu) {
     render();
     return;
   }
-  lastTs = ts - (elapsed % TICK_MS);
+
+  if (movePlayer) playerTickAccum = Math.max(0, playerTickAccum - playerTickInterval);
+  if (moveCpu)    cpuTickAccum    = Math.max(0, cpuTickAccum    - cpuTickInterval);
 
   // T5: 제한 시간 초과 → 점수 비교 (s2 §2, §3-2)
   const survivedMs = performance.now() - gameStartTs - totalPausedMs;
@@ -917,15 +1571,70 @@ function loop(ts) {
     return;
   }
 
-  // tickFull: player + CPU 동시 1 스텝 (BF-530)
-  const prevFood = state.food;            // BF-537: 수집 감지용 스냅샷
-  state = tickFull(state);
+  // ── BF-545: 아이템 스폰 타이머 (명세 §6-1) ─────────────────
+  const nowMs = Date.now();
+  if (ITEMS_ENABLED && ITEM_SPAWN_RATE > 0 && state.item === null
+      && nextItemSpawnTs > 0 && nowMs >= nextItemSpawnTs) {
+    const cell = spawnItemCell(state.cols, state.rows, state.snake, state.cpu, state.food);
+    if (cell !== null) {
+      const itype  = pickItemType();
+      const iStats = state.itemStats || createItemStats();
+      state = {
+        ...state,
+        item: {
+          type:      itype,
+          x:         cell.x,
+          y:         cell.y,
+          spawnedAt: nowMs,
+          expiresAt: nowMs + ITEM_LIFESPAN_MS,
+        },
+        itemStats: {
+          ...iStats,
+          [itype]: { ...iStats[itype], spawned: (iStats[itype]?.spawned || 0) + 1 },
+        },
+      };
+    }
+    // 다음 스폰 예약 (스폰 성공 여부 무관)
+    const ivMs = ITEM_SPAWN_INTERVAL_MIN_MS
+      + Math.random() * (ITEM_SPAWN_INTERVAL_MAX_MS - ITEM_SPAWN_INTERVAL_MIN_MS);
+    nextItemSpawnTs = nowMs + ivMs;
+  }
+
+  // ── 게임 틱 — tickWithItems (BF-545) ─────────────────────
+  const prevFood     = state.food;           // BF-537: 수집 감지용 스냅샷
+  const prevItem     = state.item;           // BF-545: 아이템 획득 감지용
+  const prevAcqCount = prevItem
+    ? (state.itemStats?.[prevItem.type]?.acquired || 0)
+    : 0;
+
+  state = tickWithItems(state, nowMs, movePlayer, moveCpu);
 
   // BF-537: 먹이 수집 감지 → 이팩트 트리거 (명세 §6-4)
-  // prevFood !== null && state.food !== prevFood → 수집 발생 (새 food 스폰 또는 null)
   if (prevFood !== null && state.food !== prevFood) {
     const { x, y, multiplier } = prevFood;
     triggerEffect(x * CELL + CELL / 2, y * CELL + CELL / 2, multiplier);
+  }
+
+  // BF-545: 아이템 획득 감지 → 이팩트 + 토스트 (명세 §6-6)
+  if (prevItem !== null && state.item === null) {
+    const itype   = prevItem.type;
+    const currAcq = state.itemStats?.[itype]?.acquired || 0;
+    if (currAcq > prevAcqCount) {
+      // player 가 아이템 획득
+      const cx = prevItem.x * CELL + CELL / 2;
+      const cy = prevItem.y * CELL + CELL / 2;
+      triggerItemEffect(cx, cy, itype);
+      const cssClass = "toast-" + itype.toLowerCase().replace(/_/g, "-");
+      if (ITEM_CATEGORY[itype] === "HOLDABLE") {
+        maybeShowZHint(itype);
+        showToast(itype.replace(/_/g, " ") + " 획득!", cssClass);
+      } else {
+        const durSec = ITEM_DURATION_MS[itype]
+          ? (ITEM_DURATION_MS[itype] / 1000).toFixed(0)
+          : "5";
+        showToast(itype.replace(/_/g, " ") + " +" + durSec + "s", cssClass);
+      }
+    }
   }
 
   render();
@@ -954,8 +1663,14 @@ function initGame() {
   state = createInitialState(cols, rows, hs);
   hideGameOver();
   // KPI 타이머 시작
-  gameStartTs   = performance.now();
-  totalPausedMs = 0;
+  gameStartTs      = performance.now();
+  totalPausedMs    = 0;
+  // BF-545: tick accumulator 리셋 + 아이템 스폰 타이머 (게임 시작 20초 후 첫 스폰)
+  playerTickAccum  = 0;
+  cpuTickAccum     = 0;
+  nextItemSpawnTs  = (ITEMS_ENABLED && ITEM_SPAWN_RATE > 0)
+    ? performance.now() + ITEM_FIRST_SPAWN_DELAY_MS
+    : -1;
   render();
   startLoop();
 }
@@ -969,6 +1684,12 @@ function doRestart() {
   gameStartTs      = performance.now();
   // BF-537: 이팩트 카운트 리셋
   for (const k of ["1", "2", "4", "8"]) effectTriggerCount[k] = 0;
+  // BF-545: tick accumulator + 아이템 스폰 타이머 리셋
+  playerTickAccum  = 0;
+  cpuTickAccum     = 0;
+  nextItemSpawnTs  = (ITEMS_ENABLED && ITEM_SPAWN_RATE > 0)
+    ? performance.now() + ITEM_FIRST_SPAWN_DELAY_MS
+    : -1;
   state = restartGame(state);
   saveHighScore(state.highScore);
   startLoop();
@@ -1006,7 +1727,25 @@ window.addEventListener("keydown", (e) => {
     return;
   }
 
-  // ③ 방향키는 playing 상태에서만 허용 (paused 중 방향 변경 불가)
+  // ③ Z 키 — 보유 아이템 발동 (BF-545, 명세 §8-2)
+  if (state.status === "playing" && (e.key === "z" || e.key === "Z")) {
+    e.preventDefault();
+    if (state.heldItem) {
+      const heldType = state.heldItem.type;
+      const cx = state.snake[0].x * CELL + CELL / 2;
+      const cy = state.snake[0].y * CELL + CELL / 2;
+      state = useHeldItem(state);
+      triggerItemEffect(cx, cy, heldType);
+      showToast(
+        heldType.replace(/_/g, " ") + " 발동!",
+        "toast-" + heldType.toLowerCase().replace(/_/g, "-"),
+      );
+      updateItemSlotHUD();
+    }
+    return;
+  }
+
+  // ④ 방향키는 playing 상태에서만 허용 (paused 중 방향 변경 불가)
   if (state.status === "playing") {
     const dir = KEY_DIR[e.key];
     if (dir) {
@@ -1026,8 +1765,14 @@ window.addEventListener("resize", () => {
   state = createInitialState(cols, rows, hs);
   if (rafId !== null) cancelAnimationFrame(rafId);
   hideGameOver();
-  gameStartTs   = performance.now();
-  totalPausedMs = 0;
+  gameStartTs      = performance.now();
+  totalPausedMs    = 0;
+  // BF-545: tick accumulator + 아이템 스폰 타이머 리셋
+  playerTickAccum  = 0;
+  cpuTickAccum     = 0;
+  nextItemSpawnTs  = (ITEMS_ENABLED && ITEM_SPAWN_RATE > 0)
+    ? performance.now() + ITEM_FIRST_SPAWN_DELAY_MS
+    : -1;
   startLoop();
 });
 
