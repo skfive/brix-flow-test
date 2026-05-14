@@ -406,14 +406,31 @@
           return true;
         });
         if (candidates.length === 0) return cpuDir;
+        // BF-576: 루프 감지 — 동일 좌표 3회 이상 재방문 시 음식 방향 강제
+        var recentPositions = state.cpuRecentPositions || [];
+        var headKey = cpuHead.x + "," + cpuHead.y;
+        var visitCount = recentPositions.filter(function(p) { return p === headKey; }).length;
+        if (visitCount >= 3 && food !== null) {
+          var foodPriority = candidates.slice().sort(function(a, b) {
+            var posA = { x: cpuHead.x + a.x, y: cpuHead.y + a.y };
+            var posB = { x: cpuHead.x + b.x, y: cpuHead.y + b.y };
+            var distA = Math.abs(posA.x - food.x) + Math.abs(posA.y - food.y);
+            var distB = Math.abs(posB.x - food.x) + Math.abs(posB.y - food.y);
+            return distA - distB;
+          });
+          return foodPriority[0];
+        }
+        // BF-576: safeLen 을 visionRange 로 정규화 (0~1) — foodScore(0~1) 와 스케일 통일
         var scored = candidates.map(function(dir) {
           var safeLen   = lookAhead(cpuHead, dir, params.visionRange, cols, rows, occupiedSet);
           var foodScore = computeFoodScore(cpuHead, dir, food);
           var score;
           if (safeLen < params.avoidanceThreshold) {
-            score = safeLen * 0.1;
+            // BF-576: 위험 패널티 + foodScore 가중치 보존
+            score = safeLen * 0.1 + foodScore * params.foodPriorityWeight;
           } else {
-            score = safeLen   * (1 - params.foodPriorityWeight)
+            // BF-576: safeLen 을 visionRange 로 정규화 (0~1 스케일 통일)
+            score = (safeLen / params.visionRange) * (1 - params.foodPriorityWeight)
                   + foodScore * params.foodPriorityWeight;
           }
           return { dir: dir, score: score };
@@ -742,6 +759,8 @@
         var dir        = s.nextDir;
         var head       = s.snake[0];
         var cpuHead    = s.cpu[0];
+        // BF-576: 방문 이력 갱신 (최근 15 틱) — 다음 틱에서 루프 감지에 사용
+        var newCpuRecentPositions = (s.cpuRecentPositions || []).concat([cpuHead.x + "," + cpuHead.y]).slice(-15);
         var newHead    = movePlayer
           ? { x: head.x    + dir.x,       y: head.y    + dir.y       }
           : { x: head.x,                  y: head.y                  };
@@ -894,21 +913,22 @@
         }
 
         return Object.assign({}, stateForItem, {
-          snake:            newSnake,
-          dir:              dir,
-          cpu:              newCPU,
-          cpuDir:           newCpuDir,
-          food:             newFood,
-          item:             curItem,
-          score:            newScore,
-          cpuScore:         newCPUScore,
-          highScore:        Math.max(s.highScore, newScore),
-          status:           "playing",
-          result:           null,
-          deathCause:       null,
-          pendingGrowth:    newPlayerPending,
-          cpuPendingGrowth: newCpuPending,
-          multiplierStats:  newMultiplierStats,
+          snake:               newSnake,
+          dir:                 dir,
+          cpu:                 newCPU,
+          cpuDir:              newCpuDir,
+          food:                newFood,
+          item:                curItem,
+          score:               newScore,
+          cpuScore:            newCPUScore,
+          highScore:           Math.max(s.highScore, newScore),
+          status:              "playing",
+          result:              null,
+          deathCause:          null,
+          pendingGrowth:       newPlayerPending,
+          cpuPendingGrowth:    newCpuPending,
+          multiplierStats:     newMultiplierStats,
+          cpuRecentPositions:  newCpuRecentPositions, // BF-576
         });
       }
 
