@@ -35,6 +35,47 @@ const {
   tickWithItems,
 } = globalThis;
 
+// BF-560: HUD 유틸 (logic.js ES module 을 직접 import — file:// 호환 없이 globalThis 경유 불가)
+// 대신 인라인으로 동일 로직 정의 (index.html 인라인 IIFE 방식과 동일 전략)
+/** @param {Array} speedStack @param {string} target @returns {"SLOW"|"NORMAL"|"FAST"} */
+function getSpeedLevel(speedStack, target = "player") {
+  const entries = (speedStack || []).filter((e) => e.target === target);
+  const hasUp   = entries.some((e) => e.type === "SPEED_UP");
+  const hasDown = entries.some((e) => e.type === "SLOW_DOWN");
+  if (hasUp)   return "FAST";
+  if (hasDown) return "SLOW";
+  return "NORMAL";
+}
+
+/** @param {"SLOW"|"NORMAL"|"FAST"} level @returns {string} */
+function getSpeedDots(level) {
+  switch (level) {
+    case "SLOW": return "●○○";
+    case "FAST": return "○○●";
+    default:     return "○●○"; // NORMAL
+  }
+}
+
+/**
+ * 플레이 시간(ms) → 한국어 표시 문자열 (명세 §5-3).
+ * @param {number} ms
+ * @returns {string}
+ */
+function formatPlayTime(ms) {
+  const totalSec  = Math.floor(ms / 1000);
+  const totalMin  = Math.floor(totalSec / 60);
+  const totalHour = Math.floor(totalMin  / 60);
+  if (totalHour >= 1) {
+    const remainMin = totalMin % 60;
+    return `${totalHour}시간 ${remainMin}분`;
+  }
+  if (totalMin >= 1) {
+    const remainSec = totalSec % 60;
+    return `${totalMin}분 ${remainSec}초`;
+  }
+  return `${totalSec}초`;
+}
+
 // ─────────────────────────────────────────────────────────────
 // DOM 참조
 // ─────────────────────────────────────────────────────────────
@@ -53,9 +94,23 @@ const goOverlay    = document.getElementById("gameover-overlay");
 const goResultEl   = document.getElementById("go-result");
 const goScoreEl    = document.getElementById("go-score");
 const goCPUScoreEl = document.getElementById("go-cpu-score");
+// BF-560: 게임 오버 통계 요소
+const goNewRecordEl      = document.getElementById("go-new-record");
+const goPrevHighScoreEl  = document.getElementById("go-prev-high-score");
+const goPlayTimeEl       = document.getElementById("go-play-time");
+const goItemStatsEl      = document.getElementById("go-item-stats");
 
 // PAUSED 오버레이 — BF-524
 const pausedOverlay = document.getElementById("paused-overlay");
+// BF-560: 일시정지 버튼
+const pausedBtnResumeEl  = document.getElementById("paused-btn-resume");
+const pausedBtnRestartEl = document.getElementById("paused-btn-restart");
+const pausedBtnQuitEl    = document.getElementById("paused-btn-quit");
+
+// BF-560: HUD 상태 패널
+const hudStatusPanelEl = document.getElementById("hud-status-panel");
+const hudSnakeLengthEl = document.getElementById("hud-snake-length");
+const hudSpeedLevelEl  = document.getElementById("hud-speed-level");
 
 // 아이템 HUD — BF-545
 const buffBarEl     = document.getElementById("buff-bar");
@@ -1397,6 +1452,39 @@ function updateHUD() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// BF-560: HUD 상태 패널 갱신 (길이·속도) — 명세 §5-1, §7-5
+// ─────────────────────────────────────────────────────────────
+
+/** 직전 속도 레벨 (속도 변경 감지용) */
+let _prevSpeedLevel = "NORMAL";
+
+/**
+ * HUD 상태 패널 갱신 — 길이 + 속도 레벨 도트.
+ * render() 에서 매 프레임 호출 → 60fps 끊김 없이 갱신 (AC-1).
+ */
+function updateHUDStatus() {
+  if (!hudSnakeLengthEl || !hudSpeedLevelEl) return;
+
+  // 길이
+  hudSnakeLengthEl.textContent = state.snake ? state.snake.length : 3;
+
+  // 속도 레벨
+  const newLevel = getSpeedLevel(state.speedStack || [], "player");
+  const dots     = getSpeedDots(newLevel);
+
+  hudSpeedLevelEl.textContent          = dots;
+  hudSpeedLevelEl.setAttribute("data-speed", newLevel);
+
+  // 속도 변경 시 speed-change-flash 클래스 토글 (명세 §7-5)
+  if (newLevel !== _prevSpeedLevel) {
+    hudSpeedLevelEl.classList.remove("speed-change-flash");
+    void hudSpeedLevelEl.offsetWidth;    // reflow — 애니메이션 재시작
+    hudSpeedLevelEl.classList.add("speed-change-flash");
+    _prevSpeedLevel = newLevel;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // 배수 통계 패널 업데이트 — BF-533 (명세 §7-3, §7-4)
 // ─────────────────────────────────────────────────────────────
 
@@ -1429,6 +1517,7 @@ function render() {
   drawSnake();
   drawCpuSnake();
   updateHUD();
+  updateHUDStatus();    // BF-560: 길이·속도 HUD (60fps 실시간)
   updateMultiplierStatsUI();
   updateBuffBar();      // BF-545: 버프 상태바 (즉시발동 효과 타이머)
   updateItemSlotHUD();  // BF-545: 보유 아이템 슬롯 HUD
@@ -1436,21 +1525,81 @@ function render() {
 
 // ─────────────────────────────────────────────────────────────
 // Game Over / 결과 오버레이 처리 — BF-530 s2 §5-4
+// BF-560: 통계 화면 확장 (신기록·플레이 시간·아이템 카운트)
 // ─────────────────────────────────────────────────────────────
 function showGameOver() {
   // 결과 텍스트 + 색상 (s2 §5-4)
   const resultMap = {
-    player_win: { text: "YOU WIN",  color: "#4cff80" },
-    cpu_win:    { text: "YOU LOSE", color: "#ff4c4c" },
-    draw:       { text: "DRAW",     color: "#ffcc44" },
+    player_win: { text: "YOU WIN",  color: "#4cff80"  },
+    cpu_win:    { text: "YOU LOSE", color: "#ff4c4c"  },
+    draw:       { text: "DRAW",     color: "#ffcc44"  },
   };
-  const info = resultMap[state.result] || { text: "GAME OVER", color: "#ffffff" };
+  const info = resultMap[state.result] || { text: "GAME OVER", color: "#cc2200" };
   goResultEl.textContent  = info.text;
   goResultEl.style.color  = info.color;
   goScoreEl.textContent    = state.score;
   goCPUScoreEl.textContent = state.cpuScore;
+
+  // ── BF-560: 최고 점수 비교 + 신기록 표시 (명세 §5-3) ────────
+  const prevHighScore = loadHighScore();        // 현재 세션 이전 최고 점수
+  const isNewRecord   = state.score > prevHighScore;
+
+  saveHighScore(state.highScore);               // 최고 점수 영속화
+
+  if (goNewRecordEl) {
+    if (isNewRecord && prevHighScore > 0) {
+      // 신기록 배지 + 이전 최고 점수 표시 (명세 §5-3)
+      goNewRecordEl.removeAttribute("hidden");
+      goScoreEl.style.color = "#ffcc00";
+      goScoreEl.style.fontWeight = "700";
+      if (goPrevHighScoreEl) {
+        goPrevHighScoreEl.textContent = `이전 기록: ${prevHighScore}점`;
+        goPrevHighScoreEl.removeAttribute("hidden");
+      }
+    } else {
+      goNewRecordEl.setAttribute("hidden", "");
+      goScoreEl.style.color      = "";
+      goScoreEl.style.fontWeight = "";
+      if (goPrevHighScoreEl) goPrevHighScoreEl.setAttribute("hidden", "");
+    }
+  }
+
+  // ── BF-560: 플레이 시간 표시 (명세 §5-3) ────────────────────
+  if (goPlayTimeEl) {
+    const survivedMs = Math.max(0, Math.round(performance.now() - gameStartTs - totalPausedMs));
+    goPlayTimeEl.textContent = `플레이 시간: ${formatPlayTime(survivedMs)}`;
+  }
+
+  // ── BF-560: 아이템 통계 갱신 (명세 §5-3) ────────────────────
+  if (goItemStatsEl) {
+    const iStats = state.itemStats || {};
+    const itemTypes = ["SPEED_UP", "SLOW_DOWN", "LENGTH_BURST", "SHIELD", "REVERSE"];
+    itemTypes.forEach((type) => {
+      const li    = goItemStatsEl.querySelector(`li[data-item-type="${type}"]`);
+      if (!li) return;
+      const count = iStats[type]?.acquired || 0;
+      li.setAttribute("data-item-count", String(count));
+      const countEl = li.querySelector(".go-item-count");
+      if (countEl) countEl.textContent = `×${count}`;
+    });
+  }
+
+  // ── BF-560: HUD KPI 기록 ──────────────────────────────────
+  try {
+    const survivedMs = Math.max(0, Math.round(performance.now() - gameStartTs - totalPausedMs));
+    const hudKpi = {
+      timestamp:    Date.now(),
+      playTimeMs:   survivedMs,
+      finalScore:   state.score,
+      highScore:    state.highScore,
+      isNewRecord,
+      snakeLength:  state.snake ? state.snake.length : 0,
+    };
+    localStorage.setItem("bf-snake-hud-kpi", JSON.stringify(hudKpi));
+    console.log(`[BF-560 KPI] 플레이 시간: ${formatPlayTime(survivedMs)} | 최종 점수: ${state.score} | 최고 점수: ${state.highScore} | 신기록: ${isNewRecord}`);
+  } catch (_) { /* private mode — 무시 */ }
+
   goOverlay.removeAttribute("hidden");
-  saveHighScore(state.highScore);
   logKPI();
   logItemKPI();  // BF-545: 아이템 KPI 세션 기록
 }
@@ -1710,6 +1859,44 @@ const KEY_DIR = {
   d: DIR.RIGHT, D: DIR.RIGHT,
 };
 
+// ─────────────────────────────────────────────────────────────
+// BF-560: 일시정지 모달 버튼 이벤트 핸들러 (명세 §5-2)
+// ─────────────────────────────────────────────────────────────
+if (pausedBtnResumeEl) {
+  pausedBtnResumeEl.addEventListener("click", () => {
+    if (state.status === "paused") togglePause();
+  });
+}
+if (pausedBtnRestartEl) {
+  pausedBtnRestartEl.addEventListener("click", () => {
+    if (state.status === "paused") {
+      hidePaused();
+      state = Object.assign({}, state, { status: "playing" });
+      doRestart();
+    }
+  });
+}
+if (pausedBtnQuitEl) {
+  pausedBtnQuitEl.addEventListener("click", () => {
+    if (state.status === "paused") {
+      hidePaused();
+      // 종료: 게임 오버 상태로 전환 후 통계 화면 표시
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      state = Object.assign({}, state, {
+        status:    "gameover",
+        result:    null,
+        deathCause: "quit",
+        highScore: Math.max(state.highScore, state.score),
+      });
+      render();
+      showGameOver();
+    }
+  });
+}
+
 window.addEventListener("keydown", (e) => {
   // ① 게임 오버 상태: Space → 재시작 (AC §3 — 멈춤/재개와 충돌 없음, early-return)
   if (state.status === "gameover") {
@@ -1721,9 +1908,33 @@ window.addEventListener("keydown", (e) => {
   }
 
   // ② 멈춤/재개 토글 — playing 또는 paused 상태에서만 (AC §1, §2)
-  if (e.code === "Space") {
+  //    BF-560: P키 추가 지원 (명세 AC-2)
+  if (e.code === "Space" || e.code === "KeyP") {
     e.preventDefault();
     togglePause();
+    return;
+  }
+
+  // ② 일시정지 중 R키 → 재시작, Q키 → 종료 (BF-560 AC-2)
+  if (state.status === "paused") {
+    if (e.code === "KeyR") {
+      e.preventDefault();
+      hidePaused();
+      state = Object.assign({}, state, { status: "playing" });
+      doRestart();
+    } else if (e.code === "KeyQ") {
+      e.preventDefault();
+      hidePaused();
+      if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+      state = Object.assign({}, state, {
+        status:    "gameover",
+        result:    null,
+        deathCause: "quit",
+        highScore: Math.max(state.highScore, state.score),
+      });
+      render();
+      showGameOver();
+    }
     return;
   }
 

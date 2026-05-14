@@ -25,6 +25,18 @@
     </div>
     <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+    <!-- HUD 상태 패널 (길이·속도) — BF-560 (명세 §5-1, §7-2) -->
+    <div id="hud-status-panel" role="status" aria-live="polite" aria-label="뱀 상태">
+      <div class="hud-status-row">
+        <span class="hud-status-label">길이</span>
+        <span id="hud-snake-length" class="hud-status-value">3</span>
+      </div>
+      <div class="hud-status-row">
+        <span class="hud-status-label">속도</span>
+        <span id="hud-speed-level" class="hud-status-value" data-speed="NORMAL">○●○</span>
+      </div>
+    </div>
+
     <!-- HUD: 우측 상단 PLAYER / CPU 점수 동시 표시 — BF-530 s2 §5-3 -->
     <!-- hud-score-value: BF-504/514/518 하위 호환 별칭 (hud-player-score 와 동기화) -->
     <div id="hud" aria-live="polite" aria-label="점수 현황">
@@ -71,24 +83,56 @@
       <span class="legend-item cpu">● CPU</span>
     </div>
 
-    <!-- Game Over 오버레이 (경쟁 모드 확장) — BF-530 s2 §5-4 / BF-504 회귀 호환 -->
+    <!-- Game Over 오버레이 (경쟁 모드 확장) — BF-530 s2 §5-4 / BF-504 회귀 호환
+         BF-560: 통계 화면 확장 (최종 점수·신기록·플레이 시간·아이템 카운트) -->
     <div id="gameover-overlay" hidden role="dialog" aria-modal="true" aria-label="게임 결과">
       <div class="gameover-box">
         <h2 id="go-result">YOU WIN</h2>
+
+        <!-- 최종 점수 블록 — BF-560 -->
         <p class="go-score">
           PLAYER: <span id="go-score">0</span>
           &nbsp;vs&nbsp;
           CPU: <span id="go-cpu-score">0</span>
         </p>
+
+        <!-- 신기록 배지 — BF-560 (hidden 기본, 신기록 시 JS 에서 해제) -->
+        <p id="go-new-record" hidden aria-live="polite">★ 신기록!</p>
+
+        <!-- 이전 최고 점수 — BF-560 (hidden 기본) -->
+        <p id="go-prev-high-score" hidden class="go-prev-score"></p>
+
+        <!-- 플레이 시간 — BF-560 -->
+        <p id="go-play-time" class="go-play-time"></p>
+
+        <!-- 섹션 구분선 -->
+        <hr class="go-divider" aria-hidden="true" />
+
+        <!-- 아이템 획득 현황 — BF-560 (명세 §5-3) -->
+        <section id="go-item-stats" aria-label="아이템 획득 현황">
+          <p class="go-item-section-title">아이템 획득 현황</p>
+          <ul class="go-item-list">
+            <li data-item-type="SPEED_UP"     data-item-count="0"><span class="go-item-icon">⚡</span><span class="go-item-label">SPEED UP</span><span class="go-item-count">×0</span></li>
+            <li data-item-type="SLOW_DOWN"    data-item-count="0"><span class="go-item-icon">⏱</span><span class="go-item-label">SLOW DOWN</span><span class="go-item-count">×0</span></li>
+            <li data-item-type="LENGTH_BURST" data-item-count="0"><span class="go-item-icon">★</span><span class="go-item-label">LENGTH BURST</span><span class="go-item-count">×0</span></li>
+            <li data-item-type="SHIELD"       data-item-count="0"><span class="go-item-icon">🛡</span><span class="go-item-label">SHIELD</span><span class="go-item-count">×0</span></li>
+            <li data-item-type="REVERSE"      data-item-count="0"><span class="go-item-icon">↺</span><span class="go-item-label">REVERSE</span><span class="go-item-count">×0</span></li>
+          </ul>
+        </section>
+
         <p class="go-hint">Press Space to restart</p>
       </div>
     </div>
 
-    <!-- PAUSED 오버레이 — BF-524 -->
+    <!-- PAUSED 오버레이 — BF-524 / BF-560: 버튼 3종 + 타이틀 한국어 전환 (명세 §5-2) -->
     <div id="paused-overlay" hidden role="dialog" aria-modal="true" aria-label="일시정지">
       <div class="paused-box">
-        <h2>PAUSED</h2>
-        <p class="paused-hint">Press Space to resume</p>
+        <h2 class="paused-title">일시정지</h2>
+        <div class="paused-btn-container">
+          <button id="paused-btn-resume"  class="paused-btn" type="button">계속하기 <kbd>P</kbd></button>
+          <button id="paused-btn-restart" class="paused-btn" type="button">재시작 <kbd>R</kbd></button>
+          <button id="paused-btn-quit"    class="paused-btn" type="button">종료 <kbd>Q</kbd></button>
+        </div>
       </div>
     </div>
 

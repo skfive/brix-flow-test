@@ -1256,3 +1256,72 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
     multiplierStats:  newMultiplierStats,
   };
 }
+
+// ─────────────────────────────────────────────────────────────
+// BF-560: HUD 상태 유틸 — 속도 레벨 계산 + 도트 표시
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * speedStack 으로부터 플레이어(또는 지정 target)의 현재 속도 레벨을 계산.
+ * SPEED_UP 이 있으면 FAST, SLOW_DOWN 이 있으면 SLOW, 없으면 NORMAL.
+ * SPEED_UP 과 SLOW_DOWN 이 동시에 있으면 FAST 우선 (명세 §5-1).
+ *
+ * @param {Array}  speedStack  state.speedStack 배열
+ * @param {string} [target="player"]  "player" | "cpu"
+ * @returns {"SLOW"|"NORMAL"|"FAST"}
+ */
+export function getSpeedLevel(speedStack, target = "player") {
+  const entries = (speedStack || []).filter((e) => e.target === target);
+  const hasUp   = entries.some((e) => e.type === "SPEED_UP");
+  const hasDown = entries.some((e) => e.type === "SLOW_DOWN");
+  if (hasUp)   return "FAST";
+  if (hasDown) return "SLOW";
+  return "NORMAL";
+}
+
+/**
+ * 속도 레벨에 대응하는 도트 문자열 반환 (명세 §5-1 도트 아이콘 규칙).
+ * 활성 도트: ● (U+25CF), 비활성 도트: ○ (U+25CB)
+ *
+ * @param {"SLOW"|"NORMAL"|"FAST"} level
+ * @returns {string}  예) "●○○" | "○●○" | "○○●"
+ */
+export function getSpeedDots(level) {
+  switch (level) {
+    case "SLOW":   return "●○○";
+    case "FAST":   return "○○●";
+    default:       return "○●○"; // NORMAL
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// BF-560: 플레이 시간 포맷 유틸 (명세 §5-3)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 플레이 시간(ms)을 한국어 문자열로 포맷 (명세 §5-3).
+ *
+ * | 범위         | 표시 형식   |
+ * |-------------|------------|
+ * | < 60초      | `N초`       |
+ * | 60초 ~ 59분 | `N분 M초`   |
+ * | ≥ 60분      | `N시간 M분` |
+ *
+ * @param {number} ms  경과 시간(ms)
+ * @returns {string}
+ */
+export function formatPlayTime(ms) {
+  const totalSec  = Math.floor(ms / 1000);
+  const totalMin  = Math.floor(totalSec / 60);
+  const totalHour = Math.floor(totalMin  / 60);
+
+  if (totalHour >= 1) {
+    const remainMin = totalMin % 60;
+    return `${totalHour}시간 ${remainMin}분`;
+  }
+  if (totalMin >= 1) {
+    const remainSec = totalSec % 60;
+    return `${totalMin}분 ${remainSec}초`;
+  }
+  return `${totalSec}초`;
+}
