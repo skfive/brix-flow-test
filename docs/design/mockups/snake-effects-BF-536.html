@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Snake 이팩트 디자인 Mockup — BF-536</title>
+  <style>
+    /* ── 리셋 ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── 디자인 토큰 ──────────────────────────────────── */
+    :root {
+      --bg-primary:    #0d0d0d;
+      --grid-line:     rgba(255,255,255,0.04);
+      --player-body:   #4cff80;
+      --player-head:   #00cc44;
+      --cpu-body:      #ff6b4c;
+      --cpu-head:      #cc2200;
+
+      --fx-1x-primary: #ffcc00;
+      --fx-1x-light:   #fff3a0;
+      --fx-2x-primary: #00cfff;
+      --fx-2x-light:   #80e8ff;
+      --fx-4x-primary: #cc44ff;
+      --fx-4x-mid:     #e080ff;
+      --fx-4x-light:   #ffaaff;
+      --fx-8x-primary: #ff4444;
+      --fx-8x-orange:  #ff8800;
+      --fx-8x-gold:    #ffcc00;
+      --fx-core-white: #ffffff;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg-primary);
+      font-family: 'Courier New', Courier, monospace;
+      color: #e0e0e0;
+    }
+
+    /* ── 격자 배경 캔버스 ─────────────────────────────── */
+    #grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── 이팩트 레이어 (명세 §4-2) ───────────────────── */
+    #effect-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 15;
+      overflow: hidden;
+    }
+
+    /* ── HUD (참조용) ─────────────────────────────────── */
+    #hud {
+      position: fixed;
+      top: 16px; right: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+      text-align: right;
+      pointer-events: none;
+      z-index: 10;
+      text-shadow: 0 0 6px rgba(0,255,100,0.4);
+    }
+    .hud-row { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+    .hud-label  { font-size: 11px; letter-spacing: 1px; opacity: 0.85; }
+    .hud-score  { font-size: 22px; font-weight: bold; }
+    .player-label, .player-score { color: var(--player-body); }
+    .cpu-label, .cpu-score { color: var(--cpu-body); }
+    .hud-divider { color: #555; font-size: 18px; }
+    #hud .hud-high { font-size: 13px; color: #aaa; margin-top: 2px; }
+
+    /* ── 범례 ──────────────────────────────────────────── */
+    #competition-legend {
+      position: fixed;
+      bottom: 16px; left: 20px;
+      font-size: 13px;
+      display: flex; gap: 16px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .legend-item.player { color: var(--player-body); }
+    .legend-item.cpu    { color: var(--cpu-body); }
+
+    /* ── 컨트롤 패널 ──────────────────────────────────── */
+    #control-panel {
+      position: fixed;
+      bottom: 50px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    #control-panel h3 {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #666;
+      text-transform: uppercase;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    .fx-btn {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: transform 0.1s, box-shadow 0.1s;
+      color: #111;
+    }
+    .fx-btn:hover  { transform: translateY(-2px); }
+    .fx-btn:active { transform: translateY(0); }
+    .fx-btn.btn-1x {
+      background: var(--fx-1x-primary);
+      box-shadow: 0 0 12px rgba(255,204,0,0.5);
+    }
+    .fx-btn.btn-2x {
+      background: var(--fx-2x-primary);
+      box-shadow: 0 0 12px rgba(0,207,255,0.5);
+    }
+    .fx-btn.btn-4x {
+      background: var(--fx-4x-primary);
+      box-shadow: 0 0 12px rgba(204,68,255,0.5);
+    }
+    .fx-btn.btn-8x {
+      background: var(--fx-8x-primary);
+      box-shadow: 0 0 16px rgba(255,68,68,0.7);
+      color: #fff;
+    }
+
+    /* ── 먹이 시안 미리보기 ──────────────────────────── */
+    #food-preview {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+      display: flex;
+      gap: 40px;
+      align-items: center;
+      flex-direction: column;
+    }
+    .food-row {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+    }
+    .food-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .food-circle {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      font-weight: bold;
+      color: #fff;
+      position: relative;
+    }
+    .food-circle::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      opacity: 0.4;
+    }
+    .food-1x {
+      background: radial-gradient(circle, #fff 0%, var(--fx-1x-primary) 40%, var(--fx-1x-primary) 100%);
+      box-shadow: 0 0 12px rgba(255,204,0,0.4);
+      color: #fff3a0;
+    }
+    .food-2x {
+      background: radial-gradient(circle, #fff 0%, var(--fx-2x-primary) 40%, var(--fx-2x-primary) 100%);
+      box-shadow: 0 0 14px rgba(0,207,255,0.5);
+      color: var(--fx-2x-light);
+    }
+    .food-4x {
+      background: radial-gradient(circle, #fff 0%, var(--fx-4x-primary) 40%, var(--fx-4x-primary) 100%);
+      box-shadow: 0 0 16px rgba(204,68,255,0.6);
+      color: var(--fx-4x-light);
+    }
+    .food-8x {
+      background: radial-gradient(circle, #fff 0%, var(--fx-8x-primary) 40%, var(--fx-8x-primary) 100%);
+      box-shadow: 0 0 20px rgba(255,68,68,0.7);
+      color: #ffa0a0;
+    }
+    .food-label {
+      font-size: 10px;
+      color: #666;
+      letter-spacing: 1px;
+    }
+
+    /* ── 지렁이 시안 (참조용) ────────────────────────── */
+    .snake-preview {
+      position: fixed;
+      top: 80px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .snake-label { font-size: 10px; color: #444; letter-spacing: 1px; }
+    .snake-row {
+      display: flex;
+      gap: 2px;
+    }
+    .snake-seg {
+      width: 18px; height: 18px;
+      border-radius: 4px;
+    }
+    .snake-seg.head {
+      outline: 2px solid rgba(255,255,255,0.5);
+      outline-offset: -1px;
+    }
+
+    /* ── 이팩트 공통 애니메이션 ──────────────────────── */
+
+    /* 1× 스파클 파티클 */
+    @keyframes fx-sparkle-particle {
+      0%   { transform: translate(0,0) scale(1);   opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0.4); opacity: 0; }
+    }
+    /* 1× 중심 플래시 */
+    @keyframes fx-sparkle-center {
+      0%   { width: 8px;  height: 8px;  opacity: 1; margin-left:-4px; margin-top:-4px; }
+      100% { width: 20px; height: 20px; opacity: 0; margin-left:-10px; margin-top:-10px; }
+    }
+
+    /* 2× 팝 파티클 */
+    @keyframes fx-pop-particle {
+      0%   { transform: translate(0,0) rotate(45deg) scale(1); opacity: 1; }
+      15%  { opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) rotate(105deg) scale(0); opacity: 0; }
+    }
+    /* 2× 중심 플래시 */
+    @keyframes fx-pop-center {
+      0%   { width: 10px; height: 10px; opacity: 1; margin-left:-5px; margin-top:-5px; }
+      100% { width: 26px; height: 26px; opacity: 0; margin-left:-13px; margin-top:-13px; }
+    }
+
+    /* 4× 버스트 파티클 */
+    @keyframes fx-burst-inner {
+      0%   { transform: translate(0,0) scale(1.2); opacity: 1; }
+      30%  { opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
+    /* 4× 링 확장 */
+    @keyframes fx-burst-ring {
+      0%   { width: 0; height: 0; margin-left: 0; margin-top: 0; opacity: 1; }
+      100% { width: 88px; height: 88px; margin-left: -44px; margin-top: -44px; opacity: 0; }
+    }
+    /* 공통 스크린 플래시 */
+    @keyframes fx-screen-flash {
+      0%   { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* 8× 메가 블라스트 — 주 파티클 */
+    @keyframes fx-mega-particle {
+      0%   { transform: translate(0,0) scale(1.5); opacity: 1; }
+      35%  { opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
+    /* 8× 드리프트 파티클 (위로 느리게) */
+    @keyframes fx-mega-drift {
+      0%   { transform: translate(var(--dx), 0) scale(1); opacity: 1; }
+      60%  { opacity: 1; }
+      100% { transform: translate(var(--dx), var(--ty)) scale(0.3); opacity: 0; }
+    }
+    /* 8× 쇼크웨이브 링 1 */
+    @keyframes fx-shockwave-1 {
+      0%   { width: 0;    height: 0;    margin-left: 0;    margin-top: 0;    opacity: 1; }
+      100% { width: 120px; height: 120px; margin-left: -60px; margin-top: -60px; opacity: 0; }
+    }
+    /* 8× 쇼크웨이브 링 2 */
+    @keyframes fx-shockwave-2 {
+      0%   { width: 0;    height: 0;    margin-left: 0;    margin-top: 0;    opacity: 0.8; }
+      100% { width: 180px; height: 180px; margin-left: -90px; margin-top: -90px; opacity: 0; }
+    }
+    /* 8× 스파크 (직선 섬광) */
+    @keyframes fx-spark {
+      0%   { transform: translate(0,0) rotate(var(--rot)) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(0.2); opacity: 0; }
+    }
+    /* 8× 화면 흔들림 */
+    @keyframes fx-screen-shake {
+      0%,100% { transform: translate(0,0); }
+      20%     { transform: translate(-4px,  2px); }
+      40%     { transform: translate( 4px, -2px); }
+      60%     { transform: translate(-3px,  3px); }
+      80%     { transform: translate( 3px, -3px); }
+    }
+
+    /* ── 점수 팝업 ───────────────────────────────────── */
+    @keyframes fx-score-popup {
+      0%   { transform: translateY(0); opacity: 1; }
+      60%  { opacity: 1; }
+      100% { transform: translateY(-32px); opacity: 0; }
+    }
+    .fx-score {
+      position: absolute;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      pointer-events: none;
+      white-space: nowrap;
+      animation: fx-score-popup 700ms ease-out forwards;
+    }
+
+    /* ── z-index 계층 표시 패널 ──────────────────────── */
+    #layer-info {
+      position: fixed;
+      top: 16px; left: 16px;
+      z-index: 10;
+      background: rgba(0,0,0,0.55);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #666;
+      line-height: 1.8;
+      pointer-events: none;
+    }
+    #layer-info .layer-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    #layer-info .z-badge {
+      font-size: 9px;
+      background: #222;
+      border-radius: 3px;
+      padding: 1px 5px;
+      color: #888;
+    }
+    #layer-info .active { color: #e0e0e0; }
+
+    /* ── 안내 텍스트 ──────────────────────────────────── */
+    #guide {
+      position: fixed;
+      bottom: 120px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      font-size: 11px;
+      color: #444;
+      letter-spacing: 1px;
+      text-align: center;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 격자 배경 캔버스 -->
+  <canvas id="grid-bg"></canvas>
+
+  <!-- z-index 계층 안내 -->
+  <div id="layer-info">
+    <div class="layer-row"><span class="z-badge">z-20</span> <span>gameover / paused overlay</span></div>
+    <div class="layer-row active"><span class="z-badge">z-15</span> <span>✦ #effect-layer (이팩트 파티클)</span></div>
+    <div class="layer-row"><span class="z-badge">z-10</span> <span>HUD / stats / legend</span></div>
+    <div class="layer-row"><span class="z-badge">z-0</span>  <span>&lt;canvas&gt; (게임 요소)</span></div>
+  </div>
+
+  <!-- HUD 참조 -->
+  <div id="hud">
+    <div class="hud-row">
+      <span class="hud-label player-label">PLAYER</span>
+      <span class="hud-score player-score" id="hud-player">0</span>
+      <span class="hud-divider">|</span>
+      <span class="hud-label cpu-label">CPU</span>
+      <span class="hud-score cpu-score" id="hud-cpu">0</span>
+    </div>
+    <div class="hud-high">Best: <span id="hud-best">0</span></div>
+  </div>
+
+  <!-- 범례 -->
+  <div id="competition-legend">
+    <span class="legend-item player">● PLAYER</span>
+    <span class="legend-item cpu">● CPU</span>
+  </div>
+
+  <!-- 지렁이 시안 (참조) -->
+  <div class="snake-preview">
+    <div class="snake-label">PLAYER</div>
+    <div class="snake-row">
+      <div class="snake-seg head" style="background:#00cc44;"></div>
+      <div class="snake-seg" style="background:rgba(60,210,100,0.85);"></div>
+      <div class="snake-seg" style="background:rgba(60,210,100,0.7);"></div>
+      <div class="snake-seg" style="background:rgba(60,210,100,0.55);"></div>
+      <div class="snake-seg" style="background:rgba(60,210,100,0.45);"></div>
+    </div>
+    <div class="snake-label" style="margin-top:8px;">CPU</div>
+    <div class="snake-row">
+      <div class="snake-seg head" style="background:#cc2200;"></div>
+      <div class="snake-seg" style="background:rgba(210,60,60,0.85);"></div>
+      <div class="snake-seg" style="background:rgba(210,60,60,0.7);"></div>
+      <div class="snake-seg" style="background:rgba(210,60,60,0.55);"></div>
+      <div class="snake-seg" style="background:rgba(210,60,60,0.45);"></div>
+    </div>
+  </div>
+
+  <!-- 먹이 미리보기 -->
+  <div id="food-preview">
+    <div class="food-row">
+      <div class="food-item">
+        <div class="food-circle food-1x">1×</div>
+        <span class="food-label">55% — 일반</span>
+      </div>
+      <div class="food-item">
+        <div class="food-circle food-2x">2×</div>
+        <span class="food-label">28% — 드문</span>
+      </div>
+      <div class="food-item">
+        <div class="food-circle food-4x">4×</div>
+        <span class="food-label">13% — 희귀</span>
+      </div>
+      <div class="food-item">
+        <div class="food-circle food-8x">8×</div>
+        <span class="food-label">4% — 전설</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 이팩트 레이어 (명세 §4-2) -->
+  <div id="effect-layer"></div>
+
+  <!-- 안내 -->
+  <div id="guide">버튼을 클릭해 각 배수 이팩트를 트리거 하세요</div>
+
+  <!-- 컨트롤 패널 -->
+  <div id="control-panel">
+    <h3>이팩트 트리거</h3>
+    <div class="btn-row">
+      <button class="fx-btn btn-1x" onclick="triggerAtCenter(1)">1× 스파클</button>
+      <button class="fx-btn btn-2x" onclick="triggerAtCenter(2)">2× 팝</button>
+      <button class="fx-btn btn-4x" onclick="triggerAtCenter(4)">4× 버스트</button>
+      <button class="fx-btn btn-8x" onclick="triggerAtCenter(8)">8× 메가블라스트</button>
+    </div>
+  </div>
+
+<script>
+"use strict";
+
+/* ── 격자 배경 렌더링 ────────────────────────────────── */
+const canvas = document.getElementById("grid-bg");
+const ctx    = canvas.getContext("2d");
+const CELL   = 20;
+
+function resizeAndDraw() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.fillStyle = "#0d0d0d";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "rgba(255,255,255,0.04)";
+  ctx.lineWidth   = 0.5;
+  const cols = Math.floor(canvas.width  / CELL);
+  const rows = Math.floor(canvas.height / CELL);
+  for (let x = 0; x <= cols; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x * CELL, 0);
+    ctx.lineTo(x * CELL, rows * CELL);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= rows; y++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y * CELL);
+    ctx.lineTo(cols * CELL, y * CELL);
+    ctx.stroke();
+  }
+}
+resizeAndDraw();
+window.addEventListener("resize", resizeAndDraw);
+
+/* ── 이팩트 레이어 참조 ──────────────────────────────── */
+const effectLayer = document.getElementById("effect-layer");
+
+/* ── 점수 HUD 모의 업데이트 ──────────────────────────── */
+let mockScore = 0;
+function addScore(m) {
+  mockScore += m * 10;
+  document.getElementById("hud-player").textContent = mockScore;
+  const best = parseInt(document.getElementById("hud-best").textContent) || 0;
+  if (mockScore > best) document.getElementById("hud-best").textContent = mockScore;
+}
+
+/* ── 헬퍼: 파티클 생성 ──────────────────────────────── */
+function createParticle({ cx, cy, color, w, h, tx, ty, duration, easing, animName, delay = 0, extra = "" }) {
+  const el = document.createElement("div");
+  el.style.cssText = [
+    "position:absolute",
+    "pointer-events:none",
+    `left:${cx - w / 2}px`,
+    `top:${cy - h / 2}px`,
+    `width:${w}px`,
+    `height:${h}px`,
+    `background:${color}`,
+    `--tx:${tx}px`,
+    `--ty:${ty}px`,
+    `animation:${animName} ${duration}ms ${easing} ${delay}ms forwards`,
+    extra,
+  ].join(";");
+  effectLayer.appendChild(el);
+  el.addEventListener("animationend", () => el.remove(), { once: true });
+  return el;
+}
+
+/* ── 헬퍼: 링/원 생성 ───────────────────────────────── */
+function createRing({ cx, cy, borderColor, animName, duration, delay = 0 }) {
+  const el = document.createElement("div");
+  el.style.cssText = [
+    "position:absolute",
+    "pointer-events:none",
+    "border-radius:50%",
+    `left:${cx}px`,
+    `top:${cy}px`,
+    `border:2px solid ${borderColor}`,
+    `animation:${animName} ${duration}ms ease-out ${delay}ms forwards`,
+  ].join(";");
+  effectLayer.appendChild(el);
+  el.addEventListener("animationend", () => el.remove(), { once: true });
+}
+
+/* ── 헬퍼: 스크린 플래시 ────────────────────────────── */
+function triggerScreenFlash(color, durationMs) {
+  const el = document.createElement("div");
+  el.style.cssText = [
+    "position:fixed",
+    "inset:0",
+    `background:${color}`,
+    "pointer-events:none",
+    "z-index:16",
+    `animation:fx-screen-flash ${durationMs}ms ease-out forwards`,
+  ].join(";");
+  document.body.appendChild(el);
+  el.addEventListener("animationend", () => el.remove(), { once: true });
+}
+
+/* ── 헬퍼: 화면 흔들림 ──────────────────────────────── */
+function triggerScreenShake() {
+  document.body.style.animation = "fx-screen-shake 200ms ease-in-out";
+  const restore = () => { document.body.style.animation = ""; };
+  document.body.addEventListener("animationend", restore, { once: true });
+}
+
+/* ── 헬퍼: 점수 팝업 ────────────────────────────────── */
+function spawnScorePopup(cx, cy, multiplier, color) {
+  const el = document.createElement("div");
+  el.className = "fx-score";
+  el.textContent = `+${multiplier * 10}`;
+  el.style.cssText = [
+    `left:${cx}px`,
+    `top:${cy - 20}px`,
+    `color:${color}`,
+    "transform:translateX(-50%)",
+  ].join(";");
+  effectLayer.appendChild(el);
+  el.addEventListener("animationend", () => el.remove(), { once: true });
+}
+
+/* ── 극좌표 → 직교 변환 ──────────────────────────────── */
+function polar(deg, dist) {
+  const rad = (deg - 90) * Math.PI / 180;
+  return { tx: Math.round(Math.cos(rad) * dist), ty: Math.round(Math.sin(rad) * dist) };
+}
+
+/* ══════════════════════════════════════════════════════
+   1× — 골든 스파클 (Sparkle)
+   명세 §5-1: 파티클 6개 원형, 380ms, 방사형 60° 간격
+   ══════════════════════════════════════════════════════ */
+function trigger1x(cx, cy) {
+  const COUNT    = 6;
+  const DIST     = 28;
+  const DURATION = 380;
+  const EASING   = "cubic-bezier(0.2,0.6,0.4,1)";
+  const COLORS   = ["#ffcc00", "#fff3a0"];
+
+  for (let i = 0; i < COUNT; i++) {
+    const { tx, ty } = polar(i * 60, DIST);
+    createParticle({
+      cx, cy,
+      color: COLORS[i % 2],
+      w: 6, h: 6,
+      tx, ty,
+      duration: DURATION,
+      easing: EASING,
+      animName: "fx-sparkle-particle",
+      extra: "border-radius:50%",
+    });
+  }
+
+  // 중심 플래시 (명세 §5-1)
+  const flash = document.createElement("div");
+  flash.style.cssText = [
+    "position:absolute",
+    "pointer-events:none",
+    "border-radius:50%",
+    `left:${cx}px`,
+    `top:${cy}px`,
+    "background:#ffcc00",
+    "animation:fx-sparkle-center 120ms ease-out forwards",
+  ].join(";");
+  effectLayer.appendChild(flash);
+  flash.addEventListener("animationend", () => flash.remove(), { once: true });
+
+  spawnScorePopup(cx, cy, 1, "#ffcc00");
+  addScore(1);
+}
+
+/* ══════════════════════════════════════════════════════
+   2× — 사이언 다이아몬드 (Pop)
+   명세 §5-2: 파티클 8개 다이아몬드, 480ms, 방사형 45° 간격
+   ══════════════════════════════════════════════════════ */
+function trigger2x(cx, cy) {
+  const COUNT    = 8;
+  const DIST     = 44;
+  const DURATION = 480;
+  const EASING   = "cubic-bezier(0.1,0.7,0.3,1)";
+  const COLORS   = ["#00cfff", "#80e8ff"];
+
+  for (let i = 0; i < COUNT; i++) {
+    const { tx, ty } = polar(i * 45, DIST);
+    createParticle({
+      cx, cy,
+      color: COLORS[i % 2],
+      w: 7, h: 7,
+      tx, ty,
+      duration: DURATION,
+      easing: EASING,
+      animName: "fx-pop-particle",
+      extra: "transform:rotate(45deg)",
+    });
+  }
+
+  // 중심 플래시
+  const flash = document.createElement("div");
+  flash.style.cssText = [
+    "position:absolute",
+    "pointer-events:none",
+    "border-radius:50%",
+    `left:${cx}px`,
+    `top:${cy}px`,
+    "background:#ffffff",
+    "animation:fx-pop-center 150ms ease-out forwards",
+  ].join(";");
+  effectLayer.appendChild(flash);
+  flash.addEventListener("animationend", () => flash.remove(), { once: true });
+
+  spawnScorePopup(cx, cy, 2, "#00cfff");
+  addScore(2);
+}
+
+/* ══════════════════════════════════════════════════════
+   4× — 퍼플 버스트 (Burst)
+   명세 §5-3: 파티클 16개(내부6 + 외부6 + 위성4), 620ms, 링 + 스크린플래시
+   ══════════════════════════════════════════════════════ */
+function trigger4x(cx, cy) {
+  const DURATION = 620;
+  const EASING   = "cubic-bezier(0.05,0.7,0.25,1)";
+
+  // 내부 링 (6개 별 — travel 30px)
+  for (let i = 0; i < 6; i++) {
+    const { tx, ty } = polar(i * 60, 30);
+    const el = createParticle({
+      cx, cy,
+      color: "#cc44ff",
+      w: 10, h: 10,
+      tx, ty,
+      duration: DURATION,
+      easing: EASING,
+      animName: "fx-burst-inner",
+    });
+    el.style.clipPath = "polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)";
+    el.style.background = "#cc44ff";
+  }
+
+  // 외부 링 (6개 별 — travel 62px, 50ms 딜레이)
+  for (let i = 0; i < 6; i++) {
+    const { tx, ty } = polar(i * 60 + 30, 62);
+    const el = createParticle({
+      cx, cy,
+      color: "#e080ff",
+      w: 10, h: 10,
+      tx, ty,
+      duration: DURATION,
+      easing: EASING,
+      animName: "fx-burst-inner",
+      delay: 50,
+    });
+    el.style.clipPath = "polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)";
+    el.style.background = "#e080ff";
+  }
+
+  // 위성 원 (4개 — travel 42px, 90°간격)
+  for (let i = 0; i < 4; i++) {
+    const { tx, ty } = polar(i * 90 + 15, 42);
+    createParticle({
+      cx, cy,
+      color: "#ffaaff",
+      w: 8, h: 8,
+      tx, ty,
+      duration: DURATION,
+      easing: EASING,
+      animName: "fx-burst-inner",
+      extra: "border-radius:50%",
+    });
+  }
+
+  // 링 확장 (명세 §5-3)
+  createRing({
+    cx, cy,
+    borderColor: "#cc44ff",
+    animName: "fx-burst-ring",
+    duration: 350,
+  });
+
+  // 스크린 플래시 (명세 §5-3: rgba(180,60,255,0.15), 60ms)
+  triggerScreenFlash("rgba(180,60,255,0.15)", 60);
+
+  spawnScorePopup(cx, cy, 4, "#cc44ff");
+  addScore(4);
+}
+
+/* ══════════════════════════════════════════════════════
+   8× — 메가 블라스트 (Mega Blast)
+   명세 §5-4: 파티클 24개, 840ms, 쇼크웨이브×2 + 스크린플래시 + 화면흔들림
+   ══════════════════════════════════════════════════════ */
+function trigger8x(cx, cy) {
+  const EASING_MAIN = "cubic-bezier(0,0.9,0.2,1)";
+  const DURATION    = 840;
+
+  // 내부 8방향 불꽃 파티클 (travel 52px)
+  for (let i = 0; i < 8; i++) {
+    const { tx, ty } = polar(i * 45, 52);
+    const el = createParticle({
+      cx, cy,
+      color: "#ff4444",
+      w: 10, h: 14,
+      tx, ty,
+      duration: DURATION,
+      easing: EASING_MAIN,
+      animName: "fx-mega-particle",
+    });
+    // 불꽃 물방울 형태
+    el.style.borderRadius = "80% 20% 80% 20%";
+    el.style.background   = "linear-gradient(135deg, #ff4444, #ff8800)";
+    el.style.transform    = `rotate(${i * 45}deg)`;
+  }
+
+  // 외부 8방향 원 파티클 (travel 96px, 오프셋 22.5°)
+  for (let i = 0; i < 8; i++) {
+    const { tx, ty } = polar(i * 45 + 22.5, 96);
+    createParticle({
+      cx, cy,
+      color: "#ff8800",
+      w: 8, h: 8,
+      tx, ty,
+      duration: DURATION,
+      easing: EASING_MAIN,
+      animName: "fx-mega-particle",
+      extra: "border-radius:50%",
+      delay: 40,
+    });
+  }
+
+  // 드리프트 별 파티클 4개 (위쪽 방향 천천히 상승, 명세 §5-4)
+  const driftDirs = [-30, -10, 10, 30]; // 위쪽으로 퍼지는 각도 오프셋 (dx)
+  for (let i = 0; i < 4; i++) {
+    const el = document.createElement("div");
+    el.style.cssText = [
+      "position:absolute",
+      "pointer-events:none",
+      `left:${cx - 6}px`,
+      `top:${cy - 6}px`,
+      "width:12px",
+      "height:12px",
+      "background:#ffcc00",
+      `--dx:${driftDirs[i]}px`,
+      "--ty:-80px",
+      "clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)",
+      "animation:fx-mega-drift 1100ms linear 80ms forwards",
+    ].join(";");
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+
+  // 스파크 (직선 섬광 4방향)
+  const sparkAngles = [0, 90, 180, 270];
+  for (const angle of sparkAngles) {
+    const { tx, ty } = polar(angle, 36);
+    const el = document.createElement("div");
+    el.style.cssText = [
+      "position:absolute",
+      "pointer-events:none",
+      `left:${cx - 1}px`,
+      `top:${cy - 8}px`,
+      "width:2px",
+      "height:16px",
+      "background:#ffffff",
+      `--tx:${tx}px`,
+      `--ty:${ty}px`,
+      `--rot:${angle}deg`,
+      "animation:fx-spark 300ms ease-out forwards",
+    ].join(";");
+    effectLayer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+
+  // 쇼크웨이브 링 1 (명세 §5-4: 0→60px, 400ms)
+  createRing({
+    cx, cy,
+    borderColor: "#ff4444",
+    animName: "fx-shockwave-1",
+    duration: 400,
+    delay: 0,
+  });
+
+  // 쇼크웨이브 링 2 (명세 §5-4: 0→90px, 600ms, 100ms 딜레이)
+  createRing({
+    cx, cy,
+    borderColor: "rgba(255,136,0,0.6)",
+    animName: "fx-shockwave-2",
+    duration: 600,
+    delay: 100,
+  });
+
+  // 스크린 플래시 (명세 §5-4: rgba(255,68,68,0.25), 100ms)
+  triggerScreenFlash("rgba(255,68,68,0.25)", 100);
+
+  // 화면 흔들림 (명세 §5-4: ±4px, 200ms)
+  triggerScreenShake();
+
+  spawnScorePopup(cx, cy, 8, "#ff4444");
+  addScore(8);
+}
+
+/* ── 중앙 트리거 (버튼 → 화면 중앙 발사) ─────────────── */
+function triggerAtCenter(multiplier) {
+  const cx = window.innerWidth  / 2;
+  const cy = window.innerHeight / 2;
+  switch (multiplier) {
+    case 1: trigger1x(cx, cy); break;
+    case 2: trigger2x(cx, cy); break;
+    case 4: trigger4x(cx, cy); break;
+    case 8: trigger8x(cx, cy); break;
+  }
+}
+
+/* ── 클릭으로 임의 위치 트리거 (보너스 인터랙션) ────── */
+canvas.addEventListener("click", (e) => {
+  // 확률 가중치로 랜덤 배수 선택 (게임과 동일)
+  const r = Math.random() * 100;
+  let m;
+  if (r < 55)       m = 1;
+  else if (r < 83)  m = 2;
+  else if (r < 96)  m = 4;
+  else              m = 8;
+  triggerAtCenter(m); // 중앙으로 고정 (캔버스 클릭도 동일)
+});
+</script>
+</body>
+</html>
