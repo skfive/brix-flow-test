@@ -749,17 +749,18 @@
           ? { x: cpuHead.x + newCpuDir.x, y: cpuHead.y + newCpuDir.y }
           : { x: cpuHead.x,               y: cpuHead.y               };
 
-        // 충돌 검사
-        var headOn         = movePlayer && moveCpu && newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+        // 충돌 검사 (BF-572: T3 제거, T4-SWAP 추가)
+        var headOnNormal   = movePlayer && moveCpu && newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+        var headOnSwap     = movePlayer && moveCpu && newHead.x === cpuHead.x && newHead.y === cpuHead.y && newCpuHead.x === head.x && newCpuHead.y === head.y;
+        var headOn         = headOnNormal || headOnSwap;
         var playerHitWall  = movePlayer && isWallCollision(newHead,    s.cols, s.rows);
         var cpuHitWall     = moveCpu    && isWallCollision(newCpuHead, s.cols, s.rows);
         var playerHitSelf  = movePlayer && isSelfCollision(newHead,    s.snake);
         var cpuHitSelf     = moveCpu    && isSelfCollision(newCpuHead, s.cpu);
-        var playerHitCPU   = movePlayer && !headOn && s.cpu.some(function(seg)   { return seg.x === newHead.x    && seg.y === newHead.y; });
-        var cpuHitPlayer   = moveCpu    && !headOn && s.snake.some(function(seg) { return seg.x === newCpuHead.x && seg.y === newCpuHead.y; });
+        // T3 제거 — 상대방 몸통 통과 허용 (BF-572)
 
-        var playerDead = headOn || playerHitWall || playerHitSelf || playerHitCPU;
-        var cpuDead    = headOn || cpuHitWall    || cpuHitSelf    || cpuHitPlayer;
+        var playerDead = headOn || playerHitWall || playerHitSelf;
+        var cpuDead    = headOn || cpuHitWall    || cpuHitSelf;
 
         // SHIELD 인터셉트
         var shieldTriggered = false;
@@ -772,13 +773,12 @@
           var result, deathCause = null;
           if (playerDead && cpuDead) {
             result = "draw";
-            deathCause = headOn ? "head_on" : playerHitWall ? "wall" : playerHitSelf ? "self" : "cpu_body";
+            deathCause = headOn ? "head_on" : playerHitWall ? "wall" : "self";
           } else if (playerDead) {
             result = "cpu_win";
             if (headOn) deathCause = "head_on";
             else if (playerHitWall) deathCause = "wall";
             else if (playerHitSelf) deathCause = "self";
-            else if (playerHitCPU)  deathCause = "cpu_body";
           } else {
             result = "player_win"; deathCause = null;
           }

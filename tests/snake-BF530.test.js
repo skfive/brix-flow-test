@@ -221,8 +221,8 @@ test("BF-530 §3-4 (AC2): tickFull — player 자기 몸 충돌 → cpu_win (s2 
   assert.equal(s2.result, "cpu_win",   "player 자기 몸 충돌 → CPU 승리");
 });
 
-test("BF-530 §3-5 (AC2): tickFull — player 머리가 CPU 몸통과 충돌 → cpu_win (s2 T3)", () => {
-  // player 이동 후 CPU 현재 위치(1,5)에 겹침
+test("BF-530 §3-5 (AC2): tickFull — player 머리가 CPU 몸통 위치로 이동 → 통과 (BF-572 T3 제거)", () => {
+  // player 이동 후 CPU 몸통 세그먼트 (1,5)로 진입 — BF-572: 충돌 없이 통과
   const s = makeCompState({
     cols:    10,
     rows:    10,
@@ -235,9 +235,9 @@ test("BF-530 §3-5 (AC2): tickFull — player 머리가 CPU 몸통과 충돌 →
     score:   0, cpuScore: 0, highScore: 0, status: "playing", result: null,
   });
   const s2 = tickFull(s);
-  // player 새 머리 = (1,5) → CPU 몸통 세그먼트 (1,5) 충돌
-  assert.equal(s2.status, "gameover", "CPU 몸통 충돌 시 gameover");
-  assert.equal(s2.result, "cpu_win",  "player 가 CPU 몸통 충돌 → CPU 승리");
+  // player 새 머리 = (1,5) → CPU 몸통 세그먼트 (1,5) 이지만 충돌 없음 (T3 제거)
+  assert.equal(s2.status, "playing", "CPU 몸통으로 진입해도 게임 계속 진행");
+  assert.equal(s2.result, null,      "T3 제거 — playerDead = false");
 });
 
 test("BF-530 §3-6 (AC2): tickFull — CPU 벽 충돌 → player_win (s2 §3-1 케이스B)", () => {
@@ -405,7 +405,8 @@ test("BF-530 §3-13 (AC2): tickFull — deathCause 필드 포함 (KPI §6-1)", (
   });
   const s2 = tickFull(s);
   assert.ok("deathCause" in s2, "deathCause 필드 없음");
-  const validCauses = ["wall", "self", "cpu_body", "head_on", "timeout", null];
+  // BF-572: cpu_body / player_body 제거됨 (T3 제거)
+  const validCauses = ["wall", "self", "head_on", "timeout", null];
   assert.ok(
     validCauses.includes(s2.deathCause),
     `deathCause 유효하지 않은 값: ${s2.deathCause}`
