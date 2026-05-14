@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Snake</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- 전체 화면 캔버스 (100vw × 100vh) — BF-504 AC §1 -->
+    <canvas id="game-canvas" aria-label="Snake 게임 캔버스"></canvas>
+
+    <!-- HUD: 우측 상단 Score / High Score — BF-504 AC §1 -->
+    <div id="hud" aria-live="polite" aria-label="점수 현황">
+      <div class="hud-score" id="hud-score-value" aria-label="현재 점수">0</div>
+      <div class="hud-high">
+        Best: <span id="hud-high-value">0</span>
+      </div>
+    </div>
+
+    <!-- Game Over 오버레이 — BF-504 AC §4 -->
+    <div id="gameover-overlay" hidden role="dialog" aria-modal="true" aria-label="게임 오버">
+      <div class="gameover-box">
+        <h2>Game Over</h2>
+        <p class="go-score">Score: <span id="go-score">0</span></p>
+        <p class="go-hint">Press Space to restart</p>
+      </div>
+    </div>
+
+    <!-- ES module — logic.js 순수 로직 import 가능 (BF-504) -->
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>
