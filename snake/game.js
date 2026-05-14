@@ -14,6 +14,7 @@ const {
   CELL,
   LS_HIGH_SCORE_KEY,
   DIR,
+  MULTIPLIER_COLORS,
   createInitialState,
   changeDirection,
   tick,
@@ -75,6 +76,10 @@ const SS_PAUSE_KPI_KEY = "bf-snake-pause-kpi";
 /** localStorage 키 — BF-530 KPI (s2 §6-2) */
 const COMP_KPI_KEY   = "bf-snake-comp-kpi";
 const COMP_STATS_KEY = "bf-snake-comp-stats";
+
+/** localStorage 키 — BF-533 배수 통계 KPI (명세 §9-1) */
+const MULT_KPI_KEY   = "bf-snake-multiplier-kpi";
+const MULT_STATS_KEY = "bf-snake-multiplier-stats";
 
 // ─────────────────────────────────────────────────────────────
 // localStorage 헬퍼
@@ -150,6 +155,74 @@ function logKPI() {
   console.log(
     `[BF-526 KPI] 멈춤/재개 토글 ${pauseToggleCount}회, 누적 멈춤 ${Math.round(totalPausedMs)}ms`,
   );
+
+  // ── BF-531 배수 통계 KPI (명세 §9-1~§9-2) ────────────────
+  const mStats = state.multiplierStats;
+  if (mStats) {
+    const totalSpawned = Object.values(mStats).reduce((s, v) => s + v.spawned, 0);
+
+    // 직전 게임 KPI 저장 (bf-snake-multiplier-kpi)
+    const perMultiplier = {};
+    for (const m of [1, 2, 4, 8]) {
+      const k = String(m);
+      const eatRate = mStats[k].spawned > 0
+        ? Math.round(mStats[k].eaten / mStats[k].spawned * 100) / 100
+        : 0;
+      perMultiplier[k] = {
+        spawned: mStats[k].spawned,
+        eaten:   mStats[k].eaten,
+        eatRate,
+      };
+    }
+    const multKpiEntry = {
+      timestamp:    Date.now(),
+      totalSpawned,
+      perMultiplier,
+      playerScore:  state.score,
+      cpuScore:     state.cpuScore,
+    };
+    try { localStorage.setItem(MULT_KPI_KEY, JSON.stringify(multKpiEntry)); } catch (_) { /* EC-5 */ }
+
+    // 누적 통계 (bf-snake-multiplier-stats)
+    let multStats;
+    try {
+      const v = localStorage.getItem(MULT_STATS_KEY);
+      multStats = v ? JSON.parse(v) : null;
+    } catch (_) { multStats = null; }
+    if (!multStats) {
+      multStats = {
+        totalGames:   0,
+        totalSpawned: { "1": 0, "2": 0, "4": 0, "8": 0 },
+        totalEaten:   { "1": 0, "2": 0, "4": 0, "8": 0 },
+      };
+    }
+    multStats.totalGames++;
+    for (const m of [1, 2, 4, 8]) {
+      const k = String(m);
+      multStats.totalSpawned[k] += mStats[k].spawned;
+      multStats.totalEaten[k]   += mStats[k].eaten;
+    }
+    try { localStorage.setItem(MULT_STATS_KEY, JSON.stringify(multStats)); } catch (_) { /* EC-5 */ }
+
+    // console 출력 (명세 §9-2)
+    const probStr = [1, 2, 4, 8].map(m => {
+      const k = String(m);
+      const pct = totalSpawned > 0
+        ? (mStats[k].spawned / totalSpawned * 100).toFixed(1)
+        : "0.0";
+      return `${m}×:${mStats[k].spawned}건(${pct}%)`;
+    }).join(" ");
+    console.log(`[BF-531 KPI] 배수 통계 — ${probStr} | 총합:${totalSpawned}건`);
+
+    const eatRateStr = [1, 2, 4, 8].map(m => {
+      const k = String(m);
+      const rate = mStats[k].spawned > 0
+        ? (mStats[k].eaten / mStats[k].spawned * 100).toFixed(1)
+        : "0.0";
+      return `${m}×:${rate}%`;
+    }).join(" ");
+    console.log(`[BF-531 KPI] 수집률 — ${eatRateStr}`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -287,31 +360,45 @@ function drawCpuSnake() {
   });
 }
 
-/** 먹이 */
+/** 먹이 — BF-533: 배수별 색상·레이블 렌더링 (명세 §2-1) */
 function drawFood() {
   if (!state.food) return;
-  const { x, y } = state.food;
+  const { x, y, multiplier = 1 } = state.food;
   const cx = x * CELL + CELL / 2;
   const cy = y * CELL + CELL / 2;
   const r  = CELL / 2 - 3;
 
-  // 빛나는 원
+  // 배수별 색상 (MULTIPLIER_COLORS || fallback)
+  const colorDef = (MULTIPLIER_COLORS && MULTIPLIER_COLORS[multiplier])
+    || { fill: "#ffcc00", glow: "rgba(255,200,0,0.3)" };
+  const fillColor = colorDef.fill;
+  const glowColor = colorDef.glow;
+
+  // 빛나는 원 (배수별 색상)
   const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  grd.addColorStop(0,   "#fff0aa");
-  grd.addColorStop(0.5, "#ffcc00");
-  grd.addColorStop(1,   "#ff8800");
+  grd.addColorStop(0,   "#ffffff");
+  grd.addColorStop(0.4, fillColor);
+  grd.addColorStop(1,   fillColor);
 
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle = grd;
   ctx.fill();
 
-  // 광채 링
+  // 광채 링 (배수별 색상)
   ctx.beginPath();
   ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255,200,0,0.3)";
+  ctx.strokeStyle = glowColor;
   ctx.lineWidth   = 2;
   ctx.stroke();
+
+  // 배수 레이블 (명세 §2-1: 흰색 굵은 폰트, 원 중앙)
+  const fontSize = Math.round(CELL * 0.55);
+  ctx.fillStyle    = "#ffffff";
+  ctx.font         = `bold ${fontSize}px 'Courier New', monospace`;
+  ctx.textAlign    = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`${multiplier}×`, cx, cy);
 }
 
 /** HUD 업데이트 — BF-530 s2 §5-3 양쪽 점수 */
@@ -322,6 +409,31 @@ function updateHUD() {
   hudHighEl.textContent        = state.highScore;
 }
 
+// ─────────────────────────────────────────────────────────────
+// 배수 통계 패널 업데이트 — BF-533 (명세 §7-3, §7-4)
+// ─────────────────────────────────────────────────────────────
+
+/** 배수별 실제 등장 확률 계산 (명세 §7-3) */
+function calcSpawnProb(multiplierStats, m) {
+  const total = Object.values(multiplierStats).reduce((s, v) => s + v.spawned, 0);
+  if (total === 0) return "—";
+  const prob = (multiplierStats[String(m)].spawned / total * 100).toFixed(1);
+  return `${prob}%`;
+}
+
+/** 통계 패널 DOM 갱신 (명세 §7-4: 스폰 직후 즉시 갱신) */
+function updateMultiplierStatsUI() {
+  const stats = state.multiplierStats;
+  if (!stats) return;
+  for (const m of [1, 2, 4, 8]) {
+    const countEl = document.getElementById(`ms-count-${m}`);
+    const probEl  = document.getElementById(`ms-prob-${m}`);
+    if (!countEl || !probEl) continue;
+    countEl.textContent = stats[String(m)].spawned;
+    probEl.textContent  = `(${calcSpawnProb(stats, m)})`;
+  }
+}
+
 /** 전체 프레임 렌더 */
 function render() {
   drawBackground();
@@ -329,6 +441,7 @@ function render() {
   drawSnake();
   drawCpuSnake();
   updateHUD();
+  updateMultiplierStatsUI();
 }
 
 // ─────────────────────────────────────────────────────────────

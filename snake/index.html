@@ -25,6 +25,31 @@
       <span id="hud-score-value" hidden aria-hidden="true">0</span>
     </div>
 
+    <!-- 배수 아이템 통계 — BF-531 (좌측 상단 고정) -->
+    <div id="multiplier-stats" aria-label="배수 아이템 통계" aria-live="polite">
+      <div class="ms-title">배수 통계</div>
+      <div class="ms-row" id="ms-row-1">
+        <span class="ms-badge ms-1x">1×</span>
+        <span class="ms-count" id="ms-count-1">0</span>건
+        <span class="ms-prob" id="ms-prob-1">(—)</span>
+      </div>
+      <div class="ms-row" id="ms-row-2">
+        <span class="ms-badge ms-2x">2×</span>
+        <span class="ms-count" id="ms-count-2">0</span>건
+        <span class="ms-prob" id="ms-prob-2">(—)</span>
+      </div>
+      <div class="ms-row" id="ms-row-4">
+        <span class="ms-badge ms-4x">4×</span>
+        <span class="ms-count" id="ms-count-4">0</span>건
+        <span class="ms-prob" id="ms-prob-4">(—)</span>
+      </div>
+      <div class="ms-row" id="ms-row-8">
+        <span class="ms-badge ms-8x">8×</span>
+        <span class="ms-count" id="ms-count-8">0</span>건
+        <span class="ms-prob" id="ms-prob-8">(—)</span>
+      </div>
+    </div>
+
     <!-- 범례: 좌하단 고정 — BF-530 s2 §5-2 -->
     <div id="competition-legend" aria-label="지렁이 범례">
       <span class="legend-item player">● PLAYER</span>
@@ -53,7 +78,8 @@
     </div>
 
     <!-- BF-518: file:// CORS 회피 — 인라인 로직 글로벌 폴백 스크립트
-         BF-530: cpuChooseDir / tickFull / 확장된 createInitialState 추가 -->
+         BF-530: cpuChooseDir / tickFull / 확장된 createInitialState 추가
+         BF-533: pickMultiplier / spawnFoodWithMultiplier / pendingGrowth / multiplierStats 추가 -->
     <script>
     (function () {
       "use strict";
@@ -71,6 +97,40 @@
         normal: { tickIntervalMs: 120, visionRange: 8,  avoidanceThreshold: 5,  respawnDelayTicks: 20, foodPriorityWeight: 0.7 },
         easy:   { tickIntervalMs: 240, visionRange: 3,  avoidanceThreshold: 2,  respawnDelayTicks: 10, foodPriorityWeight: 0.4 },
       };
+
+      // ── 배수 아이템 (BF-533, 명세 §3) ───────────────────────
+      var MULTIPLIER_WEIGHTS = [
+        { m: 1, weight: 55 },
+        { m: 2, weight: 28 },
+        { m: 4, weight: 13 },
+        { m: 8, weight:  4 },
+      ];
+      var TOTAL_WEIGHT = 100;
+      var MULTIPLIER_COLORS = {
+        1: { fill: "#ffcc00", glow: "rgba(255,200,0,0.3)" },
+        2: { fill: "#00cfff", glow: "rgba(0,200,255,0.4)" },
+        4: { fill: "#cc44ff", glow: "rgba(180,60,255,0.5)" },
+        8: { fill: "#ff4444", glow: "rgba(255,50,50,0.6)" },
+      };
+
+      function pickMultiplier() {
+        var r = Math.random() * TOTAL_WEIGHT;
+        var cumulative = 0;
+        for (var i = 0; i < MULTIPLIER_WEIGHTS.length; i++) {
+          cumulative += MULTIPLIER_WEIGHTS[i].weight;
+          if (r < cumulative) return MULTIPLIER_WEIGHTS[i].m;
+        }
+        return 1;
+      }
+
+      function createMultiplierStats() {
+        return {
+          "1": { spawned: 0, eaten: 0 },
+          "2": { spawned: 0, eaten: 0 },
+          "4": { spawned: 0, eaten: 0 },
+          "8": { spawned: 0, eaten: 0 },
+        };
+      }
 
       function isWallCollision(head, cols, rows) {
         return head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows;
@@ -92,7 +152,14 @@
         return empty[Math.floor(Math.random() * empty.length)];
       }
 
-      // BF-530: CPU 지렁이 포함 초기 상태
+      // BF-533: 배수 포함 스폰 (명세 §3-3, §6-1)
+      function spawnFoodWithMultiplier(cols, rows, occupiedCells) {
+        var cell = spawnFoodCell(cols, rows, occupiedCells);
+        if (cell === null) return null;
+        return { x: cell.x, y: cell.y, multiplier: pickMultiplier() };
+      }
+
+      // BF-530+BF-533: CPU 지렁이 포함 초기 상태
       function createInitialState(cols, rows, highScore) {
         if (highScore === undefined) highScore = 0;
         var midX = Math.floor(cols / 2);
@@ -109,21 +176,33 @@
           { x: cpuX + 1, y: cpuY },
           { x: cpuX + 2, y: cpuY },
         ].filter(function(c) { return c.x >= 0 && c.x < cols && c.y >= 0 && c.y < rows; });
+
+        // BF-533: 첫 번째 food 스폰 + 통계 초기화
+        var initialFood = spawnFoodWithMultiplier(cols, rows, snake.concat(cpu));
+        var initialStats = createMultiplierStats();
+        if (initialFood !== null) {
+          initialStats[String(initialFood.multiplier)].spawned++;
+        }
+
         return {
-          cols:       cols,
-          rows:       rows,
-          snake:      snake,
-          dir:        DIR.RIGHT,
-          nextDir:    DIR.RIGHT,
-          cpu:        cpu,
-          cpuDir:     DIR.LEFT,
-          food:       spawnFoodCell(cols, rows, snake.concat(cpu)),
-          score:      0,
-          cpuScore:   0,
-          highScore:  highScore,
-          status:     "playing",
-          result:     null,
-          deathCause: null,
+          cols:             cols,
+          rows:             rows,
+          snake:            snake,
+          dir:              DIR.RIGHT,
+          nextDir:          DIR.RIGHT,
+          cpu:              cpu,
+          cpuDir:           DIR.LEFT,
+          food:             initialFood,
+          score:            0,
+          cpuScore:         0,
+          highScore:        highScore,
+          status:           "playing",
+          result:           null,
+          deathCause:       null,
+          // BF-533
+          pendingGrowth:    0,
+          cpuPendingGrowth: 0,
+          multiplierStats:  initialStats,
         };
       }
 
@@ -133,6 +212,7 @@
         return Object.assign({}, state, { nextDir: newDir });
       }
 
+      // BF-533: tick — pendingGrowth 방식 (명세 §4-2)
       function tick(state) {
         if (state.status !== "playing") return state;
         var dir = state.nextDir;
@@ -150,18 +230,47 @@
           state.food !== null &&
           newHead.x === state.food.x &&
           newHead.y === state.food.y;
-        var newSnake = ateFood
-          ? [newHead].concat(state.snake)
-          : [newHead].concat(state.snake.slice(0, -1));
-        var newScore = ateFood ? state.score + 10 : state.score;
-        var newFood  = ateFood ? spawnFoodCell(state.cols, state.rows, newSnake) : state.food;
+
+        var M = ateFood ? ((state.food && state.food.multiplier) || 1) : 0;
+        var newPendingGrowth = (state.pendingGrowth || 0) + M;
+        var newSnake;
+        if (newPendingGrowth > 0) {
+          newSnake = [newHead].concat(state.snake);
+          newPendingGrowth--;
+        } else {
+          newSnake = [newHead].concat(state.snake.slice(0, -1));
+        }
+
+        var newScore = ateFood ? state.score + M * 10 : state.score;
+        var newMultiplierStats = state.multiplierStats || createMultiplierStats();
+        var newFood = state.food;
+        if (ateFood) {
+          var eatenKey = String(M);
+          newMultiplierStats = Object.assign({}, newMultiplierStats);
+          newMultiplierStats[eatenKey] = {
+            spawned: newMultiplierStats[eatenKey].spawned,
+            eaten:   newMultiplierStats[eatenKey].eaten + 1,
+          };
+          var spawned = spawnFoodWithMultiplier(state.cols, state.rows, newSnake);
+          newFood = spawned;
+          if (spawned !== null) {
+            var spawnKey = String(spawned.multiplier);
+            newMultiplierStats[spawnKey] = {
+              spawned: newMultiplierStats[spawnKey].spawned + 1,
+              eaten:   newMultiplierStats[spawnKey].eaten,
+            };
+          }
+        }
+
         return Object.assign({}, state, {
-          snake:     newSnake,
-          dir:       dir,
-          food:      newFood,
-          score:     newScore,
-          highScore: Math.max(state.highScore, newScore),
-          status:    "playing",
+          snake:           newSnake,
+          dir:             dir,
+          food:            newFood,
+          score:           newScore,
+          highScore:       Math.max(state.highScore, newScore),
+          status:          "playing",
+          pendingGrowth:   newPendingGrowth,
+          multiplierStats: newMultiplierStats,
         });
       }
 
@@ -232,7 +341,7 @@
         return scored[0].dir;
       }
 
-      // ── 경쟁 게임 틱 (s2 §2~§3) ─────────────────────────────
+      // ── 경쟁 게임 틱 (s2 §2~§3) + BF-533 pendingGrowth ────
 
       function tickFull(state, difficulty) {
         if (!difficulty) difficulty = "normal";
@@ -287,48 +396,91 @@
         var playerAteFood = state.food !== null && newHead.x === state.food.x && newHead.y === state.food.y;
         var cpuAteFood    = state.food !== null && !playerAteFood && newCpuHead.x === state.food.x && newCpuHead.y === state.food.y;
 
-        var newSnake = playerAteFood
-          ? [newHead].concat(state.snake)
-          : [newHead].concat(state.snake.slice(0, -1));
-        var newCPU = cpuAteFood
-          ? [newCpuHead].concat(state.cpu)
-          : [newCpuHead].concat(state.cpu.slice(0, -1));
+        // BF-533: 배수 적용 (명세 §4-2, §5)
+        var foodM   = (state.food && state.food.multiplier) || 1;
+        var playerM = playerAteFood ? foodM : 0;
+        var cpuM    = cpuAteFood    ? foodM : 0;
 
-        var newScore    = playerAteFood ? state.score    + 10 : state.score;
-        var newCPUScore = cpuAteFood    ? state.cpuScore + 10 : state.cpuScore;
-        var newFood     = (playerAteFood || cpuAteFood)
-          ? spawnFoodCell(state.cols, state.rows, newSnake.concat(newCPU))
-          : state.food;
+        var newPlayerPending = (state.pendingGrowth    || 0) + playerM;
+        var newCpuPending    = (state.cpuPendingGrowth || 0) + cpuM;
+
+        var newSnake;
+        if (newPlayerPending > 0) {
+          newSnake = [newHead].concat(state.snake);
+          newPlayerPending--;
+        } else {
+          newSnake = [newHead].concat(state.snake.slice(0, -1));
+        }
+
+        var newCPU;
+        if (newCpuPending > 0) {
+          newCPU = [newCpuHead].concat(state.cpu);
+          newCpuPending--;
+        } else {
+          newCPU = [newCpuHead].concat(state.cpu.slice(0, -1));
+        }
+
+        var newScore    = playerAteFood ? state.score    + playerM * 10 : state.score;
+        var newCPUScore = cpuAteFood    ? state.cpuScore + cpuM    * 10 : state.cpuScore;
+
+        // BF-533: multiplierStats 카운트 + 새 food 스폰
+        var newMultiplierStats = Object.assign({}, state.multiplierStats || createMultiplierStats());
+        if (playerAteFood || cpuAteFood) {
+          var eatenKey = String(foodM);
+          newMultiplierStats[eatenKey] = {
+            spawned: newMultiplierStats[eatenKey].spawned,
+            eaten:   newMultiplierStats[eatenKey].eaten + 1,
+          };
+        }
+        var newFood = state.food;
+        if (playerAteFood || cpuAteFood) {
+          var spawnedFood = spawnFoodWithMultiplier(state.cols, state.rows, newSnake.concat(newCPU));
+          newFood = spawnedFood;
+          if (spawnedFood !== null) {
+            var spawnKey = String(spawnedFood.multiplier);
+            newMultiplierStats[spawnKey] = {
+              spawned: newMultiplierStats[spawnKey].spawned + 1,
+              eaten:   newMultiplierStats[spawnKey].eaten,
+            };
+          }
+        }
 
         return Object.assign({}, state, {
-          snake:      newSnake,
-          dir:        dir,
-          cpu:        newCPU,
-          cpuDir:     newCpuDir,
-          food:       newFood,
-          score:      newScore,
-          cpuScore:   newCPUScore,
-          highScore:  Math.max(state.highScore, newScore),
-          status:     "playing",
-          result:     null,
-          deathCause: null,
+          snake:            newSnake,
+          dir:              dir,
+          cpu:              newCPU,
+          cpuDir:           newCpuDir,
+          food:             newFood,
+          score:            newScore,
+          cpuScore:         newCPUScore,
+          highScore:        Math.max(state.highScore, newScore),
+          status:           "playing",
+          result:           null,
+          deathCause:       null,
+          pendingGrowth:    newPlayerPending,
+          cpuPendingGrowth: newCpuPending,
+          multiplierStats:  newMultiplierStats,
         });
       }
 
       // game.js 에서 globalThis 로 참조 (BF-518/522)
       Object.assign(globalThis, {
-        CELL:               CELL,
-        LS_HIGH_SCORE_KEY:  LS_HIGH_SCORE_KEY,
-        DIR:                DIR,
-        spawnFoodCell:      spawnFoodCell,
-        createInitialState: createInitialState,
-        changeDirection:    changeDirection,
-        isWallCollision:    isWallCollision,
-        isSelfCollision:    isSelfCollision,
-        tick:               tick,
-        tickFull:           tickFull,
-        cpuChooseDir:       cpuChooseDir,
-        restartGame:        restartGame,
+        CELL:                    CELL,
+        LS_HIGH_SCORE_KEY:       LS_HIGH_SCORE_KEY,
+        DIR:                     DIR,
+        MULTIPLIER_COLORS:       MULTIPLIER_COLORS,
+        spawnFoodCell:           spawnFoodCell,
+        spawnFoodWithMultiplier: spawnFoodWithMultiplier,
+        pickMultiplier:          pickMultiplier,
+        createMultiplierStats:   createMultiplierStats,
+        createInitialState:      createInitialState,
+        changeDirection:         changeDirection,
+        isWallCollision:         isWallCollision,
+        isSelfCollision:         isSelfCollision,
+        tick:                    tick,
+        tickFull:                tickFull,
+        cpuChooseDir:            cpuChooseDir,
+        restartGame:             restartGame,
       });
     })();
     </script>

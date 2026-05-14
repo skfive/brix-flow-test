@@ -5,6 +5,9 @@
 // BF-530 · CPU 지렁이 AI + 경쟁 게임 로직 추가
 // - s1 명세(BF-527): chooseCpuDirection 스코어 기반 AI (safeLen + foodScore)
 // - s2 명세(BF-529): tickFull — T1~T4 충돌 검사 + 승패 판정 + deathCause 기록
+//
+// BF-533 · 배수 아이템 spawn·길이 증가·상단 통계 UI 구현
+// - 명세(BF-531): 확률 기반 배수 선택, pendingGrowth, multiplierStats
 
 /** 기본 셀 크기 (px). 렌더러에서 사용. */
 export const CELL = 20;
@@ -75,22 +78,69 @@ export function createInitialState(cols, rows, highScore = 0) {
     { x: cpuX + 2, y: cpuY },
   ].filter(c => c.x >= 0 && c.x < cols && c.y >= 0 && c.y < rows);
 
+  const initialFood = spawnFoodWithMultiplier(cols, rows, [...snake, ...cpu]);
+  const initialStats = createMultiplierStats();
+  // 첫 번째 food 스폰 카운트 (명세 §7-4: 스폰 직후 카운트)
+  if (initialFood !== null) {
+    initialStats[String(initialFood.multiplier)].spawned++;
+  }
+
   return {
     cols,
     rows,
     snake,
-    dir:        DIR.RIGHT,
-    nextDir:    DIR.RIGHT,
+    dir:              DIR.RIGHT,
+    nextDir:          DIR.RIGHT,
     cpu,
-    cpuDir:     DIR.LEFT,
-    food:       spawnFoodCell(cols, rows, [...snake, ...cpu]),
-    score:      0,
-    cpuScore:   0,
+    cpuDir:           DIR.LEFT,
+    food:             initialFood,
+    score:            0,
+    cpuScore:         0,
     highScore,
-    status:     "playing", // 'playing' | 'paused' | 'gameover'
-    result:     null,      // null | 'player_win' | 'cpu_win' | 'draw'
-    deathCause: null,      // null | 'wall' | 'self' | 'cpu_body' | 'head_on' | 'timeout'
+    status:           "playing", // 'playing' | 'paused' | 'gameover'
+    result:           null,      // null | 'player_win' | 'cpu_win' | 'draw'
+    deathCause:       null,      // null | 'wall' | 'self' | 'cpu_body' | 'head_on' | 'timeout'
+    // BF-533: 배수 아이템 상태 필드 (명세 §6-2)
+    pendingGrowth:    0,
+    cpuPendingGrowth: 0,
+    multiplierStats:  initialStats,
   };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 배수 아이템 — BF-533 (명세 BF-531 §3)
+// ─────────────────────────────────────────────────────────────
+
+/** 배수별 색상 정의 (캔버스 렌더링용) */
+export const MULTIPLIER_COLORS = {
+  1: { fill: "#ffcc00", glow: "rgba(255,200,0,0.3)" },
+  2: { fill: "#00cfff", glow: "rgba(0,200,255,0.4)" },
+  4: { fill: "#cc44ff", glow: "rgba(180,60,255,0.5)" },
+  8: { fill: "#ff4444", glow: "rgba(255,50,50,0.6)" },
+};
+
+/** 배수 가중치 테이블 (명세 §3-1) */
+const MULTIPLIER_WEIGHTS = [
+  { m: 1, weight: 55 },
+  { m: 2, weight: 28 },
+  { m: 4, weight: 13 },
+  { m: 8, weight:  4 },
+];
+const TOTAL_WEIGHT = 100;
+
+/**
+ * 가중치 기반 배수 선택 (명세 §3-2).
+ *
+ * @returns {1|2|4|8}
+ */
+export function pickMultiplier() {
+  const r = Math.random() * TOTAL_WEIGHT;
+  let cumulative = 0;
+  for (const { m, weight } of MULTIPLIER_WEIGHTS) {
+    cumulative += weight;
+    if (r < cumulative) return m;
+  }
+  return 1; // fallback
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -100,6 +150,7 @@ export function createInitialState(cols, rows, highScore = 0) {
 /**
  * 격자 내 빈 셀 중 무작위 1개를 반환.
  * 빈 셀이 없으면 null 반환 (만점 상태).
+ * 하위 호환성 유지 — {x, y} 만 반환 (multiplier 없음).
  *
  * @param {number} cols
  * @param {number} rows
@@ -116,6 +167,35 @@ export function spawnFoodCell(cols, rows, snake) {
   }
   if (empty.length === 0) return null;
   return empty[Math.floor(Math.random() * empty.length)];
+}
+
+/**
+ * 배수 포함 먹이 스폰 (명세 §3-3, §6-1).
+ * 빈 셀이 없으면 null 반환 (EC-1).
+ *
+ * @param {number} cols
+ * @param {number} rows
+ * @param {Array<{x:number,y:number}>} occupiedCells
+ * @returns {{x:number, y:number, multiplier:1|2|4|8}|null}
+ */
+export function spawnFoodWithMultiplier(cols, rows, occupiedCells) {
+  const cell = spawnFoodCell(cols, rows, occupiedCells);
+  if (cell === null) return null;
+  return { ...cell, multiplier: pickMultiplier() };
+}
+
+/**
+ * multiplierStats 초기 구조 (명세 §6-2).
+ *
+ * @returns {Object}
+ */
+export function createMultiplierStats() {
+  return {
+    "1": { spawned: 0, eaten: 0 },
+    "2": { spawned: 0, eaten: 0 },
+    "4": { spawned: 0, eaten: 0 },
+    "8": { spawned: 0, eaten: 0 },
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -199,26 +279,59 @@ export function tick(state) {
     newHead.x === state.food.x &&
     newHead.y === state.food.y;
 
+  // BF-533: pendingGrowth 카운터 방식 (명세 §4-2)
+  const M = ateFood ? (state.food?.multiplier ?? 1) : 0;
+  let newPendingGrowth = (state.pendingGrowth ?? 0) + M;
+
   let newSnake;
-  if (ateFood) {
+  if (newPendingGrowth > 0) {
+    // 꼬리 유지 → 길이 +1
     newSnake = [newHead, ...state.snake];
+    newPendingGrowth--;
   } else {
+    // 꼬리 제거 → 길이 유지
     newSnake = [newHead, ...state.snake.slice(0, -1)];
   }
 
-  const newScore = ateFood ? state.score + 10 : state.score;
-  const newFood = ateFood
-    ? spawnFoodCell(state.cols, state.rows, newSnake)
-    : state.food;
+  // 점수: M × 10 (명세 §5-1), 기존 1x 동작: 1×10 = +10 그대로
+  const newScore = ateFood ? state.score + M * 10 : state.score;
+
+  // BF-533: multiplierStats eaten 카운트 + 새 food 스폰
+  let newFood = state.food;
+  let newMultiplierStats = state.multiplierStats ?? createMultiplierStats();
+  if (ateFood) {
+    // eaten 카운트
+    newMultiplierStats = {
+      ...newMultiplierStats,
+      [String(M)]: {
+        ...newMultiplierStats[String(M)],
+        eaten: newMultiplierStats[String(M)].eaten + 1,
+      },
+    };
+    // 새 food 스폰
+    const spawned = spawnFoodWithMultiplier(state.cols, state.rows, newSnake);
+    newFood = spawned;
+    if (spawned !== null) {
+      newMultiplierStats = {
+        ...newMultiplierStats,
+        [String(spawned.multiplier)]: {
+          ...newMultiplierStats[String(spawned.multiplier)],
+          spawned: newMultiplierStats[String(spawned.multiplier)].spawned + 1,
+        },
+      };
+    }
+  }
 
   return {
     ...state,
-    snake:     newSnake,
+    snake:           newSnake,
     dir,
-    food:      newFood,
-    score:     newScore,
-    highScore: Math.max(state.highScore, newScore),
-    status:    "playing",
+    food:            newFood,
+    score:           newScore,
+    highScore:       Math.max(state.highScore, newScore),
+    status:          "playing",
+    pendingGrowth:   newPendingGrowth,
+    multiplierStats: newMultiplierStats,
   };
 }
 
@@ -438,35 +551,80 @@ export function tickFull(state, difficulty = "normal") {
     newCpuHead.x === state.food.x &&
     newCpuHead.y === state.food.y;
 
-  const newSnake = playerAteFood
-    ? [newHead, ...state.snake]
-    : [newHead, ...state.snake.slice(0, -1)];
+  // BF-533: 배수 적용 (명세 §4-2, §5)
+  const foodM = state.food?.multiplier ?? 1;
+  const playerM = playerAteFood ? foodM : 0;
+  const cpuM    = cpuAteFood    ? foodM : 0;
 
-  const newCPU = cpuAteFood
-    ? [newCpuHead, ...state.cpu]
-    : [newCpuHead, ...state.cpu.slice(0, -1)];
+  // pendingGrowth 카운터 방식 (명세 §4-2)
+  let newPlayerPending = (state.pendingGrowth    ?? 0) + playerM;
+  let newCpuPending    = (state.cpuPendingGrowth ?? 0) + cpuM;
 
-  const newScore    = playerAteFood ? state.score    + 10 : state.score;
-  const newCPUScore = cpuAteFood    ? state.cpuScore + 10 : state.cpuScore;
+  let newSnake;
+  if (newPlayerPending > 0) {
+    newSnake = [newHead, ...state.snake];
+    newPlayerPending--;
+  } else {
+    newSnake = [newHead, ...state.snake.slice(0, -1)];
+  }
+
+  let newCPU;
+  if (newCpuPending > 0) {
+    newCPU = [newCpuHead, ...state.cpu];
+    newCpuPending--;
+  } else {
+    newCPU = [newCpuHead, ...state.cpu.slice(0, -1)];
+  }
+
+  // 점수: M × 10 (명세 §5-1, §5-2)
+  const newScore    = playerAteFood ? state.score    + playerM * 10 : state.score;
+  const newCPUScore = cpuAteFood    ? state.cpuScore + cpuM    * 10 : state.cpuScore;
+
+  // BF-533: multiplierStats 카운트 + 새 food 스폰
+  let newMultiplierStats = state.multiplierStats ?? createMultiplierStats();
+  if (playerAteFood || cpuAteFood) {
+    // eaten 카운트 (명세 §6-2: eaten = player+CPU 합산)
+    newMultiplierStats = {
+      ...newMultiplierStats,
+      [String(foodM)]: {
+        ...newMultiplierStats[String(foodM)],
+        eaten: newMultiplierStats[String(foodM)].eaten + 1,
+      },
+    };
+  }
 
   // 새 food: 두 지렁이 모두 피해서 스폰 (s2 EC-1)
-  const newFood = (playerAteFood || cpuAteFood)
-    ? spawnFoodCell(state.cols, state.rows, [...newSnake, ...newCPU])
-    : state.food;
+  let newFood = state.food;
+  if (playerAteFood || cpuAteFood) {
+    const spawned = spawnFoodWithMultiplier(state.cols, state.rows, [...newSnake, ...newCPU]);
+    newFood = spawned;
+    if (spawned !== null) {
+      newMultiplierStats = {
+        ...newMultiplierStats,
+        [String(spawned.multiplier)]: {
+          ...newMultiplierStats[String(spawned.multiplier)],
+          spawned: newMultiplierStats[String(spawned.multiplier)].spawned + 1,
+        },
+      };
+    }
+  }
 
   return {
     ...state,
-    snake:      newSnake,
+    snake:            newSnake,
     dir,
-    cpu:        newCPU,
-    cpuDir:     newCpuDir,
-    food:       newFood,
-    score:      newScore,
-    cpuScore:   newCPUScore,
-    highScore:  Math.max(state.highScore, newScore),
-    status:     "playing",
-    result:     null,
-    deathCause: null,
+    cpu:              newCPU,
+    cpuDir:           newCpuDir,
+    food:             newFood,
+    score:            newScore,
+    cpuScore:         newCPUScore,
+    highScore:        Math.max(state.highScore, newScore),
+    status:           "playing",
+    result:           null,
+    deathCause:       null,
+    pendingGrowth:    newPlayerPending,
+    cpuPendingGrowth: newCpuPending,
+    multiplierStats:  newMultiplierStats,
   };
 }
 

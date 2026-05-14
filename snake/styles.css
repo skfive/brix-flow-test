@@ -145,6 +145,63 @@ body {
   letter-spacing: 1px;
 }
 
+/* ─── 배수 통계 패널 (좌측 상단) — BF-533 (명세 §7-1) ──── */
+#multiplier-stats {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+  color: #e0e0e0;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  min-width: 140px;
+}
+
+.ms-title {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.ms-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ms-badge {
+  display: inline-block;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #111;
+  min-width: 22px;
+  text-align: center;
+}
+
+.ms-1x { background-color: #ffcc00; }
+.ms-2x { background-color: #00cfff; }
+.ms-4x { background-color: #cc44ff; }
+.ms-8x { background-color: #ff4444; }
+
+.ms-count {
+  min-width: 28px;
+  text-align: right;
+  font-weight: bold;
+}
+
+.ms-prob {
+  color: #aaa;
+  font-size: 11px;
+}
+
 /* ─── PAUSED 오버레이 (중앙) — BF-524 ──────────────────── */
 #paused-overlay {
   position: fixed;
