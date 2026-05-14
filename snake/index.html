@@ -13,6 +13,18 @@
     <!-- 이팩트 레이어 — BF-536 -->
     <div id="effect-layer" aria-hidden="true"></div>
 
+    <!-- 아이템 시스템 HUD — BF-545 (명세 §6-2) -->
+    <div id="buff-bar" aria-label="활성 버프 상태" hidden></div>
+    <div id="item-slot-hud" aria-label="보유 아이템">
+      <div class="slot-label">HOLD</div>
+      <div class="slot-box" data-state="empty">
+        <span class="slot-icon" aria-hidden="true">—</span>
+        <span class="slot-key-hint">[Z]</span>
+        <span class="slot-expire"></span>
+      </div>
+    </div>
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
     <!-- HUD: 우측 상단 PLAYER / CPU 점수 동시 표시 — BF-530 s2 §5-3 -->
     <!-- hud-score-value: BF-504/514/518 하위 호환 별칭 (hud-player-score 와 동기화) -->
     <div id="hud" aria-live="polite" aria-label="점수 현황">
@@ -82,7 +94,8 @@
 
     <!-- BF-518: file:// CORS 회피 — 인라인 로직 글로벌 폴백 스크립트
          BF-530: cpuChooseDir / tickFull / 확장된 createInitialState 추가
-         BF-533: pickMultiplier / spawnFoodWithMultiplier / pendingGrowth / multiplierStats 추가 -->
+         BF-533: pickMultiplier / spawnFoodWithMultiplier / pendingGrowth / multiplierStats 추가
+         BF-545: 아이템 시스템 (ITEMS_ENABLED, pickItemType, spawnItemCell 등) 추가 -->
     <script>
     (function () {
       "use strict";
@@ -206,6 +219,19 @@
           pendingGrowth:    0,
           cpuPendingGrowth: 0,
           multiplierStats:  initialStats,
+          // BF-545: 아이템 시스템 상태 필드 (명세 부록 A)
+          item:                 null,
+          heldItem:             null,
+          shieldActive:         false,
+          cpuReverseTicksLeft:  0,
+          speedStack:           [],
+          lengthBurstActive:    false,
+          lengthBeforeBurst:    0,
+          lengthBurstEndMs:     0,
+          cpuLengthBurstActive: false,
+          cpuLengthBeforeBurst: 0,
+          cpuLengthBurstEndMs:  0,
+          itemStats:            createItemStats(),
         };
       }
 
@@ -466,6 +492,374 @@
         });
       }
 
+      // ── BF-545 아이템 시스템 (명세 §2~§10) ─────────────────────
+
+      var ITEMS_ENABLED   = false;
+      var ITEM_SPAWN_RATE = 0;
+
+      var ITEM_WEIGHTS = [
+        { type: "SPEED_UP",     weight: 25 },
+        { type: "SLOW_DOWN",    weight: 25 },
+        { type: "LENGTH_BURST", weight: 15 },
+        { type: "SHIELD",       weight: 20 },
+        { type: "REVERSE",      weight: 15 },
+      ];
+      var ITEM_TOTAL_WEIGHT = 100;
+
+      var ITEM_CATEGORY = {
+        SPEED_UP:     "INSTANT",
+        SLOW_DOWN:    "INSTANT",
+        LENGTH_BURST: "INSTANT",
+        SHIELD:       "HOLDABLE",
+        REVERSE:      "HOLDABLE",
+      };
+
+      var ITEM_DURATION_MS = {
+        SPEED_UP:     5000,
+        SLOW_DOWN:    5000,
+        LENGTH_BURST: 5000,
+        SHIELD:       30000,
+        REVERSE:      3000,
+      };
+
+      var ITEM_LIFESPAN_MS  = 10000;
+      var HOLDABLE_EXPIRE_MS = 30000;
+
+      function createItemStats() {
+        return {
+          SPEED_UP:     { spawned: 0, acquired: 0, expired: 0, durationCompleted: 0 },
+          SLOW_DOWN:    { spawned: 0, acquired: 0, expired: 0, durationCompleted: 0 },
+          LENGTH_BURST: { spawned: 0, acquired: 0, expired: 0, durationCompleted: 0, selfDeathDuringBurst: 0 },
+          SHIELD:       { spawned: 0, acquired: 0, expired: 0, used: 0, shieldTriggered: 0, dropped: 0 },
+          REVERSE:      { spawned: 0, acquired: 0, expired: 0, used: 0, cpuConsumed: 0, dropped: 0 },
+        };
+      }
+
+      function pickItemType() {
+        var r = Math.random() * ITEM_TOTAL_WEIGHT;
+        var cumulative = 0;
+        for (var i = 0; i < ITEM_WEIGHTS.length; i++) {
+          cumulative += ITEM_WEIGHTS[i].weight;
+          if (r < cumulative) return ITEM_WEIGHTS[i].type;
+        }
+        return "SPEED_UP";
+      }
+
+      function spawnItemCell(cols, rows, snake, cpu, food) {
+        var occupied = new Set();
+        snake.forEach(function(c) { occupied.add(c.x + "," + c.y); });
+        cpu.forEach(function(c)   { occupied.add(c.x + "," + c.y); });
+        if (food) occupied.add(food.x + "," + food.y);
+        var empty = [];
+        for (var y = 0; y < rows; y++) {
+          for (var x = 0; x < cols; x++) {
+            if (!occupied.has(x + "," + y)) empty.push({ x: x, y: y });
+          }
+        }
+        if (empty.length === 0) return null;
+        return empty[Math.floor(Math.random() * empty.length)];
+      }
+
+      function applyInstantEffect(state, itemType, target, nowMs) {
+        var expiresAtMs = nowMs + ITEM_DURATION_MS[itemType];
+        if (itemType === "SPEED_UP" || itemType === "SLOW_DOWN") {
+          var newEntry = { type: itemType, target: target, expiresAtMs: expiresAtMs };
+          var filtered = (state.speedStack || []).filter(function(e) {
+            return !(e.type === itemType && e.target === target);
+          });
+          return Object.assign({}, state, { speedStack: filtered.concat([newEntry]) });
+        }
+        if (itemType === "LENGTH_BURST") {
+          var isPlayer = target === "player";
+          var snake    = isPlayer ? state.snake : state.cpu;
+          var maxCells = Math.floor(state.cols * state.rows * 0.8);
+          var newLen   = Math.min(snake.length * 10, maxCells);
+          var addCount = Math.max(0, newLen - snake.length);
+          var tail     = snake[snake.length - 1];
+          var extraSegs = [];
+          for (var i = 0; i < addCount; i++) extraSegs.push({ x: tail.x, y: tail.y });
+          if (isPlayer) {
+            return Object.assign({}, state, {
+              snake:             state.snake.concat(extraSegs),
+              lengthBurstActive: true,
+              lengthBeforeBurst: state.snake.length,
+              lengthBurstEndMs:  expiresAtMs,
+            });
+          } else {
+            return Object.assign({}, state, {
+              cpu:                  state.cpu.concat(extraSegs),
+              cpuLengthBurstActive: true,
+              cpuLengthBeforeBurst: state.cpu.length,
+              cpuLengthBurstEndMs:  expiresAtMs,
+            });
+          }
+        }
+        return state;
+      }
+
+      function updateItemTimers(state, nowMs) {
+        var ns = state;
+        // speedStack 만료
+        var expiredSpeed = (ns.speedStack || []).filter(function(e) { return nowMs >= e.expiresAtMs; });
+        var activeSpeed  = (ns.speedStack || []).filter(function(e) { return nowMs < e.expiresAtMs; });
+        var newStats = Object.assign({}, ns.itemStats || createItemStats());
+        expiredSpeed.forEach(function(e) {
+          newStats[e.type] = Object.assign({}, newStats[e.type], {
+            durationCompleted: newStats[e.type].durationCompleted + 1,
+          });
+        });
+        ns = Object.assign({}, ns, { speedStack: activeSpeed, itemStats: newStats });
+
+        // player LENGTH_BURST 만료
+        if (ns.lengthBurstActive && nowMs >= ns.lengthBurstEndMs) {
+          var restoreLen = Math.min(ns.lengthBeforeBurst, ns.snake.length);
+          ns = Object.assign({}, ns, {
+            snake:             ns.snake.slice(0, restoreLen),
+            lengthBurstActive: false,
+            lengthBeforeBurst: 0,
+            lengthBurstEndMs:  0,
+            itemStats: Object.assign({}, ns.itemStats, {
+              LENGTH_BURST: Object.assign({}, ns.itemStats.LENGTH_BURST, {
+                durationCompleted: ns.itemStats.LENGTH_BURST.durationCompleted + 1,
+              }),
+            }),
+          });
+        }
+        // CPU LENGTH_BURST 만료
+        if (ns.cpuLengthBurstActive && nowMs >= ns.cpuLengthBurstEndMs) {
+          var cpuRestoreLen = Math.min(ns.cpuLengthBeforeBurst, ns.cpu.length);
+          ns = Object.assign({}, ns, {
+            cpu:                  ns.cpu.slice(0, cpuRestoreLen),
+            cpuLengthBurstActive: false,
+            cpuLengthBeforeBurst: 0,
+            cpuLengthBurstEndMs:  0,
+          });
+        }
+        // heldItem 만료
+        if (ns.heldItem !== null && nowMs >= ns.heldItem.expiresAt) {
+          var ht = ns.heldItem.type;
+          ns = Object.assign({}, ns, {
+            heldItem: null,
+            itemStats: Object.assign({}, ns.itemStats, {
+              [ht]: Object.assign({}, ns.itemStats[ht], { expired: ns.itemStats[ht].expired + 1 }),
+            }),
+          });
+        }
+        // 보드 위 item 만료
+        if (ns.item !== null && nowMs >= ns.item.expiresAt) {
+          var it = ns.item.type;
+          ns = Object.assign({}, ns, {
+            item: null,
+            itemStats: Object.assign({}, ns.itemStats, {
+              [it]: Object.assign({}, ns.itemStats[it], { expired: ns.itemStats[it].expired + 1 }),
+            }),
+          });
+        }
+        // cpuReverseTicksLeft 감소
+        if (ns.cpuReverseTicksLeft > 0) {
+          ns = Object.assign({}, ns, { cpuReverseTicksLeft: ns.cpuReverseTicksLeft - 1 });
+        }
+        return ns;
+      }
+
+      function useHeldItem(state) {
+        if (state.status !== "playing" || !state.heldItem) return state;
+        var type = state.heldItem.type;
+        var updStats = Object.assign({}, state.itemStats);
+        updStats[type] = Object.assign({}, updStats[type], { used: (updStats[type].used || 0) + 1 });
+        var ns = Object.assign({}, state, { heldItem: null, itemStats: updStats });
+        if (type === "SHIELD")  ns = Object.assign({}, ns, { shieldActive: true });
+        if (type === "REVERSE") ns = Object.assign({}, ns, { cpuReverseTicksLeft: 25 });
+        return ns;
+      }
+
+      function tickWithItems(state, nowMs, movePlayer, moveCpu) {
+        if (nowMs === undefined) nowMs = Date.now();
+        if (movePlayer === undefined) movePlayer = true;
+        if (moveCpu    === undefined) moveCpu    = true;
+        if (state.status !== "playing") return state;
+
+        var s = updateItemTimers(state, nowMs);
+
+        // CPU 방향 (REVERSE 오버라이드)
+        var newCpuDir = moveCpu ? cpuChooseDir(s) : s.cpuDir;
+        if (moveCpu && s.cpuReverseTicksLeft > 0) {
+          newCpuDir = { x: -newCpuDir.x, y: -newCpuDir.y };
+        }
+
+        var dir        = s.nextDir;
+        var head       = s.snake[0];
+        var cpuHead    = s.cpu[0];
+        var newHead    = movePlayer
+          ? { x: head.x    + dir.x,       y: head.y    + dir.y       }
+          : { x: head.x,                  y: head.y                  };
+        var newCpuHead = moveCpu
+          ? { x: cpuHead.x + newCpuDir.x, y: cpuHead.y + newCpuDir.y }
+          : { x: cpuHead.x,               y: cpuHead.y               };
+
+        // 충돌 검사
+        var headOn         = movePlayer && moveCpu && newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+        var playerHitWall  = movePlayer && isWallCollision(newHead,    s.cols, s.rows);
+        var cpuHitWall     = moveCpu    && isWallCollision(newCpuHead, s.cols, s.rows);
+        var playerHitSelf  = movePlayer && isSelfCollision(newHead,    s.snake);
+        var cpuHitSelf     = moveCpu    && isSelfCollision(newCpuHead, s.cpu);
+        var playerHitCPU   = movePlayer && !headOn && s.cpu.some(function(seg)   { return seg.x === newHead.x    && seg.y === newHead.y; });
+        var cpuHitPlayer   = moveCpu    && !headOn && s.snake.some(function(seg) { return seg.x === newCpuHead.x && seg.y === newCpuHead.y; });
+
+        var playerDead = headOn || playerHitWall || playerHitSelf || playerHitCPU;
+        var cpuDead    = headOn || cpuHitWall    || cpuHitSelf    || cpuHitPlayer;
+
+        // SHIELD 인터셉트
+        var shieldTriggered = false;
+        if (playerDead && s.shieldActive) {
+          playerDead      = false;
+          shieldTriggered = true;
+        }
+
+        if (playerDead || cpuDead) {
+          var result, deathCause = null;
+          if (playerDead && cpuDead) {
+            result = "draw";
+            deathCause = headOn ? "head_on" : playerHitWall ? "wall" : playerHitSelf ? "self" : "cpu_body";
+          } else if (playerDead) {
+            result = "cpu_win";
+            if (headOn) deathCause = "head_on";
+            else if (playerHitWall) deathCause = "wall";
+            else if (playerHitSelf) deathCause = "self";
+            else if (playerHitCPU)  deathCause = "cpu_body";
+          } else {
+            result = "player_win"; deathCause = null;
+          }
+          var endStats = Object.assign({}, s.itemStats);
+          if (playerDead && s.lengthBurstActive) {
+            endStats.LENGTH_BURST = Object.assign({}, endStats.LENGTH_BURST, {
+              selfDeathDuringBurst: endStats.LENGTH_BURST.selfDeathDuringBurst + 1,
+            });
+          }
+          return Object.assign({}, s, {
+            dir: dir, cpuDir: newCpuDir, status: "gameover",
+            highScore: Math.max(s.highScore, s.score),
+            result: result, deathCause: deathCause,
+            shieldActive: false, itemStats: endStats,
+          });
+        }
+
+        var newShieldActive = shieldTriggered ? false : s.shieldActive;
+        var afterShieldStats = s.itemStats;
+        if (shieldTriggered) {
+          afterShieldStats = Object.assign({}, afterShieldStats, {
+            SHIELD: Object.assign({}, afterShieldStats.SHIELD, {
+              shieldTriggered: afterShieldStats.SHIELD.shieldTriggered + 1,
+            }),
+          });
+        }
+
+        // 먹이 처리
+        var playerAteFood = movePlayer && s.food !== null && newHead.x === s.food.x && newHead.y === s.food.y;
+        var cpuAteFood    = moveCpu && !playerAteFood && s.food !== null && newCpuHead.x === s.food.x && newCpuHead.y === s.food.y;
+        var foodM   = (s.food && s.food.multiplier) || 1;
+        var playerM = playerAteFood ? foodM : 0;
+        var cpuM    = cpuAteFood    ? foodM : 0;
+        var newPlayerPending = (s.pendingGrowth    || 0) + playerM;
+        var newCpuPending    = (s.cpuPendingGrowth || 0) + cpuM;
+
+        var newSnake;
+        if (movePlayer) {
+          if (newPlayerPending > 0) { newSnake = [newHead].concat(s.snake); newPlayerPending--; }
+          else                       { newSnake = [newHead].concat(s.snake.slice(0, -1)); }
+        } else { newSnake = s.snake; }
+
+        var newCPU;
+        if (moveCpu) {
+          if (newCpuPending > 0) { newCPU = [newCpuHead].concat(s.cpu); newCpuPending--; }
+          else                    { newCPU = [newCpuHead].concat(s.cpu.slice(0, -1)); }
+        } else { newCPU = s.cpu; }
+
+        var newScore    = playerAteFood ? s.score    + playerM * 10 : s.score;
+        var newCPUScore = cpuAteFood    ? s.cpuScore + cpuM    * 10 : s.cpuScore;
+        var newMultiplierStats = Object.assign({}, s.multiplierStats || createMultiplierStats());
+
+        if (playerAteFood || cpuAteFood) {
+          newMultiplierStats[String(foodM)] = {
+            spawned: newMultiplierStats[String(foodM)].spawned,
+            eaten:   newMultiplierStats[String(foodM)].eaten + 1,
+          };
+        }
+        var newFood = s.food;
+        if (playerAteFood || cpuAteFood) {
+          var spawnedFood = spawnFoodWithMultiplier(s.cols, s.rows, newSnake.concat(newCPU));
+          newFood = spawnedFood;
+          if (spawnedFood) {
+            var sk = String(spawnedFood.multiplier);
+            newMultiplierStats[sk] = {
+              spawned: newMultiplierStats[sk].spawned + 1,
+              eaten:   newMultiplierStats[sk].eaten,
+            };
+          }
+        }
+
+        // 아이템 획득 처리
+        var curItem  = s.item;
+        var curHeld  = s.heldItem;
+        var curStats = Object.assign({}, afterShieldStats);
+        var stateForItem = Object.assign({}, s, { shieldActive: newShieldActive, itemStats: curStats });
+
+        if (curItem !== null) {
+          var playerHitItem = movePlayer && newHead.x === curItem.x && newHead.y === curItem.y;
+          var cpuHitItem    = moveCpu && !playerHitItem && newCpuHead.x === curItem.x && newCpuHead.y === curItem.y;
+
+          if (playerHitItem) {
+            var itype = curItem.type;
+            curStats[itype] = Object.assign({}, curStats[itype], { acquired: curStats[itype].acquired + 1 });
+            if (ITEM_CATEGORY[itype] === "INSTANT") {
+              stateForItem = applyInstantEffect(Object.assign({}, stateForItem, { itemStats: curStats }), itype, "player", nowMs);
+              curStats = stateForItem.itemStats;
+            } else {
+              if (curHeld !== null && curHeld.type !== itype) {
+                curStats[curHeld.type] = Object.assign({}, curStats[curHeld.type], {
+                  dropped: curStats[curHeld.type].dropped + 1,
+                });
+              }
+              curHeld = { type: itype, acquiredAt: nowMs, expiresAt: nowMs + HOLDABLE_EXPIRE_MS };
+              stateForItem = Object.assign({}, stateForItem, { heldItem: curHeld, itemStats: curStats });
+            }
+            curItem = null;
+          } else if (cpuHitItem) {
+            if (ITEM_CATEGORY[curItem.type] === "HOLDABLE") {
+              curStats[curItem.type] = Object.assign({}, curStats[curItem.type], {
+                cpuConsumed: (curStats[curItem.type].cpuConsumed || 0) + 1,
+              });
+            } else {
+              curStats[curItem.type] = Object.assign({}, curStats[curItem.type], {
+                acquired: curStats[curItem.type].acquired + 1,
+              });
+              stateForItem = applyInstantEffect(Object.assign({}, stateForItem, { itemStats: curStats }), curItem.type, "cpu", nowMs);
+              curStats = stateForItem.itemStats;
+            }
+            curItem = null;
+            stateForItem = Object.assign({}, stateForItem, { itemStats: curStats });
+          }
+        }
+
+        return Object.assign({}, stateForItem, {
+          snake:            newSnake,
+          dir:              dir,
+          cpu:              newCPU,
+          cpuDir:           newCpuDir,
+          food:             newFood,
+          item:             curItem,
+          score:            newScore,
+          cpuScore:         newCPUScore,
+          highScore:        Math.max(s.highScore, newScore),
+          status:           "playing",
+          result:           null,
+          deathCause:       null,
+          pendingGrowth:    newPlayerPending,
+          cpuPendingGrowth: newCpuPending,
+          multiplierStats:  newMultiplierStats,
+        });
+      }
+
       // game.js 에서 globalThis 로 참조 (BF-518/522)
       Object.assign(globalThis, {
         CELL:                    CELL,
@@ -484,6 +878,20 @@
         tickFull:                tickFull,
         cpuChooseDir:            cpuChooseDir,
         restartGame:             restartGame,
+        // BF-545: 아이템 시스템
+        ITEMS_ENABLED:           ITEMS_ENABLED,
+        ITEM_SPAWN_RATE:         ITEM_SPAWN_RATE,
+        ITEM_WEIGHTS:            ITEM_WEIGHTS,
+        ITEM_CATEGORY:           ITEM_CATEGORY,
+        ITEM_DURATION_MS:        ITEM_DURATION_MS,
+        ITEM_LIFESPAN_MS:        ITEM_LIFESPAN_MS,
+        HOLDABLE_EXPIRE_MS:      HOLDABLE_EXPIRE_MS,
+        createItemStats:         createItemStats,
+        pickItemType:            pickItemType,
+        spawnItemCell:           spawnItemCell,
+        useHeldItem:             useHeldItem,
+        updateItemTimers:        updateItemTimers,
+        tickWithItems:           tickWithItems,
       });
     })();
     </script>

@@ -104,6 +104,19 @@ export function createInitialState(cols, rows, highScore = 0) {
     pendingGrowth:    0,
     cpuPendingGrowth: 0,
     multiplierStats:  initialStats,
+    // BF-545: 아이템 시스템 상태 필드 (명세 부록 A)
+    item:                 null,   // 보드 위 아이템 { type, x, y, spawnedAt, expiresAt }
+    heldItem:             null,   // 보유 슬롯 { type, acquiredAt, expiresAt }
+    shieldActive:         false,
+    cpuReverseTicksLeft:  0,
+    speedStack:           [],     // [{ type, target, expiresAtMs }]
+    lengthBurstActive:    false,
+    lengthBeforeBurst:    0,
+    lengthBurstEndMs:     0,
+    cpuLengthBurstActive: false,
+    cpuLengthBeforeBurst: 0,
+    cpuLengthBurstEndMs:  0,
+    itemStats:            createItemStats(),
   };
 }
 
@@ -640,4 +653,606 @@ export function tickFull(state, difficulty = "normal") {
  */
 export function restartGame(state) {
   return createInitialState(state.cols, state.rows, state.highScore);
+}
+
+// ─────────────────────────────────────────────────────────────
+// 아이템 시스템 — BF-545 (명세 BF-538 §2~§10, BF-544 §6)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Feature Flag — 기본값 false (기존 사용자 영향 0, 명세 §9-1).
+ * true 로 변경 시 아이템 스폰 타이머 활성화.
+ */
+export const ITEMS_ENABLED = false;
+
+/**
+ * 스폰 비율 파라미터 — 0: 비활성, 1: 정상 (명세 §9-2).
+ * ITEMS_ENABLED=true & ITEM_SPAWN_RATE > 0 일 때 아이템 등장.
+ */
+export const ITEM_SPAWN_RATE = 0;
+
+/** 아이템 가중치 테이블 (명세 §6-2). 합계 100. */
+export const ITEM_WEIGHTS = [
+  { type: "SPEED_UP",     weight: 25 },
+  { type: "SLOW_DOWN",    weight: 25 },
+  { type: "LENGTH_BURST", weight: 15 },
+  { type: "SHIELD",       weight: 20 },
+  { type: "REVERSE",      weight: 15 },
+];
+export const ITEM_TOTAL_WEIGHT = 100;
+
+/** 아이템 카테고리 (명세 §1-2). */
+export const ITEM_CATEGORY = {
+  SPEED_UP:     "INSTANT",
+  SLOW_DOWN:    "INSTANT",
+  LENGTH_BURST: "INSTANT",
+  SHIELD:       "HOLDABLE",
+  REVERSE:      "HOLDABLE",
+};
+
+/** 아이템 효과 지속 시간 ms (명세 §2). */
+export const ITEM_DURATION_MS = {
+  SPEED_UP:     5000,   // 5초
+  SLOW_DOWN:    5000,   // 5초
+  LENGTH_BURST: 5000,   // 5초
+  SHIELD:       30000,  // 보유 후 30초
+  REVERSE:      3000,   // 발동 후 3초
+};
+
+/** 보드 위 아이템 수명 ms — 10초 경과 시 자동 소멸 (명세 §6-1). */
+export const ITEM_LIFESPAN_MS = 10000;
+
+/** 보유형 아이템 자동 소멸 시간 ms (명세 §4-1). */
+export const HOLDABLE_EXPIRE_MS = 30000;
+
+// ─────────────────────────────────────────────────────────────
+// 아이템 KPI 통계 구조 생성 (명세 §10-1)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 아이템별 누적 통계 초기 구조 (명세 §10-1).
+ *
+ * @returns {Object}
+ */
+export function createItemStats() {
+  return {
+    SPEED_UP: {
+      spawned: 0, acquired: 0, expired: 0, durationCompleted: 0,
+    },
+    SLOW_DOWN: {
+      spawned: 0, acquired: 0, expired: 0, durationCompleted: 0,
+    },
+    LENGTH_BURST: {
+      spawned: 0, acquired: 0, expired: 0, durationCompleted: 0,
+      selfDeathDuringBurst: 0,
+    },
+    SHIELD: {
+      spawned: 0, acquired: 0, expired: 0, used: 0,
+      shieldTriggered: 0, dropped: 0,
+    },
+    REVERSE: {
+      spawned: 0, acquired: 0, expired: 0, used: 0,
+      cpuConsumed: 0, dropped: 0,
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 아이템 스폰 (명세 §6-2)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 가중치 기반 아이템 타입 선택 (명세 §6-2).
+ *
+ * @returns {string} "SPEED_UP" | "SLOW_DOWN" | "LENGTH_BURST" | "SHIELD" | "REVERSE"
+ */
+export function pickItemType() {
+  const r = Math.random() * ITEM_TOTAL_WEIGHT;
+  let cumulative = 0;
+  for (const { type, weight } of ITEM_WEIGHTS) {
+    cumulative += weight;
+    if (r < cumulative) return type;
+  }
+  return "SPEED_UP"; // fallback
+}
+
+/**
+ * 아이템 스폰 셀 선택 — snake/cpu/food 셀 제외 (명세 §6-1, EC-10).
+ *
+ * @param {number} cols
+ * @param {number} rows
+ * @param {Array<{x:number,y:number}>} snake
+ * @param {Array<{x:number,y:number}>} cpu
+ * @param {{x:number,y:number}|null} food
+ * @returns {{x:number,y:number}|null}
+ */
+export function spawnItemCell(cols, rows, snake, cpu, food) {
+  const occupied = new Set([...snake, ...cpu].map(c => `${c.x},${c.y}`));
+  if (food !== null && food !== undefined) occupied.add(`${food.x},${food.y}`);
+  const empty = [];
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (!occupied.has(`${x},${y}`)) empty.push({ x, y });
+    }
+  }
+  if (empty.length === 0) return null;
+  return empty[Math.floor(Math.random() * empty.length)];
+}
+
+// ─────────────────────────────────────────────────────────────
+// 아이템 효과 적용 (내부 헬퍼)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * INSTANT 아이템 효과를 state에 적용 (내부 헬퍼).
+ * lengthBurst: 즉시 세그먼트 추가, speedStack에 항목 추가.
+ *
+ * @param {GameState} state
+ * @param {string} itemType  아이템 타입
+ * @param {"player"|"cpu"} target  획득 주체
+ * @param {number} nowMs  현재 시각 (ms)
+ * @returns {GameState}
+ */
+function applyInstantEffect(state, itemType, target, nowMs) {
+  const expiresAtMs = nowMs + ITEM_DURATION_MS[itemType];
+
+  if (itemType === "SPEED_UP" || itemType === "SLOW_DOWN") {
+    const newEntry = { type: itemType, target, expiresAtMs };
+    // 동일 target 의 동일 type 재획득 → 타이머 리셋 (명세 §7-1)
+    const filtered = (state.speedStack || []).filter(
+      e => !(e.type === itemType && e.target === target)
+    );
+    return { ...state, speedStack: [...filtered, newEntry] };
+  }
+
+  if (itemType === "LENGTH_BURST") {
+    const isPlayer = target === "player";
+    const snake    = isPlayer ? state.snake : state.cpu;
+    const maxCells = Math.floor(state.cols * state.rows * 0.8);
+    const newLen   = Math.min(snake.length * 10, maxCells);
+    const addCount = Math.max(0, newLen - snake.length);
+    const tail     = snake[snake.length - 1];
+    const extraSegs = Array.from({ length: addCount }, () => ({ ...tail }));
+
+    if (isPlayer) {
+      return {
+        ...state,
+        snake:              [...state.snake, ...extraSegs],
+        lengthBurstActive:  true,
+        lengthBeforeBurst:  state.snake.length,
+        lengthBurstEndMs:   expiresAtMs,
+      };
+    } else {
+      return {
+        ...state,
+        cpu:                  [...state.cpu, ...extraSegs],
+        cpuLengthBurstActive: true,
+        cpuLengthBeforeBurst: state.cpu.length,
+        cpuLengthBurstEndMs:  expiresAtMs,
+      };
+    }
+  }
+
+  return state;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 아이템 타이머 업데이트 (명세 §5-1, §5-4)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 매 틱 호출 — 아이템 타이머 만료 체크 및 효과 복원.
+ *
+ * 처리 항목:
+ * 1. speedStack 만료 항목 제거 + durationCompleted KPI
+ * 2. lengthBurst 만료 → 길이 복원 (명세 §3-3)
+ * 3. cpuLengthBurst 만료 → CPU 길이 복원
+ * 4. heldItem 만료 → null + expired KPI (명세 §5-4)
+ * 5. 보드 위 item 만료 → null + expired KPI (명세 §6-1)
+ * 6. cpuReverseTicksLeft 감소
+ *
+ * @param {GameState} state
+ * @param {number} nowMs
+ * @returns {GameState}
+ */
+export function updateItemTimers(state, nowMs) {
+  let ns = state;
+
+  // ── 1. speedStack 만료 ──────────────────────────────────
+  const expiredSpeed  = (ns.speedStack || []).filter(e => nowMs >= e.expiresAtMs);
+  const activeSpeed   = (ns.speedStack || []).filter(e => nowMs < e.expiresAtMs);
+  let newItemStats = ns.itemStats ? { ...ns.itemStats } : createItemStats();
+
+  for (const e of expiredSpeed) {
+    const t = e.type;
+    newItemStats[t] = {
+      ...newItemStats[t],
+      durationCompleted: newItemStats[t].durationCompleted + 1,
+    };
+  }
+  ns = { ...ns, speedStack: activeSpeed, itemStats: newItemStats };
+
+  // ── 2. player LENGTH_BURST 만료 ─────────────────────────
+  if (ns.lengthBurstActive && nowMs >= ns.lengthBurstEndMs) {
+    const restoreLen = Math.min(ns.lengthBeforeBurst, ns.snake.length);
+    const updStats   = {
+      ...ns.itemStats,
+      LENGTH_BURST: {
+        ...ns.itemStats.LENGTH_BURST,
+        durationCompleted: ns.itemStats.LENGTH_BURST.durationCompleted + 1,
+      },
+    };
+    ns = {
+      ...ns,
+      snake:             ns.snake.slice(0, restoreLen),
+      lengthBurstActive: false,
+      lengthBeforeBurst: 0,
+      lengthBurstEndMs:  0,
+      itemStats:         updStats,
+    };
+  }
+
+  // ── 3. CPU LENGTH_BURST 만료 ─────────────────────────────
+  if (ns.cpuLengthBurstActive && nowMs >= ns.cpuLengthBurstEndMs) {
+    const restoreLen = Math.min(ns.cpuLengthBeforeBurst, ns.cpu.length);
+    ns = {
+      ...ns,
+      cpu:                  ns.cpu.slice(0, restoreLen),
+      cpuLengthBurstActive: false,
+      cpuLengthBeforeBurst: 0,
+      cpuLengthBurstEndMs:  0,
+    };
+  }
+
+  // ── 4. heldItem 만료 ────────────────────────────────────
+  if (ns.heldItem !== null && nowMs >= ns.heldItem.expiresAt) {
+    const t = ns.heldItem.type;
+    const updStats = {
+      ...ns.itemStats,
+      [t]: { ...ns.itemStats[t], expired: ns.itemStats[t].expired + 1 },
+    };
+    ns = { ...ns, heldItem: null, itemStats: updStats };
+  }
+
+  // ── 5. 보드 위 item 만료 ────────────────────────────────
+  if (ns.item !== null && nowMs >= ns.item.expiresAt) {
+    const t = ns.item.type;
+    const updStats = {
+      ...ns.itemStats,
+      [t]: { ...ns.itemStats[t], expired: ns.itemStats[t].expired + 1 },
+    };
+    ns = { ...ns, item: null, itemStats: updStats };
+  }
+
+  // ── 6. cpuReverseTicksLeft 감소 ─────────────────────────
+  if (ns.cpuReverseTicksLeft > 0) {
+    ns = { ...ns, cpuReverseTicksLeft: ns.cpuReverseTicksLeft - 1 };
+  }
+
+  return ns;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 보유형 아이템 발동 (명세 §5-3)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Z 키 입력 시 보유 아이템 발동.
+ * playing 상태 + heldItem 존재 시에만 처리.
+ *
+ * @param {GameState} state
+ * @returns {GameState}
+ */
+export function useHeldItem(state) {
+  if (state.status !== "playing") return state;
+  if (!state.heldItem) return state;
+
+  const { type } = state.heldItem;
+  const updStats = {
+    ...state.itemStats,
+    [type]: { ...state.itemStats[type], used: (state.itemStats[type].used || 0) + 1 },
+  };
+
+  let ns = { ...state, heldItem: null, itemStats: updStats };
+
+  if (type === "SHIELD") {
+    ns = { ...ns, shieldActive: true };
+  } else if (type === "REVERSE") {
+    ns = { ...ns, cpuReverseTicksLeft: 25 };  // 명세 §4-3 (25틱)
+  }
+
+  return ns;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 경쟁 게임 틱 — 아이템 시스템 포함 (BF-545)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 아이템 시스템을 포함한 1 프레임 경쟁 게임 로직.
+ *
+ * tickFull 을 확장하여 아이템 획득·효과·방패 인터셉트·역전탄을 처리.
+ * ITEMS_ENABLED=false 또는 아이템이 없는 경우에도 안전하게 동작
+ * (기존 tickFull 하위 호환 보장 — AC-3).
+ *
+ * @param {GameState} state
+ * @param {number} [nowMs=Date.now()]
+ * @param {boolean} [movePlayer=true]  이번 틱에 player 이동 여부 (속도 효과 지원)
+ * @param {boolean} [moveCpu=true]     이번 틱에 CPU 이동 여부
+ * @returns {GameState}
+ */
+export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, moveCpu = true) {
+  if (state.status !== "playing") return state;
+
+  // ── 0. 타이머 업데이트 (이동 전) ─────────────────────────
+  let s = updateItemTimers(state, nowMs);
+
+  // ── 1. CPU 방향 결정 (REVERSE 오버라이드 포함) ────────────
+  let newCpuDir = moveCpu ? cpuChooseDir(s) : s.cpuDir;
+  if (moveCpu && s.cpuReverseTicksLeft > 0) {
+    // 역전탄: CPU 이동 방향 180도 반전 (명세 §4-3)
+    newCpuDir = { x: -newCpuDir.x, y: -newCpuDir.y };
+  }
+
+  // ── 2. 새 헤드 위치 계산 ─────────────────────────────────
+  const dir       = s.nextDir;
+  const head      = s.snake[0];
+  const cpuHead   = s.cpu[0];
+  const newHead   = movePlayer
+    ? { x: head.x    + dir.x,       y: head.y    + dir.y       }
+    : { x: head.x,                  y: head.y                  };  // 이동 없음
+  const newCpuHead = moveCpu
+    ? { x: cpuHead.x + newCpuDir.x, y: cpuHead.y + newCpuDir.y }
+    : { x: cpuHead.x,               y: cpuHead.y               }; // 이동 없음
+
+  // ── 3. 충돌 검사 ──────────────────────────────────────────
+  // T4: head-on (양쪽 모두 이동할 때만 가능)
+  const headOn = movePlayer && moveCpu &&
+    newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+
+  const playerHitWall = movePlayer && isWallCollision(newHead,    s.cols, s.rows);
+  const cpuHitWall    = moveCpu   && isWallCollision(newCpuHead,  s.cols, s.rows);
+  const playerHitSelf = movePlayer && isSelfCollision(newHead,    s.snake);
+  const cpuHitSelf    = moveCpu   && isSelfCollision(newCpuHead,  s.cpu);
+  const playerHitCPU  = movePlayer && !headOn &&
+    s.cpu.some(seg => seg.x === newHead.x    && seg.y === newHead.y);
+  const cpuHitPlayer  = moveCpu   && !headOn &&
+    s.snake.some(seg => seg.x === newCpuHead.x && seg.y === newCpuHead.y);
+
+  let playerDead = headOn || playerHitWall || playerHitSelf || playerHitCPU;
+  const cpuDead  = headOn || cpuHitWall    || cpuHitSelf    || cpuHitPlayer;
+
+  // ── 4. SHIELD 인터셉트 (명세 §4-2) ───────────────────────
+  let shieldTriggered = false;
+  if (playerDead && s.shieldActive) {
+    playerDead      = false;
+    shieldTriggered = true;
+  }
+
+  // ── 5. 게임 종료 처리 ─────────────────────────────────────
+  if (playerDead || cpuDead) {
+    let result, deathCause = null;
+
+    if (playerDead && cpuDead) {
+      result     = "draw";
+      deathCause = headOn ? "head_on"
+        : playerHitWall ? "wall"
+        : playerHitSelf ? "self"
+        : "cpu_body";
+    } else if (playerDead) {
+      result = "cpu_win";
+      if      (headOn)          deathCause = "head_on";
+      else if (playerHitWall)   deathCause = "wall";
+      else if (playerHitSelf)   deathCause = "self";
+      else if (playerHitCPU)    deathCause = "cpu_body";
+    } else {
+      result     = "player_win";
+      deathCause = null;
+    }
+
+    // LENGTH_BURST 중 자멸 KPI (명세 §10-1)
+    let endStats = { ...s.itemStats };
+    if (playerDead && s.lengthBurstActive) {
+      endStats = {
+        ...endStats,
+        LENGTH_BURST: {
+          ...endStats.LENGTH_BURST,
+          selfDeathDuringBurst: endStats.LENGTH_BURST.selfDeathDuringBurst + 1,
+        },
+      };
+    }
+
+    const newHighScore = Math.max(s.highScore, s.score);
+    return {
+      ...s,
+      dir,
+      cpuDir:      newCpuDir,
+      status:      "gameover",
+      highScore:   newHighScore,
+      result,
+      deathCause,
+      shieldActive: false,
+      itemStats:   endStats,
+    };
+  }
+
+  // ── 6. 방패 소멸 처리 ─────────────────────────────────────
+  let newShieldActive = shieldTriggered ? false : s.shieldActive;
+  let afterShieldStats = s.itemStats;
+  if (shieldTriggered) {
+    afterShieldStats = {
+      ...afterShieldStats,
+      SHIELD: {
+        ...afterShieldStats.SHIELD,
+        shieldTriggered: afterShieldStats.SHIELD.shieldTriggered + 1,
+      },
+    };
+  }
+
+  // ── 7. 먹이 처리 ─────────────────────────────────────────
+  const playerAteFood = movePlayer &&
+    s.food !== null &&
+    newHead.x === s.food.x && newHead.y === s.food.y;
+  const cpuAteFood    = moveCpu && !playerAteFood &&
+    s.food !== null &&
+    newCpuHead.x === s.food.x && newCpuHead.y === s.food.y;
+
+  const foodM     = s.food?.multiplier ?? 1;
+  const playerM   = playerAteFood ? foodM : 0;
+  const cpuM      = cpuAteFood    ? foodM : 0;
+
+  let newPlayerPending = (s.pendingGrowth    ?? 0) + playerM;
+  let newCpuPending    = (s.cpuPendingGrowth ?? 0) + cpuM;
+
+  // ── 8. 뱀 이동 (pendingGrowth 적용) ─────────────────────
+  let newSnake;
+  if (movePlayer) {
+    if (newPlayerPending > 0) {
+      newSnake = [newHead, ...s.snake];
+      newPlayerPending--;
+    } else {
+      newSnake = [newHead, ...s.snake.slice(0, -1)];
+    }
+  } else {
+    newSnake = s.snake; // player 이동 없음
+  }
+
+  let newCPU;
+  if (moveCpu) {
+    if (newCpuPending > 0) {
+      newCPU = [newCpuHead, ...s.cpu];
+      newCpuPending--;
+    } else {
+      newCPU = [newCpuHead, ...s.cpu.slice(0, -1)];
+    }
+  } else {
+    newCPU = s.cpu; // CPU 이동 없음
+  }
+
+  // ── 9. 점수 + multiplierStats ────────────────────────────
+  const newScore    = playerAteFood ? s.score    + playerM * 10 : s.score;
+  const newCPUScore = cpuAteFood    ? s.cpuScore + cpuM    * 10 : s.cpuScore;
+
+  let newMultiplierStats = s.multiplierStats ?? createMultiplierStats();
+  if (playerAteFood || cpuAteFood) {
+    newMultiplierStats = {
+      ...newMultiplierStats,
+      [String(foodM)]: {
+        ...newMultiplierStats[String(foodM)],
+        eaten: newMultiplierStats[String(foodM)].eaten + 1,
+      },
+    };
+  }
+
+  // 새 food 스폰
+  let newFood = s.food;
+  if (playerAteFood || cpuAteFood) {
+    const spawned = spawnFoodWithMultiplier(s.cols, s.rows, [...newSnake, ...newCPU]);
+    newFood = spawned;
+    if (spawned !== null) {
+      newMultiplierStats = {
+        ...newMultiplierStats,
+        [String(spawned.multiplier)]: {
+          ...newMultiplierStats[String(spawned.multiplier)],
+          spawned: newMultiplierStats[String(spawned.multiplier)].spawned + 1,
+        },
+      };
+    }
+  }
+
+  // ── 10. 아이템 획득 처리 ────────────────────────────────
+  let curItem     = s.item;
+  let curHeld     = s.heldItem;
+  let curStats    = { ...afterShieldStats };
+  // snake/cpu 는 이동 후 위치를 포함해야 LENGTH_BURST 가 올바른 길이를 기준으로 10배 적용
+  let stateAfterItem = {
+    ...s,
+    snake:        newSnake,
+    cpu:          newCPU,
+    shieldActive: newShieldActive,
+    itemStats:    curStats,
+  };
+
+  if (curItem !== null) {
+    const playerHitItem = movePlayer && newHead.x === curItem.x && newHead.y === curItem.y;
+    const cpuHitItem    = moveCpu && !playerHitItem &&
+      newCpuHead.x === curItem.x && newCpuHead.y === curItem.y;
+
+    if (playerHitItem) {
+      const itype = curItem.type;
+      curStats = {
+        ...curStats,
+        [itype]: { ...curStats[itype], acquired: curStats[itype].acquired + 1 },
+      };
+
+      if (ITEM_CATEGORY[itype] === "INSTANT") {
+        // 즉시발동 효과 적용
+        stateAfterItem = applyInstantEffect(
+          { ...stateAfterItem, itemStats: curStats },
+          itype, "player", nowMs
+        );
+      } else {
+        // 보유형: 슬롯에 보관 (명세 §5-2)
+        if (curHeld !== null && curHeld.type !== itype) {
+          // 다른 종류 교체 → 기존 드롭 KPI (명세 §7-3)
+          curStats = {
+            ...curStats,
+            [curHeld.type]: {
+              ...curStats[curHeld.type],
+              dropped: curStats[curHeld.type].dropped + 1,
+            },
+          };
+        }
+        const newExpiry = curHeld !== null && curHeld.type === itype
+          ? nowMs + HOLDABLE_EXPIRE_MS  // 동일 종류 → 만료 갱신
+          : nowMs + HOLDABLE_EXPIRE_MS;
+        curHeld = { type: itype, acquiredAt: nowMs, expiresAt: newExpiry };
+        stateAfterItem = { ...stateAfterItem, heldItem: curHeld, itemStats: curStats };
+      }
+      curItem = null;
+
+    } else if (cpuHitItem) {
+      // CPU가 보유형 아이템 밟음 → 소멸 (명세 §4-1, EC-05)
+      if (ITEM_CATEGORY[curItem.type] === "HOLDABLE") {
+        curStats = {
+          ...curStats,
+          [curItem.type]: {
+            ...curStats[curItem.type],
+            cpuConsumed: (curStats[curItem.type].cpuConsumed || 0) + 1,
+          },
+        };
+      } else {
+        // CPU가 INSTANT 아이템 획득
+        curStats = {
+          ...curStats,
+          [curItem.type]: { ...curStats[curItem.type], acquired: curStats[curItem.type].acquired + 1 },
+        };
+        stateAfterItem = applyInstantEffect(
+          { ...stateAfterItem, itemStats: curStats },
+          curItem.type, "cpu", nowMs
+        );
+        curStats = stateAfterItem.itemStats;
+      }
+      curItem = null;
+      stateAfterItem = { ...stateAfterItem, itemStats: curStats };
+    }
+  }
+
+  return {
+    ...stateAfterItem,
+    // snake, cpu 는 stateAfterItem 에 포함 (이동 후 위치 + LENGTH_BURST 등 아이템 효과 반영)
+    dir,
+    cpuDir:           newCpuDir,
+    food:             newFood,
+    item:             curItem,
+    score:            newScore,
+    cpuScore:         newCPUScore,
+    highScore:        Math.max(s.highScore, newScore),
+    status:           "playing",
+    result:           null,
+    deathCause:       null,
+    pendingGrowth:    newPlayerPending,
+    cpuPendingGrowth: newCpuPending,
+    multiplierStats:  newMultiplierStats,
+  };
 }
