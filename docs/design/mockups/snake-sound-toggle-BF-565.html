@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake 효과음 토글 시안 — BF-565</title>
+  <style>
+    /* ─── 디자인 토큰 (snake-sound-toggle-BF-565.md §2 기반) ─── */
+    :root {
+      /* 게임 기반 토큰 */
+      --bg-primary: #0d0d0d;
+      --player-body: #4cff80;
+      --hud-panel-bg: rgba(0, 0, 0, 0.45);
+      --hud-panel-border: rgba(76, 255, 128, 0.22);
+      --hud-panel-text: #e0e0e0;
+
+      /* ON 상태 */
+      --sound-on-bg: rgba(76, 255, 128, 0.12);
+      --sound-on-border: rgba(76, 255, 128, 0.35);
+      --sound-on-text-shadow: 0 0 8px rgba(76, 255, 128, 0.60);
+      --sound-on-icon-filter: brightness(1);
+
+      /* OFF 상태 */
+      --sound-off-bg: rgba(0, 0, 0, 0.45);
+      --sound-off-border: rgba(255, 255, 255, 0.15);
+      --sound-off-text-shadow: none;
+      --sound-off-icon-filter: brightness(0.55) grayscale(0.6);
+
+      /* Hover */
+      --sound-hover-bg-on: rgba(76, 255, 128, 0.22);
+      --sound-hover-bg-off: rgba(255, 255, 255, 0.10);
+
+      /* Focus-visible */
+      --sound-focus-ring: #4cff80;
+      --sound-focus-ring-width: 2px;
+      --sound-focus-ring-offset: 3px;
+    }
+
+    /* ─── 기본 리셋 ─────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-primary);
+      font-family: 'Courier New', Courier, monospace;
+      color: var(--hud-panel-text);
+      min-height: 100vh;
+    }
+
+    /* ─── 페이지 헤더 ───────────────────────────────────── */
+    .page-header {
+      padding: 28px 32px 16px;
+      border-bottom: 1px solid rgba(76, 255, 128, 0.15);
+    }
+    .page-header h1 {
+      font-size: 1.1rem;
+      color: #4cff80;
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+    .page-header p {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* ─── 섹션 레이아웃 ─────────────────────────────────── */
+    .section {
+      padding: 32px 32px 0;
+    }
+    .section-title {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.40);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* ─── 상태 비교 패널 ────────────────────────────────── */
+    .state-grid {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .state-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 24px 28px;
+      min-width: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .state-label {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.40);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .state-desc {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.35);
+      text-align: center;
+      line-height: 1.5;
+      max-width: 130px;
+    }
+
+    /* ─── 토글 버튼 공통 ────────────────────────────────── */
+    .sound-toggle {
+      position: relative;
+      width: 32px;
+      height: 32px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      font-size: 18px;
+      border-radius: 8px;
+      border: 1px solid;
+      cursor: pointer;
+      font-family: 'Courier New', Courier, monospace;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .sound-toggle:active {
+      transform: scale(0.94);
+    }
+    .sound-toggle:focus {
+      outline: none;
+    }
+    .sound-toggle:focus-visible {
+      outline: var(--sound-focus-ring-width) solid var(--sound-focus-ring);
+      outline-offset: var(--sound-focus-ring-offset);
+    }
+
+    /* ─── ON 상태 ───────────────────────────────────────── */
+    .sound-toggle--on {
+      background: var(--sound-on-bg);
+      border-color: var(--sound-on-border);
+      text-shadow: var(--sound-on-text-shadow);
+      filter: var(--sound-on-icon-filter);
+    }
+    .sound-toggle--on:hover {
+      background: var(--sound-hover-bg-on);
+    }
+
+    /* ─── OFF 상태 ──────────────────────────────────────── */
+    .sound-toggle--off {
+      background: var(--sound-off-bg);
+      border-color: var(--sound-off-border);
+      text-shadow: var(--sound-off-text-shadow);
+      filter: var(--sound-off-icon-filter);
+    }
+    .sound-toggle--off:hover {
+      background: var(--sound-hover-bg-off);
+    }
+
+    /* ─── hover (정적 시연용) ──────────────────────────── */
+    .sound-toggle--on-hover {
+      background: var(--sound-hover-bg-on);
+      border-color: var(--sound-on-border);
+      text-shadow: var(--sound-on-text-shadow);
+      filter: var(--sound-on-icon-filter);
+    }
+    .sound-toggle--off-hover {
+      background: var(--sound-hover-bg-off);
+      border-color: var(--sound-off-border);
+      text-shadow: var(--sound-off-text-shadow);
+      filter: var(--sound-off-icon-filter);
+    }
+
+    /* ─── focus-visible (정적 시연용) ───────────────────── */
+    .sound-toggle--focus {
+      background: var(--sound-on-bg);
+      border-color: var(--sound-on-border);
+      text-shadow: var(--sound-on-text-shadow);
+      outline: var(--sound-focus-ring-width) solid var(--sound-focus-ring);
+      outline-offset: var(--sound-focus-ring-offset);
+    }
+
+    /* ─── 게임 배경 시뮬레이션 섹션 ────────────────────── */
+    .game-scene {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      height: 300px;
+      background: var(--bg-primary);
+      border: 1px solid rgba(76, 255, 128, 0.15);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    /* 게임 격자 패턴 (시각적 배경 힌트) */
+    .game-scene::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(76, 255, 128, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(76, 255, 128, 0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* 게임 씬 내 배치 */
+    .game-scene .sound-toggle {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+    }
+
+    /* 씬 내 HUD 시뮬레이션 */
+    .game-hud {
+      position: absolute;
+      top: 52px; /* 토글(32px) + gap(4px) + 기준(16px) = 52px */
+      right: 20px;
+      color: var(--hud-panel-text);
+      font-size: 14px;
+      line-height: 1.6;
+      text-align: right;
+      pointer-events: none;
+      text-shadow: 0 0 6px rgba(0, 255, 100, 0.4);
+    }
+    .game-hud .hud-score {
+      font-size: 22px;
+      font-weight: bold;
+      color: #4cff80;
+    }
+    .game-hud .hud-label {
+      font-size: 11px;
+      letter-spacing: 1px;
+      opacity: 0.85;
+    }
+
+    /* HUD 상태 패널 */
+    .game-hud-status {
+      position: absolute;
+      top: 96px; /* 토글 조정 반영: 기존 60px + 36px */
+      right: 20px;
+      background: var(--hud-panel-bg);
+      border: 1px solid var(--hud-panel-border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      min-width: 110px;
+      text-align: right;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.50);
+      pointer-events: none;
+    }
+    .game-hud-status .status-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--hud-panel-text);
+    }
+
+    /* 뱀 시뮬레이션 (장식) */
+    .snake-body {
+      position: absolute;
+      border-radius: 3px;
+      background: #4cff80;
+    }
+    .food-dot {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ff4444;
+      box-shadow: 0 0 8px rgba(255, 68, 68, 0.60);
+    }
+
+    /* ─── 상태 전환 인터랙션 시연 ───────────────────────── */
+    .live-demo {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .live-demo-info {
+      flex: 1;
+    }
+    .live-demo-info .demo-title {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.60);
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .live-demo-info .demo-status {
+      font-size: 14px;
+      color: #4cff80;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .live-demo-info .demo-status.off {
+      color: rgba(255, 255, 255, 0.40);
+    }
+
+    /* ─── 토큰 매핑 테이블 ──────────────────────────────── */
+    .token-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+    .token-table th {
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.35);
+      padding: 6px 12px 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .token-table td {
+      padding: 7px 12px 7px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: rgba(255, 255, 255, 0.75);
+      vertical-align: middle;
+    }
+    .token-table td:first-child {
+      font-family: 'Courier New', Courier, monospace;
+      color: #4cff80;
+      font-size: 11px;
+    }
+    .color-chip {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.20);
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    /* ─── 구분선 ────────────────────────────────────────── */
+    .divider {
+      margin: 32px 0 0;
+      border: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* ─── 푸터 ──────────────────────────────────────────── */
+    .page-footer {
+      padding: 20px 32px 32px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.25);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── 페이지 헤더 ── -->
+  <header class="page-header">
+    <h1>SNAKE SOUND TOGGLE — 시각 시안</h1>
+    <p>BF-565 · 디자이너: 이디자인 · 2026-05-14 · mockup 전용 (dev 참조용)</p>
+  </header>
+
+
+  <!-- ════════════════════════════════════════════════════
+       섹션 1: 게임 배경 실제 배치 시뮬레이션
+  ════════════════════════════════════════════════════ -->
+  <div class="section">
+    <p class="section-title">01 · 게임 배경 배치 시뮬레이션 (ON 상태)</p>
+
+    <div class="game-scene">
+      <!-- 뱀 몸통 (장식) -->
+      <div class="snake-body" style="left:60px;top:140px;width:20px;height:20px;background:#00cc44;"></div>
+      <div class="snake-body" style="left:80px;top:140px;width:20px;height:20px;"></div>
+      <div class="snake-body" style="left:100px;top:140px;width:20px;height:20px;"></div>
+      <div class="snake-body" style="left:120px;top:140px;width:20px;height:20px;"></div>
+      <div class="snake-body" style="left:140px;top:140px;width:20px;height:20px;"></div>
+      <!-- 먹이 -->
+      <div class="food-dot" style="left:200px;top:100px;"></div>
+
+      <!-- 🔊 토글 버튼 (ON 상태) -->
+      <button class="sound-toggle sound-toggle--on" aria-pressed="true"
+              aria-label="효과음 켜짐 — 클릭하여 끄기">🔊</button>
+
+      <!-- HUD 점수 (위치 조정 반영: top 52px) -->
+      <div class="game-hud">
+        <div class="hud-label">점수</div>
+        <div class="hud-score">42</div>
+      </div>
+
+      <!-- HUD 상태 패널 (위치 조정: top 96px) -->
+      <div class="game-hud-status">
+        <div>길이 <span class="status-value">7</span></div>
+        <div>속도 <span class="status-value" style="color:#aaa;">● ○ ○</span></div>
+      </div>
+    </div>
+
+    <!-- OFF 상태 씬 -->
+    <p class="section-title" style="margin-top:16px;">01b · 게임 배경 배치 시뮬레이션 (OFF 상태)</p>
+    <div class="game-scene">
+      <div class="snake-body" style="left:60px;top:140px;width:20px;height:20px;background:#00cc44;"></div>
+      <div class="snake-body" style="left:80px;top:140px;width:20px;height:20px;"></div>
+      <div class="snake-body" style="left:100px;top:140px;width:20px;height:20px;"></div>
+      <div class="food-dot" style="left:200px;top:100px;"></div>
+
+      <!-- 🔇 토글 버튼 (OFF 상태) -->
+      <button class="sound-toggle sound-toggle--off" aria-pressed="false"
+              aria-label="효과음 꺼짐 — 클릭하여 켜기">🔇</button>
+
+      <div class="game-hud">
+        <div class="hud-label">점수</div>
+        <div class="hud-score">42</div>
+      </div>
+      <div class="game-hud-status">
+        <div>길이 <span class="status-value">7</span></div>
+        <div>속도 <span class="status-value" style="color:#aaa;">● ○ ○</span></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+       섹션 2: 4가지 상태 비교
+  ════════════════════════════════════════════════════ -->
+  <hr class="divider">
+  <div class="section" style="padding-top:28px;">
+    <p class="section-title">02 · 4가지 상태 비교</p>
+
+    <div class="state-grid">
+
+      <!-- ON 상태 -->
+      <div class="state-card">
+        <div class="state-label">① ON (Default)</div>
+        <button class="sound-toggle sound-toggle--on"
+                aria-pressed="true"
+                aria-label="효과음 켜짐 — 클릭하여 끄기">🔊</button>
+        <div class="state-desc">
+          그린 틴트 배경<br>
+          rgba(76,255,128,0.12)<br>
+          그린 글로우 shadow<br>
+          border rgba(76,255,128,0.35)
+        </div>
+      </div>
+
+      <!-- OFF 상태 -->
+      <div class="state-card">
+        <div class="state-label">② OFF (Muted)</div>
+        <button class="sound-toggle sound-toggle--off"
+                aria-pressed="false"
+                aria-label="효과음 꺼짐 — 클릭하여 켜기">🔇</button>
+        <div class="state-desc">
+          중립 배경<br>
+          rgba(0,0,0,0.45)<br>
+          아이콘 brightness 55%<br>
+          border rgba(255,255,255,0.15)
+        </div>
+      </div>
+
+      <!-- Hover ON 상태 -->
+      <div class="state-card">
+        <div class="state-label">③ Hover (ON 위)</div>
+        <button class="sound-toggle sound-toggle--on-hover"
+                aria-pressed="true"
+                aria-label="효과음 켜짐 — 클릭하여 끄기">🔊</button>
+        <div class="state-desc">
+          배경 강화<br>
+          rgba(76,255,128,0.22)<br>
+          글로우 유지<br>
+          (마우스 오버 시뮬레이션)
+        </div>
+      </div>
+
+      <!-- Hover OFF 상태 -->
+      <div class="state-card">
+        <div class="state-label">③b Hover (OFF 위)</div>
+        <button class="sound-toggle sound-toggle--off-hover"
+                aria-pressed="false"
+                aria-label="효과음 꺼짐 — 클릭하여 켜기">🔇</button>
+        <div class="state-desc">
+          배경 살짝 밝아짐<br>
+          rgba(255,255,255,0.10)<br>
+          아이콘 여전히 dim<br>
+          (마우스 오버 시뮬레이션)
+        </div>
+      </div>
+
+      <!-- Focus-visible 상태 -->
+      <div class="state-card">
+        <div class="state-label">④ Focus-visible</div>
+        <button class="sound-toggle sound-toggle--focus"
+                aria-pressed="true"
+                aria-label="효과음 켜짐 — 클릭하여 끄기">🔊</button>
+        <div class="state-desc">
+          outline: 2px solid<br>
+          #4cff80<br>
+          offset: 3px<br>
+          (Tab 키 포커스)
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+       섹션 3: 라이브 인터랙션 데모
+  ════════════════════════════════════════════════════ -->
+  <hr class="divider">
+  <div class="section" style="padding-top:28px;padding-bottom:32px;">
+    <p class="section-title">03 · 라이브 인터랙션 데모 (클릭으로 토글)</p>
+
+    <div class="live-demo">
+      <button id="live-toggle"
+              class="sound-toggle sound-toggle--on"
+              aria-pressed="true"
+              aria-label="효과음 켜짐 — 클릭하여 끄기">🔊</button>
+      <div class="live-demo-info">
+        <div class="demo-title">현재 상태</div>
+        <div id="live-status" class="demo-status">ON — 효과음 켜짐</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.30);margin-top:4px;letter-spacing:1px;">
+          클릭하여 ON/OFF 전환 · hover/focus-visible 인터랙션 확인
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+       섹션 4: HUD 위치 조정 비교
+  ════════════════════════════════════════════════════ -->
+  <hr class="divider">
+  <div class="section" style="padding-top:28px;">
+    <p class="section-title">04 · HUD 위치 조정 (토글 추가 전/후)</p>
+
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:32px;">
+
+      <!-- 변경 전 -->
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;margin-bottom:8px;">변경 전 (top:16px)</div>
+        <div style="position:relative;width:200px;height:200px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;">
+          <div style="position:absolute;top:16px;right:20px;font-size:11px;color:#4cff80;text-align:right;">
+            <div style="font-size:10px;opacity:0.7;">점수</div>
+            <div style="font-size:18px;font-weight:bold;">42</div>
+          </div>
+          <div style="position:absolute;top:60px;right:20px;background:rgba(0,0,0,0.45);border:1px solid rgba(76,255,128,0.22);border-radius:4px;padding:4px 8px;font-size:10px;color:rgba(255,255,255,0.5);text-align:right;">
+            <div>길이 <span style="color:#e0e0e0;font-weight:700;">7</span></div>
+          </div>
+          <div style="position:absolute;top:4px;right:4px;font-size:9px;color:rgba(255,0,0,0.5);letter-spacing:0.5px;">⚠ 토글 없음</div>
+        </div>
+      </div>
+
+      <!-- 변경 후 -->
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;margin-bottom:8px;">변경 후 (HUD top:52px)</div>
+        <div style="position:relative;width:200px;height:200px;background:#0d0d0d;border:1px solid rgba(76,255,128,0.20);border-radius:6px;overflow:hidden;">
+          <!-- 토글 버튼 -->
+          <button class="sound-toggle sound-toggle--on"
+                  style="position:absolute;top:16px;right:20px;"
+                  aria-pressed="true">🔊</button>
+          <!-- HUD top:52px -->
+          <div style="position:absolute;top:52px;right:20px;font-size:11px;color:#4cff80;text-align:right;">
+            <div style="font-size:10px;opacity:0.7;">점수</div>
+            <div style="font-size:18px;font-weight:bold;">42</div>
+          </div>
+          <!-- 상태패널 top:96px -->
+          <div style="position:absolute;top:96px;right:20px;background:rgba(0,0,0,0.45);border:1px solid rgba(76,255,128,0.22);border-radius:4px;padding:4px 8px;font-size:10px;color:rgba(255,255,255,0.5);text-align:right;">
+            <div>길이 <span style="color:#e0e0e0;font-weight:700;">7</span></div>
+          </div>
+          <div style="position:absolute;top:4px;left:8px;font-size:9px;color:rgba(76,255,128,0.6);letter-spacing:0.5px;">✓ 겹침 없음</div>
+        </div>
+      </div>
+
+      <!-- 수치 요약 -->
+      <div style="padding-top:20px;">
+        <table class="token-table" style="min-width:260px;">
+          <thead>
+            <tr>
+              <th>요소</th>
+              <th>변경 전 top</th>
+              <th>변경 후 top</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>#sound-toggle</td>
+              <td style="color:rgba(255,255,255,0.45);">없음</td>
+              <td style="color:#4cff80;">16px (신규)</td>
+            </tr>
+            <tr>
+              <td>#hud</td>
+              <td style="color:rgba(255,255,255,0.45);">16px</td>
+              <td style="color:#4cff80;">52px (+36)</td>
+            </tr>
+            <tr>
+              <td>#hud-status-panel</td>
+              <td style="color:rgba(255,255,255,0.45);">60px</td>
+              <td style="color:#4cff80;">96px (+36)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+       섹션 5: 색상 토큰 표
+  ════════════════════════════════════════════════════ -->
+  <hr class="divider">
+  <div class="section" style="padding-top:28px;padding-bottom:40px;">
+    <p class="section-title">05 · 색상 토큰 요약</p>
+
+    <table class="token-table">
+      <thead>
+        <tr>
+          <th>CSS 변수</th>
+          <th>값</th>
+          <th>미리보기</th>
+          <th>용도</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>--sound-on-bg</td>
+          <td>rgba(76,255,128,0.12)</td>
+          <td><span class="color-chip" style="background:rgba(76,255,128,0.12);"></span></td>
+          <td>ON 상태 버튼 배경</td>
+        </tr>
+        <tr>
+          <td>--sound-on-border</td>
+          <td>rgba(76,255,128,0.35)</td>
+          <td><span class="color-chip" style="background:rgba(76,255,128,0.35);"></span></td>
+          <td>ON 상태 테두리</td>
+        </tr>
+        <tr>
+          <td>--sound-on-text-shadow</td>
+          <td>0 0 8px rgba(76,255,128,0.60)</td>
+          <td><span class="color-chip" style="background:rgba(76,255,128,0.60);"></span></td>
+          <td>ON 아이콘 글로우</td>
+        </tr>
+        <tr>
+          <td>--sound-off-bg</td>
+          <td>rgba(0,0,0,0.45)</td>
+          <td><span class="color-chip" style="background:rgba(0,0,0,0.45);"></span></td>
+          <td>OFF 상태 버튼 배경</td>
+        </tr>
+        <tr>
+          <td>--sound-off-border</td>
+          <td>rgba(255,255,255,0.15)</td>
+          <td><span class="color-chip" style="background:rgba(255,255,255,0.15);"></span></td>
+          <td>OFF 상태 테두리</td>
+        </tr>
+        <tr>
+          <td>--sound-off-icon-filter</td>
+          <td>brightness(0.55) grayscale(0.6)</td>
+          <td>—</td>
+          <td>OFF 아이콘 어둠 + 탈색</td>
+        </tr>
+        <tr>
+          <td>--sound-hover-bg-on</td>
+          <td>rgba(76,255,128,0.22)</td>
+          <td><span class="color-chip" style="background:rgba(76,255,128,0.22);"></span></td>
+          <td>ON 상태 hover 배경</td>
+        </tr>
+        <tr>
+          <td>--sound-hover-bg-off</td>
+          <td>rgba(255,255,255,0.10)</td>
+          <td><span class="color-chip" style="background:rgba(255,255,255,0.10);"></span></td>
+          <td>OFF 상태 hover 배경</td>
+        </tr>
+        <tr>
+          <td>--sound-focus-ring</td>
+          <td>#4cff80</td>
+          <td><span class="color-chip" style="background:#4cff80;"></span></td>
+          <td>focus-visible outline</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ── 푸터 ── -->
+  <footer class="page-footer">
+    <p>BF-565 DESIGNER MOCKUP · 이디자인 · 2026-05-14 · 이 파일은 시각 시뮬레이션 전용입니다. dev 는 이 파일을 기준 가이드로 활용하되 픽셀 단위 일치 의무 없음.</p>
+  </footer>
+
+
+  <!-- ── 라이브 토글 JS ── -->
+  <script>
+    const btn = document.getElementById('live-toggle');
+    const status = document.getElementById('live-status');
+
+    btn.addEventListener('click', () => {
+      const isOn = btn.getAttribute('aria-pressed') === 'true';
+      const nowOn = !isOn;
+
+      // 클래스 전환
+      btn.classList.remove('sound-toggle--on', 'sound-toggle--off');
+      btn.classList.add(nowOn ? 'sound-toggle--on' : 'sound-toggle--off');
+
+      // aria + 텍스트 업데이트
+      btn.setAttribute('aria-pressed', String(nowOn));
+      btn.textContent = nowOn ? '🔊' : '🔇';
+      btn.setAttribute(
+        'aria-label',
+        nowOn ? '효과음 켜짐 — 클릭하여 끄기' : '효과음 꺼짐 — 클릭하여 켜기'
+      );
+
+      // 상태 텍스트
+      status.textContent = nowOn ? 'ON — 효과음 켜짐' : 'OFF — 효과음 꺼짐';
+      status.className = 'demo-status' + (nowOn ? '' : ' off');
+    });
+  </script>
+
+</body>
+</html>
