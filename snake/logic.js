@@ -100,6 +100,8 @@ export function createInitialState(cols, rows, highScore = 0) {
     status:           "playing", // 'playing' | 'paused' | 'gameover'
     result:           null,      // null | 'player_win' | 'cpu_win' | 'draw'
     deathCause:       null,      // null | 'wall' | 'self' | 'cpu_body' | 'head_on' | 'timeout'
+    // BF-576: CPU 방문 이력 — 루프 감지용 (최근 15 틱)
+    cpuRecentPositions: [],
     // BF-533: 배수 아이템 상태 필드 (명세 §6-2)
     pendingGrowth:    0,
     cpuPendingGrowth: 0,
@@ -444,21 +446,47 @@ export function cpuChooseDir(state, difficulty = "normal") {
   // §5.1 탈출 불가 → 현재 방향 유지
   if (candidates.length === 0) return cpuDir;
 
+  // BF-576 §AC2: 루프 감지 — 동일 좌표 3회 이상 재방문 시 음식 방향 강제
+  // cpuRecentPositions 에 현재 head 좌표가 3회 이상 나타나면 루프로 판단해
+  // safeLen 스코어링을 우회하고 Manhattan 거리 최소 방향으로 즉시 전환.
+  const recentPositions = state.cpuRecentPositions || [];
+  const headKey = `${cpuHead.x},${cpuHead.y}`;
+  const visitCount = recentPositions.filter(p => p === headKey).length;
+  if (visitCount >= 3 && food !== null) {
+    const foodPriority = [...candidates].sort((a, b) => {
+      const posA = { x: cpuHead.x + a.x, y: cpuHead.y + a.y };
+      const posB = { x: cpuHead.x + b.x, y: cpuHead.y + b.y };
+      const distA = Math.abs(posA.x - food.x) + Math.abs(posA.y - food.y);
+      const distB = Math.abs(posB.x - food.x) + Math.abs(posB.y - food.y);
+      return distA - distB;
+    });
+    return foodPriority[0];
+  }
+
   // §3.1 각 후보 점수 계산
+  // BF-576: safeLen 을 visionRange 로 정규화 (0~1) — foodScore(0~1) 와 스케일 통일.
+  // 기존 비정규화 공식에서는 safeLen(0~8) 이 foodScore(0~1) 를 압도해
+  // 개방 공간 방향이 음식 방향보다 항상 높은 점수를 받는 결함이 발생했음.
   const scored = candidates.map(dir => {
     const safeLen   = lookAhead(cpuHead, dir, params.visionRange, cols, rows, occupiedSet);
     const foodScore = computeFoodScore(cpuHead, dir, food);
     let score;
     if (safeLen < params.avoidanceThreshold) {
-      score = safeLen * 0.1; // 위험 경로 대폭 감점
+      // BF-576: 위험 패널티 + foodScore 가중치 보존.
+      // 구 공식 (safeLen*0.1 만) 은 음식이 벽 근처에 있을 때
+      // "안전한 비음식 방향" 에 역전되는 문제가 있었음.
+      // → foodScore 항목을 유지해 "위험하지만 음식으로 가는 방향" 이
+      //   "안전한 비음식 방향" 보다 높은 점수를 받을 수 있도록 함.
+      score = safeLen * 0.1 + foodScore * params.foodPriorityWeight;
     } else {
-      score = safeLen   * (1 - params.foodPriorityWeight)
+      // BF-576: safeLen 을 visionRange 로 정규화 (0~1 스케일 통일)
+      score = (safeLen / params.visionRange) * (1 - params.foodPriorityWeight)
             + foodScore * params.foodPriorityWeight;
     }
     return { dir, score };
   });
 
-  // 최고 점수 방향 선택 (내림차순, 동점 시 앞 항목 우선)
+  // 최고 점수 방향 선택 (내림차순, 동점 시 배열 앞 항목 우선)
   scored.sort((a, b) => b.score - a.score);
   return scored[0].dir;
 }
@@ -491,6 +519,11 @@ export function tickFull(state, difficulty = "normal") {
   // ── 1. CPU 방향 결정 ─────────────────────────────────────
   const newCpuDir = cpuChooseDir(state, difficulty);
   const cpuHead   = state.cpu[0];
+  // BF-576: 방문 이력 갱신 (최근 15 틱) — 다음 틱에서 루프 감지에 사용
+  const newCpuRecentPositions = [
+    ...(state.cpuRecentPositions || []),
+    `${cpuHead.x},${cpuHead.y}`,
+  ].slice(-15);
   const newCpuHead = { x: cpuHead.x + newCpuDir.x, y: cpuHead.y + newCpuDir.y };
 
   // ── 2. 플레이어 이동 방향 ─────────────────────────────────
@@ -625,20 +658,21 @@ export function tickFull(state, difficulty = "normal") {
 
   return {
     ...state,
-    snake:            newSnake,
+    snake:               newSnake,
     dir,
-    cpu:              newCPU,
-    cpuDir:           newCpuDir,
-    food:             newFood,
-    score:            newScore,
-    cpuScore:         newCPUScore,
-    highScore:        Math.max(state.highScore, newScore),
-    status:           "playing",
-    result:           null,
-    deathCause:       null,
-    pendingGrowth:    newPlayerPending,
-    cpuPendingGrowth: newCpuPending,
-    multiplierStats:  newMultiplierStats,
+    cpu:                 newCPU,
+    cpuDir:              newCpuDir,
+    food:                newFood,
+    score:               newScore,
+    cpuScore:            newCPUScore,
+    highScore:           Math.max(state.highScore, newScore),
+    status:              "playing",
+    result:              null,
+    deathCause:          null,
+    pendingGrowth:       newPlayerPending,
+    cpuPendingGrowth:    newCpuPending,
+    multiplierStats:     newMultiplierStats,
+    cpuRecentPositions:  newCpuRecentPositions, // BF-576
   };
 }
 
@@ -999,6 +1033,11 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
   const dir       = s.nextDir;
   const head      = s.snake[0];
   const cpuHead   = s.cpu[0];
+  // BF-576: 방문 이력 갱신 (최근 15 틱)
+  const newCpuRecentPositions = [
+    ...(s.cpuRecentPositions || []),
+    `${cpuHead.x},${cpuHead.y}`,
+  ].slice(-15);
   const newHead   = movePlayer
     ? { x: head.x    + dir.x,       y: head.y    + dir.y       }
     : { x: head.x,                  y: head.y                  };  // 이동 없음
@@ -1245,18 +1284,19 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
     ...stateAfterItem,
     // snake, cpu 는 stateAfterItem 에 포함 (이동 후 위치 + LENGTH_BURST 등 아이템 효과 반영)
     dir,
-    cpuDir:           newCpuDir,
-    food:             newFood,
-    item:             curItem,
-    score:            newScore,
-    cpuScore:         newCPUScore,
-    highScore:        Math.max(s.highScore, newScore),
-    status:           "playing",
-    result:           null,
-    deathCause:       null,
-    pendingGrowth:    newPlayerPending,
-    cpuPendingGrowth: newCpuPending,
-    multiplierStats:  newMultiplierStats,
+    cpuDir:              newCpuDir,
+    food:                newFood,
+    item:                curItem,
+    score:               newScore,
+    cpuScore:            newCPUScore,
+    highScore:           Math.max(s.highScore, newScore),
+    status:              "playing",
+    result:              null,
+    deathCause:          null,
+    pendingGrowth:       newPlayerPending,
+    cpuPendingGrowth:    newCpuPending,
+    multiplierStats:     newMultiplierStats,
+    cpuRecentPositions:  newCpuRecentPositions, // BF-576
   };
 }
 
