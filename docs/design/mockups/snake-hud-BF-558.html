@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BF-558 · Snake HUD / 일시정지 모달 / 게임 오버 통계 — 시각 Mockup</title>
+  <style>
+    /* ═══════════════════════════════════════════════
+       디자인 토큰 — BF-558 명세 §2 기준
+       (기존 토큰 + 신규 토큰 모두 정의)
+    ═══════════════════════════════════════════════ */
+    :root {
+      /* 기존 게임 토큰 */
+      --bg-primary:            #0d0d0d;
+      --player-body:           #4cff80;
+      --player-head:           #00cc44;
+      --cpu-body:              #ff6b4c;
+      --cpu-head:              #cc2200;
+
+      /* 기존 아이템 토큰 */
+      --item-speed-primary:    #ffaa00;
+      --item-slow-primary:     #00ddcc;
+      --item-burst-primary:    #ff6600;
+      --item-shield-primary:   #4488ff;
+      --item-reverse-primary:  #22ffaa;
+
+      /* ─── HUD 상태 패널 — BF-558 ─────────────────── */
+      --hud-panel-bg:          rgba(0, 0, 0, 0.45);
+      --hud-panel-border:      rgba(76, 255, 128, 0.22);
+      --hud-panel-text:        #e0e0e0;
+      --hud-panel-label:       rgba(255, 255, 255, 0.50);
+      --speed-slow-color:      #00ddcc;
+      --speed-normal-color:    #aaaaaa;
+      --speed-fast-color:      #ffaa00;
+
+      /* ─── 일시정지 모달 버튼 — BF-558 ──────────── */
+      --btn-resume-color:      #4cff80;
+      --btn-resume-bg:         rgba(76, 255, 128, 0.10);
+      --btn-resume-hover-bg:   rgba(76, 255, 128, 0.20);
+      --btn-restart-color:     #00cfff;
+      --btn-restart-bg:        rgba(0, 207, 255, 0.08);
+      --btn-restart-hover-bg:  rgba(0, 207, 255, 0.18);
+      --btn-quit-color:        #ff6b4c;
+      --btn-quit-bg:           rgba(255, 107, 76, 0.08);
+      --btn-quit-hover-bg:     rgba(255, 107, 76, 0.18);
+      --btn-kbd-bg:            rgba(255, 255, 255, 0.12);
+      --btn-kbd-border:        rgba(255, 255, 255, 0.25);
+
+      /* ─── 게임 오버 통계 — BF-558 ────────────── */
+      --go-new-record-color:   #ffcc00;
+      --go-new-record-glow:    rgba(255, 204, 0, 0.80);
+      --go-muted-text:         rgba(255, 255, 255, 0.40);
+      --go-section-divider:    rgba(255, 255, 255, 0.10);
+      --go-item-zero-opacity:  0.35;
+      --go-play-time-color:    #e0e0e0;
+    }
+
+    /* ═══════════════════════════════════════════════
+       전체 레이아웃
+    ═══════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #181818;
+      font-family: 'Courier New', Courier, monospace;
+      color: #e0e0e0;
+      padding: 40px 20px;
+    }
+
+    /* 섹션 레이블 (mockup 전용) */
+    .mock-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.30);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    section.mock-section {
+      margin-bottom: 60px;
+    }
+
+    /* 게임 보드 시뮬레이션 배경 */
+    .game-board-sim {
+      position: relative;
+      width: 100%;
+      max-width: 700px;
+      height: 400px;
+      background: var(--bg-primary);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* 그리드 패턴 */
+    .game-board-sim::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* 뱀 시각화 (샘플) */
+    .snake-preview {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      gap: 2px;
+    }
+    .snake-seg {
+      width: 18px; height: 18px;
+      border-radius: 3px;
+      background: var(--player-body);
+    }
+    .snake-seg.head { background: var(--player-head); border-radius: 5px; }
+
+    /* 먹이 시각화 */
+    .food-preview {
+      position: absolute;
+      top: 40%;
+      left: 60%;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #ffcc00;
+      box-shadow: 0 0 8px rgba(255,204,0,0.6);
+    }
+
+    /* ═══════════════════════════════════════════════
+       [A] HUD 상태 패널 — BF-558 §5-1
+    ═══════════════════════════════════════════════ */
+
+    /* 기존 점수 HUD (우상단) */
+    .hud-score-panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      color: #e0e0e0;
+      font-size: 14px;
+      line-height: 1.6;
+      text-align: right;
+      pointer-events: none;
+      text-shadow: 0 0 6px rgba(0,255,100,0.4);
+    }
+    .hud-score-panel .hud-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .hud-score-panel .player-label { color: #4cff80; font-size: 11px; letter-spacing: 1px; }
+    .hud-score-panel .player-score { color: #4cff80; font-size: 22px; font-weight: bold; }
+    .hud-score-panel .hud-divider  { color: #555; font-size: 18px; }
+    .hud-score-panel .cpu-label    { color: #ff6b4c; font-size: 11px; letter-spacing: 1px; }
+    .hud-score-panel .cpu-score    { color: #ff6b4c; font-size: 22px; font-weight: bold; }
+    .hud-score-panel .hud-high     { font-size: 13px; color: #aaa; margin-top: 2px; }
+
+    /* 신규 HUD 상태 패널 (우상단, 점수 패널 아래) */
+    #hud-status-panel {
+      position: absolute;
+      top: 60px;   /* 점수 패널 아래 */
+      right: 20px;
+      background: var(--hud-panel-bg);
+      border: 1px solid var(--hud-panel-border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      min-width: 110px;
+      text-align: right;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .hud-status-label {
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--hud-panel-label);
+    }
+
+    .hud-status-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--hud-panel-text);
+    }
+
+    /* 속도 도트 */
+    #hud-speed-level {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    #hud-speed-level[data-speed="SLOW"]   { color: var(--speed-slow-color); }
+    #hud-speed-level[data-speed="NORMAL"] { color: var(--speed-normal-color); }
+    #hud-speed-level[data-speed="FAST"]   { color: var(--speed-fast-color); }
+
+    /* 속도 변경 플래시 */
+    @keyframes hud-speed-flash {
+      0%   { opacity: 0.4; }
+      40%  { opacity: 1.0; }
+      100% { opacity: 1.0; }
+    }
+    #hud-speed-level.speed-change-flash {
+      animation: hud-speed-flash 0.30s ease-out forwards;
+    }
+
+    /* 배수 통계 (좌상단 — 기존 레이아웃 참조) */
+    .multiplier-sim {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-size: 12px;
+      background: rgba(0,0,0,0.45);
+      border-radius: 6px;
+      padding: 8px 12px;
+      line-height: 1.7;
+      min-width: 140px;
+      color: #e0e0e0;
+    }
+    .ms-title-sim { font-size: 11px; letter-spacing: 1px; color: #aaa; margin-bottom: 4px; }
+    .ms-row-sim { display: flex; align-items: center; gap: 4px; }
+    .ms-badge-sim {
+      display: inline-block; border-radius: 3px; padding: 1px 4px;
+      font-size: 10px; font-weight: bold; color: #111; min-width: 22px; text-align: center;
+    }
+    .ms-1x { background: #ffcc00; }
+    .ms-2x { background: #00cfff; }
+    .ms-4x { background: #cc44ff; }
+    .ms-8x { background: #ff4444; }
+
+    /* 버프 바 (우측, 아이템 상태 — 기존 레이아웃 참조) */
+    .buff-sim {
+      position: absolute;
+      bottom: 60px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 130px;
+    }
+    .buff-item-sim {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(0,0,0,0.55);
+      border-radius: 4px; padding: 3px 8px;
+      font-size: 11px;
+    }
+    .buff-time-sim { font-size: 11px; font-weight: bold; min-width: 28px; text-align: right; }
+    .buff-progress-track-sim { flex: 1; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden; }
+    .buff-progress-bar-sim { height: 100%; border-radius: 2px; }
+
+    /* 속도 비교 레이블 (mockup 전용 — 3가지 상태 나란히) */
+    .speed-variants {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .speed-variant-box {
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .speed-variant-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 10px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       [B] 일시정지 모달 — BF-558 §5-2
+    ═══════════════════════════════════════════════ */
+
+    .modal-demo {
+      position: relative;
+      width: 100%;
+      max-width: 700px;
+      height: 400px;
+      background: var(--bg-primary);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay-bg {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+    }
+
+    /* 모달 박스 */
+    .paused-box-demo {
+      position: relative;
+      background: #111;
+      border: 2px solid #4cff80;
+      border-radius: 12px;
+      padding: 40px 56px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(76,255,128,0.3);
+      animation: modal-enter 0.20s ease-out forwards;
+      transform-origin: center center;
+    }
+
+    @keyframes modal-enter {
+      from { opacity: 0; transform: scale(0.92); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .paused-title-demo {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #4cff80;
+      text-shadow: 0 0 12px rgba(76,255,128,0.5);
+      margin-bottom: 24px;
+    }
+
+    .paused-btn-list {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* 공통 버튼 */
+    .paused-btn-demo {
+      width: 200px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: 1px solid;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.10s ease;
+    }
+    .paused-btn-demo:active { transform: scale(0.97); }
+    .paused-btn-demo:focus-visible {
+      outline-offset: 2px;
+    }
+
+    /* 계속하기 */
+    .btn-resume {
+      color: var(--btn-resume-color);
+      background: var(--btn-resume-bg);
+      border-color: rgba(76,255,128,0.30);
+    }
+    .btn-resume:hover {
+      background: var(--btn-resume-hover-bg);
+      border-color: rgba(76,255,128,0.55);
+    }
+    .btn-resume:focus-visible { outline: 2px solid #4cff80; }
+
+    /* 재시작 */
+    .btn-restart {
+      color: var(--btn-restart-color);
+      background: var(--btn-restart-bg);
+      border-color: rgba(0,207,255,0.30);
+    }
+    .btn-restart:hover {
+      background: var(--btn-restart-hover-bg);
+      border-color: rgba(0,207,255,0.55);
+    }
+    .btn-restart:focus-visible { outline: 2px solid #00cfff; }
+
+    /* 종료 */
+    .btn-quit {
+      color: var(--btn-quit-color);
+      background: var(--btn-quit-bg);
+      border-color: rgba(255,107,76,0.30);
+    }
+    .btn-quit:hover {
+      background: var(--btn-quit-hover-bg);
+      border-color: rgba(255,107,76,0.55);
+    }
+    .btn-quit:focus-visible { outline: 2px solid #ff6b4c; }
+
+    /* kbd 배지 */
+    .paused-btn-demo kbd {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 5px;
+      background: var(--btn-kbd-bg);
+      border: 1px solid var(--btn-kbd-border);
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-left: 8px;
+      vertical-align: middle;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* ═══════════════════════════════════════════════
+       [C] 게임 오버 통계 화면 — BF-558 §5-3
+    ═══════════════════════════════════════════════ */
+
+    .gameover-demo {
+      position: relative;
+      width: 100%;
+      max-width: 700px;
+      min-height: 500px;
+      background: var(--bg-primary);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gameover-overlay-bg {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+    }
+
+    .gameover-box-demo {
+      position: relative;
+      background: #111;
+      border: 2px solid #4cff80;
+      border-radius: 12px;
+      padding: 36px 52px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(76,255,128,0.3);
+      min-width: 340px;
+      animation: gameover-enter 0.25s ease-out forwards;
+    }
+
+    @keyframes gameover-enter {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 결과 헤더 */
+    .go-result-demo {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .go-result-demo.player-win { color: #00cc44; text-shadow: 0 0 14px rgba(0,204,68,0.5); }
+    .go-result-demo.game-over  { color: #cc2200; text-shadow: 0 0 14px rgba(204,34,0,0.5); }
+
+    /* 점수 블록 */
+    .go-score-block {
+      margin-bottom: 16px;
+    }
+
+    .go-score-num {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      display: block;
+    }
+    .go-score-num.new-record {
+      color: var(--go-new-record-color);
+    }
+
+    .go-new-record-badge {
+      display: inline-block;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--go-new-record-color);
+      margin-left: 8px;
+      animation: new-record-pulse 1.4s ease-in-out infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes new-record-pulse {
+      0%, 100% {
+        text-shadow: 0 0 6px rgba(255,204,0,0.70);
+        color: #ffcc00;
+      }
+      50% {
+        text-shadow: 0 0 18px rgba(255,204,0,1), 0 0 36px rgba(255,204,0,0.40);
+        color: #ffe566;
+      }
+    }
+
+    /* 최고 기록 행 */
+    .go-high-score-row {
+      font-size: 1.1rem;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+    .go-prev-high-score {
+      font-size: 0.9rem;
+      color: var(--go-muted-text);
+      margin-bottom: 0;
+    }
+
+    /* 섹션 구분선 */
+    .go-divider {
+      border: none;
+      border-top: 1px solid var(--go-section-divider);
+      margin: 14px 0;
+    }
+
+    /* 플레이 시간 */
+    .go-play-time-row {
+      font-size: 1rem;
+      color: var(--go-play-time-color);
+      margin-bottom: 2px;
+    }
+    .go-play-time-label {
+      color: var(--go-muted-text);
+      font-size: 11px;
+      letter-spacing: 2px;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .go-play-time-val {
+      font-size: 1rem;
+      font-weight: 400;
+    }
+
+    /* 아이템 현황 섹션 */
+    #go-item-stats-demo {
+      text-align: left;
+      margin-top: 4px;
+    }
+    .go-section-title-demo {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--go-muted-text);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .go-item-list-demo {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .go-item-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+    }
+    .go-item-row[data-item-count="0"] {
+      opacity: var(--go-item-zero-opacity, 0.35);
+    }
+
+    .go-item-icon-demo { font-size: 15px; width: 20px; text-align: center; }
+    .go-item-label-demo {
+      flex: 1;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      color: #e0e0e0;
+    }
+    .go-item-count-demo {
+      font-size: 13px;
+      font-weight: 700;
+      min-width: 28px;
+      text-align: right;
+    }
+
+    /* 아이템별 카운트 색상 */
+    .item-SPEED_UP   .go-item-count-demo { color: #ffaa00; }
+    .item-SLOW_DOWN  .go-item-count-demo { color: #00ddcc; }
+    .item-LENGTH_BURST .go-item-count-demo { color: #ff6600; }
+    .item-SHIELD     .go-item-count-demo { color: #4488ff; }
+    .item-REVERSE    .go-item-count-demo { color: #22ffaa; }
+
+    /* 하단 힌트 */
+    .go-hint-demo {
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      color: #888;
+      margin-top: 16px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       [D] 탭 네비게이션 (mockup 전용)
+    ═══════════════════════════════════════════════ */
+
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      padding: 8px 20px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.20);
+      background: rgba(0,0,0,0.35);
+      color: rgba(255,255,255,0.55);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .tab-btn.active {
+      background: rgba(76,255,128,0.12);
+      border-color: rgba(76,255,128,0.40);
+      color: #4cff80;
+    }
+    .tab-btn:hover:not(.active) {
+      background: rgba(255,255,255,0.06);
+      color: #e0e0e0;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ═══════════════════════════════════════════════
+       색상 토큰 팔레트 카드 (mockup 전용 참조)
+    ═══════════════════════════════════════════════ */
+    .token-palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .token-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,0,0,0.40);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 6px;
+      padding: 8px 12px;
+      min-width: 220px;
+    }
+    .token-swatch {
+      width: 28px; height: 28px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.15);
+      flex-shrink: 0;
+    }
+    .token-info { font-size: 11px; line-height: 1.5; }
+    .token-name { color: #e0e0e0; font-weight: 600; }
+    .token-hex  { color: rgba(255,255,255,0.45); }
+
+    /* 페이지 헤더 (mockup 전용) */
+    .page-header {
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .page-header h1 {
+      font-size: 1.4rem;
+      color: #4cff80;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+    .page-header p {
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.5px;
+    }
+
+    /* 상태 탭 내 여러 변형 나란히 */
+    .variant-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .variant-col {
+      flex: 1;
+      min-width: 300px;
+    }
+    .variant-title {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.30);
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── 페이지 헤더 ─── -->
+  <div class="page-header">
+    <h1>BF-558 · Snake HUD / 일시정지 / 통계 — 시각 Mockup</h1>
+    <p>담당: [이디자인] · 기준 명세: docs/design/snake-hud-BF-558.md · 상태: 신규 3개 화면 시각 디자인</p>
+  </div>
+
+  <!-- ─── 탭 네비게이션 ─── -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="showTab('tab-hud')">A. HUD 상태 패널</button>
+    <button class="tab-btn"        onclick="showTab('tab-pause')">B. 일시정지 모달</button>
+    <button class="tab-btn"        onclick="showTab('tab-gameover')">C. 게임 오버 통계</button>
+    <button class="tab-btn"        onclick="showTab('tab-tokens')">D. 색상 토큰 팔레트</button>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       탭 A: HUD 상태 패널
+  ══════════════════════════════════════════════════════════ -->
+  <div id="tab-hud" class="tab-content active">
+    <section class="mock-section">
+      <div class="mock-label">A-1. 플레이 중 — HUD 전체 레이아웃 (속도 NORMAL 상태)</div>
+
+      <div class="game-board-sim">
+        <!-- 뱀 -->
+        <div class="snake-preview">
+          <div class="snake-seg head"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+          <div class="snake-seg"></div>
+        </div>
+        <!-- 먹이 -->
+        <div class="food-preview"></div>
+
+        <!-- 배수 통계 (좌상단 — 기존 BF-533) -->
+        <div class="multiplier-sim">
+          <div class="ms-title-sim">배수 통계</div>
+          <div class="ms-row-sim"><span class="ms-badge-sim ms-1x">1×</span> 5건 <span style="color:#aaa;font-size:11px">(50%)</span></div>
+          <div class="ms-row-sim"><span class="ms-badge-sim ms-2x">2×</span> 3건 <span style="color:#aaa;font-size:11px">(30%)</span></div>
+          <div class="ms-row-sim"><span class="ms-badge-sim ms-4x">4×</span> 1건 <span style="color:#aaa;font-size:11px">(10%)</span></div>
+          <div class="ms-row-sim"><span class="ms-badge-sim ms-8x">8×</span> 1건 <span style="color:#aaa;font-size:11px">(10%)</span></div>
+        </div>
+
+        <!-- 기존 점수 HUD (우상단) -->
+        <div class="hud-score-panel">
+          <div class="hud-row">
+            <span class="player-label">PLAYER</span>
+            <span class="player-score">150</span>
+            <span class="hud-divider">|</span>
+            <span class="cpu-label">CPU</span>
+            <span class="cpu-score">80</span>
+          </div>
+          <div class="hud-high">Best: <span>200</span></div>
+        </div>
+
+        <!-- ★ 신규: 상태 패널 (우상단, 점수 아래) -->
+        <div id="hud-status-panel" role="status" aria-live="polite" aria-label="게임 상태">
+          <div class="hud-status-row">
+            <span class="hud-status-label">길이</span>
+            <span class="hud-status-value" id="hud-snake-length">12</span>
+          </div>
+          <div class="hud-status-row">
+            <span class="hud-status-label">속도</span>
+            <span id="hud-speed-level" data-speed="NORMAL" aria-label="속도: 보통">○●○</span>
+          </div>
+        </div>
+
+        <!-- 버프 바 (우하단 — 기존 BF-545 참조) -->
+        <div class="buff-sim">
+          <div class="buff-item-sim" style="color:#ffaa00">
+            <span>⚡</span>
+            <span style="font-size:10px;opacity:0.8;">SPEED</span>
+            <div class="buff-progress-track-sim">
+              <div class="buff-progress-bar-sim" style="width:60%;background:#ffaa00"></div>
+            </div>
+            <span class="buff-time-sim">3.1</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 속도 레벨 3가지 상태 비교 -->
+    <section class="mock-section">
+      <div class="mock-label">A-2. 속도 레벨 3가지 상태 비교</div>
+      <div class="speed-variants">
+
+        <!-- SLOW -->
+        <div class="speed-variant-box">
+          <div class="speed-variant-label">SLOW (청록 #00ddcc)</div>
+          <div id="hud-status-panel" style="position:static;margin:0;">
+            <div class="hud-status-row">
+              <span class="hud-status-label">길이</span>
+              <span class="hud-status-value">8</span>
+            </div>
+            <div class="hud-status-row">
+              <span class="hud-status-label">속도</span>
+              <span style="font-size:14px;font-weight:700;letter-spacing:2px;color:var(--speed-slow-color)"
+                    aria-label="속도: 느림">●○○</span>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--go-muted-text)">
+            净 속도 효과 &lt; 0 (SLOW_DOWN 활성)
+          </div>
+        </div>
+
+        <!-- NORMAL -->
+        <div class="speed-variant-box">
+          <div class="speed-variant-label">NORMAL (회색 #aaaaaa)</div>
+          <div style="
+            background:var(--hud-panel-bg);
+            border:1px solid var(--hud-panel-border);
+            border-radius:6px;
+            padding:6px 10px;
+            min-width:110px;
+            text-align:right;
+            display:flex;
+            flex-direction:column;
+            gap:4px;
+          ">
+            <div class="hud-status-row">
+              <span class="hud-status-label">길이</span>
+              <span class="hud-status-value">12</span>
+            </div>
+            <div class="hud-status-row">
+              <span class="hud-status-label">속도</span>
+              <span style="font-size:14px;font-weight:700;letter-spacing:2px;color:var(--speed-normal-color)"
+                    aria-label="속도: 보통">○●○</span>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--go-muted-text)">
+            净 속도 효과 = 0 (기본 틱)
+          </div>
+        </div>
+
+        <!-- FAST -->
+        <div class="speed-variant-box">
+          <div class="speed-variant-label">FAST (주황 #ffaa00)</div>
+          <div style="
+            background:var(--hud-panel-bg);
+            border:1px solid var(--hud-panel-border);
+            border-radius:6px;
+            padding:6px 10px;
+            min-width:110px;
+            text-align:right;
+            display:flex;
+            flex-direction:column;
+            gap:4px;
+          ">
+            <div class="hud-status-row">
+              <span class="hud-status-label">길이</span>
+              <span class="hud-status-value">19</span>
+            </div>
+            <div class="hud-status-row">
+              <span class="hud-status-label">속도</span>
+              <span style="font-size:14px;font-weight:700;letter-spacing:2px;color:var(--speed-fast-color)"
+                    aria-label="속도: 빠름">○○●</span>
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--go-muted-text)">
+            净 속도 효과 &gt; 0 (SPEED_UP 활성)
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       탭 B: 일시정지 모달
+  ══════════════════════════════════════════════════════════ -->
+  <div id="tab-pause" class="tab-content">
+
+    <section class="mock-section">
+      <div class="mock-label">B-1. 일시정지 모달 (버튼 기본 상태)</div>
+
+      <div class="modal-demo">
+        <!-- 그리드 -->
+        <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:20px 20px;"></div>
+        <div class="modal-overlay-bg"></div>
+
+        <div class="paused-box-demo" role="dialog" aria-modal="true" aria-label="일시정지">
+          <h2 class="paused-title-demo">⏸ 일시정지</h2>
+          <div class="paused-btn-list">
+            <button class="paused-btn-demo btn-resume" id="paused-btn-resume" data-action="resume">
+              계속하기 <kbd>Space</kbd><kbd>P</kbd>
+            </button>
+            <button class="paused-btn-demo btn-restart" id="paused-btn-restart" data-action="restart">
+              재시작 <kbd>R</kbd>
+            </button>
+            <button class="paused-btn-demo btn-quit" id="paused-btn-quit" data-action="quit">
+              종료 <kbd>Q</kbd>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 버튼 3종 시각 상세 -->
+    <section class="mock-section">
+      <div class="mock-label">B-2. 버튼 상태 상세 (rest / hover / focus)</div>
+      <div class="variant-row">
+
+        <!-- 계속하기 상태들 -->
+        <div class="variant-col">
+          <div class="variant-title">계속하기 (#4cff80)</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">REST</div>
+              <button class="paused-btn-demo btn-resume" style="pointer-events:none">
+                계속하기 <kbd>Space</kbd><kbd>P</kbd>
+              </button>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">HOVER</div>
+              <button class="paused-btn-demo btn-resume"
+                style="background:var(--btn-resume-hover-bg);border-color:rgba(76,255,128,0.55);pointer-events:none">
+                계속하기 <kbd>Space</kbd><kbd>P</kbd>
+              </button>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">FOCUS</div>
+              <button class="paused-btn-demo btn-resume"
+                style="outline:2px solid #4cff80;outline-offset:2px;pointer-events:none">
+                계속하기 <kbd>Space</kbd><kbd>P</kbd>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 재시작 상태들 -->
+        <div class="variant-col">
+          <div class="variant-title">재시작 (#00cfff)</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">REST</div>
+              <button class="paused-btn-demo btn-restart" style="pointer-events:none">
+                재시작 <kbd>R</kbd>
+              </button>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">HOVER</div>
+              <button class="paused-btn-demo btn-restart"
+                style="background:var(--btn-restart-hover-bg);border-color:rgba(0,207,255,0.55);pointer-events:none">
+                재시작 <kbd>R</kbd>
+              </button>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">FOCUS</div>
+              <button class="paused-btn-demo btn-restart"
+                style="outline:2px solid #00cfff;outline-offset:2px;pointer-events:none">
+                재시작 <kbd>R</kbd>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 종료 상태들 -->
+        <div class="variant-col">
+          <div class="variant-title">종료 (#ff6b4c)</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">REST</div>
+              <button class="paused-btn-demo btn-quit" style="pointer-events:none">
+                종료 <kbd>Q</kbd>
+              </button>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">HOVER</div>
+              <button class="paused-btn-demo btn-quit"
+                style="background:var(--btn-quit-hover-bg);border-color:rgba(255,107,76,0.55);pointer-events:none">
+                종료 <kbd>Q</kbd>
+              </button>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--go-muted-text);margin-bottom:4px;">FOCUS</div>
+              <button class="paused-btn-demo btn-quit"
+                style="outline:2px solid #ff6b4c;outline-offset:2px;pointer-events:none">
+                종료 <kbd>Q</kbd>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       탭 C: 게임 오버 통계 화면
+  ══════════════════════════════════════════════════════════ -->
+  <div id="tab-gameover" class="tab-content">
+
+    <div class="variant-row">
+
+      <!-- C-1: 신기록 케이스 (GAME OVER 솔로) -->
+      <div class="variant-col">
+        <div class="mock-label">C-1. 게임 오버 — 신기록 달성</div>
+        <div class="gameover-demo">
+          <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:20px 20px;"></div>
+          <div class="gameover-overlay-bg"></div>
+          <div class="gameover-box-demo">
+
+            <h2 class="go-result-demo game-over" id="go-result">GAME OVER</h2>
+
+            <div class="go-score-block">
+              <span class="go-score-num new-record" id="go-score">
+                180
+                <span class="go-new-record-badge" id="go-new-record">★ 신기록!</span>
+              </span>
+            </div>
+
+            <div class="go-high-score-row" id="go-high-score-row">최고 기록: 180</div>
+            <div class="go-prev-high-score" id="go-prev-high-score">(이전 최고: 150)</div>
+
+            <hr class="go-divider" />
+
+            <div class="go-play-time-row">
+              <span class="go-play-time-label">플레이 시간</span>
+              <span class="go-play-time-val" id="go-play-time">2분 34초</span>
+            </div>
+
+            <hr class="go-divider" />
+
+            <section id="go-item-stats-demo" aria-label="아이템 획득 현황">
+              <h3 class="go-section-title-demo">아이템 획득 현황</h3>
+              <ul class="go-item-list-demo">
+                <li class="go-item-row item-SPEED_UP" data-item-type="SPEED_UP">
+                  <span class="go-item-icon-demo">⚡</span>
+                  <span class="go-item-label-demo">빠르게</span>
+                  <span class="go-item-count-demo" id="go-item-SPEED_UP">×3</span>
+                </li>
+                <li class="go-item-row item-SLOW_DOWN" data-item-type="SLOW_DOWN">
+                  <span class="go-item-icon-demo">⏱</span>
+                  <span class="go-item-label-demo">느리게</span>
+                  <span class="go-item-count-demo" id="go-item-SLOW_DOWN">×1</span>
+                </li>
+                <li class="go-item-row item-LENGTH_BURST" data-item-type="LENGTH_BURST">
+                  <span class="go-item-icon-demo">★</span>
+                  <span class="go-item-label-demo">길이폭발</span>
+                  <span class="go-item-count-demo" id="go-item-LENGTH_BURST">×2</span>
+                </li>
+                <li class="go-item-row item-SHIELD" data-item-count="0" data-item-type="SHIELD">
+                  <span class="go-item-icon-demo">🛡</span>
+                  <span class="go-item-label-demo">방패</span>
+                  <span class="go-item-count-demo" id="go-item-SHIELD">×0</span>
+                </li>
+                <li class="go-item-row item-REVERSE" data-item-type="REVERSE">
+                  <span class="go-item-icon-demo">↺</span>
+                  <span class="go-item-label-demo">역전탄</span>
+                  <span class="go-item-count-demo" id="go-item-REVERSE">×1</span>
+                </li>
+              </ul>
+            </section>
+
+            <p class="go-hint-demo" id="go-hint">[Space] 재시작 · [Q] 종료</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- C-2: YOU WIN 케이스 (신기록 아님) -->
+      <div class="variant-col">
+        <div class="mock-label">C-2. YOU WIN — 신기록 아님</div>
+        <div class="gameover-demo">
+          <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:20px 20px;"></div>
+          <div class="gameover-overlay-bg"></div>
+          <div class="gameover-box-demo" style="border-color:#00cc44;box-shadow:0 0 30px rgba(0,204,68,0.3)">
+
+            <h2 class="go-result-demo player-win">YOU WIN</h2>
+
+            <div class="go-score-block">
+              <span class="go-score-num" style="color:#e0e0e0">120</span>
+            </div>
+
+            <div class="go-high-score-row" style="color:#aaa">최고 기록: 200</div>
+
+            <hr class="go-divider" />
+
+            <div class="go-play-time-row">
+              <span class="go-play-time-label">플레이 시간</span>
+              <span class="go-play-time-val">1분 12초</span>
+            </div>
+
+            <hr class="go-divider" />
+
+            <section id="go-item-stats-demo-2" aria-label="아이템 획득 현황">
+              <h3 class="go-section-title-demo">아이템 획득 현황</h3>
+              <ul class="go-item-list-demo">
+                <li class="go-item-row item-SPEED_UP" data-item-count="0" data-item-type="SPEED_UP">
+                  <span class="go-item-icon-demo">⚡</span>
+                  <span class="go-item-label-demo">빠르게</span>
+                  <span class="go-item-count-demo">×0</span>
+                </li>
+                <li class="go-item-row item-SLOW_DOWN" data-item-count="0" data-item-type="SLOW_DOWN">
+                  <span class="go-item-icon-demo">⏱</span>
+                  <span class="go-item-label-demo">느리게</span>
+                  <span class="go-item-count-demo">×0</span>
+                </li>
+                <li class="go-item-row item-LENGTH_BURST" data-item-type="LENGTH_BURST">
+                  <span class="go-item-icon-demo">★</span>
+                  <span class="go-item-label-demo">길이폭발</span>
+                  <span class="go-item-count-demo">×1</span>
+                </li>
+                <li class="go-item-row item-SHIELD" data-item-type="SHIELD">
+                  <span class="go-item-icon-demo">🛡</span>
+                  <span class="go-item-label-demo">방패</span>
+                  <span class="go-item-count-demo">×2</span>
+                </li>
+                <li class="go-item-row item-REVERSE" data-item-count="0" data-item-type="REVERSE">
+                  <span class="go-item-icon-demo">↺</span>
+                  <span class="go-item-label-demo">역전탄</span>
+                  <span class="go-item-count-demo">×0</span>
+                </li>
+              </ul>
+            </section>
+
+            <p class="go-hint-demo">[Space] 재시작 · [Q] 종료</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       탭 D: 색상 토큰 팔레트
+  ══════════════════════════════════════════════════════════ -->
+  <div id="tab-tokens" class="tab-content">
+    <section class="mock-section">
+      <div class="mock-label">D-1. 신규 색상 토큰 팔레트 (BF-558 §2)</div>
+
+      <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:16px">
+        🔒 기존 토큰 (--player-body, --item-* 등) 은 변경 금지. 아래는 신규 추가분만.
+      </p>
+
+      <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;letter-spacing:1px">
+        ── HUD 상태 패널 ──
+      </div>
+      <div class="token-palette" style="margin-bottom:24px">
+        <div class="token-card">
+          <div class="token-swatch" style="background:rgba(0,0,0,0.45);border:1px solid #4cff80"></div>
+          <div class="token-info">
+            <div class="token-name">--hud-panel-bg</div>
+            <div class="token-hex">rgba(0,0,0,0.45)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:rgba(76,255,128,0.22)"></div>
+          <div class="token-info">
+            <div class="token-name">--hud-panel-border</div>
+            <div class="token-hex">rgba(76,255,128,0.22)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#00ddcc"></div>
+          <div class="token-info">
+            <div class="token-name">--speed-slow-color</div>
+            <div class="token-hex">#00ddcc (SLOW)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#aaaaaa"></div>
+          <div class="token-info">
+            <div class="token-name">--speed-normal-color</div>
+            <div class="token-hex">#aaaaaa (NORMAL)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#ffaa00"></div>
+          <div class="token-info">
+            <div class="token-name">--speed-fast-color</div>
+            <div class="token-hex">#ffaa00 (FAST)</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;letter-spacing:1px">
+        ── 일시정지 버튼 ──
+      </div>
+      <div class="token-palette" style="margin-bottom:24px">
+        <div class="token-card">
+          <div class="token-swatch" style="background:#4cff80"></div>
+          <div class="token-info">
+            <div class="token-name">--btn-resume-color</div>
+            <div class="token-hex">#4cff80 (계속하기)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#00cfff"></div>
+          <div class="token-info">
+            <div class="token-name">--btn-restart-color</div>
+            <div class="token-hex">#00cfff (재시작)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#ff6b4c"></div>
+          <div class="token-info">
+            <div class="token-name">--btn-quit-color</div>
+            <div class="token-hex">#ff6b4c (종료)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25)"></div>
+          <div class="token-info">
+            <div class="token-name">--btn-kbd-bg / border</div>
+            <div class="token-hex">rgba(255,255,255,0.12 / 0.25)</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:8px;letter-spacing:1px">
+        ── 게임 오버 통계 ──
+      </div>
+      <div class="token-palette">
+        <div class="token-card">
+          <div class="token-swatch" style="background:#ffcc00"></div>
+          <div class="token-info">
+            <div class="token-name">--go-new-record-color</div>
+            <div class="token-hex">#ffcc00 (신기록 골드)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:rgba(255,255,255,0.40)"></div>
+          <div class="token-info">
+            <div class="token-name">--go-muted-text</div>
+            <div class="token-hex">rgba(255,255,255,0.40)</div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:rgba(255,255,255,0.10)"></div>
+          <div class="token-info">
+            <div class="token-name">--go-section-divider</div>
+            <div class="token-hex">rgba(255,255,255,0.10)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+
+  <script>
+    /* mockup 전용 탭 전환 */
+    function showTab(id) {
+      document.querySelectorAll('.tab-content').forEach(function(el) {
+        el.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+      });
+      document.getElementById(id).classList.add('active');
+      // 탭 버튼 active 처리
+      var btnMap = {
+        'tab-hud':      0,
+        'tab-pause':    1,
+        'tab-gameover': 2,
+        'tab-tokens':   3,
+      };
+      document.querySelectorAll('.tab-btn')[btnMap[id]].classList.add('active');
+    }
+  </script>
+</body>
+</html>
