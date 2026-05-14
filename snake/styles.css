@@ -29,7 +29,7 @@ body {
 /* ─── HUD: 경쟁 점수판 (우측 상단) — BF-530 s2 §5-3 ── */
 #hud {
   position: fixed;
-  top: 16px;
+  top: 52px;  /* 16px → 52px (+36px): #sound-toggle 32px + gap 4px — BF-567 */
   right: 20px;
   color: #e0e0e0;
   font-size: 14px;
@@ -610,7 +610,7 @@ body {
 #hud-status-panel {
   position: fixed;
   right: 20px;
-  top: 60px;          /* #hud(top:16px) + 최대 높이(44px) = 60px (명세 §4-1) */
+  top: 96px;          /* 60px → 96px (+36px): #sound-toggle 연쇄 오프셋 — BF-567 */
   min-width: 110px;
   padding: 6px 10px;
   border-radius: 6px;
@@ -878,3 +878,92 @@ body {
 .go-item-list li[data-item-type="LENGTH_BURST"] .go-item-count { color: #ff6600; }
 .go-item-list li[data-item-type="SHIELD"]       .go-item-count { color: #4488ff; }
 .go-item-list li[data-item-type="REVERSE"]      .go-item-count { color: #22ffaa; }
+
+/* ─────────────────────────────────────────────────────────────── */
+/* BF-567: 효과음 토글 — CSS 변수 + #sound-toggle 스타일           */
+/* 명세: docs/design/snake-sound-toggle-BF-565.md §6-1 ~ §6-3    */
+/* ─────────────────────────────────────────────────────────────── */
+
+/* ─── 효과음 토글 토큰 (BF-565) ─────────────────────── */
+:root {
+  /* ON 상태 */
+  --sound-on-bg: rgba(76, 255, 128, 0.12);
+  --sound-on-border: rgba(76, 255, 128, 0.35);
+  --sound-on-text-shadow: 0 0 8px rgba(76, 255, 128, 0.60);
+  --sound-on-icon-filter: brightness(1);
+
+  /* OFF 상태 */
+  --sound-off-bg: rgba(0, 0, 0, 0.45);
+  --sound-off-border: rgba(255, 255, 255, 0.15);
+  --sound-off-text-shadow: none;
+  --sound-off-icon-filter: brightness(0.55) grayscale(0.6);
+
+  /* Hover */
+  --sound-hover-bg-on: rgba(76, 255, 128, 0.22);
+  --sound-hover-bg-off: rgba(255, 255, 255, 0.10);
+
+  /* Focus-visible */
+  --sound-focus-ring: #4cff80;
+  --sound-focus-ring-width: 2px;
+  --sound-focus-ring-offset: 3px;
+}
+
+/* 기본 구조 */
+#sound-toggle {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  z-index: 11;
+
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+
+  font-size: 18px;
+  border-radius: 8px;
+  border: 1px solid;
+  cursor: pointer;
+  font-family: inherit;
+
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#sound-toggle:active {
+  transform: scale(0.94);
+}
+
+/* focus: 마우스 클릭 시 기본 outline 제거 */
+#sound-toggle:focus {
+  outline: none;
+}
+#sound-toggle:focus-visible {
+  outline: var(--sound-focus-ring-width) solid var(--sound-focus-ring);
+  outline-offset: var(--sound-focus-ring-offset);
+}
+
+/* ON 상태 */
+#sound-toggle[aria-pressed="true"] {
+  background: var(--sound-on-bg);
+  border-color: var(--sound-on-border);
+  text-shadow: var(--sound-on-text-shadow);
+  filter: var(--sound-on-icon-filter);
+}
+#sound-toggle[aria-pressed="true"]:hover {
+  background: var(--sound-hover-bg-on);
+}
+
+/* OFF 상태 */
+#sound-toggle[aria-pressed="false"] {
+  background: var(--sound-off-bg);
+  border-color: var(--sound-off-border);
+  text-shadow: var(--sound-off-text-shadow);
+  filter: var(--sound-off-icon-filter);
+}
+#sound-toggle[aria-pressed="false"]:hover {
+  background: var(--sound-hover-bg-off);
+}

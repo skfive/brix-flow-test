@@ -112,6 +112,9 @@ const hudStatusPanelEl = document.getElementById("hud-status-panel");
 const hudSnakeLengthEl = document.getElementById("hud-snake-length");
 const hudSpeedLevelEl  = document.getElementById("hud-speed-level");
 
+// 효과음 토글 — BF-567
+const soundToggleEl = document.getElementById("sound-toggle");
+
 // 아이템 HUD — BF-545
 const buffBarEl     = document.getElementById("buff-bar");
 const itemSlotHudEl = document.getElementById("item-slot-hud");
@@ -202,6 +205,153 @@ function saveHighScore(score) {
   } catch (_) {
     // private mode 등 — 무시
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 효과음 시스템 — BF-567 (Web Audio API + localStorage 연동)
+// 명세: docs/spec/snake-sound-toggle-BF-563.md §3, §5, §6
+// ─────────────────────────────────────────────────────────────
+
+/** localStorage 키 — BF-567 효과음 토글 */
+const LS_SOUND_KEY = "bf-snake-sound-enabled";
+
+/**
+ * localStorage 에서 효과음 설정 로드.
+ * 키 없으면 기본값 true(ON). 엄격 "true" 비교 (EC-07 처리).
+ * @returns {boolean}
+ */
+function loadSoundEnabled() {
+  try {
+    const raw = localStorage.getItem(LS_SOUND_KEY);
+    if (raw === null) return true;   // EC-01 기본값 ON
+    return raw === "true";           // EC-07 엄격 문자열 비교
+  } catch (_) {
+    return true;                     // EC-01: private mode 등 — 기본값 ON
+  }
+}
+
+/**
+ * 효과음 설정을 localStorage 에 영속화.
+ * @param {boolean} enabled
+ */
+function saveSoundEnabled(enabled) {
+  try {
+    localStorage.setItem(LS_SOUND_KEY, String(enabled));
+  } catch (_) {
+    // EC-01: private mode 등 — 무시
+  }
+}
+
+/** 효과음 ON/OFF 상태 — 페이지 로드 시 localStorage 에서 복원 */
+let soundEnabled = loadSoundEnabled();
+
+/** Web Audio API 싱글톤 (최초 사용자 인터랙션 후 생성) */
+let _audioCtx = null;
+
+/**
+ * AudioContext 싱글톤 반환.
+ * 최초 호출 시 생성. 생성 실패 시 null 반환 (EC-02).
+ * @returns {AudioContext|null}
+ */
+function getAudioContext() {
+  try {
+    if (!_audioCtx) {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return _audioCtx;
+  } catch (_) {
+    return null; // EC-02: AudioContext 생성 실패
+  }
+}
+
+/** EC-04: 진행 중인 gameover 오실레이터 참조 (재시작 시 중단) */
+let _gameoverOsc = null;
+
+/**
+ * 음식 먹기 효과음 (80ms 상승 sine 파형).
+ * 명세 §6-2: 880Hz → 1320Hz, gain 0.35 → 0, sine
+ */
+function playEatSound() {
+  if (!soundEnabled) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  // EC-03: AudioContext suspended 상태 처리
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(880, ctx.currentTime);
+  osc.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.08);
+  gain.gain.setValueAtTime(0.35, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
+
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.08);
+}
+
+/**
+ * 게임 오버 효과음 (600ms 하강 sawtooth 파형).
+ * 명세 §6-3: 440Hz → 110Hz, gain 0.4 → 0, sawtooth
+ * EC-04: 이전 gameover 오실레이터를 먼저 중단.
+ */
+function playGameOverSound() {
+  if (!soundEnabled) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  // EC-03: AudioContext suspended 상태 처리
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+  // EC-04: 이전 gameover 오실레이터 중단
+  if (_gameoverOsc) {
+    try { _gameoverOsc.stop(); } catch (_) {}
+    _gameoverOsc = null;
+  }
+
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(440, ctx.currentTime);
+  osc.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.6);
+  gain.gain.setValueAtTime(0.4, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
+
+  _gameoverOsc = osc;
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.6);
+  osc.onended = () => { if (_gameoverOsc === osc) _gameoverOsc = null; };
+}
+
+/**
+ * 토글 버튼 UI 갱신 — aria-pressed·aria-label·textContent 동기화.
+ * 명세 §6-5: CSS 는 aria-pressed selector 로 자동 반영.
+ * @param {boolean} enabled
+ */
+function updateSoundToggleUI(enabled) {
+  if (!soundToggleEl) return;
+  soundToggleEl.textContent = enabled ? "🔊" : "🔇";
+  soundToggleEl.setAttribute("aria-pressed", String(enabled));
+  soundToggleEl.setAttribute(
+    "aria-label",
+    enabled ? "효과음 켜짐 — 클릭하여 끄기" : "효과음 꺼짐 — 클릭하여 켜기"
+  );
+}
+
+// 토글 버튼 클릭 핸들러
+if (soundToggleEl) {
+  soundToggleEl.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    saveSoundEnabled(soundEnabled);
+    updateSoundToggleUI(soundEnabled);
+    // AudioContext 미리 생성 (첫 클릭이 사용자 인터랙션 — EC-03 방지)
+    getAudioContext();
+  });
 }
 
 /** KPI 누적 통계 로드 (s2 §6-2-2) */
@@ -1716,6 +1866,7 @@ function loop(ts) {
       highScore:  Math.max(state.highScore, state.score),
     });
     render();
+    playGameOverSound(); // BF-567: 효과음 (AC-2)
     showGameOver();
     return;
   }
@@ -1762,6 +1913,7 @@ function loop(ts) {
   if (prevFood !== null && state.food !== prevFood) {
     const { x, y, multiplier } = prevFood;
     triggerEffect(x * CELL + CELL / 2, y * CELL + CELL / 2, multiplier);
+    playEatSound(); // BF-567: 효과음 (AC-2)
   }
 
   // BF-545: 아이템 획득 감지 → 이팩트 + 토스트 (명세 §6-6)
@@ -1792,6 +1944,7 @@ function loop(ts) {
     cancelAnimationFrame(rafId);
     rafId = null;
     render(); // 최종 프레임
+    playGameOverSound(); // BF-567: 효과음 (AC-2)
     showGameOver();
   }
 }
@@ -1811,6 +1964,7 @@ function initGame() {
   const hs = loadHighScore();
   state = createInitialState(cols, rows, hs);
   hideGameOver();
+  updateSoundToggleUI(soundEnabled); // BF-567: localStorage 복원값으로 UI 초기화
   // KPI 타이머 시작
   gameStartTs      = performance.now();
   totalPausedMs    = 0;
@@ -1826,6 +1980,11 @@ function initGame() {
 
 function doRestart() {
   hideGameOver();
+  // BF-567 EC-04: 진행 중인 gameover 효과음 중단
+  if (_gameoverOsc) {
+    try { _gameoverOsc.stop(); } catch (_) {}
+    _gameoverOsc = null;
+  }
   // KPI 초기화 — 새 게임마다 리셋 (BF-526 AC §4 + BF-530)
   pauseToggleCount = 0;
   pauseStartTs     = 0;
