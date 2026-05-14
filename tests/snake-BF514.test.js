@@ -256,10 +256,18 @@ test("BF-514: createInitialState — 초기 highScore 전달 보존", () => {
   assert.equal(s.status,    "playing", "초기 status 는 playing");
 });
 
-test("BF-514: game.js — ES module type 로 로드 (type=module)", () => {
+// BF-522 갱신: type="module" 이 file:// CORS 차단 원인 → 제거됨.
+// game.js 는 일반 <script src="./game.js"> 로 로드 (type 속성 없음).
+test("BF-514 (BF-522 갱신): game.js — 일반 script 태그로 로드 (type=module 없음, file:// CORS 수정)", () => {
   const html = readFileSync(path.join(REPO_ROOT, "snake", "index.html"), "utf-8");
+  // BF-522: game.js 에 type=module 없음 — file:// CORS 오류 수정
   assert.ok(
-    html.includes('type="module"'),
-    "game.js 가 type=module 로 로드되지 않음 — ES import 필요",
+    !html.includes('<script type="module" src="./game.js"'),
+    'game.js 스크립트에 type="module" 존재 — BF-522 에서 제거되어야 함',
+  );
+  // game.js 참조는 유지
+  assert.ok(
+    html.includes('src="./game.js"') || html.includes("src='./game.js'"),
+    "index.html 에서 game.js 참조 제거됨",
   );
 });

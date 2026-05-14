@@ -32,17 +32,20 @@ test("BF-518 AC1: game.js — static `import { } from './logic.js'` 제거됨", 
   );
 });
 
-test("BF-518 AC1: game.js — dynamic import() 폴백 패턴 존재", () => {
+// BF-522 갱신: dynamic import() 방식 → globalThis 직접 참조 방식으로 교체됨.
+// type="module" 자체가 file:// CORS 차단 원인이었으므로 dynamic import 도 함께 제거.
+// 이 가드는 BF-522 의 새 구현을 반영: import() 없음 + globalThis 직접 참조 확인.
+test("BF-518 AC1 (BF-522 갱신): game.js — dynamic import 제거 + globalThis 직접 참조 (type=module 없음)", () => {
   const js = readFileSync(GAME_JS, "utf-8");
-  // dynamic import 사용 여부
+  // BF-522: dynamic import 완전 제거 — type="module" 없는 일반 스크립트는 import() 불필요
   assert.ok(
-    js.includes("import(") && (js.includes("./logic.js") || js.includes('"./logic.js"')),
-    "game.js 에 dynamic import('./logic.js') 없음",
+    !js.includes("import("),
+    "game.js 에 dynamic import() 존재 — BF-522 에서 제거되어야 함 (type=module 미사용)",
   );
-  // catch + globalThis 폴백 여부
+  // game.js 는 globalThis 구조 분해로 직접 로직 함수 참조 (BF-522 접근)
   assert.ok(
-    js.includes("catch") && js.includes("globalThis"),
-    "game.js 에 CORS 차단 시 globalThis 폴백 (catch 블록) 없음",
+    js.includes("globalThis"),
+    "game.js 에 globalThis 참조 없음 — index.html 인라인 IIFE 변수를 globalThis 에서 구조 분해해야 함",
   );
 });
 
@@ -167,12 +170,17 @@ test("BF-518 AC2: 인라인 글로벌 restartGame — 점수 초기화 + highSco
 // AC §3 — http:// 회귀 없음 (type=module + src=game.js 유지 확인)
 // ─────────────────────────────────────────────────────────────
 
-test("BF-518 AC3: index.html — type=module script + game.js 참조 유지 (http:// 호환)", () => {
+// BF-522 갱신: type="module" 이 file:// CORS 차단 원인이었으므로 제거됨.
+// http:// 호환성은 globalThis 구조 분해 방식으로 그대로 유지 (인라인 IIFE → game.js).
+// 이 가드는 BF-522 의 새 구현을 반영: game.js 스크립트에 type=module 없음 확인.
+test("BF-518 AC3 (BF-522 갱신): index.html — game.js script 태그 type=module 없음 (file:// CORS 수정)", () => {
   const html = readFileSync(INDEX_HTML, "utf-8");
+  // BF-522: game.js 로드 태그에 type="module" 없어야 함
   assert.ok(
-    html.includes('type="module"'),
-    'index.html 에서 type="module" 제거됨 — http:// 환경 회귀',
+    !html.includes('<script type="module" src="./game.js"'),
+    'index.html game.js 스크립트에 type="module" 존재 — BF-522 에서 제거되어야 함',
   );
+  // game.js 참조 자체는 유지
   assert.ok(
     html.includes('src="./game.js"') || html.includes("src='./game.js'"),
     "index.html 에서 game.js 참조 제거됨",
