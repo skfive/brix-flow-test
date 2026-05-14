@@ -335,13 +335,19 @@ test("BF-504 §11: index.html — Game Over 오버레이 존재 (AC §4)", () =>
   assert.ok(html.includes("Press Space to restart"), '"Press Space to restart" 텍스트 없음');
 });
 
-test("BF-504 §11: index.html — game.js 를 type=module 로 로드", () => {
+// BF-522 갱신: type="module" 이 file:// CORS 차단 원인 → 제거됨.
+// game.js 는 일반 <script src="./game.js"> 로 로드.
+test("BF-504 §11 (BF-522 갱신): index.html — game.js 를 일반 script 태그로 로드 (type=module 없음)", () => {
   const html = readFileSync(INDEX_HTML, "utf-8");
   assert.ok(
     html.includes('src="./game.js"') || html.includes("src='./game.js'"),
     'game.js 로드 없음',
   );
-  assert.ok(html.includes('type="module"'), 'type="module" 없음 — ES module import 필요');
+  // BF-522: type=module 제거 — file:// CORS 오류 수정
+  assert.ok(
+    !html.includes('<script type="module" src="./game.js"'),
+    'game.js 스크립트에 type="module" 존재 — BF-522 에서 제거되어야 함',
+  );
 });
 
 test("BF-504 §11: game.js — localStorage High Score 키 사용 (AC §5)", () => {

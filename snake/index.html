@@ -143,8 +143,8 @@
     })();
     </script>
 
-    <!-- ES module — logic.js 순수 로직 import 가능 (BF-504)
-         BF-518: file:// CORS 차단 시 dynamic import catch → 위 인라인 글로벌로 폴백 -->
-    <script type="module" src="./game.js"></script>
+    <!-- game.js 로드: type 속성 없음 → file:// 프로토콜 CORS 차단 해소 (BF-522)
+         BF-518 인라인 IIFE 가 globalThis 에 로직 변수 주입 → game.js 에서 구조 분해 참조 -->
+    <script src="./game.js"></script>
   </body>
 </html>
