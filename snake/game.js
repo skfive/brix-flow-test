@@ -33,6 +33,12 @@ const {
   useHeldItem,
   updateItemTimers,
   tickWithItems,
+  // BF-579: 게임 설정
+  SNAKE_SETTINGS_DEFAULTS,
+  SNAKE_SETTINGS_LIMITS,
+  loadSnakeSettings,
+  saveSnakeSettings,
+  validateAndMergeSettings,
 } = globalThis;
 
 // BF-560: HUD 유틸 (logic.js ES module 을 직접 import — file:// 호환 없이 globalThis 경유 불가)
@@ -124,6 +130,19 @@ const slotKeyHintEl = itemSlotHudEl ? itemSlotHudEl.querySelector(".slot-key-hin
 const slotExpireEl  = itemSlotHudEl ? itemSlotHudEl.querySelector(".slot-expire")   : null;
 const toastContainerEl = document.getElementById("toast-container");
 
+// 설정 모달 — BF-579
+const settingsTriggerEl   = document.getElementById("settings-trigger");
+const settingsModalEl     = document.getElementById("settings-modal");
+const settingsValidationEl = document.getElementById("settings-validation-msg");
+const settingsCloseEl     = settingsModalEl ? settingsModalEl.querySelector(".settings-close")      : null;
+const settingsBtnSaveEl   = settingsModalEl ? settingsModalEl.querySelector(".settings-btn-save")   : null;
+const settingsBtnCancelEl = settingsModalEl ? settingsModalEl.querySelector(".settings-btn-cancel") : null;
+const settingsBtnResetEl  = settingsModalEl ? settingsModalEl.querySelector(".settings-btn-reset")  : null;
+const settingsOverlayEl   = settingsModalEl ? settingsModalEl.querySelector(".settings-modal-overlay") : null;
+const pausedBtnSettingsEl = document.getElementById("paused-btn-settings");
+const hudTimeRemainingEl  = document.getElementById("hud-time-remaining");
+const hudTimeValueEl      = document.getElementById("hud-time-value");
+
 // ─────────────────────────────────────────────────────────────
 // 게임 상태
 // ─────────────────────────────────────────────────────────────
@@ -134,8 +153,37 @@ let lastTs = 0;
 /** 틱 간격 (ms) — 이 값마다 게임 로직 1 스텝 */
 const TICK_MS = 120;
 
-/** 제한 시간 (ms) — s2 §1 T5 */
+/** 제한 시간 (ms) — s2 §1 T5 (BF-579: settings.timeLimitSec 가 우선; 미설정 시 2분 fallback) */
 const GAME_DURATION_MS = 120000;
+
+/**
+ * 현재 적용 중인 설정 (BF-579 §4-2 — game.start 시 캡처되는 effectiveSettings).
+ * 페이지 로드 시 localStorage 에서 load.
+ */
+let currentSettings = (typeof loadSnakeSettings === "function")
+  ? loadSnakeSettings()
+  : Object.assign({}, SNAKE_SETTINGS_DEFAULTS || {
+      schemaVersion: 1, difficulty: "normal", cpuCount: 1,
+      itemsEnabled: false, itemSpawnRate: 0.5, multiplierEnabled: true,
+      timeLimitSec: null, initialLength: 3,
+    });
+
+/**
+ * 다음 게임에 적용될 pending 설정 (BF-579 §4-2 — modal save 시점에 갱신).
+ * null 이면 currentSettings 유지.
+ */
+let pendingSettings = null;
+
+/** 모달 진입 직전 설정 스냅샷 (취소 시 롤백용). */
+let draftSettings = null;
+
+/** 시간 만료 임박(타임아웃) 처리는 settings.timeLimitSec 기반 ms 로 계산 */
+function getGameDurationMs() {
+  if (currentSettings && currentSettings.timeLimitSec != null) {
+    return currentSettings.timeLimitSec * 1000;
+  }
+  return GAME_DURATION_MS;
+}
 
 // ─────────────────────────────────────────────────────────────
 // KPI 측정 변수 — BF-526 (pause) + BF-530 (competition)
@@ -1671,6 +1719,9 @@ function render() {
   updateMultiplierStatsUI();
   updateBuffBar();      // BF-545: 버프 상태바 (즉시발동 효과 타이머)
   updateItemSlotHUD();  // BF-545: 보유 아이템 슬롯 HUD
+  // BF-579: HUD 남은 시간 + ⚙ 진입 버튼 disabled 상태 갱신
+  if (typeof updateHUDTimeRemaining === "function") updateHUDTimeRemaining();
+  if (typeof updateSettingsTriggerState === "function") updateSettingsTriggerState();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1851,8 +1902,12 @@ function loop(ts) {
   if (moveCpu)    cpuTickAccum    = Math.max(0, cpuTickAccum    - cpuTickInterval);
 
   // T5: 제한 시간 초과 → 점수 비교 (s2 §2, §3-2)
+  // BF-579: settings.timeLimitSec === null 이면 무제한 — 만료 검사 skip
   const survivedMs = performance.now() - gameStartTs - totalPausedMs;
-  if (survivedMs >= GAME_DURATION_MS) {
+  const timeLimitMs = (currentSettings && currentSettings.timeLimitSec != null)
+    ? currentSettings.timeLimitSec * 1000
+    : Infinity;
+  if (timeLimitMs !== Infinity && survivedMs >= timeLimitMs) {
     cancelAnimationFrame(rafId);
     rafId = null;
     let result;
@@ -1872,8 +1927,10 @@ function loop(ts) {
   }
 
   // ── BF-545: 아이템 스폰 타이머 (명세 §6-1) ─────────────────
+  // BF-579: ITEMS_ENABLED 대신 settings.itemsEnabled 사용
   const nowMs = Date.now();
-  if (ITEMS_ENABLED && ITEM_SPAWN_RATE > 0 && state.item === null
+  const itemsOn = currentSettings.itemsEnabled === true && currentSettings.itemSpawnRate > 0;
+  if (itemsOn && state.item === null
       && nextItemSpawnTs > 0 && nowMs >= nextItemSpawnTs) {
     const cell = spawnItemCell(state.cols, state.rows, state.snake, state.cpu, state.food);
     if (cell !== null) {
@@ -1895,8 +1952,13 @@ function loop(ts) {
       };
     }
     // 다음 스폰 예약 (스폰 성공 여부 무관)
-    const ivMs = ITEM_SPAWN_INTERVAL_MIN_MS
+    // BF-579 §2-2: itemSpawnRate 가 높을수록 스폰 빈도↑.
+    //   rate=0.5 가 기본값 — 기존 25~35초 간격을 1배로 매핑 (회귀 안정성).
+    //   rate=1.0 → 0.5배 간격 (자주), rate=0.1 → 5배 간격 (드물게)
+    const baseIvMs = ITEM_SPAWN_INTERVAL_MIN_MS
       + Math.random() * (ITEM_SPAWN_INTERVAL_MAX_MS - ITEM_SPAWN_INTERVAL_MIN_MS);
+    const rate     = Math.max(0.01, currentSettings.itemSpawnRate);
+    const ivMs     = baseIvMs * (0.5 / rate);
     nextItemSpawnTs = nowMs + ivMs;
   }
 
@@ -1956,24 +2018,332 @@ function startLoop() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// BF-579: 설정 모달 핸들러 (planner §3, §4 / designer §6-6)
+// ─────────────────────────────────────────────────────────────
+
+/** 매 render frame 호출 — HUD 남은 시간 row 갱신 (planner §6-3, designer §5-12). */
+function updateHUDTimeRemaining() {
+  if (!hudTimeRemainingEl || !hudTimeValueEl) return;
+  const limit = currentSettings && currentSettings.timeLimitSec;
+  if (limit == null) {
+    hudTimeRemainingEl.setAttribute("hidden", "");
+    return;
+  }
+  hudTimeRemainingEl.removeAttribute("hidden");
+  // 게임 시작 안 했거나 paused 면 limit 전체 표시
+  let elapsedSec;
+  if (state && state.status === "playing") {
+    const elapsedMs = Math.max(0, performance.now() - gameStartTs - totalPausedMs);
+    elapsedSec = Math.floor(elapsedMs / 1000);
+  } else {
+    elapsedSec = 0;
+  }
+  const remainSec = Math.max(0, limit - elapsedSec);
+  const mm = Math.floor(remainSec / 60);
+  const ss = remainSec % 60;
+  hudTimeValueEl.textContent =
+    String(mm).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+}
+
+/** ⚙ 진입 버튼 disabled — state.status === "playing" 시 (planner §3-1, §8-9). */
+function updateSettingsTriggerState() {
+  if (!settingsTriggerEl) return;
+  const isPlaying = state && state.status === "playing";
+  if (isPlaying) settingsTriggerEl.setAttribute("disabled", "");
+  else           settingsTriggerEl.removeAttribute("disabled");
+}
+
+/** 현재 draftSettings 값을 모달 컨트롤에 반영 (planner §4-3). */
+function reflectDraftToControls() {
+  if (!settingsModalEl) return;
+  const d = draftSettings;
+  // 라디오 그룹
+  settingsModalEl.querySelectorAll(".ctrl-radio-group").forEach((group) => {
+    const key = group.getAttribute("data-key");
+    if (!key || !(key in d)) return;
+    const cur = d[key];
+    group.querySelectorAll(".ctrl-radio").forEach((btn) => {
+      const v   = btn.getAttribute("data-value");
+      let match = false;
+      if (key === "timeLimitSec") {
+        if (v === "null") match = (cur === null);
+        else if (v === "custom") {
+          const presets = [null, 60, 180, 300, 600];
+          match = (cur !== null && presets.indexOf(cur) < 0);
+        } else {
+          match = (String(cur) === v);
+        }
+      } else if (key === "cpuCount" || key === "initialLength") {
+        match = (String(cur) === v);
+      } else {
+        match = (String(cur) === v);
+      }
+      btn.setAttribute("aria-pressed", match ? "true" : "false");
+    });
+  });
+  // 토글 스위치
+  settingsModalEl.querySelectorAll(".ctrl-toggle").forEach((tog) => {
+    const key = tog.getAttribute("data-key");
+    if (!key || !(key in d)) return;
+    const on   = d[key] === true;
+    tog.setAttribute("aria-checked", on ? "true" : "false");
+    const txt = tog.querySelector(".ctrl-toggle-text");
+    if (txt) txt.textContent = on ? "on" : "off";
+  });
+  // 슬라이더 (itemSpawnRate)
+  const slider = settingsModalEl.querySelector('.ctrl-slider input[type="range"][data-key="itemSpawnRate"]');
+  if (slider) {
+    const tens = Math.round((d.itemSpawnRate || 0) * 10);
+    slider.value = String(tens);
+    const valEl = slider.parentElement.querySelector(".ctrl-slider-value");
+    if (valEl) valEl.textContent = (tens / 10).toFixed(1);
+  }
+  // 의존 컨트롤 disabled — itemsEnabled = false 면 itemSpawnRate row 회색
+  const rateRow = slider ? slider.closest(".ctrl-row") : null;
+  if (rateRow) {
+    if (d.itemsEnabled) rateRow.removeAttribute("data-disabled");
+    else                rateRow.setAttribute("data-disabled", "true");
+  }
+  // 직접 입력 셀
+  const customWrap  = settingsModalEl.querySelector(".ctrl-time-custom");
+  const customInput = customWrap ? customWrap.querySelector('input[type="number"]') : null;
+  if (customWrap && customInput) {
+    const presets = [null, 60, 180, 300, 600];
+    const isCustom = (d.timeLimitSec !== null && presets.indexOf(d.timeLimitSec) < 0);
+    if (isCustom) {
+      customWrap.removeAttribute("hidden");
+      customInput.value = String(d.timeLimitSec);
+    } else {
+      customWrap.setAttribute("hidden", "");
+    }
+  }
+  // 검증 메시지 클리어
+  hideValidationMsg();
+}
+
+function showValidationMsg(msg) {
+  if (!settingsValidationEl) return;
+  settingsValidationEl.textContent = msg;
+  settingsValidationEl.removeAttribute("hidden");
+}
+function hideValidationMsg() {
+  if (!settingsValidationEl) return;
+  settingsValidationEl.setAttribute("hidden", "");
+  settingsValidationEl.textContent = "";
+}
+
+/** 모달 열기 (planner §3-1). state.status === "playing" 이면 차단. */
+function openSettingsModal(source) {
+  if (!settingsModalEl) return;
+  if (state && state.status === "playing") return;
+  // draftSettings 초기화: pendingSettings 우선, 그 다음 currentSettings
+  const base = pendingSettings || currentSettings || SNAKE_SETTINGS_DEFAULTS;
+  draftSettings = Object.assign({}, base);
+  reflectDraftToControls();
+  settingsModalEl.removeAttribute("hidden");
+  console.log("[BF-579] settings.modal.open source=" + (source || "unknown"));
+}
+
+/** 모달 닫기 (no save). */
+function closeSettingsModal(outcome) {
+  if (!settingsModalEl) return;
+  settingsModalEl.setAttribute("hidden", "");
+  draftSettings = null;
+  console.log("[BF-579] settings.modal.close outcome=" + (outcome || "cancel"));
+}
+
+/** 검증: 직접 입력 timeLimitSec 등 범위 확인 (BF-582 AC3). */
+function validateDraft() {
+  if (!draftSettings) return { ok: false, msg: "내부 오류: draft 없음" };
+  // 직접 입력 timeLimitSec 검증
+  const customWrap  = settingsModalEl ? settingsModalEl.querySelector(".ctrl-time-custom") : null;
+  const customInput = customWrap ? customWrap.querySelector('input[type="number"]') : null;
+  if (customWrap && !customWrap.hasAttribute("hidden") && customInput) {
+    const raw = customInput.value.trim();
+    if (raw === "") return { ok: false, msg: "제한 시간을 입력해 주세요." };
+    const n = Number(raw);
+    const lim = SNAKE_SETTINGS_LIMITS.timeLimitSec;
+    if (!Number.isFinite(n) || !Number.isInteger(n)) {
+      return { ok: false, msg: "제한 시간은 정수여야 합니다." };
+    }
+    if (n < lim.min || n > lim.max) {
+      return { ok: false, msg: `제한 시간은 ${lim.min}~${lim.max}초 범위여야 합니다.` };
+    }
+    draftSettings.timeLimitSec = n;
+  }
+  // itemSpawnRate 검증
+  const lim2 = SNAKE_SETTINGS_LIMITS.itemSpawnRate;
+  if (draftSettings.itemSpawnRate < lim2.min || draftSettings.itemSpawnRate > lim2.max) {
+    return { ok: false, msg: `아이템 등장 확률은 ${lim2.min}~${lim2.max} 범위여야 합니다.` };
+  }
+  return { ok: true };
+}
+
+/** 모달 저장 — planner §3-3, §8-3. */
+function saveSettingsModal() {
+  const v = validateDraft();
+  if (!v.ok) {
+    showValidationMsg(v.msg);
+    return;
+  }
+  const merged = validateAndMergeSettings(draftSettings);
+  // localStorage 영속
+  if (typeof saveSnakeSettings === "function") {
+    saveSnakeSettings(merged);
+  } else {
+    try {
+      localStorage.setItem("bf-snake-settings", JSON.stringify(merged));
+    } catch (_) { /* private mode */ }
+  }
+  // 현재 게임 영향 없음 — 다음 시작 시 적용 (planner §6-1)
+  pendingSettings = merged;
+  console.log("[BF-579] settings.save snapshot=", JSON.stringify(merged));
+  closeSettingsModal("save");
+}
+
+/** 기본값 복원 (planner §3-3, §8-6) — draftSettings 만 갱신, 저장은 별도 [저장] 필요. */
+function resetSettingsToDefaults() {
+  draftSettings = Object.assign({}, SNAKE_SETTINGS_DEFAULTS);
+  reflectDraftToControls();
+  console.log("[BF-579] settings.reset → defaults");
+}
+
+/** 라디오 그룹 클릭 핸들러. */
+function handleRadioClick(group, btn) {
+  const key = group.getAttribute("data-key");
+  if (!key || !draftSettings) return;
+  if (btn.hasAttribute("disabled")) return;
+  const raw = btn.getAttribute("data-value");
+  let value;
+  if (key === "timeLimitSec") {
+    if (raw === "null") value = null;
+    else if (raw === "custom") {
+      // 직접 입력 토글 활성화 — 현재 값이 preset 이면 그대로 표시 + custom row 노출
+      // value 는 현재 draftSettings.timeLimitSec 유지 (또는 customInput 의 기본값 사용)
+      const customInput = settingsModalEl.querySelector('.ctrl-time-custom input[type="number"]');
+      const presets = [null, 60, 180, 300, 600];
+      let n = draftSettings.timeLimitSec;
+      if (n === null || presets.indexOf(n) >= 0) {
+        n = customInput ? Number(customInput.value) || 120 : 120;
+      }
+      value = n;
+    } else {
+      value = Number(raw);
+    }
+  } else if (key === "cpuCount" || key === "initialLength") {
+    value = Number(raw);
+  } else {
+    value = raw;
+  }
+  draftSettings[key] = value;
+  reflectDraftToControls();
+}
+
+/** 토글 스위치 클릭 핸들러. */
+function handleToggleClick(tog) {
+  const key = tog.getAttribute("data-key");
+  if (!key || !draftSettings) return;
+  draftSettings[key] = !(draftSettings[key] === true);
+  reflectDraftToControls();
+}
+
+/** 슬라이더 input 핸들러 (itemSpawnRate). */
+function handleSliderInput(slider) {
+  const key = slider.getAttribute("data-key");
+  if (!key || !draftSettings) return;
+  const tens = Number(slider.value);
+  if (!Number.isFinite(tens)) return;
+  draftSettings[key] = Math.max(0, Math.min(1, tens / 10));
+  reflectDraftToControls();
+}
+
+/** 직접 입력 숫자 input 핸들러. */
+function handleCustomTimeInput(input) {
+  if (!draftSettings) return;
+  const n = Number(input.value);
+  if (Number.isFinite(n) && Number.isInteger(n)) {
+    draftSettings.timeLimitSec = n;
+  }
+  // 검증 메시지는 [저장] 시 표시 — 즉시 표시는 거슬림
+}
+
+// 모달 진입 이벤트
+if (settingsTriggerEl) {
+  settingsTriggerEl.addEventListener("click", () => {
+    if (settingsTriggerEl.hasAttribute("disabled")) return;
+    openSettingsModal("start");
+  });
+}
+if (pausedBtnSettingsEl) {
+  pausedBtnSettingsEl.addEventListener("click", () => {
+    if (state && state.status === "paused") {
+      openSettingsModal("pause");
+    }
+  });
+}
+// 모달 내부 컨트롤 이벤트 (위임)
+if (settingsModalEl) {
+  settingsModalEl.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    if (target === settingsOverlayEl) {
+      closeSettingsModal("cancel");
+      return;
+    }
+    const radio = target.closest(".ctrl-radio");
+    if (radio) {
+      const group = radio.closest(".ctrl-radio-group");
+      if (group) handleRadioClick(group, radio);
+      return;
+    }
+    const tog = target.closest(".ctrl-toggle");
+    if (tog) {
+      handleToggleClick(tog);
+      return;
+    }
+  });
+  settingsModalEl.addEventListener("input", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.type === "range") {
+      handleSliderInput(target);
+    } else if (target.type === "number") {
+      handleCustomTimeInput(target);
+    }
+  });
+}
+if (settingsCloseEl)     settingsCloseEl.addEventListener("click", () => closeSettingsModal("cancel"));
+if (settingsBtnCancelEl) settingsBtnCancelEl.addEventListener("click", () => closeSettingsModal("cancel"));
+if (settingsBtnSaveEl)   settingsBtnSaveEl.addEventListener("click", () => saveSettingsModal());
+if (settingsBtnResetEl)  settingsBtnResetEl.addEventListener("click", () => resetSettingsToDefaults());
+
+// ─────────────────────────────────────────────────────────────
 // 게임 초기화 / 재시작
 // ─────────────────────────────────────────────────────────────
 function initGame() {
   resizeCanvas();
   const { cols, rows } = getGridSize();
   const hs = loadHighScore();
-  state = createInitialState(cols, rows, hs);
+  // BF-579: pendingSettings 가 있으면 적용 (start trigger 시점)
+  if (pendingSettings) {
+    currentSettings = pendingSettings;
+    pendingSettings = null;
+  }
+  state = createInitialState(cols, rows, hs, currentSettings);
   hideGameOver();
   updateSoundToggleUI(soundEnabled); // BF-567: localStorage 복원값으로 UI 초기화
+  updateHUDTimeRemaining();           // BF-579: HUD 남은 시간 row 갱신
+  updateSettingsTriggerState();       // BF-579: playing 중 disabled
   // KPI 타이머 시작
   gameStartTs      = performance.now();
   totalPausedMs    = 0;
   // BF-545: tick accumulator 리셋 + 아이템 스폰 타이머 (게임 시작 20초 후 첫 스폰)
   playerTickAccum  = 0;
   cpuTickAccum     = 0;
-  nextItemSpawnTs  = (ITEMS_ENABLED && ITEM_SPAWN_RATE > 0)
+  nextItemSpawnTs  = (currentSettings.itemsEnabled && currentSettings.itemSpawnRate > 0)
     ? performance.now() + ITEM_FIRST_SPAWN_DELAY_MS
     : -1;
+  console.log("[BF-579] game.start effectiveSettings:", JSON.stringify(currentSettings));
   render();
   startLoop();
 }
@@ -1992,14 +2362,22 @@ function doRestart() {
   gameStartTs      = performance.now();
   // BF-537: 이팩트 카운트 리셋
   for (const k of ["1", "2", "4", "8"]) effectTriggerCount[k] = 0;
+  // BF-579: pendingSettings 적용 (저장된 변경분 다음 게임에 반영)
+  if (pendingSettings) {
+    currentSettings = pendingSettings;
+    pendingSettings = null;
+  }
   // BF-545: tick accumulator + 아이템 스폰 타이머 리셋
   playerTickAccum  = 0;
   cpuTickAccum     = 0;
-  nextItemSpawnTs  = (ITEMS_ENABLED && ITEM_SPAWN_RATE > 0)
+  nextItemSpawnTs  = (currentSettings.itemsEnabled && currentSettings.itemSpawnRate > 0)
     ? performance.now() + ITEM_FIRST_SPAWN_DELAY_MS
     : -1;
-  state = restartGame(state);
+  state = restartGame(state, currentSettings);
   saveHighScore(state.highScore);
+  updateHUDTimeRemaining();           // BF-579
+  updateSettingsTriggerState();       // BF-579
+  console.log("[BF-579] game.start effectiveSettings:", JSON.stringify(currentSettings));
   startLoop();
 }
 
@@ -2057,11 +2435,27 @@ if (pausedBtnQuitEl) {
 }
 
 window.addEventListener("keydown", (e) => {
-  // ① 게임 오버 상태: Space → 재시작 (AC §3 — 멈춤/재개와 충돌 없음, early-return)
+  // ⓪ BF-579: 설정 모달이 열려 있으면 Esc/Enter 만 받음 — 방향키 / 다른 단축키 차단 (planner EC-7)
+  if (settingsModalEl && !settingsModalEl.hasAttribute("hidden")) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeSettingsModal("cancel");
+    } else if (e.key === "Enter" || e.code === "Enter") {
+      // Enter 가 input 안에서 발생하면 form 동작 방지
+      e.preventDefault();
+      saveSettingsModal();
+    }
+    return;
+  }
+
+  // ① 게임 오버 상태: Space → 재시작, S → 설정 모달 (AC §3 + BF-579 §3-1)
   if (state.status === "gameover") {
     if (e.code === "Space") {
       e.preventDefault();
       doRestart();
+    } else if (e.key === "s" || e.key === "S") {
+      e.preventDefault();
+      openSettingsModal("hotkey");
     }
     return;
   }
@@ -2074,7 +2468,7 @@ window.addEventListener("keydown", (e) => {
     return;
   }
 
-  // ② 일시정지 중 R키 → 재시작, Q키 → 종료 (BF-560 AC-2)
+  // ② 일시정지 중 R키 → 재시작, Q키 → 종료, S키 → 설정 모달 (BF-560 + BF-579 §3-1)
   if (state.status === "paused") {
     if (e.code === "KeyR") {
       e.preventDefault();
@@ -2093,6 +2487,9 @@ window.addEventListener("keydown", (e) => {
       });
       render();
       showGameOver();
+    } else if (e.key === "s" || e.key === "S") {
+      e.preventDefault();
+      openSettingsModal("hotkey");
     }
     return;
   }
@@ -2132,7 +2529,8 @@ window.addEventListener("resize", () => {
   resizeCanvas();
   const { cols, rows } = getGridSize();
   const hs = Math.max(state.highScore, loadHighScore());
-  state = createInitialState(cols, rows, hs);
+  // BF-579: 현재 게임의 settings 를 그대로 사용 — resize 가 settings 적용 시점은 아님
+  state = createInitialState(cols, rows, hs, currentSettings);
   if (rafId !== null) cancelAnimationFrame(rafId);
   hideGameOver();
   gameStartTs      = performance.now();
@@ -2140,9 +2538,10 @@ window.addEventListener("resize", () => {
   // BF-545: tick accumulator + 아이템 스폰 타이머 리셋
   playerTickAccum  = 0;
   cpuTickAccum     = 0;
-  nextItemSpawnTs  = (ITEMS_ENABLED && ITEM_SPAWN_RATE > 0)
+  nextItemSpawnTs  = (currentSettings.itemsEnabled && currentSettings.itemSpawnRate > 0)
     ? performance.now() + ITEM_FIRST_SPAWN_DELAY_MS
     : -1;
+  updateHUDTimeRemaining();           // BF-579
   startLoop();
 });
 
