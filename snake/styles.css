@@ -1051,6 +1051,11 @@ body {
   align-items: center;
   justify-content: center;
 }
+/* BF-594: display:flex 가 UA stylesheet [hidden]{display:none} 을 덮으므로
+   #gameover-overlay / #paused-overlay 와 동일하게 명시적 override 필요 */
+#settings-modal[hidden] {
+  display: none;
+}
 .settings-modal-overlay {
   position: absolute;
   inset: 0;
