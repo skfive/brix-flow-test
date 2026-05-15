@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake 설정 모달 시안 — BF-579</title>
+  <style>
+    /* ─── 디자인 토큰 (BF-579 명세 §2 기반) ─── */
+    :root {
+      /* 게임 기반 토큰 */
+      --bg-primary: #0d0d0d;
+      --player-body: #4cff80;
+      --hud-panel-bg: rgba(0, 0, 0, 0.45);
+      --hud-panel-border: rgba(76, 255, 128, 0.22);
+      --hud-panel-text: #e0e0e0;
+      --hud-panel-label: rgba(255, 255, 255, 0.50);
+
+      /* 모달 구조 */
+      --settings-overlay-bg:      rgba(0, 0, 0, 0.72);
+      --settings-modal-bg:        #111;
+      --settings-modal-border:    rgba(76, 255, 128, 0.30);
+      --settings-modal-shadow:    0 0 30px rgba(76, 255, 128, 0.25);
+      --settings-section-divider: rgba(255, 255, 255, 0.10);
+      --settings-section-title:   rgba(255, 255, 255, 0.40);
+
+      /* 컨트롤 */
+      --ctrl-track-bg:           rgba(255, 255, 255, 0.10);
+      --ctrl-track-fill:         #4cff80;
+      --ctrl-thumb:              #4cff80;
+      --ctrl-thumb-glow:         0 0 6px rgba(76, 255, 128, 0.55);
+      --ctrl-border:             rgba(76, 255, 128, 0.25);
+      --ctrl-border-active:      rgba(76, 255, 128, 0.55);
+      --ctrl-disabled-opacity:   0.35;
+      --ctrl-label-text:         #e0e0e0;
+      --ctrl-value-text:         #aaaaaa;
+      --ctrl-hover-bg:           rgba(76, 255, 128, 0.08);
+
+      /* 진입 버튼 */
+      --settings-trigger-bg:           rgba(0, 0, 0, 0.45);
+      --settings-trigger-border:       rgba(255, 255, 255, 0.15);
+      --settings-trigger-hover-bg:     rgba(76, 255, 128, 0.18);
+      --settings-trigger-hover-border: rgba(76, 255, 128, 0.35);
+
+      /* 액션 버튼 (BF-558 재사용) */
+      --btn-resume-color:       #4cff80;
+      --btn-resume-bg:          rgba(76, 255, 128, 0.10);
+      --btn-resume-hover-bg:    rgba(76, 255, 128, 0.20);
+      --btn-restart-color:      #00cfff;
+      --btn-restart-bg:         rgba(0, 207, 255, 0.08);
+      --btn-restart-hover-bg:   rgba(0, 207, 255, 0.18);
+      --btn-quit-color:         #ff6b4c;
+      --btn-quit-bg:            rgba(255, 107, 76, 0.08);
+      --btn-quit-hover-bg:      rgba(255, 107, 76, 0.18);
+      --btn-kbd-bg:             rgba(255, 255, 255, 0.12);
+      --btn-kbd-border:         rgba(255, 255, 255, 0.25);
+
+      /* focus-visible */
+      --sound-focus-ring: #4cff80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-primary);
+      font-family: 'Courier New', Courier, monospace;
+      color: var(--hud-panel-text);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* ─── 페이지 헤더 ───────────────────────────────────── */
+    .page-header {
+      padding: 28px 32px 16px;
+      border-bottom: 1px solid rgba(76, 255, 128, 0.15);
+    }
+    .page-header h1 {
+      font-size: 1.1rem;
+      color: #4cff80;
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+    .page-header p {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* ─── 섹션 ───────────────────────────────────────────── */
+    .section {
+      padding: 28px 32px 0;
+    }
+    .section-title {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.40);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .section-note {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    /* ─── 비교 카드 (mockup 컷별) ─────────────────────────── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 24px;
+    }
+
+    .preview-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .preview-card-title {
+      font-size: 11px;
+      color: var(--hud-panel-label);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .preview-canvas {
+      position: relative;
+      background: var(--bg-primary);
+      border: 1px solid rgba(76, 255, 128, 0.08);
+      border-radius: 6px;
+      min-height: 280px;
+      overflow: hidden;
+    }
+
+    /* ─── 게임 화면 시뮬레이션 (start screen) ─────────────── */
+    .sim-canvas {
+      position: relative;
+      width: 100%;
+      height: 360px;
+      background: var(--bg-primary);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    /* 모의 격자 */
+    .sim-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(76,255,128,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(76,255,128,0.04) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* 모의 HUD */
+    .sim-hud-status {
+      position: absolute;
+      right: 12px;
+      top: 60px;
+      min-width: 110px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: var(--hud-panel-bg);
+      border: 1px solid var(--hud-panel-border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: right;
+      font-family: 'Courier New', monospace;
+    }
+    .sim-hud-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .sim-hud-label {
+      font-size: 11px;
+      color: var(--hud-panel-label);
+      letter-spacing: 1px;
+    }
+    .sim-hud-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--hud-panel-text);
+    }
+
+    /* 모의 효과음 토글 */
+    .sim-sound-toggle {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px; height: 32px;
+      background: rgba(76, 255, 128, 0.12);
+      border: 1px solid rgba(76, 255, 128, 0.35);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    /* ⚙ 설정 진입 버튼 — 본 시안 핵심 */
+    .sim-settings-trigger {
+      position: absolute;
+      top: 12px;
+      right: 52px;
+      width: 32px; height: 32px;
+      background: var(--settings-trigger-bg);
+      border: 1px solid var(--settings-trigger-border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--hud-panel-text);
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .sim-settings-trigger:hover {
+      background: var(--settings-trigger-hover-bg);
+      border-color: var(--settings-trigger-hover-border);
+    }
+    .sim-settings-trigger:focus-visible {
+      outline: 2px solid var(--sound-focus-ring);
+      outline-offset: 3px;
+    }
+
+    /* "Press Space to start" 안내 */
+    .sim-start-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.45);
+      letter-spacing: 1.5px;
+      font-size: 13px;
+      pointer-events: none;
+    }
+    .sim-start-hint .big {
+      color: var(--player-body);
+      font-size: 22px;
+      letter-spacing: 4px;
+      text-shadow: 0 0 8px rgba(76, 255, 128, 0.40);
+    }
+
+    /* ─── 설정 모달 본체 ───────────────────────────────────── */
+    .settings-modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--settings-overlay-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .settings-modal-box {
+      position: relative;
+      background: var(--settings-modal-bg);
+      border: 1px solid var(--settings-modal-border);
+      border-radius: 12px;
+      box-shadow: var(--settings-modal-shadow);
+      width: min(480px, calc(100% - 24px));
+      max-height: 92%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .settings-header {
+      padding: 16px 28px;
+      position: relative;
+      border-bottom: 1px solid var(--settings-section-divider);
+    }
+    .settings-title {
+      font-size: 1.4rem;
+      color: var(--player-body);
+      letter-spacing: 3px;
+      font-weight: 700;
+    }
+    .settings-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 40px; height: 40px;
+      background: transparent;
+      border: none;
+      color: var(--ctrl-value-text);
+      font-size: 22px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: color 0.12s ease, background 0.12s ease;
+    }
+    .settings-close:hover {
+      color: var(--hud-panel-text);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .settings-close:focus-visible {
+      outline: 2px solid var(--sound-focus-ring);
+      outline-offset: -2px;
+    }
+    .settings-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 28px 4px;
+    }
+    .settings-section {
+      padding: 10px 0 14px;
+      border-top: 1px solid var(--settings-section-divider);
+    }
+    .settings-section:first-child {
+      border-top: none;
+      padding-top: 6px;
+    }
+    .settings-section-title {
+      font-size: 11px;
+      color: var(--settings-section-title);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .settings-section-note {
+      font-size: 11px;
+      color: var(--ctrl-value-text);
+      letter-spacing: 0.5px;
+      padding: 4px 0;
+    }
+
+    /* ─── 컨트롤 row ───────────────────────────────────────── */
+    .ctrl-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 7px 0;
+    }
+    .ctrl-label {
+      flex: 0 0 40%;
+      max-width: 40%;
+      font-size: 13px;
+      color: var(--ctrl-label-text);
+      letter-spacing: 0.5px;
+    }
+
+    /* disabled row */
+    .ctrl-row[data-disabled="true"] .ctrl-label,
+    .ctrl-row[data-disabled="true"] .ctrl-slider {
+      opacity: var(--ctrl-disabled-opacity);
+      pointer-events: none;
+    }
+    .ctrl-row[data-disabled="true"] .ctrl-slider input {
+      cursor: not-allowed;
+    }
+
+    /* ─── 라디오 그룹 ──────────────────────────────────────── */
+    .ctrl-radio-group {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .ctrl-radio {
+      background: var(--ctrl-track-bg);
+      border: 1px solid var(--ctrl-border);
+      border-radius: 6px;
+      padding: 8px 14px;
+      color: var(--hud-panel-text);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      min-height: 36px;
+      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    }
+    .ctrl-radio:hover:not(:disabled):not([aria-pressed="true"]) {
+      background: var(--ctrl-hover-bg);
+    }
+    .ctrl-radio[aria-pressed="true"] {
+      background: rgba(76, 255, 128, 0.18);
+      border-color: var(--ctrl-border-active);
+      color: var(--player-body);
+      text-shadow: 0 0 6px rgba(76, 255, 128, 0.40);
+    }
+    .ctrl-radio:focus-visible {
+      outline: 2px solid var(--sound-focus-ring);
+      outline-offset: 3px;
+    }
+    .ctrl-radio:disabled,
+    .ctrl-radio[aria-disabled="true"] {
+      opacity: var(--ctrl-disabled-opacity);
+      cursor: not-allowed;
+    }
+    .ctrl-radio sup {
+      font-size: 9px;
+      color: #aaa;
+      margin-left: 2px;
+    }
+
+    /* ─── 토글 스위치 ──────────────────────────────────────── */
+    .ctrl-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .ctrl-toggle-track {
+      position: relative;
+      width: 48px;
+      height: 24px;
+      background: var(--ctrl-track-bg);
+      border-radius: 12px;
+      transition: background 0.15s ease;
+    }
+    .ctrl-toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.55);
+      transition: transform 0.18s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ctrl-toggle-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ctrl-value-text);
+      letter-spacing: 0.5px;
+      min-width: 24px;
+      text-align: left;
+    }
+    .ctrl-toggle[aria-checked="true"] .ctrl-toggle-track {
+      background: rgba(76, 255, 128, 0.30);
+    }
+    .ctrl-toggle[aria-checked="true"] .ctrl-toggle-thumb {
+      transform: translateX(24px);
+      background: var(--ctrl-thumb);
+      box-shadow: var(--ctrl-thumb-glow);
+    }
+    .ctrl-toggle[aria-checked="true"] .ctrl-toggle-text {
+      color: var(--player-body);
+    }
+    .ctrl-toggle:hover .ctrl-toggle-track {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .ctrl-toggle[aria-checked="true"]:hover .ctrl-toggle-track {
+      background: rgba(76, 255, 128, 0.40);
+    }
+    .ctrl-toggle:focus-visible {
+      outline: 2px solid var(--sound-focus-ring);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+
+    /* ─── 슬라이더 ─────────────────────────────────────────── */
+    .ctrl-slider {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+    .ctrl-slider input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: linear-gradient(
+        to right,
+        var(--ctrl-track-fill) 0%,
+        var(--ctrl-track-fill) var(--fill, 50%),
+        var(--ctrl-track-bg)   var(--fill, 50%),
+        var(--ctrl-track-bg)   100%
+      );
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+    .ctrl-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--ctrl-thumb);
+      border-radius: 50%;
+      box-shadow: var(--ctrl-thumb-glow);
+      cursor: pointer;
+      border: none;
+      transition: box-shadow 0.15s ease;
+    }
+    .ctrl-slider input[type="range"]:hover::-webkit-slider-thumb {
+      box-shadow: 0 0 10px rgba(76, 255, 128, 0.80);
+    }
+    .ctrl-slider input[type="range"]:focus-visible::-webkit-slider-thumb {
+      outline: 2px solid #4cff80;
+      outline-offset: 2px;
+    }
+    .ctrl-slider input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: var(--ctrl-thumb);
+      border-radius: 50%;
+      box-shadow: var(--ctrl-thumb-glow);
+      border: none;
+      cursor: pointer;
+    }
+    .ctrl-slider-value {
+      min-width: 32px;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ctrl-value-text);
+    }
+
+    /* ─── 시간 제한 컨트롤 ─────────────────────────────────── */
+    .ctrl-time-limit {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+    .ctrl-time-custom {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding-left: 4px;
+    }
+    .ctrl-time-custom input[type="number"] {
+      width: 88px;
+      padding: 8px 10px;
+      background: var(--ctrl-track-bg);
+      border: 1px solid var(--ctrl-border);
+      color: var(--hud-panel-text);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .ctrl-time-custom input[type="number"]:focus-visible {
+      outline: 2px solid var(--sound-focus-ring);
+      outline-offset: 2px;
+    }
+    .ctrl-time-custom-unit {
+      font-size: 11px;
+      color: var(--ctrl-value-text);
+      letter-spacing: 0.5px;
+    }
+
+    /* ─── 액션 버튼 바 ─────────────────────────────────────── */
+    .settings-btn-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px 16px;
+      border-top: 1px solid var(--settings-section-divider);
+      flex-wrap: wrap;
+    }
+    .settings-btn-bar-spacer { flex: 1; }
+    .settings-btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: 1px solid;
+      background: transparent;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      min-height: 40px;
+      min-width: 96px;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.10s ease;
+    }
+    .settings-btn:active { transform: scale(0.97); }
+    .settings-btn-save {
+      color: var(--btn-resume-color);
+      background: var(--btn-resume-bg);
+      border-color: rgba(76, 255, 128, 0.30);
+    }
+    .settings-btn-save:hover { background: var(--btn-resume-hover-bg); }
+    .settings-btn-save:focus-visible { outline: 2px solid #4cff80; outline-offset: 2px; }
+    .settings-btn-cancel {
+      color: var(--btn-quit-color);
+      background: var(--btn-quit-bg);
+      border-color: rgba(255, 107, 76, 0.30);
+    }
+    .settings-btn-cancel:hover { background: var(--btn-quit-hover-bg); }
+    .settings-btn-cancel:focus-visible { outline: 2px solid #ff6b4c; outline-offset: 2px; }
+    .settings-btn-reset {
+      color: var(--btn-restart-color);
+      background: var(--btn-restart-bg);
+      border-color: rgba(0, 207, 255, 0.30);
+      min-width: 110px;
+    }
+    .settings-btn-reset:hover { background: var(--btn-restart-hover-bg); }
+    .settings-btn-reset:focus-visible { outline: 2px solid #00cfff; outline-offset: 2px; }
+    .settings-btn kbd {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 5px;
+      background: var(--btn-kbd-bg);
+      border: 1px solid var(--btn-kbd-border);
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    /* ─── 컬러 토큰 카탈로그 ──────────────────────────────── */
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .token-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .token-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      flex-shrink: 0;
+    }
+    .token-name {
+      font-size: 11px;
+      color: var(--hud-panel-text);
+      letter-spacing: 0.5px;
+    }
+    .token-value {
+      font-size: 10px;
+      color: var(--ctrl-value-text);
+      margin-top: 2px;
+    }
+
+    /* ─── 컴포넌트 변형 데모 ─────────────────────────────── */
+    .variant-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 0;
+      flex-wrap: wrap;
+    }
+    .variant-label {
+      font-size: 11px;
+      color: var(--ctrl-value-text);
+      letter-spacing: 1px;
+      min-width: 100px;
+      text-transform: uppercase;
+    }
+
+    /* ─── 반응형 (모바일 데모 카드 내부) ─────────────────────── */
+    .mobile-frame {
+      width: 360px;
+      max-width: 100%;
+      margin: 0 auto;
+      border: 2px solid rgba(255, 255, 255, 0.10);
+      border-radius: 18px;
+      overflow: hidden;
+      background: var(--bg-primary);
+    }
+    .mobile-frame .sim-canvas { height: 580px; }
+    .mobile-frame .settings-modal-box {
+      width: calc(100% - 24px);
+    }
+    .mobile-frame .ctrl-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+    .mobile-frame .ctrl-label {
+      flex: none;
+      max-width: 100%;
+    }
+    .mobile-frame .ctrl-radio {
+      min-height: 44px;
+      padding: 10px 16px;
+    }
+    .mobile-frame .settings-btn {
+      flex: 1;
+      min-height: 44px;
+    }
+    .mobile-frame .settings-btn-reset {
+      flex: 1 1 100%;
+    }
+
+    /* legend */
+    .legend {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.50);
+      letter-spacing: 0.5px;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .legend strong { color: var(--player-body); }
+  </style>
+</head>
+<body>
+
+  <!-- ─── 페이지 헤더 ─────────────────────────────────────── -->
+  <header class="page-header">
+    <h1>SNAKE 설정 모달 시안 — BF-579</h1>
+    <p>planner 명세 docs/spec/snake-game-settings-BF-579.md 의 UX/데이터 결정을 시각화</p>
+  </header>
+
+  <!-- ─── 1. 시작 화면(설정 모달 닫힌 상태) ─────────────────── -->
+  <section class="section">
+    <p class="section-title">1. 시작 화면 — ⚙ 설정 진입 버튼 위치</p>
+    <div class="preview-card">
+      <p class="preview-card-title">start screen · 모달 닫힌 상태</p>
+      <div class="sim-canvas">
+        <div class="sim-grid"></div>
+
+        <!-- 모의 HUD -->
+        <div class="sim-hud-status">
+          <div class="sim-hud-row">
+            <span class="sim-hud-label">길이</span>
+            <span class="sim-hud-value">3</span>
+          </div>
+          <div class="sim-hud-row">
+            <span class="sim-hud-label">속도</span>
+            <span class="sim-hud-value">○●○</span>
+          </div>
+        </div>
+
+        <!-- 모의 효과음 토글 (기존, 변경 X) -->
+        <div class="sim-sound-toggle" aria-hidden="true">🔊</div>
+
+        <!-- ⚙ 설정 진입 버튼 (본 시안 신규) -->
+        <button class="sim-settings-trigger" aria-label="게임 설정 열기">⚙</button>
+
+        <!-- 시작 안내 -->
+        <div class="sim-start-hint">
+          <div class="big">SNAKE</div>
+          <div>Press Space to start</div>
+        </div>
+      </div>
+      <p class="legend">
+        <strong>⚙ 버튼</strong>은 <code>#sound-toggle</code>(top:16 right:20) 왼쪽 8px 간격으로 배치(right:60).
+        평소엔 중립 톤(검정+화이트 보더), hover 시 그린으로 전환되어 활성 가능성 암시.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── 2. 설정 모달 열린 상태 (데스크톱) ─────────────────── -->
+  <section class="section">
+    <p class="section-title">2. 설정 모달 — 데스크톱 480px (전체 컨트롤)</p>
+    <div class="preview-card">
+      <p class="preview-card-title">모달 열림 · 기본값 상태</p>
+      <div class="sim-canvas" style="height: 620px;">
+        <div class="sim-grid"></div>
+        <div class="sim-hud-status">
+          <div class="sim-hud-row"><span class="sim-hud-label">길이</span><span class="sim-hud-value">3</span></div>
+          <div class="sim-hud-row"><span class="sim-hud-label">속도</span><span class="sim-hud-value">○●○</span></div>
+        </div>
+        <div class="sim-sound-toggle" aria-hidden="true">🔊</div>
+        <button class="sim-settings-trigger" aria-label="게임 설정 열기">⚙</button>
+
+        <!-- 모달 -->
+        <div class="settings-modal-overlay">
+          <div class="settings-modal-box" role="dialog" aria-modal="true" aria-labelledby="settings-title-1">
+            <header class="settings-header">
+              <h2 id="settings-title-1" class="settings-title">게임 설정</h2>
+              <button class="settings-close" type="button" aria-label="설정 닫기">×</button>
+            </header>
+
+            <div class="settings-body">
+
+              <!-- 게임 -->
+              <div class="settings-section">
+                <div class="ctrl-row">
+                  <span class="ctrl-label">난이도</span>
+                  <div class="ctrl-radio-group" role="radiogroup" aria-label="난이도">
+                    <button class="ctrl-radio" data-value="easy"   aria-pressed="false">easy</button>
+                    <button class="ctrl-radio" data-value="normal" aria-pressed="true">normal</button>
+                  </div>
+                </div>
+                <div class="ctrl-row">
+                  <span class="ctrl-label">적 지렁이 수</span>
+                  <div class="ctrl-radio-group" role="radiogroup" aria-label="적 지렁이 수">
+                    <button class="ctrl-radio" data-value="0" aria-pressed="false">0</button>
+                    <button class="ctrl-radio" data-value="1" aria-pressed="true">1</button>
+                    <button class="ctrl-radio" data-value="2" aria-pressed="false" disabled aria-disabled="true" title="곧 추가 예정">2<sup>*</sup></button>
+                  </div>
+                </div>
+                <div class="ctrl-row">
+                  <span class="ctrl-label">시작 지렁이 길이</span>
+                  <div class="ctrl-radio-group" role="radiogroup" aria-label="시작 지렁이 길이">
+                    <button class="ctrl-radio" data-value="3" aria-pressed="true">3</button>
+                    <button class="ctrl-radio" data-value="5" aria-pressed="false">5</button>
+                    <button class="ctrl-radio" data-value="7" aria-pressed="false">7</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 먹이 -->
+              <div class="settings-section">
+                <p class="settings-section-title">먹이</p>
+                <div class="ctrl-row">
+                  <span class="ctrl-label">배수 먹이 등장</span>
+                  <button class="ctrl-toggle" role="switch" aria-checked="true">
+                    <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
+                    <span class="ctrl-toggle-text">on</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 아이템 -->
+              <div class="settings-section">
+                <p class="settings-section-title">아이템</p>
+                <div class="ctrl-row">
+                  <span class="ctrl-label">아이템 등장</span>
+                  <button class="ctrl-toggle" role="switch" aria-checked="false">
+                    <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
+                    <span class="ctrl-toggle-text">off</span>
+                  </button>
+                </div>
+                <div class="ctrl-row" data-disabled="true">
+                  <span class="ctrl-label">등장 확률</span>
+                  <div class="ctrl-slider">
+                    <input type="range" min="0" max="10" step="1" value="5" aria-label="아이템 등장 확률" style="--fill: 50%;">
+                    <span class="ctrl-slider-value">0.5</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 게임 시간 -->
+              <div class="settings-section">
+                <p class="settings-section-title">게임 시간</p>
+                <div class="ctrl-row">
+                  <span class="ctrl-label">시간 제한</span>
+                  <div class="ctrl-time-limit">
+                    <div class="ctrl-radio-group" role="radiogroup" aria-label="시간 제한">
+                      <button class="ctrl-radio" data-value="null" aria-pressed="true">무제한</button>
+                      <button class="ctrl-radio" data-value="60"   aria-pressed="false">1분</button>
+                      <button class="ctrl-radio" data-value="180"  aria-pressed="false">3분</button>
+                      <button class="ctrl-radio" data-value="300"  aria-pressed="false">5분</button>
+                      <button class="ctrl-radio" data-value="600"  aria-pressed="false">10분</button>
+                      <button class="ctrl-radio ctrl-radio-custom" data-value="custom" aria-pressed="false">직접 입력</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 효과음 안내 -->
+              <div class="settings-section">
+                <p class="settings-section-note">효과음은 화면 우상단 🔊 버튼으로 변경하세요.</p>
+              </div>
+            </div>
+
+            <footer class="settings-btn-bar">
+              <button class="settings-btn settings-btn-reset" type="button">기본값 복원</button>
+              <div class="settings-btn-bar-spacer"></div>
+              <button class="settings-btn settings-btn-cancel" type="button">취소 <kbd>Esc</kbd></button>
+              <button class="settings-btn settings-btn-save"   type="button">저장 <kbd>Enter</kbd></button>
+            </footer>
+          </div>
+        </div>
+      </div>
+      <p class="legend">
+        모달 width 480px 고정 · 본문 overflow-y:auto · 헤더/본문/푸터 1px divider 분리.
+        <strong>아이템 등장 = off</strong> 이므로 "등장 확률" row 가 회색(opacity 0.35) + cursor:not-allowed.
+        <code>2*</code> (적 지렁이 수)는 disabled — "곧 추가 예정" title 툴팁.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── 3. 의존 컨트롤 비교 (itemsEnabled on/off) ─────────── -->
+  <section class="section">
+    <p class="section-title">3. 의존 컨트롤 — 아이템 등장 토글에 따른 슬라이더 활성 비교</p>
+    <div class="compare-grid">
+      <!-- off -->
+      <div class="preview-card">
+        <p class="preview-card-title">아이템 등장 = off · 슬라이더 disabled</p>
+        <div style="background: var(--settings-modal-bg); border-radius: 8px; padding: 16px;">
+          <div class="ctrl-row">
+            <span class="ctrl-label">아이템 등장</span>
+            <button class="ctrl-toggle" role="switch" aria-checked="false">
+              <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
+              <span class="ctrl-toggle-text">off</span>
+            </button>
+          </div>
+          <div class="ctrl-row" data-disabled="true">
+            <span class="ctrl-label">등장 확률</span>
+            <div class="ctrl-slider">
+              <input type="range" min="0" max="10" step="1" value="5" style="--fill: 50%;">
+              <span class="ctrl-slider-value">0.5</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- on -->
+      <div class="preview-card">
+        <p class="preview-card-title">아이템 등장 = on · 슬라이더 enabled</p>
+        <div style="background: var(--settings-modal-bg); border-radius: 8px; padding: 16px;">
+          <div class="ctrl-row">
+            <span class="ctrl-label">아이템 등장</span>
+            <button class="ctrl-toggle" role="switch" aria-checked="true">
+              <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
+              <span class="ctrl-toggle-text">on</span>
+            </button>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">등장 확률</span>
+            <div class="ctrl-slider">
+              <input type="range" min="0" max="10" step="1" value="8" style="--fill: 80%;">
+              <span class="ctrl-slider-value">0.8</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="legend">동일 마크업 + 부모 row 의 <code>data-disabled="true"</code> 속성만으로 즉시 회색 처리. JS 는 토글 onchange 시 속성만 갱신.</p>
+  </section>
+
+  <!-- ─── 4. 시간 제한 — "직접 입력" 활성 컷 ──────────────────── -->
+  <section class="section">
+    <p class="section-title">4. 시간 제한 — "직접 입력" 선택 시</p>
+    <div class="preview-card">
+      <p class="preview-card-title">timeLimitSec 직접 입력 활성</p>
+      <div style="background: var(--settings-modal-bg); border-radius: 8px; padding: 16px;">
+        <p class="settings-section-title">게임 시간</p>
+        <div class="ctrl-row">
+          <span class="ctrl-label">시간 제한</span>
+          <div class="ctrl-time-limit">
+            <div class="ctrl-radio-group" role="radiogroup" aria-label="시간 제한">
+              <button class="ctrl-radio" data-value="null" aria-pressed="false">무제한</button>
+              <button class="ctrl-radio" data-value="60"   aria-pressed="false">1분</button>
+              <button class="ctrl-radio" data-value="180"  aria-pressed="false">3분</button>
+              <button class="ctrl-radio" data-value="300"  aria-pressed="false">5분</button>
+              <button class="ctrl-radio" data-value="600"  aria-pressed="false">10분</button>
+              <button class="ctrl-radio ctrl-radio-custom" data-value="custom" aria-pressed="true">직접 입력</button>
+            </div>
+            <div class="ctrl-time-custom">
+              <input type="number" min="60" max="600" step="10" value="120" aria-label="제한 시간(초)">
+              <span class="ctrl-time-custom-unit">초 (60 ~ 600)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="legend">"직접 입력" 라디오 활성 시 <code>.ctrl-time-custom</code> 의 <code>hidden</code> 해제. 입력 범위 60~600 (UI 차단 — planner §9 EC-4).</p>
+    </div>
+  </section>
+
+  <!-- ─── 5. HUD 남은 시간 표시 ─────────────────────────────── -->
+  <section class="section">
+    <p class="section-title">5. HUD 남은 시간 — timeLimitSec ≠ null 일 때</p>
+    <div class="compare-grid">
+      <div class="preview-card">
+        <p class="preview-card-title">무제한 (timeLimitSec = null) · row hidden</p>
+        <div class="sim-canvas" style="height: 200px;">
+          <div class="sim-grid"></div>
+          <div class="sim-hud-status">
+            <div class="sim-hud-row"><span class="sim-hud-label">길이</span><span class="sim-hud-value">8</span></div>
+            <div class="sim-hud-row"><span class="sim-hud-label">속도</span><span class="sim-hud-value">○●○</span></div>
+          </div>
+          <div class="sim-sound-toggle" aria-hidden="true">🔊</div>
+          <button class="sim-settings-trigger" aria-label="게임 설정 열기">⚙</button>
+        </div>
+      </div>
+
+      <div class="preview-card">
+        <p class="preview-card-title">5분 제한 (timeLimitSec = 300) · row 표시</p>
+        <div class="sim-canvas" style="height: 200px;">
+          <div class="sim-grid"></div>
+          <div class="sim-hud-status">
+            <div class="sim-hud-row"><span class="sim-hud-label">길이</span><span class="sim-hud-value">8</span></div>
+            <div class="sim-hud-row"><span class="sim-hud-label">속도</span><span class="sim-hud-value">○●○</span></div>
+            <div class="sim-hud-row" id="hud-time-remaining">
+              <span class="sim-hud-label">남은 시간</span>
+              <span class="sim-hud-value">04:23</span>
+            </div>
+          </div>
+          <div class="sim-sound-toggle" aria-hidden="true">🔊</div>
+          <button class="sim-settings-trigger" aria-label="게임 설정 열기">⚙</button>
+        </div>
+      </div>
+    </div>
+    <p class="legend">기존 HUD 토큰(<code>--hud-panel-bg</code> / <code>--hud-panel-text</code>) 그대로. row 1개 추가만으로 구현 — 별도 색상 토큰 X.</p>
+  </section>
+
+  <!-- ─── 6. 모바일 반응형 ─────────────────────────────────── -->
+  <section class="section">
+    <p class="section-title">6. 모바일 반응형 (≤ 640px viewport)</p>
+    <div class="preview-card">
+      <p class="preview-card-title">모바일 frame · 360px viewport · 모달 full-width 거의</p>
+      <div class="mobile-frame">
+        <div class="sim-canvas">
+          <div class="sim-grid"></div>
+          <div class="sim-hud-status">
+            <div class="sim-hud-row"><span class="sim-hud-label">길이</span><span class="sim-hud-value">3</span></div>
+            <div class="sim-hud-row"><span class="sim-hud-label">속도</span><span class="sim-hud-value">○●○</span></div>
+          </div>
+          <div class="sim-sound-toggle" aria-hidden="true">🔊</div>
+          <button class="sim-settings-trigger" aria-label="게임 설정 열기">⚙</button>
+
+          <div class="settings-modal-overlay">
+            <div class="settings-modal-box" role="dialog" aria-modal="true">
+              <header class="settings-header">
+                <h2 class="settings-title">게임 설정</h2>
+                <button class="settings-close" type="button" aria-label="설정 닫기">×</button>
+              </header>
+              <div class="settings-body" style="padding: 8px 20px 4px;">
+                <div class="settings-section">
+                  <div class="ctrl-row">
+                    <span class="ctrl-label">난이도</span>
+                    <div class="ctrl-radio-group" role="radiogroup" aria-label="난이도">
+                      <button class="ctrl-radio" data-value="easy"   aria-pressed="false">easy</button>
+                      <button class="ctrl-radio" data-value="normal" aria-pressed="true">normal</button>
+                    </div>
+                  </div>
+                  <div class="ctrl-row">
+                    <span class="ctrl-label">적 지렁이 수</span>
+                    <div class="ctrl-radio-group" role="radiogroup" aria-label="적 지렁이 수">
+                      <button class="ctrl-radio" data-value="0" aria-pressed="false">0</button>
+                      <button class="ctrl-radio" data-value="1" aria-pressed="true">1</button>
+                      <button class="ctrl-radio" data-value="2" aria-pressed="false" disabled aria-disabled="true">2<sup>*</sup></button>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-section">
+                  <p class="settings-section-title">아이템</p>
+                  <div class="ctrl-row">
+                    <span class="ctrl-label">아이템 등장</span>
+                    <button class="ctrl-toggle" role="switch" aria-checked="true">
+                      <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
+                      <span class="ctrl-toggle-text">on</span>
+                    </button>
+                  </div>
+                  <div class="ctrl-row">
+                    <span class="ctrl-label">등장 확률</span>
+                    <div class="ctrl-slider">
+                      <input type="range" min="0" max="10" step="1" value="5" style="--fill: 50%;">
+                      <span class="ctrl-slider-value">0.5</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <footer class="settings-btn-bar" style="padding: 12px 20px;">
+                <button class="settings-btn settings-btn-reset" type="button">기본값 복원</button>
+                <button class="settings-btn settings-btn-cancel" type="button">취소</button>
+                <button class="settings-btn settings-btn-save"   type="button">저장</button>
+              </footer>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="legend">
+        모바일에서 ctrl-row 가 <strong>column 레이아웃</strong>(라벨 위, 컨트롤 아래)로 전환.
+        라디오 옵션 padding 10×16px 로 확장 → 터치 타겟 44px 확보.
+        액션 버튼은 wrap → 기본값 복원이 첫줄, 취소·저장이 둘째줄(또는 spacer 제거 후 균등 분할).
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── 7. 컴포넌트 상태 변형 카탈로그 ─────────────────────── -->
+  <section class="section">
+    <p class="section-title">7. 컴포넌트 상태 변형 — hover · focus · disabled</p>
+    <div class="preview-card">
+      <p class="preview-card-title">라디오 버튼 (.ctrl-radio)</p>
+      <div class="variant-row">
+        <span class="variant-label">기본/미선택</span>
+        <div class="ctrl-radio-group">
+          <button class="ctrl-radio" aria-pressed="false">easy</button>
+          <button class="ctrl-radio" aria-pressed="true">normal</button>
+        </div>
+      </div>
+      <div class="variant-row">
+        <span class="variant-label">disabled</span>
+        <div class="ctrl-radio-group">
+          <button class="ctrl-radio" aria-pressed="false" disabled aria-disabled="true">2<sup>*</sup></button>
+        </div>
+        <span class="legend" style="margin: 0; flex: 0;">opacity 0.35 + not-allowed</span>
+      </div>
+    </div>
+
+    <div class="preview-card" style="margin-top: 16px;">
+      <p class="preview-card-title">토글 스위치 (.ctrl-toggle)</p>
+      <div class="variant-row">
+        <span class="variant-label">off</span>
+        <button class="ctrl-toggle" role="switch" aria-checked="false">
+          <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
+          <span class="ctrl-toggle-text">off</span>
+        </button>
+      </div>
+      <div class="variant-row">
+        <span class="variant-label">on</span>
+        <button class="ctrl-toggle" role="switch" aria-checked="true">
+          <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
+          <span class="ctrl-toggle-text">on</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="preview-card" style="margin-top: 16px;">
+      <p class="preview-card-title">슬라이더 (.ctrl-slider) — 값 변화</p>
+      <div class="variant-row">
+        <span class="variant-label">0.0</span>
+        <div class="ctrl-slider" style="flex: 1;">
+          <input type="range" min="0" max="10" step="1" value="0" style="--fill: 0%;">
+          <span class="ctrl-slider-value">0.0</span>
+        </div>
+      </div>
+      <div class="variant-row">
+        <span class="variant-label">0.5</span>
+        <div class="ctrl-slider" style="flex: 1;">
+          <input type="range" min="0" max="10" step="1" value="5" style="--fill: 50%;">
+          <span class="ctrl-slider-value">0.5</span>
+        </div>
+      </div>
+      <div class="variant-row">
+        <span class="variant-label">1.0</span>
+        <div class="ctrl-slider" style="flex: 1;">
+          <input type="range" min="0" max="10" step="1" value="10" style="--fill: 100%;">
+          <span class="ctrl-slider-value">1.0</span>
+        </div>
+      </div>
+      <div class="variant-row">
+        <span class="variant-label">disabled</span>
+        <div class="ctrl-slider" style="flex: 1; opacity: 0.35; pointer-events: none;">
+          <input type="range" min="0" max="10" step="1" value="3" style="--fill: 30%;">
+          <span class="ctrl-slider-value">0.3</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-card" style="margin-top: 16px;">
+      <p class="preview-card-title">액션 버튼 (.settings-btn)</p>
+      <div class="variant-row">
+        <button class="settings-btn settings-btn-reset" type="button">기본값 복원</button>
+        <button class="settings-btn settings-btn-cancel" type="button">취소 <kbd>Esc</kbd></button>
+        <button class="settings-btn settings-btn-save"   type="button">저장 <kbd>Enter</kbd></button>
+      </div>
+      <p class="legend">BF-558 paused 모달의 색상 의미 100% 재사용 — save=그린(긍정), cancel=레드(부정/뒤로), reset=시안(중립/리셋).</p>
+    </div>
+
+    <div class="preview-card" style="margin-top: 16px;">
+      <p class="preview-card-title">⚙ 설정 진입 버튼 (.sim-settings-trigger)</p>
+      <div class="variant-row">
+        <span class="variant-label">기본</span>
+        <button class="sim-settings-trigger" style="position: static;" aria-label="설정">⚙</button>
+        <span class="variant-label">disabled (playing 중)</span>
+        <button class="sim-settings-trigger" style="position: static; opacity: 0.35; pointer-events: none;" aria-label="설정" disabled>⚙</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 8. 컬러 토큰 카탈로그 ─────────────────────────────── -->
+  <section class="section">
+    <p class="section-title">8. 신규 디자인 토큰 — 색상 카탈로그</p>
+    <div class="preview-card">
+      <p class="preview-card-title">모달 구조 토큰</p>
+      <div class="token-grid">
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(0,0,0,0.72);"></div>
+          <div>
+            <div class="token-name">--settings-overlay-bg</div>
+            <div class="token-value">rgba(0,0,0,0.72)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: #111;"></div>
+          <div>
+            <div class="token-name">--settings-modal-bg</div>
+            <div class="token-value">#111</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(76,255,128,0.30);"></div>
+          <div>
+            <div class="token-name">--settings-modal-border</div>
+            <div class="token-value">rgba(76,255,128,0.30)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(255,255,255,0.10);"></div>
+          <div>
+            <div class="token-name">--settings-section-divider</div>
+            <div class="token-value">rgba(255,255,255,0.10)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-card" style="margin-top: 16px;">
+      <p class="preview-card-title">컨트롤 토큰</p>
+      <div class="token-grid">
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(255,255,255,0.10);"></div>
+          <div>
+            <div class="token-name">--ctrl-track-bg</div>
+            <div class="token-value">rgba(255,255,255,0.10)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: #4cff80;"></div>
+          <div>
+            <div class="token-name">--ctrl-track-fill / --ctrl-thumb</div>
+            <div class="token-value">#4cff80</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(76,255,128,0.25);"></div>
+          <div>
+            <div class="token-name">--ctrl-border</div>
+            <div class="token-value">rgba(76,255,128,0.25)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(76,255,128,0.55);"></div>
+          <div>
+            <div class="token-name">--ctrl-border-active</div>
+            <div class="token-value">rgba(76,255,128,0.55)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(76,255,128,0.08);"></div>
+          <div>
+            <div class="token-name">--ctrl-hover-bg</div>
+            <div class="token-value">rgba(76,255,128,0.08)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: #aaaaaa;"></div>
+          <div>
+            <div class="token-name">--ctrl-value-text</div>
+            <div class="token-value">#aaaaaa</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-card" style="margin-top: 16px;">
+      <p class="preview-card-title">진입 버튼 토큰</p>
+      <div class="token-grid">
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(0,0,0,0.45);"></div>
+          <div>
+            <div class="token-name">--settings-trigger-bg</div>
+            <div class="token-value">rgba(0,0,0,0.45)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: rgba(76,255,128,0.18);"></div>
+          <div>
+            <div class="token-name">--settings-trigger-hover-bg</div>
+            <div class="token-value">rgba(76,255,128,0.18)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>
