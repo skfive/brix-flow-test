@@ -1234,6 +1234,10 @@
     })();
     </script>
 
+    <!-- BF-595: pixi.js vendored UMD 빌드 (v7.4.3) — window.PIXI 전역 노출
+         CDN/fetch 금지(BF-522): 상대경로 <script> 로만 로드 -->
+    <script src="./vendor/pixi.min.js"></script>
+
     <!-- game.js 로드: type 속성 없음 → file:// 프로토콜 CORS 차단 해소 (BF-522) -->
     <script src="./game.js"></script>
   </body>
