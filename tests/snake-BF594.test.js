@@ -33,6 +33,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// styles.css 도 읽어서 CSS 회귀 가드에 사용
+
 import {
   validateAndMergeSettings,
   SNAKE_SETTINGS_DEFAULTS,
@@ -43,7 +45,8 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const SNAKE_DIR = path.join(REPO_ROOT, "snake");
-const gameJs = readFileSync(path.join(SNAKE_DIR, "game.js"), "utf-8");
+const gameJs   = readFileSync(path.join(SNAKE_DIR, "game.js"),    "utf-8");
+const stylesCs = readFileSync(path.join(SNAKE_DIR, "styles.css"), "utf-8");
 
 // ── 헬퍼: 주어진 index 에서 시작하는 함수 본문 추출 (중괄호 depth 추적) ─────
 function extractFunctionBody(src, startIdx) {
@@ -438,6 +441,60 @@ describe("BF-594 §8 회귀 가드 — 전체 draft 흐름 연결성 (AC3)", () 
       !/pendingSettings\s*=\s*null/.test(body),
       "closeSettingsModal 내부에서 pendingSettings = null 재설정 중 — " +
       "saveSettingsModal 이 설정한 pendingSettings 가 소멸되어 게임 설정 미반영 (AC2 회귀)",
+    );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// §9. CSS 회귀 가드 — #settings-modal[hidden] { display: none } 규칙 존재 (AC2 + AC3)
+// ═══════════════════════════════════════════════════════════════
+//
+// 근본 원인 (BF-594 재수정):
+//   #settings-modal 에 CSS display:flex 가 있으면
+//   HTML [hidden] attribute 가 UA stylesheet 의 [hidden]{display:none} 에 의존하는데
+//   author stylesheet 의 display:flex (specificity 더 높음) 가 이를 덮어써서
+//   hidden attribute 를 설정해도 모달이 화면에 그대로 남음.
+//
+//   closeSettingsModal("save") 호출 → hidden 설정 → 모달 여전히 표시 →
+//   draftSettings = null → 사용자가 저장 재시도 → "draft 없음" 오류.
+//
+//   #gameover-overlay / #paused-overlay 는 이미 동일 패턴의 [hidden]{display:none} 보유.
+//   #settings-modal 만 누락 → 이 회귀 가드로 재발 방지.
+//
+// 실패 = CSS [hidden] 규칙이 삭제됨 → 모달이 닫히지 않는 동일 버그 재발.
+
+describe("BF-594 §9 CSS 회귀 가드 — #settings-modal[hidden]{display:none} 규칙 존재 (AC2 + AC3)", () => {
+  test("§9-1 styles.css 에 #settings-modal[hidden] { display: none } 규칙 존재", () => {
+    // display:flex 가 UA [hidden]{display:none} 을 덮으므로 author stylesheet 에 명시 필요.
+    // 이 규칙이 없으면 closeSettingsModal 이 hidden attribute 를 설정해도 모달이 닫히지 않음
+    // → draftSettings=null 이 된 후 사용자가 다시 저장 시도 → "draft 없음" 오류 재발.
+    assert.ok(
+      /#settings-modal\s*\[hidden\]/.test(stylesCs),
+      "styles.css 에 #settings-modal[hidden] 선택자 없음 — " +
+      "display:flex 가 [hidden] attribute 를 무력화하여 모달이 닫히지 않음 (AC2 + AC3 회귀)",
+    );
+    assert.ok(
+      // #settings-modal[hidden] 블록 안에 display: none 이 있는지 확인
+      /#settings-modal\s*\[hidden\][^}]*display\s*:\s*none/.test(stylesCs),
+      "styles.css 의 #settings-modal[hidden] 블록에 display:none 없음 — " +
+      "모달이 hidden 설정 후에도 화면에 표시되어 게임 진행 불가 (AC2 회귀)",
+    );
+  });
+
+  test("§9-2 #gameover-overlay / #paused-overlay 와 동일한 패턴 적용 확인", () => {
+    // 기존 오버레이들이 이미 [hidden]{display:none} 을 보유한 이유와 동일 원인.
+    // settings-modal 만 이 패턴이 누락되어 있었음.
+    assert.ok(
+      /#gameover-overlay\s*\[hidden\][^}]*display\s*:\s*none/.test(stylesCs),
+      "#gameover-overlay[hidden]{display:none} 패턴 없음 — 기준 패턴 자체가 제거된 이상 상태",
+    );
+    assert.ok(
+      /#paused-overlay\s*\[hidden\][^}]*display\s*:\s*none/.test(stylesCs),
+      "#paused-overlay[hidden]{display:none} 패턴 없음 — 기준 패턴 자체가 제거된 이상 상태",
+    );
+    assert.ok(
+      /#settings-modal\s*\[hidden\][^}]*display\s*:\s*none/.test(stylesCs),
+      "#settings-modal[hidden]{display:none} 패턴이 다른 오버레이들과 같이 존재해야 함 (AC3 회귀)",
     );
   });
 });
