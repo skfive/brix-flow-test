@@ -8,5 +8,8 @@
     "test": "node --test tests/*.test.js",
     "test:notepad": "node --test tests/notepad-*.test.js",
     "test:timer": "node --test tests/timer-*.test.js"
+  },
+  "devDependencies": {
+    "pixi.js": "^7.4.3"
   }
 }

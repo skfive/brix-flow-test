@@ -88,6 +88,526 @@ function formatPlayTime(ms) {
 const canvas    = document.getElementById("game-canvas");
 const ctx       = canvas.getContext("2d");
 
+// ─────────────────────────────────────────────────────────────
+// BF-595: pixi.js 렌더 백엔드 feature flag
+// ─────────────────────────────────────────────────────────────
+/** localStorage 키 — 런타임 오버라이드 (L1 롤백용) */
+const _LS_RENDER_BACKEND_KEY = "bf-snake-render-backend";
+
+/**
+ * 렌더 백엔드 선택.
+ * 우선순위: localStorage 오버라이드 > PIXI 전역 존재 여부 > canvas2d 폴백.
+ * @type {"pixi"|"canvas2d"}
+ */
+const RENDER_BACKEND = (() => {
+  try {
+    const override = localStorage.getItem(_LS_RENDER_BACKEND_KEY);
+    if (override === "pixi" || override === "canvas2d") return override;
+  } catch (_) { /* private mode */ }
+  if (typeof PIXI === "undefined") {
+    console.warn("[BF-595] pixi 로드 실패 — canvas2d 폴백");
+    return "canvas2d";
+  }
+  return "pixi";
+})();
+
+// BF-595: pixi 색상 상수 (designer §2, §6 — hex→0x 변환)
+const PX_BG          = 0x0d0d0d;
+const PX_GRID        = { color: 0xffffff, alpha: 0.04 };
+const PX_PLAYER_HEAD = 0x00cc44;
+const PX_PLAYER_BODY = 0x3cd264;   // rgba(60,210,100,α) rgb 부분
+const PX_CPU_HEAD    = 0xcc2200;
+const PX_CPU_BODY    = 0xd23c3c;   // rgba(210,60,60,α) rgb 부분
+const PX_EYE         = 0x0d0d0d;
+const PX_EYE_BORDER  = 0xffffff;
+const PX_SHIELD_GLOW = 0x4488ff;
+
+// pixi 배수별 먹이 색상 (designer §2-4)
+const PX_MULTIPLIER_COLORS = {
+  1: { fill: 0xffcc00, glow: { color: 0xffc800, alpha: 0.3 } },
+  2: { fill: 0x00cfff, glow: { color: 0x00c8ff, alpha: 0.4 } },
+  4: { fill: 0xcc44ff, glow: { color: 0xb43cff, alpha: 0.5 } },
+  8: { fill: 0xff4444, glow: { color: 0xff3232, alpha: 0.6 } },
+};
+
+// pixi 아이템 색상 (designer §2-5)
+const PX_ITEM_COLORS = {
+  SPEED_UP:     { primary: 0xffaa00, glow: { color: 0xffaa00, alpha: 0.40 } },
+  SLOW_DOWN:    { primary: 0x00ddcc, glow: { color: 0x00ddcc, alpha: 0.40 } },
+  LENGTH_BURST: { primary: 0xff6600, glow: { color: 0xff6600, alpha: 0.45 } },
+  SHIELD:       { primary: 0x4488ff, glow: { color: 0x4488ff, alpha: 0.45 } },
+  REVERSE:      { primary: 0x22ffaa, glow: { color: 0x22ffaa, alpha: 0.40 } },
+};
+
+// ─────────────────────────────────────────────────────────────
+// BF-595: KPI 측정 (render.backend / render.fps / render.fallback)
+// ─────────────────────────────────────────────────────────────
+/** localStorage 키 — render KPI 세션 기록 */
+const RENDER_KPI_KEY = "bf-snake-render-kpi";
+
+/** FPS ring buffer (최근 N=300 프레임 ms 기록) */
+const _fpsBuf    = new Float32Array(300);
+let   _fpsBufIdx = 0;
+let   _fpsBufLen = 0;
+let   _fpsLastTs = 0;
+/** render.longFrame 최대 기록 횟수 (게임당) */
+const _LONG_FRAME_LIMIT = 10;
+let   _longFrameCount = 0;
+
+/**
+ * KPI 이벤트를 localStorage ring buffer 에 기록 + console.log.
+ * @param {string} event - "render.backend" | "render.fps" | "render.fallback" | "render.initMs" | "render.longFrame"
+ * @param {Object} payload
+ */
+function _recordKpi(event, payload) {
+  try {
+    const raw  = localStorage.getItem(RENDER_KPI_KEY);
+    const arr  = raw ? JSON.parse(raw) : [];
+    arr.push({ event, ts: Date.now(), ...payload });
+    if (arr.length > 20) arr.shift();
+    localStorage.setItem(RENDER_KPI_KEY, JSON.stringify(arr));
+  } catch (_) { /* private mode — 무시 */ }
+  if (event === "render.fps") {
+    console.log(
+      `[BF-595 KPI] backend=${payload.backend} avgFps=${payload.avgFps} p95FrameMs=${payload.p95FrameMs} sampleCount=${payload.sampleCount}`,
+    );
+  }
+}
+
+/** FPS ring buffer 에 프레임 ms 추가 + longFrame 감지 */
+function _trackFrame(frameMs) {
+  _fpsBuf[_fpsBufIdx] = frameMs;
+  _fpsBufIdx = (_fpsBufIdx + 1) % _fpsBuf.length;
+  _fpsBufLen = Math.min(_fpsBufLen + 1, _fpsBuf.length);
+  if (frameMs > 50 && _longFrameCount < _LONG_FRAME_LIMIT) {
+    _longFrameCount++;
+    _recordKpi("render.longFrame", {
+      backend:    RENDER_BACKEND,
+      frameMs:    Math.round(frameMs),
+      snakeLen:   state ? (state.snake || []).length : 0,
+      cpuCount:   state ? (state.extraCpus || []).length + (state.cpu && state.cpu.length > 0 ? 1 : 0) : 0,
+    });
+  }
+}
+
+/** FPS ring buffer 에서 KPI 집계 후 기록 */
+function _flushFpsKpi() {
+  if (_fpsBufLen === 0) return;
+  const samples = Array.from(_fpsBuf.subarray(0, _fpsBufLen));
+  const avgMs   = samples.reduce((s, v) => s + v, 0) / samples.length;
+  const avgFps  = avgMs > 0 ? Math.round(1000 / avgMs) : 0;
+  const minFps  = Math.round(1000 / Math.max(...samples));
+  const sorted  = [...samples].sort((a, b) => a - b);
+  const p95Ms   = sorted[Math.floor(sorted.length * 0.95)] || avgMs;
+  _recordKpi("render.fps", {
+    backend:      RENDER_BACKEND,
+    avgFps,
+    minFps,
+    p95FrameMs:   Math.round(p95Ms),
+    sampleCount:  _fpsBufLen,
+  });
+}
+
+/** KPI 카운터 리셋 (새 게임마다) */
+function _resetFpsKpi() {
+  _fpsBufIdx   = 0;
+  _fpsBufLen   = 0;
+  _longFrameCount = 0;
+  _fpsLastTs   = 0;
+}
+
+// ─────────────────────────────────────────────────────────────
+// BF-595: SnakeRenderer — pixi.js 렌더 어댑터
+// 인터페이스: init(canvasEl, w, h) / resize(w, h) / renderFrame(state) / destroy()
+// ─────────────────────────────────────────────────────────────
+const SnakeRenderer = (() => {
+  /** @type {PIXI.Application|null} */
+  let app = null;
+  let _bgGfx         = null;
+  let _foodGfx       = null;
+  let _foodText      = null;
+  let _itemGfx       = null;
+  let _itemContainer = null;
+  let _cpuGfx        = null;
+  let _extraGfx      = null;
+  let _playerGfx     = null;
+
+  /** 배경 + 격자 Graphics 재생성 (init 시 1회 + resize 시) */
+  function _buildBg(w, h) {
+    _bgGfx.clear();
+    // 배경 rect
+    _bgGfx.beginFill(PX_BG);
+    _bgGfx.drawRect(0, 0, w, h);
+    _bgGfx.endFill();
+    // 격자 라인 (정적 — 매 프레임 재생성 금지)
+    const cols = Math.floor(w / CELL);
+    const rows = Math.floor(h / CELL);
+    _bgGfx.lineStyle(1, PX_GRID.color, PX_GRID.alpha);
+    for (let x = 0; x <= cols; x++) {
+      _bgGfx.moveTo(x * CELL, 0);
+      _bgGfx.lineTo(x * CELL, rows * CELL);
+    }
+    for (let y = 0; y <= rows; y++) {
+      _bgGfx.moveTo(0, y * CELL);
+      _bgGfx.lineTo(cols * CELL, y * CELL);
+    }
+  }
+
+  /**
+   * pixi Application 초기화.
+   * @param {HTMLCanvasElement} canvasEl
+   * @param {number} w
+   * @param {number} h
+   * @returns {boolean} 성공 여부
+   */
+  function init(canvasEl, w, h) {
+    if (typeof PIXI === "undefined") {
+      _recordKpi("render.fallback", { reason: "no_pixi", errorMsg: "PIXI undefined" });
+      return false;
+    }
+    const t0 = performance.now();
+    try {
+      app = new PIXI.Application({
+        width:           w,
+        height:          h,
+        view:            canvasEl,
+        autoStart:       false,   // RAF 단일 구동 — 이중 루프 방지 (BF-595 §6-3)
+        backgroundColor: PX_BG,
+        antialias:       true,
+        resolution:      1,
+      });
+      app.ticker.stop(); // 안전 이중 가드
+
+      // Scene graph z-order: bg → food → item → extraCpu → cpu → player (designer §4-3)
+      const bgCont    = new PIXI.Container();
+      const foodCont  = new PIXI.Container();
+      _itemContainer  = new PIXI.Container();
+      const extraCont = new PIXI.Container();
+      const cpuCont   = new PIXI.Container();
+      const playerCont = new PIXI.Container();
+      app.stage.addChild(bgCont, foodCont, _itemContainer, extraCont, cpuCont, playerCont);
+
+      _bgGfx     = new PIXI.Graphics(); bgCont.addChild(_bgGfx);
+      _foodGfx   = new PIXI.Graphics(); foodCont.addChild(_foodGfx);
+      _itemGfx   = new PIXI.Graphics(); _itemContainer.addChild(_itemGfx);
+      _cpuGfx    = new PIXI.Graphics(); cpuCont.addChild(_cpuGfx);
+      _extraGfx  = new PIXI.Graphics(); extraCont.addChild(_extraGfx);
+      _playerGfx = new PIXI.Graphics(); playerCont.addChild(_playerGfx);
+
+      // 먹이 배수 텍스트 (pixi Text)
+      _foodText = new PIXI.Text("", {
+        fontFamily: "'Courier New', monospace",
+        fontSize:   11,
+        fontWeight: "bold",
+        fill:       0xffffff,
+        align:      "center",
+      });
+      _foodText.anchor.set(0.5, 0.5);
+      foodCont.addChild(_foodText);
+
+      // 초기 배경 생성
+      _buildBg(w, h);
+
+      const initMs = performance.now() - t0;
+      _recordKpi("render.initMs",  { backend: "pixi", initMs: Math.round(initMs) });
+      _recordKpi("render.backend", { backend: "pixi", pixiVersion: PIXI.VERSION });
+    } catch (err) {
+      console.warn("[BF-595] pixi 초기화 실패 — canvas2d 폴백", err);
+      _recordKpi("render.fallback", { reason: "init_error", errorMsg: String(err) });
+      app = null;
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * window resize 시 호출.
+   * 격자 Graphics 재생성 (배경 재생성 = resize 시만, 매 프레임 금지).
+   */
+  function resize(w, h) {
+    if (!app) return;
+    app.renderer.resize(w, h);
+    _buildBg(w, h);
+  }
+
+  /**
+   * 지렁이 세그먼트 Graphics 그리기 (player / cpu 공용).
+   * @param {PIXI.Graphics} gfx
+   * @param {Array<{x:number,y:number}>} segs - snake segments
+   * @param {{x:number,y:number}} dir
+   * @param {number} headColor - pixi 0x color
+   * @param {number} bodyColor - pixi 0x color
+   * @param {boolean} shieldActive
+   * @param {boolean} burstActive
+   */
+  function _drawSegs(gfx, segs, dir, headColor, bodyColor, shieldActive, burstActive) {
+    gfx.clear();
+    if (!segs || segs.length === 0) return;
+    const len    = segs.length;
+    const blinkOn = burstActive && (Math.floor(performance.now() / 500) % 2 === 0);
+
+    segs.forEach((seg, i) => {
+      const px = seg.x * CELL + 1;
+      const py = seg.y * CELL + 1;
+      const alpha = i === 0 ? 1 : Math.max(0.45, 0.85 - (i / len) * 0.4);
+
+      // 몸통 fill
+      if (burstActive && blinkOn) {
+        gfx.beginFill(0xffffff, 0.9);
+      } else if (i === 0) {
+        gfx.beginFill(headColor);
+      } else {
+        gfx.beginFill(bodyColor, alpha);
+      }
+      gfx.drawRoundedRect(px, py, CELL - 2, CELL - 2, 4);
+      gfx.endFill();
+
+      if (i === 0) {
+        // SHIELD 글로우 pulse (§6-4)
+        if (shieldActive) {
+          const glowAlpha = 0.4 + 0.3 * Math.abs(Math.sin(performance.now() / 750));
+          gfx.lineStyle(3, PX_SHIELD_GLOW, glowAlpha);
+          gfx.drawRoundedRect(seg.x * CELL, seg.y * CELL, CELL, CELL, 4);
+          gfx.lineStyle(0);
+        }
+        // 머리 테두리 (1px, rgba 0.5)
+        gfx.lineStyle(2, PX_EYE_BORDER, 0.5);
+        gfx.drawRoundedRect(px, py, CELL - 2, CELL - 2, 4);
+        gfx.lineStyle(0);
+
+        // 눈 (방향별 위치 — designer §5-2)
+        const eyeSize = 3;
+        gfx.beginFill(PX_EYE);
+        let e1x, e1y, e2x, e2y;
+        if (dir.x === 1) {
+          e1x = seg.x * CELL + CELL - 6; e1y = seg.y * CELL + 4;
+          e2x = seg.x * CELL + CELL - 6; e2y = seg.y * CELL + CELL - 4 - eyeSize;
+        } else if (dir.x === -1) {
+          e1x = seg.x * CELL + 3;        e1y = seg.y * CELL + 4;
+          e2x = seg.x * CELL + 3;        e2y = seg.y * CELL + CELL - 4 - eyeSize;
+        } else if (dir.y === -1) {
+          e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + 3;
+          e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + 3;
+        } else {
+          e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + CELL - 6;
+          e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + CELL - 6;
+        }
+        gfx.drawRect(e1x, e1y, eyeSize, eyeSize);
+        gfx.drawRect(e2x, e2y, eyeSize, eyeSize);
+        gfx.endFill();
+      }
+    });
+  }
+
+  /** pixi 아이템 아이콘 Graphics 그리기 (기존 drawItemIcon 도형 좌표 동일) */
+  function _drawItemIconPixi(gfx, type, cx, cy) {
+    gfx.beginFill(0xffffff);
+    switch (type) {
+      case "SPEED_UP":
+        gfx.moveTo(cx + 2, cy - 5);
+        gfx.lineTo(cx - 1, cy);
+        gfx.lineTo(cx + 1, cy);
+        gfx.lineTo(cx - 2, cy + 5);
+        gfx.lineTo(cx + 1, cy + 1);
+        gfx.lineTo(cx + 0, cy + 1);
+        gfx.closePath();
+        break;
+      case "SLOW_DOWN":
+        gfx.moveTo(cx - 4, cy - 5); gfx.lineTo(cx + 4, cy - 5);
+        gfx.lineTo(cx, cy); gfx.closePath();
+        gfx.moveTo(cx - 4, cy + 5); gfx.lineTo(cx + 4, cy + 5);
+        gfx.lineTo(cx, cy); gfx.closePath();
+        gfx.drawRect(cx - 4, cy - 1, 8, 2);
+        break;
+      case "LENGTH_BURST": {
+        const arms = 8;
+        for (let ai = 0; ai < arms; ai++) {
+          const outerR = 5, innerR = 2;
+          const outerA = (ai / arms) * Math.PI * 2 - Math.PI / 2;
+          const innerA = outerA + Math.PI / arms;
+          if (ai === 0) gfx.moveTo(cx + Math.cos(outerA) * outerR, cy + Math.sin(outerA) * outerR);
+          else          gfx.lineTo(cx + Math.cos(outerA) * outerR, cy + Math.sin(outerA) * outerR);
+          gfx.lineTo(cx + Math.cos(innerA) * innerR, cy + Math.sin(innerA) * innerR);
+        }
+        gfx.closePath();
+        break;
+      }
+      case "SHIELD":
+        gfx.moveTo(cx, cy - 6);
+        gfx.lineTo(cx + 4, cy - 3); gfx.lineTo(cx + 4, cy + 2);
+        gfx.lineTo(cx, cy + 5);
+        gfx.lineTo(cx - 4, cy + 2); gfx.lineTo(cx - 4, cy - 3);
+        gfx.closePath();
+        break;
+      case "REVERSE":
+        // 반원 호 근사 (lineTo 폴리곤)
+        for (let ai = 0; ai <= 10; ai++) {
+          const a = Math.PI - (ai / 10) * Math.PI;
+          const px2 = cx + Math.cos(a) * 4;
+          const py2 = cy + Math.sin(a) * 4;
+          if (ai === 0) gfx.moveTo(px2, py2);
+          else gfx.lineTo(px2, py2);
+        }
+        gfx.lineTo(cx - 6, cy - 3);
+        gfx.lineTo(cx - 6, cy + 1);
+        gfx.closePath();
+        break;
+      default:
+        gfx.drawCircle(cx, cy, 3);
+    }
+    gfx.endFill();
+  }
+
+  /**
+   * 매 프레임 state 스냅샷으로 scene graph 갱신 + 렌더.
+   * @param {Object} st - game state
+   */
+  function renderFrame(st) {
+    if (!app) return;
+
+    // ── 플레이어 지렁이 ──────────────────────────────────────────
+    _drawSegs(
+      _playerGfx,
+      st.snake || [],
+      st.dir || { x: 1, y: 0 },
+      PX_PLAYER_HEAD,
+      PX_PLAYER_BODY,
+      st.shieldActive ?? false,
+      st.lengthBurstActive ?? false,
+    );
+
+    // ── CPU 지렁이 ───────────────────────────────────────────────
+    if (!st.cpu || st.cpu.length === 0) {
+      _cpuGfx.clear();
+    } else {
+      _drawSegs(
+        _cpuGfx,
+        st.cpu,
+        st.cpuDir || { x: -1, y: 0 },
+        PX_CPU_HEAD,
+        PX_CPU_BODY,
+        false,
+        st.cpuLengthBurstActive ?? false,
+      );
+    }
+
+    // ── 추가 CPU 지렁이 (extraCpus) ──────────────────────────────
+    _extraGfx.clear();
+    if (st.extraCpus && st.extraCpus.length > 0) {
+      st.extraCpus.forEach((extra) => {
+        const body = extra.body || [];
+        const dir  = extra.dir || { x: -1, y: 0 };
+        const len  = body.length;
+        body.forEach((seg, i) => {
+          const alpha = i === 0 ? 1 : Math.max(0.40, 0.80 - (i / len) * 0.4);
+          if (i === 0) _extraGfx.beginFill(0xff9933);
+          else         _extraGfx.beginFill(0xdc8c3c, alpha);
+          _extraGfx.drawRoundedRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2, 4);
+          _extraGfx.endFill();
+          if (i === 0) {
+            _extraGfx.lineStyle(2, PX_EYE_BORDER, 0.5);
+            _extraGfx.drawRoundedRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2, 4);
+            _extraGfx.lineStyle(0);
+            const eyeSize = 3;
+            _extraGfx.beginFill(PX_EYE);
+            let e1x, e1y, e2x, e2y;
+            if (dir.x === 1) {
+              e1x = seg.x * CELL + CELL - 6; e1y = seg.y * CELL + 4;
+              e2x = seg.x * CELL + CELL - 6; e2y = seg.y * CELL + CELL - 4 - eyeSize;
+            } else if (dir.x === -1) {
+              e1x = seg.x * CELL + 3;        e1y = seg.y * CELL + 4;
+              e2x = seg.x * CELL + 3;        e2y = seg.y * CELL + CELL - 4 - eyeSize;
+            } else if (dir.y === -1) {
+              e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + 3;
+              e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + 3;
+            } else {
+              e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + CELL - 6;
+              e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + CELL - 6;
+            }
+            _extraGfx.drawRect(e1x, e1y, eyeSize, eyeSize);
+            _extraGfx.drawRect(e2x, e2y, eyeSize, eyeSize);
+            _extraGfx.endFill();
+          }
+        });
+      });
+    }
+
+    // ── 먹이 ────────────────────────────────────────────────────
+    _foodGfx.clear();
+    if (!st.food) {
+      _foodText.visible = false;
+    } else {
+      const { x, y, multiplier = 1 } = st.food;
+      const cx = x * CELL + CELL / 2;
+      const cy = y * CELL + CELL / 2;
+      const r  = CELL / 2 - 3;
+      const cd = PX_MULTIPLIER_COLORS[multiplier] || PX_MULTIPLIER_COLORS[1];
+
+      // 먹이 원 (색상 fill + 중앙 흰색 하이라이트)
+      _foodGfx.beginFill(cd.fill);
+      _foodGfx.drawCircle(cx, cy, r);
+      _foodGfx.endFill();
+      _foodGfx.beginFill(0xffffff, 0.7);
+      _foodGfx.drawCircle(cx, cy, r * 0.4);
+      _foodGfx.endFill();
+      // 글로우 링
+      _foodGfx.lineStyle(2, cd.glow.color, cd.glow.alpha);
+      _foodGfx.drawCircle(cx, cy, r + 2);
+      _foodGfx.lineStyle(0);
+
+      // 배수 텍스트
+      const fontSize = Math.round(CELL * 0.55);
+      _foodText.text  = `${multiplier}×`;
+      _foodText.style.fontSize = fontSize;
+      _foodText.position.set(cx, cy);
+      _foodText.visible = true;
+    }
+
+    // ── 아이템 ──────────────────────────────────────────────────
+    _itemGfx.clear();
+    if (!st.item) {
+      _itemContainer.visible = false;
+    } else {
+      _itemContainer.visible = true;
+      const item = st.item;
+      const cx   = item.x * CELL + CELL / 2;
+      const cy   = item.y * CELL + CELL / 2;
+      const cd   = PX_ITEM_COLORS[item.type] || PX_ITEM_COLORS.SPEED_UP;
+
+      // 만료 임박 깜박임 (3초 미만)
+      const msLeft = item.expiresAt - Date.now();
+      const blink  = msLeft < 3000 && Math.floor(Date.now() / 500) % 2 === 1;
+      _itemContainer.alpha = blink ? 0.3 : 1.0;
+
+      // 배경 원
+      _itemGfx.beginFill(cd.primary, 0.75);
+      _itemGfx.drawCircle(cx, cy, 8);
+      _itemGfx.endFill();
+      // 글로우 링
+      _itemGfx.lineStyle(2, cd.glow.color, cd.glow.alpha);
+      _itemGfx.drawCircle(cx, cy, 9);
+      _itemGfx.lineStyle(0);
+      // 아이콘 (기존 drawItemIcon 도형 좌표 동일)
+      _drawItemIconPixi(_itemGfx, item.type, cx, cy);
+    }
+
+    // pixi 씬 렌더 (RAF loop 에서 1회 호출 — ticker 미사용)
+    app.renderer.render(app.stage);
+  }
+
+  /** pixi 자원 해제 (롤백/언마운트 시) */
+  function destroy() {
+    if (!app) return;
+    try { app.destroy(false); } catch (_) {}
+    app = null;
+    _bgGfx = null; _foodGfx = null; _foodText = null;
+    _itemGfx = null; _itemContainer = null;
+    _cpuGfx = null; _extraGfx = null; _playerGfx = null;
+  }
+
+  return { init, resize, renderFrame, destroy };
+})();
+
 // HUD — BF-530 s2 §5-3 (PLAYER / CPU 이중 점수판)
 const hudPlayerScoreEl = document.getElementById("hud-player-score");
 const hudCPUScoreEl    = document.getElementById("hud-cpu-score");
@@ -1151,6 +1671,10 @@ function triggerEffect(cx, cy, multiplier) {
 function resizeCanvas() {
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
+  // BF-595: pixi 백엔드 resize (격자 재생성)
+  if (RENDER_BACKEND === "pixi") {
+    SnakeRenderer.resize(canvas.width, canvas.height);
+  }
 }
 
 function getGridSize() {
@@ -1816,12 +2340,19 @@ function updateMultiplierStatsUI() {
 
 /** 전체 프레임 렌더 */
 function render() {
-  drawBackground();
-  drawFood();
-  drawItem();           // BF-545: 보드 위 아이템 렌더링
-  drawSnake();
-  drawCpuSnake();
-  drawExtraCpus();      // BF-584: 추가 CPU 지렁이 렌더링
+  if (RENDER_BACKEND === "pixi") {
+    // BF-595: pixi 렌더 백엔드 — scene graph 갱신 + renderer.render()
+    SnakeRenderer.renderFrame(state);
+  } else {
+    // Canvas2D 폴백 경로 (롤백 가능 — BF-595 §3-5, §8)
+    drawBackground();
+    drawFood();
+    drawItem();           // BF-545: 보드 위 아이템 렌더링
+    drawSnake();
+    drawCpuSnake();
+    drawExtraCpus();      // BF-584: 추가 CPU 지렁이 렌더링
+  }
+  // DOM HUD — 백엔드 무관 (캔버스 밖 DOM — 불변)
   updateHUD();
   updateHUDStatus();    // BF-560: 길이·속도 HUD (60fps 실시간)
   updateMultiplierStatsUI();
@@ -1911,6 +2442,8 @@ function showGameOver() {
   goOverlay.removeAttribute("hidden");
   logKPI();
   logItemKPI();  // BF-545: 아이템 KPI 세션 기록
+  // BF-595: render FPS KPI 집계 (게임 종료 시 1회)
+  _flushFpsKpi();
 }
 
 function hideGameOver() {
@@ -1979,6 +2512,10 @@ function loop(ts) {
   // BF-545: elapsed 를 각 entity accumulator 에 누적 (최대 200ms 캡)
   const elapsed = Math.min(ts - lastTs, 200);
   lastTs = ts;
+
+  // BF-595: FPS KPI 프레임 추적 (실제 프레임 간격)
+  if (_fpsLastTs > 0) _trackFrame(ts - _fpsLastTs);
+  _fpsLastTs = ts;
 
   playerTickAccum += elapsed;
   cpuTickAccum    += elapsed;
@@ -2447,6 +2984,16 @@ function initGame() {
     pendingSettings = null;
   }
   state = createInitialState(cols, rows, hs, currentSettings);
+  // BF-595: pixi 렌더러 초기화 (최초 initGame 시 1회)
+  if (RENDER_BACKEND === "pixi") {
+    const ok = SnakeRenderer.init(canvas, canvas.width, canvas.height);
+    if (!ok) {
+      // pixi 초기화 실패 → canvas2d 폴백 (전역 RENDER_BACKEND 는 const 이므로 런타임 경고만)
+      console.warn("[BF-595] SnakeRenderer.init 실패 — canvas2d draw* 로 동작");
+    }
+  }
+  // BF-595: KPI 리셋 (새 게임마다)
+  _resetFpsKpi();
   hideGameOver();
   updateSoundToggleUI(soundEnabled); // BF-567: localStorage 복원값으로 UI 초기화
   updateHUDTimeRemaining();           // BF-579: HUD 남은 시간 row 갱신
