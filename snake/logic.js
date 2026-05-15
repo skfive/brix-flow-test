@@ -67,10 +67,10 @@ export const SNAKE_SETTINGS_DEFAULTS = Object.freeze({
   initialLength:     3,
 });
 
-/** 허용 범위 (명세 §2-1, §2-2) */
+/** 허용 범위 (명세 §2-1, §2-2 — BF-584: cpuCount 0~5 확장) */
 export const SNAKE_SETTINGS_LIMITS = Object.freeze({
   difficulty:    ["easy", "normal"],
-  cpuCount:      [0, 1, 2],
+  cpuCount:      [0, 1, 2, 3, 4, 5],
   itemSpawnRate: { min: 0.0, max: 1.0 },
   timeLimitSec:  { min: 60,  max: 600 },
   initialLength: [3, 5, 7],
@@ -97,16 +97,15 @@ export function validateAndMergeSettings(raw) {
     warn("[BF-579] settings.difficulty 잘못된 값 — 기본값으로 폴백:", raw.difficulty);
   }
 
-  // cpuCount (0/1/2 → 2 는 1 로 폴백)
+  // cpuCount (BF-584: 0~5 모두 허용. 범위 외/비정수는 기본값 폴백)
   if (typeof raw.cpuCount === "number" && Number.isInteger(raw.cpuCount)) {
-    if (raw.cpuCount === 2) {
-      warn("[BF-579] settings.cpuCount=2 는 본 스토리에서 미지원 — 1 로 폴백");
-      out.cpuCount = 1;
-    } else if (raw.cpuCount === 0 || raw.cpuCount === 1) {
+    if (SNAKE_SETTINGS_LIMITS.cpuCount.includes(raw.cpuCount)) {
       out.cpuCount = raw.cpuCount;
     } else {
-      warn("[BF-579] settings.cpuCount 범위 외 — 기본값으로 폴백:", raw.cpuCount);
+      warn("[BF-584] settings.cpuCount 범위 외 — 기본값으로 폴백:", raw.cpuCount);
     }
+  } else if (raw.cpuCount !== undefined) {
+    warn("[BF-584] settings.cpuCount 비정수 — 기본값으로 폴백:", raw.cpuCount);
   }
 
   // itemsEnabled (boolean)
@@ -229,7 +228,15 @@ export function createInitialState(cols, rows, highScore = 0, settings = SNAKE_S
     { x: cpuX + 2, y: cpuY },
   ].filter(c => c.x >= 0 && c.x < cols && c.y >= 0 && c.y < rows);
 
-  const initialFood = spawnFoodWithMultiplier(cols, rows, [...snake, ...cpu]);
+  // BF-584: cpuCount > 1 일 때 추가 CPU 지렁이 (extraCpus) 스폰
+  // - 격자의 네 모서리 부근에 분산 배치 (head/body/tail 3칸, LEFT 방향)
+  // - 점유 충돌 시 해당 위치 스킵 — 작은 격자에서는 일부 누락될 수 있음
+  const extraCpus = spawnExtraCpus(cols, rows, eff.cpuCount, snake, cpu);
+
+  const initialFood = spawnFoodWithMultiplier(
+    cols, rows,
+    [...snake, ...cpu, ...extraCpus.flatMap(e => e.body)],
+  );
   const initialStats = createMultiplierStats();
   // 첫 번째 food 스폰 카운트 (명세 §7-4: 스폰 직후 카운트)
   if (initialFood !== null) {
@@ -272,7 +279,67 @@ export function createInitialState(cols, rows, highScore = 0, settings = SNAKE_S
     itemStats:            createItemStats(),
     // BF-579: 게임 진행 중 참조용 effective settings (불변 — 변경 시 재시작 필요)
     settings:             eff,
+    // BF-584: 추가 CPU 지렁이 (cpuCount > 1 일 때 N-1 개)
+    extraCpus,
   };
+}
+
+/**
+ * BF-584: 추가 CPU 지렁이 스폰 (cpuCount > 1 일 때 N-1 개).
+ *
+ * 배치 전략 — 격자의 네 모서리 부근 + 상단 중앙 (총 4개 후보 슬롯):
+ *   slot 0: 우상 (cpuX, rows/4)
+ *   slot 1: 좌하 (cols/4, cpuY)
+ *   slot 2: 좌상 (cols/4, rows/4)
+ *   slot 3: 상단 중앙 (midX, rows/8)
+ *
+ * 각 슬롯은 (x, y), (x+1, y), (x+2, y) 3칸 LEFT 방향 body.
+ * 격자가 너무 작아 일부 슬롯이 점유되면 해당 슬롯은 skip (graceful 폴백).
+ *
+ * @param {number} cols
+ * @param {number} rows
+ * @param {number} cpuCount
+ * @param {Array<{x:number,y:number}>} snake     점유된 player 셀
+ * @param {Array<{x:number,y:number}>} mainCpu   점유된 main CPU 셀
+ * @returns {Array<{body: Array<{x:number,y:number}>, dir: {x:number,y:number}, recentPositions: string[]}>}
+ */
+export function spawnExtraCpus(cols, rows, cpuCount, snake, mainCpu) {
+  if (cpuCount <= 1) return [];
+
+  const cpuX = Math.max(0, Math.min(cols - 3, Math.floor(cols * 3 / 4) - 1));
+  const cpuY = Math.max(0, Math.min(rows - 1, Math.floor(rows * 3 / 4)));
+  const midX = Math.floor(cols / 2);
+
+  // 후보 슬롯 (head 시작 좌표)
+  const slots = [
+    { x: cpuX,                          y: Math.max(0, Math.floor(rows / 4)) },
+    { x: Math.max(0, Math.floor(cols / 4) - 1), y: cpuY },
+    { x: Math.max(0, Math.floor(cols / 4) - 1), y: Math.max(0, Math.floor(rows / 4)) },
+    { x: Math.max(0, midX - 1),         y: Math.max(0, Math.floor(rows / 8)) },
+  ];
+
+  const occupied = new Set([
+    ...snake.map(s   => `${s.x},${s.y}`),
+    ...mainCpu.map(s => `${s.x},${s.y}`),
+  ]);
+
+  const extras = [];
+  const need   = cpuCount - 1;
+
+  for (let i = 0; i < slots.length && extras.length < need; i++) {
+    const { x, y } = slots[i];
+    const body = [
+      { x: x,     y: y },
+      { x: x + 1, y: y },
+      { x: x + 2, y: y },
+    ].filter(c => c.x >= 0 && c.x < cols && c.y >= 0 && c.y < rows);
+    if (body.length !== 3) continue; // 격자 밖 → skip
+    const overlap = body.some(c => occupied.has(`${c.x},${c.y}`));
+    if (overlap) continue;
+    extras.push({ body, dir: DIR.LEFT, recentPositions: [] });
+    body.forEach(c => occupied.add(`${c.x},${c.y}`));
+  }
+  return extras;
 }
 
 // ─────────────────────────────────────────────────────────────

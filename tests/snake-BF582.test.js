@@ -42,9 +42,10 @@ test("BF-582 · localStorage 키 + schemaVersion 상수", () => {
   assert.equal(SNAKE_SETTINGS_SCHEMA_VERSION, 1);
 });
 
-test("BF-582 · LIMITS 표 — planner §2-1 / §2-2 매핑", () => {
+test("BF-582 · LIMITS 표 — planner §2-1 / §2-2 매핑 (BF-584: cpuCount 0~5 확장)", () => {
   assert.deepEqual(SNAKE_SETTINGS_LIMITS.difficulty, ["easy", "normal"]);
-  assert.deepEqual(SNAKE_SETTINGS_LIMITS.cpuCount, [0, 1, 2]);
+  // BF-584 supersedes BF-582: cpuCount 옵션이 0~5 까지 확장됨
+  assert.deepEqual(SNAKE_SETTINGS_LIMITS.cpuCount, [0, 1, 2, 3, 4, 5]);
   assert.deepEqual(SNAKE_SETTINGS_LIMITS.itemSpawnRate, { min: 0.0, max: 1.0 });
   assert.deepEqual(SNAKE_SETTINGS_LIMITS.timeLimitSec, { min: 60, max: 600 });
   assert.deepEqual(SNAKE_SETTINGS_LIMITS.initialLength, [3, 5, 7]);
@@ -79,9 +80,11 @@ test("BF-582 · validateAndMergeSettings — 유효한 전체 객체 복원", ()
   assert.deepEqual(out, raw);
 });
 
-test("BF-582 · EC-1 — cpuCount=2 는 1 로 폴백 (planner §6-4, §9 EC-1)", () => {
+test("BF-582 EC-1 supersedes — BF-584: cpuCount=2 는 더 이상 폴백되지 않음 (그대로 보존)", () => {
+  // BF-584 가 cpuCount 옵션을 0~5 로 확장하면서 본 EC-1 (cpuCount=2 → 1 폴백) 은 폐기됨.
+  // 가드는 유지하되 "보존" 으로 의미 반전.
   const out = validateAndMergeSettings({ cpuCount: 2 });
-  assert.equal(out.cpuCount, 1);
+  assert.equal(out.cpuCount, 2);
 });
 
 test("BF-582 · EC-2 — itemSpawnRate clamp 0..1 (planner §9 EC-2)", () => {

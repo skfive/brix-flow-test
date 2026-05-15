@@ -1600,6 +1600,113 @@ function drawCpuSnake() {
   });
 }
 
+/** BF-584: 추가 CPU 지렁이 (extraCpus) 렌더링.
+ *  주황-노랑 계열로 main CPU 와 구분 (head: #ff9933, body: rgba(220,140,60,a)). */
+function drawExtraCpus() {
+  if (!state.extraCpus || state.extraCpus.length === 0) return;
+  state.extraCpus.forEach((extra) => {
+    const body = extra.body || [];
+    const dir  = extra.dir || DIR.LEFT;
+    body.forEach((seg, i) => {
+      const alpha = i === 0 ? 1 : 0.80 - (i / body.length) * 0.4;
+      ctx.fillStyle = i === 0 ? "#ff9933" : `rgba(220,140,60,${alpha})`;
+      ctx.beginPath();
+      ctx.roundRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2, 4);
+      ctx.fill();
+      if (i === 0) {
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth   = 2;
+        ctx.beginPath();
+        ctx.roundRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2, 4);
+        ctx.stroke();
+        // 눈 (방향 표시)
+        ctx.fillStyle = "#0d0d0d";
+        const eyeSize = 3;
+        let e1x, e1y, e2x, e2y;
+        if (dir.x === 1) {
+          e1x = seg.x * CELL + CELL - 6; e1y = seg.y * CELL + 4;
+          e2x = seg.x * CELL + CELL - 6; e2y = seg.y * CELL + CELL - 4 - eyeSize;
+        } else if (dir.x === -1) {
+          e1x = seg.x * CELL + 3;        e1y = seg.y * CELL + 4;
+          e2x = seg.x * CELL + 3;        e2y = seg.y * CELL + CELL - 4 - eyeSize;
+        } else if (dir.y === -1) {
+          e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + 3;
+          e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + 3;
+        } else {
+          e1x = seg.x * CELL + 4;              e1y = seg.y * CELL + CELL - 6;
+          e2x = seg.x * CELL + CELL - 4 - eyeSize; e2y = seg.y * CELL + CELL - 6;
+        }
+        ctx.fillRect(e1x, e1y, eyeSize, eyeSize);
+        ctx.fillRect(e2x, e2y, eyeSize, eyeSize);
+      }
+    });
+  });
+}
+
+/** BF-584: 추가 CPU 지렁이 (extraCpus) 1 틱 이동.
+ *  player + main CPU + 다른 extras + 자기 몸통 + 격자 경계를 장애물로 인식.
+ *  음식 방향 Manhattan 거리 최소 방향 우선 (단순 greedy).
+ *  유효 방향이 없으면 해당 extra 제거 (사망). 음식은 먹지 않음 (점수 격리). */
+function tickExtraCpus() {
+  if (!state.extraCpus || state.extraCpus.length === 0) return;
+
+  const cols = state.cols;
+  const rows = state.rows;
+  const dirsAll = [DIR.UP, DIR.DOWN, DIR.LEFT, DIR.RIGHT];
+  const playerCells = state.snake.map((s) => `${s.x},${s.y}`);
+  const mainCpuCells = (state.cpu || []).map((s) => `${s.x},${s.y}`);
+
+  const survivors = [];
+  for (let i = 0; i < state.extraCpus.length; i++) {
+    const e    = state.extraCpus[i];
+    const body = e.body || [];
+    if (body.length === 0) continue;
+
+    const obstacles = new Set([...playerCells, ...mainCpuCells]);
+    for (let j = 0; j < state.extraCpus.length; j++) {
+      if (j === i) continue;
+      const ob = state.extraCpus[j].body || [];
+      ob.forEach((c) => obstacles.add(`${c.x},${c.y}`));
+    }
+    // 자기 몸통 (머리 제외 — 머리 다음 칸 이동 후 자리)
+    body.slice(1).forEach((c) => obstacles.add(`${c.x},${c.y}`));
+
+    const head = body[0];
+    const cur  = e.dir || DIR.LEFT;
+    const candidates = dirsAll.filter((d) => {
+      // 자살 방향 제거
+      if (d.x + cur.x === 0 && d.y + cur.y === 0) return false;
+      const nx = head.x + d.x;
+      const ny = head.y + d.y;
+      if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) return false;
+      if (obstacles.has(`${nx},${ny}`)) return false;
+      return true;
+    });
+
+    if (candidates.length === 0) continue; // 사망 — 제거
+
+    // 음식 거리 최소 방향 (state.food 가 있을 때만)
+    let chosen = candidates[0];
+    if (state.food) {
+      let bestDist = Infinity;
+      for (const d of candidates) {
+        const nx = head.x + d.x;
+        const ny = head.y + d.y;
+        const dist = Math.abs(nx - state.food.x) + Math.abs(ny - state.food.y);
+        if (dist < bestDist) {
+          bestDist = dist;
+          chosen   = d;
+        }
+      }
+    }
+
+    const newHead = { x: head.x + chosen.x, y: head.y + chosen.y };
+    const newBody = [newHead, ...body.slice(0, -1)];
+    survivors.push({ body: newBody, dir: chosen, recentPositions: [] });
+  }
+  state = Object.assign({}, state, { extraCpus: survivors });
+}
+
 /** 먹이 — BF-533: 배수별 색상·레이블 렌더링 (명세 §2-1) */
 function drawFood() {
   if (!state.food) return;
@@ -1714,6 +1821,7 @@ function render() {
   drawItem();           // BF-545: 보드 위 아이템 렌더링
   drawSnake();
   drawCpuSnake();
+  drawExtraCpus();      // BF-584: 추가 CPU 지렁이 렌더링
   updateHUD();
   updateHUDStatus();    // BF-560: 길이·속도 HUD (60fps 실시간)
   updateMultiplierStatsUI();
@@ -1970,6 +2078,9 @@ function loop(ts) {
     : 0;
 
   state = tickWithItems(state, nowMs, movePlayer, moveCpu);
+
+  // BF-584: 추가 CPU 지렁이 (extraCpus) 1 틱 이동 — main CPU 와 동일 간격 (moveCpu 일 때만)
+  if (moveCpu) tickExtraCpus();
 
   // BF-537: 먹이 수집 감지 → 이팩트 트리거 (명세 §6-4)
   if (prevFood !== null && state.food !== prevFood) {
