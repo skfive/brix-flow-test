@@ -46,33 +46,184 @@ const DIFFICULTY_PARAMS = {
 };
 
 // ─────────────────────────────────────────────────────────────
+// 게임 설정 — BF-579 (planner 명세 §2, §5)
+// ─────────────────────────────────────────────────────────────
+
+/** 설정 localStorage 키 (명세 §5-1) */
+export const SNAKE_SETTINGS_LS_KEY = "bf-snake-settings";
+
+/** 설정 스키마 버전 (명세 §5-2) */
+export const SNAKE_SETTINGS_SCHEMA_VERSION = 1;
+
+/** 기본 설정값 (명세 §2-1) */
+export const SNAKE_SETTINGS_DEFAULTS = Object.freeze({
+  schemaVersion:     SNAKE_SETTINGS_SCHEMA_VERSION,
+  difficulty:        "normal",
+  cpuCount:          1,
+  itemsEnabled:      false,
+  itemSpawnRate:     0.5,
+  multiplierEnabled: true,
+  timeLimitSec:      null,
+  initialLength:     3,
+});
+
+/** 허용 범위 (명세 §2-1, §2-2) */
+export const SNAKE_SETTINGS_LIMITS = Object.freeze({
+  difficulty:    ["easy", "normal"],
+  cpuCount:      [0, 1, 2],
+  itemSpawnRate: { min: 0.0, max: 1.0 },
+  timeLimitSec:  { min: 60,  max: 600 },
+  initialLength: [3, 5, 7],
+});
+
+/**
+ * 입력 객체를 §2-1 기본값과 병합 + §9 EC 정책으로 검증.
+ *
+ * - 모르는 필드는 무시
+ * - 허용 범위 외 값은 기본값으로 폴백 + console.warn
+ * - cpuCount === 2 는 1 로 폴백 (EC-1: 본 스토리에서 코드 미준비)
+ *
+ * @param {unknown} raw  parse 된 localStorage 객체 (null/undefined/non-object 도 허용)
+ * @returns {typeof SNAKE_SETTINGS_DEFAULTS}
+ */
+export function validateAndMergeSettings(raw) {
+  const out = { ...SNAKE_SETTINGS_DEFAULTS };
+  if (raw === null || raw === undefined || typeof raw !== "object") return out;
+
+  // difficulty (enum)
+  if (typeof raw.difficulty === "string" && SNAKE_SETTINGS_LIMITS.difficulty.includes(raw.difficulty)) {
+    out.difficulty = raw.difficulty;
+  } else if (raw.difficulty !== undefined) {
+    warn("[BF-579] settings.difficulty 잘못된 값 — 기본값으로 폴백:", raw.difficulty);
+  }
+
+  // cpuCount (0/1/2 → 2 는 1 로 폴백)
+  if (typeof raw.cpuCount === "number" && Number.isInteger(raw.cpuCount)) {
+    if (raw.cpuCount === 2) {
+      warn("[BF-579] settings.cpuCount=2 는 본 스토리에서 미지원 — 1 로 폴백");
+      out.cpuCount = 1;
+    } else if (raw.cpuCount === 0 || raw.cpuCount === 1) {
+      out.cpuCount = raw.cpuCount;
+    } else {
+      warn("[BF-579] settings.cpuCount 범위 외 — 기본값으로 폴백:", raw.cpuCount);
+    }
+  }
+
+  // itemsEnabled (boolean)
+  if (typeof raw.itemsEnabled === "boolean") {
+    out.itemsEnabled = raw.itemsEnabled;
+  }
+
+  // itemSpawnRate (0.0~1.0, clamp)
+  if (typeof raw.itemSpawnRate === "number" && Number.isFinite(raw.itemSpawnRate)) {
+    const { min, max } = SNAKE_SETTINGS_LIMITS.itemSpawnRate;
+    if (raw.itemSpawnRate < min || raw.itemSpawnRate > max) {
+      warn("[BF-579] settings.itemSpawnRate clamp:", raw.itemSpawnRate);
+      out.itemSpawnRate = Math.max(min, Math.min(max, raw.itemSpawnRate));
+    } else {
+      out.itemSpawnRate = raw.itemSpawnRate;
+    }
+  }
+
+  // multiplierEnabled (boolean)
+  if (typeof raw.multiplierEnabled === "boolean") {
+    out.multiplierEnabled = raw.multiplierEnabled;
+  }
+
+  // timeLimitSec (null | 60..600)
+  if (raw.timeLimitSec === null) {
+    out.timeLimitSec = null;
+  } else if (typeof raw.timeLimitSec === "number" && Number.isInteger(raw.timeLimitSec)) {
+    const { min, max } = SNAKE_SETTINGS_LIMITS.timeLimitSec;
+    if (raw.timeLimitSec < min || raw.timeLimitSec > max) {
+      warn("[BF-579] settings.timeLimitSec 범위 외 — 폴백:", raw.timeLimitSec);
+      out.timeLimitSec = Math.max(min, Math.min(max, raw.timeLimitSec));
+    } else {
+      out.timeLimitSec = raw.timeLimitSec;
+    }
+  } else if (raw.timeLimitSec !== undefined) {
+    warn("[BF-579] settings.timeLimitSec 타입 오류 — null 폴백");
+  }
+
+  // initialLength (3/5/7)
+  if (typeof raw.initialLength === "number" && Number.isInteger(raw.initialLength)) {
+    if (SNAKE_SETTINGS_LIMITS.initialLength.includes(raw.initialLength)) {
+      out.initialLength = raw.initialLength;
+    } else {
+      warn("[BF-579] settings.initialLength 허용 외 — 기본값으로 폴백:", raw.initialLength);
+    }
+  }
+
+  // schemaVersion — 현재 v1 만 정의. 미래 값(2+) 은 알려진 필드만 추출하고 schemaVersion=1 로 정규화.
+  if (typeof raw.schemaVersion === "number" && raw.schemaVersion > SNAKE_SETTINGS_SCHEMA_VERSION) {
+    info("[BF-579] settings.schemaVersion 이 미래 값:", raw.schemaVersion, "— 알려진 필드만 사용");
+  }
+  out.schemaVersion = SNAKE_SETTINGS_SCHEMA_VERSION;
+
+  return out;
+}
+
+/** logic.js 단위 테스트에서도 console 호출은 OK — node 환경 호환 */
+function warn(...args) {
+  if (typeof console !== "undefined" && console.warn) console.warn(...args);
+}
+function info(...args) {
+  if (typeof console !== "undefined" && console.info) console.info(...args);
+}
+
+/**
+ * 격자 폭·높이 조건에 맞춰 initialLength 를 안전한 홀수로 보정 (EC-3).
+ * - 격자 최소 가로폭은 length 칸을 모두 담을 수 있어야 함 (head 가 cols/2 → 왼쪽 length-1 칸).
+ *
+ * @param {number} length  요청 길이 (3/5/7)
+ * @param {number} cols
+ * @returns {number}
+ */
+export function clampInitialLength(length, cols) {
+  const allowed = SNAKE_SETTINGS_LIMITS.initialLength;
+  let best = allowed[0];
+  for (const candidate of allowed) {
+    if (candidate <= length && candidate < cols) best = candidate;
+  }
+  if (best > length) best = length;
+  return best;
+}
+
+// ─────────────────────────────────────────────────────────────
 // 상태 생성
 // ─────────────────────────────────────────────────────────────
 
 /**
  * 게임 초기 상태 생성.
  * BF-530: CPU 지렁이 필드(cpu, cpuDir, cpuScore, result, deathCause) 추가.
- * player snake 는 중앙에서 오른쪽 향해 3칸, CPU 는 우하단 3/4 영역에서 왼쪽 향해 3칸.
+ * BF-579: 4번째 인자 settings 로 게임 파라미터 주입 (initialLength, cpuCount, timeLimitSec 등).
+ *         미전달 시 SNAKE_SETTINGS_DEFAULTS 사용 — 기존 호출부 시그니처 호환.
+ * player snake 는 중앙에서 오른쪽 향해 length 칸, CPU 는 우하단 3/4 영역에서 왼쪽 향해 3칸.
  *
  * @param {number} cols  격자 열 수
  * @param {number} rows  격자 행 수
  * @param {number} [highScore=0]  유지할 high score
+ * @param {Partial<typeof SNAKE_SETTINGS_DEFAULTS>} [settings]  BF-579 게임 설정
  * @returns {GameState}
  */
-export function createInitialState(cols, rows, highScore = 0) {
+export function createInitialState(cols, rows, highScore = 0, settings = SNAKE_SETTINGS_DEFAULTS) {
+  // settings 가 부분 객체면 기본값과 머지
+  const eff = { ...SNAKE_SETTINGS_DEFAULTS, ...(settings || {}) };
+  const length = clampInitialLength(eff.initialLength, cols);
+
   const midX = Math.floor(cols / 2);
   const midY = Math.floor(rows / 2);
-  const snake = [
-    { x: midX,     y: midY },
-    { x: midX - 1, y: midY },
-    { x: midX - 2, y: midY },
-  ];
+  const snake = [];
+  for (let i = 0; i < length; i++) {
+    snake.push({ x: midX - i, y: midY });
+  }
 
   // CPU 시작 위치: 오른쪽 하단 3/4 영역 (player 와 겹치지 않도록)
   // head(cpuX), body(cpuX+1), tail(cpuX+2) — cpuDir=LEFT 이므로 tail 이 오른쪽
   const cpuX = Math.max(0, Math.min(cols - 3, Math.floor(cols * 3 / 4) - 1));
   const cpuY = Math.max(0, Math.min(rows - 1, Math.floor(rows * 3 / 4)));
-  const cpu = [
+  // BF-579 §2-2: cpuCount=0 → 솔로 모드 (cpu 빈 배열)
+  const cpu = eff.cpuCount <= 0 ? [] : [
     { x: cpuX,     y: cpuY },
     { x: cpuX + 1, y: cpuY },
     { x: cpuX + 2, y: cpuY },
@@ -119,6 +270,8 @@ export function createInitialState(cols, rows, highScore = 0) {
     cpuLengthBeforeBurst: 0,
     cpuLengthBurstEndMs:  0,
     itemStats:            createItemStats(),
+    // BF-579: 게임 진행 중 참조용 effective settings (불변 — 변경 시 재시작 필요)
+    settings:             eff,
   };
 }
 
@@ -682,12 +835,15 @@ export function tickFull(state, difficulty = "normal") {
 
 /**
  * 게임 재시작 (highScore 유지, CPU 상태도 초기화).
+ * BF-579: 두 번째 인자 settings 를 전달하면 새 게임에 적용. 미전달 시 state.settings 재사용.
  *
  * @param {GameState} state  현재 상태 (cols/rows/highScore 참조)
+ * @param {Partial<typeof SNAKE_SETTINGS_DEFAULTS>} [settings]
  * @returns {GameState}
  */
-export function restartGame(state) {
-  return createInitialState(state.cols, state.rows, state.highScore);
+export function restartGame(state, settings) {
+  const next = settings ?? state.settings ?? SNAKE_SETTINGS_DEFAULTS;
+  return createInitialState(state.cols, state.rows, state.highScore, next);
 }
 
 // ─────────────────────────────────────────────────────────────
