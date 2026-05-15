@@ -2261,6 +2261,12 @@ function closeSettingsModal(outcome) {
   settingsModalEl.setAttribute("hidden", "");
   draftSettings = null;
   console.log("[BF-579] settings.modal.close outcome=" + (outcome || "cancel"));
+  // BF-592: 초기 진입 시 (state 미초기화) — 저장/취소 후 게임 시작.
+  // state 가 undefined 이면 아직 initGame() 가 실행되지 않은 최초 진입 상태.
+  // pendingSettings 는 saveSettingsModal 에서 이미 설정됐을 수 있으므로 initGame() 에서 적용됨.
+  if (!state) {
+    initGame();
+  }
 }
 
 /** 검증: 직접 입력 timeLimitSec 등 범위 확인 (BF-582 AC3). */
@@ -2659,4 +2665,9 @@ window.addEventListener("resize", () => {
 // ─────────────────────────────────────────────────────────────
 // 엔트리
 // ─────────────────────────────────────────────────────────────
-initGame();
+// BF-592: 게임 진입 시 설정창 자동 오픈.
+// state 가 미초기화(undefined) 상태에서 openSettingsModal("entry") 호출 →
+//   state && state.status === "playing" 조건이 false → 조기 리턴 없이 draftSettings 정상 초기화.
+// 사용자가 저장(save) 또는 취소(cancel/Esc/오버레이클릭) 시
+//   closeSettingsModal 내 !state 가드가 initGame() 을 호출해 게임 시작.
+openSettingsModal("entry");
