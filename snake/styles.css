@@ -226,6 +226,10 @@ body {
   padding: 36px 52px;
   text-align: center;
   box-shadow: 0 0 30px rgba(76, 255, 128, 0.3);
+  /* BF-588: 부모 #paused-overlay 가 pointer-events:none (배경 투과 의도) 이므로
+     자손 [계속하기] / [재시작] / [설정] / [종료] 버튼이 마우스 클릭을 받도록
+     박스에서 명시적으로 재활성화. */
+  pointer-events: auto;
 }
 
 .paused-box h2 {
