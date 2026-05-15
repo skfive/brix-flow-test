@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>snake-pixi-BF-597 — pixi.js 기반 지렁이게임 화면 시안</title>
+  <style>
+    /* ── 디자인 토큰 ────────────────────────────────────────── */
+    :root {
+      /* 배경·격자 */
+      --bg-primary:        #0d0d0d;
+      --grid-line:         rgba(255,255,255,0.04);
+
+      /* 플레이어 */
+      --player-head:       #00cc44;
+      --player-body:       #3cd264;
+      --player-eye:        #ffffff;
+
+      /* CPU */
+      --cpu-head:          #cc2200;
+      --cpu-body:          #d23c3c;
+
+      /* 먹이 */
+      --food-1x:           #ffcc00;
+      --food-1x-glow:      rgba(255,200,0,0.5);
+      --food-2x:           #00cfff;
+      --food-2x-glow:      rgba(0,200,255,0.6);
+      --food-4x:           #cc44ff;
+      --food-4x-glow:      rgba(180,60,255,0.6);
+      --food-8x:           #ff4444;
+      --food-8x-glow:      rgba(255,50,50,0.7);
+
+      /* 아이템 */
+      --item-speed:        #ffaa00;
+      --item-slow:         #00ddcc;
+      --item-burst:        #ff6600;
+      --item-shield:       #4488ff;
+      --item-reverse:      #22ffaa;
+
+      /* HUD */
+      --hud-player-color:  #4cff80;
+      --hud-cpu-color:     #ff6b4c;
+      --hud-text:          #e0e0e0;
+      --hud-label:         rgba(255,255,255,0.5);
+      --hud-panel-bg:      rgba(0,0,0,0.45);
+      --hud-panel-border:  rgba(76,255,128,0.22);
+
+      /* 레이아웃 */
+      --cell:              20px;
+      --font-main:         'Courier New', Courier, monospace;
+    }
+
+    /* ── 리셋 ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      font-family: var(--font-main);
+      color: var(--hud-text);
+      overflow-x: hidden;
+    }
+
+    /* ── 섹션 제목 (시안 설명용) ───────────────────────────── */
+    .section-label {
+      background: rgba(255,255,255,0.06);
+      border-left: 3px solid #4cff80;
+      padding: 8px 16px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: #aaa;
+      text-transform: uppercase;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       1. 게임 플레이 화면 (pixi canvas 시뮬레이션)
+    ══════════════════════════════════════════════════════ */
+    .game-screen {
+      position: relative;
+      width: 100%;
+      height: 600px;
+      background: var(--bg-primary);
+      overflow: hidden;
+      /* 격자 시뮬레이션 */
+      background-image:
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: var(--cell) var(--cell);
+    }
+
+    /* ── 지렁이 세그먼트 공통 ──────────────────────────────── */
+    .seg {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+    }
+
+    /* ── 플레이어 지렁이 ────────────────────────────────── */
+    /* 몸통 세그먼트 (alpha gradient: 0.85 - (i/len)*0.4) */
+    .seg-player-body { background: var(--player-body); }
+
+    /* 머리 세그먼트 */
+    .seg-player-head {
+      background: var(--player-head);
+      outline: 1px solid rgba(255,255,255,0.5);
+      outline-offset: -1px;
+    }
+
+    /* 눈 (RIGHT 방향: 오른쪽 상하) */
+    .seg-player-head::before,
+    .seg-player-head::after {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--player-eye);
+      border-radius: 1px;
+    }
+    /* RIGHT 방향 눈 위치 */
+    .dir-right::before { right: 2px; top: 4px; }
+    .dir-right::after  { right: 2px; bottom: 4px; }
+    .dir-left::before  { left: 2px; top: 4px; }
+    .dir-left::after   { left: 2px; bottom: 4px; }
+    .dir-up::before    { left: 4px; top: 2px; }
+    .dir-up::after     { right: 4px; top: 2px; }
+    .dir-down::before  { left: 4px; bottom: 2px; }
+    .dir-down::after   { right: 4px; bottom: 2px; }
+
+    /* ── CPU 지렁이 ─────────────────────────────────────── */
+    .seg-cpu-head {
+      background: var(--cpu-head);
+      outline: 1px solid rgba(255,255,255,0.5);
+      outline-offset: -1px;
+    }
+    .seg-cpu-head::before,
+    .seg-cpu-head::after {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--player-eye);
+      border-radius: 1px;
+    }
+    .seg-cpu-head.dir-left::before  { left: 2px; top: 4px; }
+    .seg-cpu-head.dir-left::after   { left: 2px; bottom: 4px; }
+    .seg-cpu-body { background: var(--cpu-body); }
+
+    /* ── 먹이 원 ─────────────────────────────────────────── */
+    .food {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7px;
+      font-weight: bold;
+      color: #fff;
+      font-family: var(--font-main);
+    }
+    /* 먹이는 셀 중심 정렬을 위해 offset 조정 (10 - 7 = 3px) */
+    .food-1x {
+      background: radial-gradient(circle at 40% 40%, #ffffff 0%, var(--food-1x) 45%, var(--food-1x) 100%);
+      box-shadow: 0 0 8px 3px var(--food-1x-glow);
+    }
+    .food-2x {
+      background: radial-gradient(circle at 40% 40%, #ffffff 0%, var(--food-2x) 45%, var(--food-2x) 100%);
+      box-shadow: 0 0 8px 3px var(--food-2x-glow);
+    }
+    .food-4x {
+      background: radial-gradient(circle at 40% 40%, #ffffff 0%, var(--food-4x) 45%, var(--food-4x) 100%);
+      box-shadow: 0 0 8px 4px var(--food-4x-glow);
+    }
+    .food-8x {
+      background: radial-gradient(circle at 40% 40%, #ffffff 0%, var(--food-8x) 45%, var(--food-8x) 100%);
+      box-shadow: 0 0 10px 5px var(--food-8x-glow);
+    }
+
+    /* ── 아이템 원 ─────────────────────────────────────────── */
+    .item {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-family: var(--font-main);
+    }
+    .item-speed  {
+      background: var(--item-speed);
+      box-shadow: 0 0 6px 3px rgba(255,170,0,0.4);
+      color: #fff;
+    }
+    .item-slow   {
+      border: 2px solid var(--item-slow);
+      box-shadow: 0 0 6px 3px rgba(0,221,204,0.4);
+      color: var(--item-slow);
+    }
+    .item-burst  {
+      border: 2px solid var(--item-burst);
+      box-shadow: 0 0 6px 3px rgba(255,102,0,0.45);
+      color: var(--item-burst);
+    }
+    .item-shield {
+      border: 2px solid var(--item-shield);
+      box-shadow: 0 0 6px 3px rgba(68,136,255,0.45);
+      color: var(--item-shield);
+    }
+    .item-reverse {
+      border: 2px solid var(--item-reverse);
+      box-shadow: 0 0 6px 3px rgba(34,255,170,0.4);
+      color: var(--item-reverse);
+    }
+
+    /* SHIELD pulse 시뮬레이션 */
+    .shield-pulse {
+      animation: shield-anim 1.5s ease-in-out infinite;
+    }
+    @keyframes shield-anim {
+      0%, 100% { outline-color: rgba(68,136,255,0.4); outline-width: 3px; }
+      50%       { outline-color: rgba(68,136,255,0.7); outline-width: 3px; }
+    }
+
+    /* LENGTH_BURST 깜빡임 시뮬레이션 */
+    .burst-blink {
+      animation: burst-anim 0.3s ease-in-out infinite alternate;
+    }
+    @keyframes burst-anim {
+      from { background: var(--player-head); }
+      to   { background: rgba(255,255,255,0.9); }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       DOM HUD 오버레이 시뮬레이션
+    ══════════════════════════════════════════════════════ */
+
+    /* 우측 상단 HUD (점수) */
+    .hud-score-panel {
+      position: absolute;
+      top: 52px;
+      right: 20px;
+      color: var(--hud-text);
+      font-size: 14px;
+      line-height: 1.6;
+      text-align: right;
+      pointer-events: none;
+      text-shadow: 0 0 6px rgba(0,255,100,0.4);
+    }
+    .hud-score-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .hud-label-txt {
+      font-size: 11px;
+      letter-spacing: 1px;
+      opacity: 0.85;
+    }
+    .hud-score-txt { font-size: 22px; font-weight: bold; }
+    .hud-divider   { color: #555; font-size: 18px; }
+    .hud-high-txt  { font-size: 13px; color: #aaa; margin-top: 2px; text-align: right; }
+
+    /* 우측 하단 상태 패널 */
+    .hud-status {
+      position: absolute;
+      right: 20px;
+      bottom: 60px;
+      background: var(--hud-panel-bg);
+      border: 1px solid var(--hud-panel-border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      pointer-events: none;
+      min-width: 110px;
+    }
+    .hud-status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .hud-status-row:last-child { margin-bottom: 0; }
+    .status-lbl  { color: var(--hud-label); font-size: 11px; }
+    .status-val  { color: var(--hud-text); font-weight: bold; }
+
+    /* 아이템 슬롯 (좌하단) */
+    .item-slot-hud {
+      position: absolute;
+      bottom: 16px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .slot-label { font-size: 9px; letter-spacing: 1px; color: var(--hud-label); }
+    .slot-box {
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      background: rgba(0,0,0,0.4);
+    }
+    .slot-key-hint {
+      font-size: 8px;
+      color: rgba(255,255,255,0.3);
+      margin-top: 2px;
+    }
+
+    /* 배수 통계 (좌측 상단) */
+    .mult-stats {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      pointer-events: none;
+    }
+    .ms-title  { color: rgba(255,255,255,0.4); font-size: 10px; margin-bottom: 4px; letter-spacing: 0.5px; }
+    .ms-row    { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; }
+    .ms-badge  { display: inline-block; padding: 0 4px; border-radius: 2px; font-size: 10px; font-weight: bold; }
+    .ms-1x     { background: #ffcc00; color: #000; }
+    .ms-2x     { background: #00cfff; color: #000; }
+    .ms-4x     { background: #cc44ff; color: #fff; }
+    .ms-8x     { background: #ff4444; color: #fff; }
+    .ms-prob   { color: rgba(255,255,255,0.4); }
+
+    /* 효과음 토글 버튼 */
+    .sound-btn {
+      position: absolute;
+      top: 12px;
+      right: 20px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 14px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    /* 범례 (좌하단) */
+    .legend {
+      position: absolute;
+      bottom: 16px;
+      left: 80px;
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      pointer-events: none;
+    }
+    .legend-player { color: #4cff80; }
+    .legend-cpu    { color: #ff6b4c; }
+
+    /* ═══════════════════════════════════════════════════════
+       2. 게임오버 오버레이
+    ══════════════════════════════════════════════════════ */
+    .gameover-screen {
+      position: relative;
+      width: 100%;
+      height: 600px;
+      background: var(--bg-primary);
+      background-image:
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: var(--cell) var(--cell);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .gameover-box {
+      background: rgba(0,0,0,0.88);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 32px 40px;
+      text-align: center;
+      min-width: 320px;
+      max-width: 420px;
+    }
+    .gameover-title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #4cff80;
+      text-shadow: 0 0 12px rgba(76,255,128,0.6);
+      margin-bottom: 12px;
+    }
+    .gameover-title.lose { color: #ff6b4c; text-shadow: 0 0 12px rgba(255,107,76,0.6); }
+    .go-score   { font-size: 15px; color: #ddd; margin-bottom: 8px; }
+    .go-score .p { color: #4cff80; font-weight: bold; }
+    .go-score .c { color: #ff6b4c; font-weight: bold; }
+    .go-record  {
+      display: inline-block;
+      background: rgba(255,200,0,0.15);
+      border: 1px solid rgba(255,200,0,0.5);
+      color: #ffd700;
+      font-size: 13px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .go-playtime { font-size: 12px; color: #888; margin-bottom: 10px; }
+    .go-divider  { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 12px 0; }
+    .go-items-title { font-size: 11px; color: #777; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .go-item-list { list-style: none; text-align: left; font-size: 13px; }
+    .go-item-list li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+      color: #ccc;
+    }
+    .go-item-icon { width: 18px; text-align: center; }
+    .go-item-label { flex: 1; color: #aaa; }
+    .go-item-count { color: #ddd; font-weight: bold; }
+    .go-hint { font-size: 12px; color: #555; margin-top: 16px; }
+
+    /* ═══════════════════════════════════════════════════════
+       3. 일시정지 오버레이
+    ══════════════════════════════════════════════════════ */
+    .paused-screen {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background: var(--bg-primary);
+      background-image:
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: var(--cell) var(--cell);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .paused-box {
+      background: rgba(0,0,0,0.88);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 28px 36px;
+      text-align: center;
+      min-width: 260px;
+    }
+    .paused-title { font-size: 22px; font-weight: bold; color: #e0e0e0; margin-bottom: 18px; }
+    .paused-btn-list { display: flex; flex-direction: column; gap: 10px; }
+    .paused-btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      color: #ddd;
+      font-family: var(--font-main);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .paused-btn.primary  { border-color: rgba(76,255,128,0.4); background: rgba(76,255,128,0.1); color: #4cff80; }
+    .paused-btn kbd {
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       4. 색상 팔레트 참조 패널
+    ══════════════════════════════════════════════════════ */
+    .palette-section {
+      background: #0a0a0a;
+      padding: 24px;
+    }
+    .palette-title {
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: #666;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .palette-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .palette-info { font-size: 11px; }
+    .palette-name { color: #aaa; margin-bottom: 2px; }
+    .palette-hex  { color: #555; font-size: 10px; }
+
+    /* ═══════════════════════════════════════════════════════
+       5. pixi Scene Graph 구조도
+    ══════════════════════════════════════════════════════ */
+    .scene-diagram {
+      background: #080808;
+      padding: 20px 24px;
+      font-size: 12px;
+    }
+    .scene-title { color: #666; letter-spacing: 1px; margin-bottom: 12px; text-transform: uppercase; font-size: 11px; }
+    .scene-tree {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      color: #888;
+    }
+    .scene-layer-0 { color: #4cff80; }
+    .scene-layer-1 { color: #ffcc00; }
+    .scene-layer-2 { color: #ffaa00; }
+    .scene-layer-3 { color: #d23c3c; }
+    .scene-layer-4 { color: #cc2200; }
+    .scene-layer-5 { color: #00cc44; }
+    .scene-dom     { color: #4488ff; }
+    .scene-note    { color: #444; font-size: 11px; font-style: italic; }
+
+    /* ═══════════════════════════════════════════════════════
+       6. 특수 상태 시뮬레이션
+    ══════════════════════════════════════════════════════ */
+    .states-section {
+      background: #0d0d0d;
+      padding: 20px 24px;
+    }
+    .states-title { font-size: 12px; letter-spacing: 1px; color: #666; margin-bottom: 16px; text-transform: uppercase; }
+    .state-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .state-name { color: #888; width: 140px; flex-shrink: 0; }
+    .state-demo { display: flex; gap: 2px; align-items: center; }
+
+    /* SHIELD 활성 head */
+    .seg-shield {
+      background: var(--player-head);
+      width: 18px; height: 18px; border-radius: 4px;
+      outline: 3px solid rgba(68,136,255,0.6);
+      animation: shield-anim 1.5s ease-in-out infinite;
+    }
+
+    /* LENGTH_BURST 세그먼트 */
+    .seg-burst {
+      width: 18px; height: 18px; border-radius: 4px;
+      animation: burst-anim 0.3s ease-in-out infinite alternate;
+    }
+
+    /* CPU 머리 */
+    .seg-cpu-demo {
+      background: var(--cpu-head);
+      width: 18px; height: 18px; border-radius: 4px;
+      outline: 1px solid rgba(255,255,255,0.5);
+      position: relative;
+    }
+    .seg-cpu-demo::before { content: ''; position: absolute; width: 4px; height: 4px; background: #fff; border-radius: 1px; left: 2px; top: 4px; }
+    .seg-cpu-demo::after  { content: ''; position: absolute; width: 4px; height: 4px; background: #fff; border-radius: 1px; left: 2px; bottom: 4px; }
+
+    /* ── 세그먼트 알파 그라데이션 시뮬레이션 ─────────────── */
+    .alpha-demo { display: flex; gap: 2px; align-items: center; }
+    .alpha-seg  { width: 18px; height: 18px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 1: 게임 플레이 화면
+══════════════════════════════════════════════════════ -->
+<div class="section-label">01 · 게임 플레이 화면 — pixi.js canvas 렌더 시뮬레이션 (전체 화면 기준)</div>
+
+<div class="game-screen">
+
+  <!-- ── 플레이어 지렁이 (오른쪽 이동, 11세그먼트) ─────── -->
+  <!-- 머리 (i=0): #00cc44, 눈 dir-right -->
+  <div class="seg seg-player-head dir-right" style="left:241px;top:181px;"></div>
+  <!-- 몸통 i=1: alpha=0.81 -->
+  <div class="seg seg-player-body" style="left:221px;top:181px;opacity:0.81;"></div>
+  <!-- 몸통 i=2: alpha=0.78 -->
+  <div class="seg seg-player-body" style="left:201px;top:181px;opacity:0.78;"></div>
+  <!-- 몸통 i=3: alpha=0.74 -->
+  <div class="seg seg-player-body" style="left:181px;top:181px;opacity:0.74;"></div>
+  <!-- 몸통 i=4: alpha=0.70 -->
+  <div class="seg seg-player-body" style="left:161px;top:181px;opacity:0.70;"></div>
+  <!-- 몸통 i=5: alpha=0.66 -->
+  <div class="seg seg-player-body" style="left:141px;top:181px;opacity:0.66;"></div>
+  <!-- 몸통 i=6: alpha=0.63 -->
+  <div class="seg seg-player-body" style="left:121px;top:181px;opacity:0.63;"></div>
+  <!-- 몸통 i=7: alpha=0.59 -->
+  <div class="seg seg-player-body" style="left:101px;top:181px;opacity:0.59;"></div>
+  <!-- 몸통 i=8: alpha=0.55 -->
+  <div class="seg seg-player-body" style="left:81px; top:181px;opacity:0.55;"></div>
+  <!-- 몸통 i=9: alpha=0.51 -->
+  <div class="seg seg-player-body" style="left:81px; top:161px;opacity:0.51;"></div>
+  <!-- 꼬리 i=10: alpha=0.47 -->
+  <div class="seg seg-player-body" style="left:81px; top:141px;opacity:0.47;"></div>
+
+  <!-- ── CPU 지렁이 (왼쪽 이동, 8세그먼트) ───────────────── -->
+  <!-- 머리: #cc2200, 눈 dir-left -->
+  <div class="seg seg-cpu-head dir-left" style="left:361px;top:341px;"></div>
+  <!-- 몸통 -->
+  <div class="seg seg-cpu-body" style="left:381px;top:341px;opacity:0.81;"></div>
+  <div class="seg seg-cpu-body" style="left:401px;top:341px;opacity:0.77;"></div>
+  <div class="seg seg-cpu-body" style="left:421px;top:341px;opacity:0.73;"></div>
+  <div class="seg seg-cpu-body" style="left:441px;top:341px;opacity:0.69;"></div>
+  <div class="seg seg-cpu-body" style="left:441px;top:321px;opacity:0.65;"></div>
+  <div class="seg seg-cpu-body" style="left:441px;top:301px;opacity:0.61;"></div>
+  <div class="seg seg-cpu-body" style="left:461px;top:301px;opacity:0.57;"></div>
+
+  <!-- ── 먹이 (2× — 파란색) ──────────────────────────────── -->
+  <!-- 셀 (17,12) → px=(340,240), 중심(350,250), 원 반지름 7px → top/left = 243/343 -->
+  <div class="food food-2x" style="left:343px;top:243px;">2×</div>
+
+  <!-- ── 먹이 (1× — 노란색) ──────────────────────────────── -->
+  <!-- 셀 (28,8) → px=(560,160), 중심(570,170) -->
+  <div class="food food-1x" style="left:563px;top:163px;">1×</div>
+
+  <!-- ── 아이템 (SHIELD — 파란색) ────────────────────────── -->
+  <!-- 셀 (10,22) → px=(200,440), 중심(210,450) -->
+  <div class="item item-shield" style="left:202px;top:442px;">🛡</div>
+
+  <!-- ── 아이템 (SPEED_UP — 주황색) ─────────────────────── -->
+  <!-- 셀 (32,16) → px=(640,320), 중심(650,330) -->
+  <div class="item item-speed" style="left:642px;top:322px;">⚡</div>
+
+  <!-- ── DOM HUD 오버레이들 ──────────────────────────────── -->
+
+  <!-- 효과음 토글 -->
+  <div class="sound-btn">🔊</div>
+
+  <!-- 점수 HUD (우측 상단) -->
+  <div class="hud-score-panel">
+    <div class="hud-score-row">
+      <span class="hud-label-txt" style="color:#4cff80;">PLAYER</span>
+      <span class="hud-score-txt" style="color:#4cff80;">142</span>
+      <span class="hud-divider">|</span>
+      <span class="hud-label-txt" style="color:#ff6b4c;">CPU</span>
+      <span class="hud-score-txt" style="color:#ff6b4c;">86</span>
+    </div>
+    <div class="hud-high-txt">Best: 240</div>
+  </div>
+
+  <!-- 배수 통계 (좌측 상단) -->
+  <div class="mult-stats">
+    <div class="ms-title">배수 통계</div>
+    <div class="ms-row">
+      <span class="ms-badge ms-1x">1×</span>
+      <span style="color:#ccc;">7건</span>
+      <span class="ms-prob">(58.3%)</span>
+    </div>
+    <div class="ms-row">
+      <span class="ms-badge ms-2x">2×</span>
+      <span style="color:#ccc;">3건</span>
+      <span class="ms-prob">(25.0%)</span>
+    </div>
+    <div class="ms-row">
+      <span class="ms-badge ms-4x">4×</span>
+      <span style="color:#ccc;">2건</span>
+      <span class="ms-prob">(16.7%)</span>
+    </div>
+    <div class="ms-row">
+      <span class="ms-badge ms-8x">8×</span>
+      <span style="color:#ccc;">0건</span>
+      <span class="ms-prob">(—)</span>
+    </div>
+  </div>
+
+  <!-- HUD 상태 패널 (우하단 영역) -->
+  <div class="hud-status">
+    <div class="hud-status-row">
+      <span class="status-lbl">길이</span>
+      <span class="status-val">11</span>
+    </div>
+    <div class="hud-status-row">
+      <span class="status-lbl">속도</span>
+      <span class="status-val" style="color:#ffaa00;">●●○</span>
+    </div>
+  </div>
+
+  <!-- 아이템 슬롯 (좌하단) -->
+  <div class="item-slot-hud">
+    <div class="slot-label">HOLD</div>
+    <div class="slot-box">⚡</div>
+    <div class="slot-key-hint">[Z]</div>
+  </div>
+
+  <!-- 범례 (좌하단) -->
+  <div class="legend">
+    <span class="legend-player">● PLAYER</span>
+    <span class="legend-cpu">● CPU</span>
+  </div>
+
+</div><!-- /.game-screen -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 2: 게임오버 화면 (YOU WIN)
+══════════════════════════════════════════════════════ -->
+<div class="section-label">02 · 게임오버 오버레이 — YOU WIN (플레이어 승리)</div>
+
+<div class="gameover-screen">
+  <!-- 배경 게임 (흐릿하게) -->
+
+  <div class="gameover-box">
+    <h2 class="gameover-title">YOU WIN</h2>
+    <p class="go-score">
+      PLAYER: <span class="p">320</span>
+      &nbsp;vs&nbsp;
+      CPU: <span class="c">218</span>
+    </p>
+    <p class="go-record">★ 신기록!</p>
+    <p class="go-playtime">플레이 시간: 03:24</p>
+    <hr class="go-divider" />
+    <p class="go-items-title">아이템 획득 현황</p>
+    <ul class="go-item-list">
+      <li><span class="go-item-icon">⚡</span><span class="go-item-label">SPEED UP</span><span class="go-item-count">×3</span></li>
+      <li><span class="go-item-icon">⏱</span><span class="go-item-label">SLOW DOWN</span><span class="go-item-count">×1</span></li>
+      <li><span class="go-item-icon">★</span><span class="go-item-label">LENGTH BURST</span><span class="go-item-count">×2</span></li>
+      <li><span class="go-item-icon">🛡</span><span class="go-item-label">SHIELD</span><span class="go-item-count">×1</span></li>
+      <li><span class="go-item-icon">↺</span><span class="go-item-label">REVERSE</span><span class="go-item-count">×0</span></li>
+    </ul>
+    <p class="go-hint">Press Space to restart</p>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 3: 게임오버 화면 (YOU LOSE)
+══════════════════════════════════════════════════════ -->
+<div class="section-label">03 · 게임오버 오버레이 — YOU LOSE (CPU 승리)</div>
+
+<div class="gameover-screen">
+  <div class="gameover-box">
+    <h2 class="gameover-title lose">YOU LOSE</h2>
+    <p class="go-score">
+      PLAYER: <span class="p">142</span>
+      &nbsp;vs&nbsp;
+      CPU: <span class="c">218</span>
+    </p>
+    <p class="go-playtime">플레이 시간: 01:47</p>
+    <hr class="go-divider" />
+    <p class="go-items-title">아이템 획득 현황</p>
+    <ul class="go-item-list">
+      <li><span class="go-item-icon">⚡</span><span class="go-item-label">SPEED UP</span><span class="go-item-count">×1</span></li>
+      <li><span class="go-item-icon">⏱</span><span class="go-item-label">SLOW DOWN</span><span class="go-item-count">×0</span></li>
+      <li><span class="go-item-icon">★</span><span class="go-item-label">LENGTH BURST</span><span class="go-item-count">×1</span></li>
+      <li><span class="go-item-icon">🛡</span><span class="go-item-label">SHIELD</span><span class="go-item-count">×0</span></li>
+      <li><span class="go-item-icon">↺</span><span class="go-item-label">REVERSE</span><span class="go-item-count">×0</span></li>
+    </ul>
+    <p class="go-hint">Press Space to restart</p>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 4: 일시정지 화면
+══════════════════════════════════════════════════════ -->
+<div class="section-label">04 · 일시정지 오버레이 (DOM — 불변)</div>
+
+<div class="paused-screen">
+  <div class="paused-box">
+    <h2 class="paused-title">일시정지</h2>
+    <div class="paused-btn-list">
+      <button class="paused-btn primary">
+        <span>계속하기</span>
+        <kbd>P</kbd>
+      </button>
+      <button class="paused-btn">
+        <span>재시작</span>
+        <kbd>R</kbd>
+      </button>
+      <button class="paused-btn">
+        <span>설정</span>
+        <kbd>S</kbd>
+      </button>
+      <button class="paused-btn">
+        <span>종료</span>
+        <kbd>Q</kbd>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 5: 특수 렌더 상태 시뮬레이션
+══════════════════════════════════════════════════════ -->
+<div class="section-label">05 · 특수 렌더 상태 — pixi alpha / stroke 시뮬레이션</div>
+
+<div class="states-section">
+  <div class="states-title">특수 상태별 시각 정의</div>
+
+  <!-- SHIELD 활성 -->
+  <div class="state-row">
+    <span class="state-name">SHIELD 활성 (pulse)</span>
+    <div class="state-demo">
+      <div class="seg-shield dir-right" style="position:relative;display:inline-block;">
+        <!-- 눈 -->
+        <div style="position:absolute;width:4px;height:4px;background:#fff;border-radius:1px;right:2px;top:4px;"></div>
+        <div style="position:absolute;width:4px;height:4px;background:#fff;border-radius:1px;right:2px;bottom:4px;"></div>
+      </div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.81;"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.77;"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.73;"></div>
+    </div>
+    <span style="color:#4488ff;font-size:11px;margin-left:12px;">파란 pulse stroke — alpha=sin(t/750)</span>
+  </div>
+
+  <!-- LENGTH_BURST 깜빡임 -->
+  <div class="state-row">
+    <span class="state-name">LENGTH_BURST (깜빡임)</span>
+    <div class="state-demo">
+      <div class="seg-burst" style=""></div>
+      <div class="seg-burst" style="animation-delay:0.05s;"></div>
+      <div class="seg-burst" style="animation-delay:0.1s;"></div>
+      <div class="seg-burst" style="animation-delay:0.15s;"></div>
+      <div class="seg-burst" style="animation-delay:0.2s;"></div>
+    </div>
+    <span style="color:#ff6600;font-size:11px;margin-left:12px;">모든 세그먼트 흰색 blink</span>
+  </div>
+
+  <!-- 알파 그라데이션 (플레이어) -->
+  <div class="state-row">
+    <span class="state-name">알파 그라데이션 (플레이어)</span>
+    <div class="alpha-demo">
+      <div class="alpha-seg" style="background:#00cc44;outline:1px solid rgba(255,255,255,0.5);"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.81;"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.77;"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.73;"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.68;"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.63;"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.59;"></div>
+      <div class="alpha-seg" style="background:#3cd264;opacity:0.54;"></div>
+    </div>
+    <span style="color:#888;font-size:11px;margin-left:12px;">α = 0.85 - (i/len)×0.4</span>
+  </div>
+
+  <!-- 알파 그라데이션 (CPU) -->
+  <div class="state-row">
+    <span class="state-name">알파 그라데이션 (CPU)</span>
+    <div class="alpha-demo">
+      <div class="alpha-seg" style="background:#cc2200;outline:1px solid rgba(255,255,255,0.5);"></div>
+      <div class="alpha-seg" style="background:#d23c3c;opacity:0.81;"></div>
+      <div class="alpha-seg" style="background:#d23c3c;opacity:0.77;"></div>
+      <div class="alpha-seg" style="background:#d23c3c;opacity:0.73;"></div>
+      <div class="alpha-seg" style="background:#d23c3c;opacity:0.68;"></div>
+      <div class="alpha-seg" style="background:#d23c3c;opacity:0.63;"></div>
+    </div>
+    <span style="color:#888;font-size:11px;margin-left:12px;">동일 공식, 색 계열 차이</span>
+  </div>
+
+</div><!-- /.states-section -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 6: 먹이·아이템 색상 팔레트
+══════════════════════════════════════════════════════ -->
+<div class="section-label">06 · 먹이·아이템 색상 팔레트 — pixi 0x 변환 기준</div>
+
+<div class="palette-section">
+  <div class="palette-title">색상 토큰 → pixi hex 변환 참조</div>
+  <div class="palette-grid">
+
+    <!-- 배경 -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#0d0d0d;"></div>
+      <div class="palette-info">
+        <div class="palette-name">배경 (BG)</div>
+        <div class="palette-hex">#0d0d0d → 0x0d0d0d</div>
+      </div>
+    </div>
+
+    <!-- 플레이어 헤드 -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#00cc44;"></div>
+      <div class="palette-info">
+        <div class="palette-name">플레이어 헤드</div>
+        <div class="palette-hex">#00cc44 → 0x00cc44</div>
+      </div>
+    </div>
+
+    <!-- 플레이어 몸통 -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#3cd264;"></div>
+      <div class="palette-info">
+        <div class="palette-name">플레이어 몸통</div>
+        <div class="palette-hex">#3cd264 → 0x3cd264 + alpha</div>
+      </div>
+    </div>
+
+    <!-- CPU 헤드 -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#cc2200;"></div>
+      <div class="palette-info">
+        <div class="palette-name">CPU 헤드</div>
+        <div class="palette-hex">#cc2200 → 0xcc2200</div>
+      </div>
+    </div>
+
+    <!-- CPU 몸통 -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#d23c3c;"></div>
+      <div class="palette-info">
+        <div class="palette-name">CPU 몸통</div>
+        <div class="palette-hex">#d23c3c → 0xd23c3c + alpha</div>
+      </div>
+    </div>
+
+    <!-- 먹이 1× -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#ffcc00;box-shadow:0 0 8px 3px rgba(255,200,0,0.5);"></div>
+      <div class="palette-info">
+        <div class="palette-name">먹이 1×</div>
+        <div class="palette-hex">#ffcc00 → 0xffcc00</div>
+      </div>
+    </div>
+
+    <!-- 먹이 2× -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#00cfff;box-shadow:0 0 8px 3px rgba(0,200,255,0.5);"></div>
+      <div class="palette-info">
+        <div class="palette-name">먹이 2×</div>
+        <div class="palette-hex">#00cfff → 0x00cfff</div>
+      </div>
+    </div>
+
+    <!-- 먹이 4× -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#cc44ff;box-shadow:0 0 8px 4px rgba(180,60,255,0.5);"></div>
+      <div class="palette-info">
+        <div class="palette-name">먹이 4×</div>
+        <div class="palette-hex">#cc44ff → 0xcc44ff</div>
+      </div>
+    </div>
+
+    <!-- 먹이 8× -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#ff4444;box-shadow:0 0 10px 5px rgba(255,50,50,0.6);"></div>
+      <div class="palette-info">
+        <div class="palette-name">먹이 8×</div>
+        <div class="palette-hex">#ff4444 → 0xff4444</div>
+      </div>
+    </div>
+
+    <!-- SPEED_UP -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#ffaa00;box-shadow:0 0 6px 3px rgba(255,170,0,0.4);"></div>
+      <div class="palette-info">
+        <div class="palette-name">아이템 SPEED_UP</div>
+        <div class="palette-hex">#ffaa00 → 0xffaa00</div>
+      </div>
+    </div>
+
+    <!-- SLOW_DOWN -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#00ddcc;box-shadow:0 0 6px 3px rgba(0,221,204,0.4);"></div>
+      <div class="palette-info">
+        <div class="palette-name">아이템 SLOW_DOWN</div>
+        <div class="palette-hex">#00ddcc → 0x00ddcc</div>
+      </div>
+    </div>
+
+    <!-- LENGTH_BURST -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#ff6600;box-shadow:0 0 6px 3px rgba(255,102,0,0.45);"></div>
+      <div class="palette-info">
+        <div class="palette-name">아이템 LENGTH_BURST</div>
+        <div class="palette-hex">#ff6600 → 0xff6600</div>
+      </div>
+    </div>
+
+    <!-- SHIELD -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#4488ff;box-shadow:0 0 6px 3px rgba(68,136,255,0.45);"></div>
+      <div class="palette-info">
+        <div class="palette-name">아이템 SHIELD</div>
+        <div class="palette-hex">#4488ff → 0x4488ff</div>
+      </div>
+    </div>
+
+    <!-- REVERSE -->
+    <div class="palette-item">
+      <div class="swatch" style="background:#22ffaa;box-shadow:0 0 6px 3px rgba(34,255,170,0.4);"></div>
+      <div class="palette-info">
+        <div class="palette-name">아이템 REVERSE</div>
+        <div class="palette-hex">#22ffaa → 0x22ffaa</div>
+      </div>
+    </div>
+
+    <!-- SHIELD pulse -->
+    <div class="palette-item">
+      <div class="swatch" style="background:transparent;border:3px solid #4488ff;animation:shield-anim 1.5s ease-in-out infinite;box-shadow:0 0 8px rgba(68,136,255,0.5);"></div>
+      <div class="palette-info">
+        <div class="palette-name">SHIELD pulse stroke</div>
+        <div class="palette-hex">alpha 0.4~0.7 sine 애니</div>
+      </div>
+    </div>
+
+  </div><!-- /.palette-grid -->
+</div><!-- /.palette-section -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 7: pixi Scene Graph 구조도
+══════════════════════════════════════════════════════ -->
+<div class="section-label">07 · pixi.js Scene Graph Z-Order 구조도</div>
+
+<div class="scene-diagram">
+  <div class="scene-title">PIXI.Application.stage 계층 구조</div>
+  <div class="scene-tree">
+    <span style="color:#666;">stage (PIXI.Application.stage)</span><br>
+    &nbsp;&nbsp;├── <span class="scene-layer-0">[0] backgroundContainer</span>
+    <span class="scene-note"> ← Graphics: 배경(0x0d0d0d) + 격자라인(0xffffff, alpha 0.04) — 정적, resize 시만 재생성</span><br>
+    &nbsp;&nbsp;├── <span class="scene-layer-1">[1] foodContainer</span>
+    <span class="scene-note"> ← 먹이 원(방사형 그라데이션) + 글로우 ring + 배수 텍스트. food=null 시 visible=false</span><br>
+    &nbsp;&nbsp;├── <span class="scene-layer-2">[2] itemContainer</span>
+    <span class="scene-note"> ← 아이템 원 + 아이콘 Graphics + 만료 alpha 페이드. item=null 시 visible=false</span><br>
+    &nbsp;&nbsp;├── <span class="scene-layer-3">[3] extraCpuContainer</span>
+    <span class="scene-note"> ← extraCpus 배열 (0~5마리). 빈 배열 시 removeChildren</span><br>
+    &nbsp;&nbsp;├── <span class="scene-layer-4">[4] cpuContainer</span>
+    <span class="scene-note"> ← CPU 지렁이. cpu=[] 시 removeChildren</span><br>
+    &nbsp;&nbsp;└── <span class="scene-layer-5">[5] playerContainer</span>
+    <span class="scene-note"> ← 플레이어 지렁이 (최상위 캔버스 레이어)</span><br>
+    <br>
+    <span style="color:#666;">DOM 오버레이 (canvas 위, z-index 기반 — 불변)</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#effect-layer</span>
+    <span class="scene-note"> ← 파티클 이펙트 (DOM, pixi 무관)</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#hud</span>
+    <span class="scene-note"> ← 점수 HUD (PLAYER/CPU/Best)</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#hud-status-panel</span>
+    <span class="scene-note"> ← 길이/속도/남은시간 상태 패널</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#item-slot-hud</span>
+    <span class="scene-note"> ← 보유 아이템 슬롯 [Z]</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#buff-bar</span>
+    <span class="scene-note"> ← 활성 버프 상태</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#multiplier-stats</span>
+    <span class="scene-note"> ← 배수 통계 (좌상단)</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#competition-legend</span>
+    <span class="scene-note"> ← 범례 (좌하단)</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#gameover-overlay</span>
+    <span class="scene-note"> ← 게임오버 모달 (DOM)</span><br>
+    &nbsp;&nbsp;├── <span class="scene-dom">#paused-overlay</span>
+    <span class="scene-note"> ← 일시정지 모달 (DOM)</span><br>
+    &nbsp;&nbsp;└── <span class="scene-dom">#settings-modal</span>
+    <span class="scene-note"> ← 설정 모달 (DOM)</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 8: 먹이 상세 렌더 비교
+══════════════════════════════════════════════════════ -->
+<div class="section-label">08 · 먹이 배수별 렌더 비교</div>
+
+<div style="background:#0d0d0d;padding:24px;display:flex;gap:40px;align-items:center;flex-wrap:wrap;">
+
+  <!-- 1× 먹이 -->
+  <div style="text-align:center;">
+    <div style="position:relative;width:40px;height:40px;margin:0 auto 8px;">
+      <div style="
+        position:absolute;
+        left:5px;top:5px;
+        width:30px;height:30px;
+        border-radius:50%;
+        background:radial-gradient(circle at 40% 40%, #ffffff 0%, #ffcc00 45%, #ffcc00 100%);
+        box-shadow:0 0 10px 4px rgba(255,200,0,0.5);
+        display:flex;align-items:center;justify-content:center;
+        font-size:11px;font-weight:bold;color:#fff;font-family:'Courier New',monospace;
+      ">1×</div>
+    </div>
+    <div style="font-size:10px;color:#666;">1× 먹이<br>#ffcc00<br>0xffcc00</div>
+  </div>
+
+  <!-- 2× 먹이 -->
+  <div style="text-align:center;">
+    <div style="position:relative;width:40px;height:40px;margin:0 auto 8px;">
+      <div style="
+        position:absolute;
+        left:5px;top:5px;
+        width:30px;height:30px;
+        border-radius:50%;
+        background:radial-gradient(circle at 40% 40%, #ffffff 0%, #00cfff 45%, #00cfff 100%);
+        box-shadow:0 0 10px 5px rgba(0,200,255,0.6);
+        display:flex;align-items:center;justify-content:center;
+        font-size:11px;font-weight:bold;color:#fff;font-family:'Courier New',monospace;
+      ">2×</div>
+    </div>
+    <div style="font-size:10px;color:#666;">2× 먹이<br>#00cfff<br>0x00cfff</div>
+  </div>
+
+  <!-- 4× 먹이 -->
+  <div style="text-align:center;">
+    <div style="position:relative;width:40px;height:40px;margin:0 auto 8px;">
+      <div style="
+        position:absolute;
+        left:5px;top:5px;
+        width:30px;height:30px;
+        border-radius:50%;
+        background:radial-gradient(circle at 40% 40%, #ffffff 0%, #cc44ff 45%, #cc44ff 100%);
+        box-shadow:0 0 12px 6px rgba(180,60,255,0.6);
+        display:flex;align-items:center;justify-content:center;
+        font-size:11px;font-weight:bold;color:#fff;font-family:'Courier New',monospace;
+      ">4×</div>
+    </div>
+    <div style="font-size:10px;color:#666;">4× 먹이<br>#cc44ff<br>0xcc44ff</div>
+  </div>
+
+  <!-- 8× 먹이 -->
+  <div style="text-align:center;">
+    <div style="position:relative;width:40px;height:40px;margin:0 auto 8px;">
+      <div style="
+        position:absolute;
+        left:5px;top:5px;
+        width:30px;height:30px;
+        border-radius:50%;
+        background:radial-gradient(circle at 40% 40%, #ffffff 0%, #ff4444 45%, #ff4444 100%);
+        box-shadow:0 0 14px 7px rgba(255,50,50,0.7);
+        display:flex;align-items:center;justify-content:center;
+        font-size:11px;font-weight:bold;color:#fff;font-family:'Courier New',monospace;
+      ">8×</div>
+    </div>
+    <div style="font-size:10px;color:#666;">8× 먹이<br>#ff4444<br>0xff4444</div>
+  </div>
+
+  <!-- 범례 -->
+  <div style="font-size:11px;color:#555;max-width:200px;line-height:1.6;">
+    <strong style="color:#888;">먹이 렌더 규격</strong><br>
+    반지름: 7px (CELL/2-3)<br>
+    방사형 그라데이션: #fff → fillColor<br>
+    글로우 ring: r=9px, stroke 2px<br>
+    텍스트: 11px bold Courier, 중앙 정렬<br>
+    <span style="color:#4488ff;">pixi: Graphics + Text 조합</span>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SECTION 9: 아이템별 렌더 비교
+══════════════════════════════════════════════════════ -->
+<div class="section-label">09 · 아이템별 렌더 비교</div>
+
+<div style="background:#0d0d0d;padding:24px;display:flex;gap:28px;align-items:center;flex-wrap:wrap;">
+
+  <!-- SPEED_UP -->
+  <div style="text-align:center;">
+    <div class="item item-speed" style="position:relative;width:28px;height:28px;margin:0 auto 6px;font-size:13px;">⚡</div>
+    <div style="font-size:10px;color:#666;">SPEED_UP<br>#ffaa00<br>fill</div>
+  </div>
+
+  <!-- SLOW_DOWN -->
+  <div style="text-align:center;">
+    <div class="item item-slow" style="position:relative;width:28px;height:28px;margin:0 auto 6px;font-size:13px;">⏱</div>
+    <div style="font-size:10px;color:#666;">SLOW_DOWN<br>#00ddcc<br>border</div>
+  </div>
+
+  <!-- LENGTH_BURST -->
+  <div style="text-align:center;">
+    <div class="item item-burst" style="position:relative;width:28px;height:28px;margin:0 auto 6px;font-size:13px;">★</div>
+    <div style="font-size:10px;color:#666;">LENGTH_BURST<br>#ff6600<br>border</div>
+  </div>
+
+  <!-- SHIELD -->
+  <div style="text-align:center;">
+    <div class="item item-shield" style="position:relative;width:28px;height:28px;margin:0 auto 6px;font-size:13px;">🛡</div>
+    <div style="font-size:10px;color:#666;">SHIELD<br>#4488ff<br>border</div>
+  </div>
+
+  <!-- REVERSE -->
+  <div style="text-align:center;">
+    <div class="item item-reverse" style="position:relative;width:28px;height:28px;margin:0 auto 6px;font-size:13px;">↺</div>
+    <div style="font-size:10px;color:#666;">REVERSE<br>#22ffaa<br>border</div>
+  </div>
+
+  <!-- 만료 페이드 시뮬레이션 -->
+  <div style="display:flex;gap:6px;align-items:center;margin-left:20px;">
+    <div class="item item-shield" style="width:24px;height:24px;font-size:12px;opacity:1.0;">🛡</div>
+    <div class="item item-shield" style="width:24px;height:24px;font-size:12px;opacity:0.75;">🛡</div>
+    <div class="item item-shield" style="width:24px;height:24px;font-size:12px;opacity:0.5;">🛡</div>
+    <div class="item item-shield" style="width:24px;height:24px;font-size:12px;opacity:0.25;">🛡</div>
+    <div style="font-size:10px;color:#555;margin-left:6px;">만료 페이드<br>(alpha 페이드)</div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     Footer
+══════════════════════════════════════════════════════ -->
+<div style="background:#060606;padding:16px 24px;font-size:11px;color:#444;border-top:1px solid #1a1a1a;">
+  <strong style="color:#555;">[이디자인]</strong> · BF-597 디자인 시안 · 2026-05-15<br>
+  pixi.js 기반 지렁이게임 화면 — Canvas2D 동등성 기준 시각 명세<br>
+  명세 문서: <code style="color:#666;">docs/design/snake-pixi-BF-595.md</code> ·
+  pixi 변환 규약: §6 · 안티앨리어싱 허용 범위: §7 · dev 구현 가이드: §8
+</div>
+
+</body>
+</html>
