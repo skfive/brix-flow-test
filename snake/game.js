@@ -836,64 +836,101 @@ function getAudioContext() {
 let _gameoverOsc = null;
 
 /**
- * 음식 먹기 효과음 (80ms 상승 sine 파형).
- * 명세 §6-2: 880Hz → 1320Hz, gain 0.35 → 0, sine
+ * 음식 먹기 효과음.
+ * BF-600: playSound("ding") 경유 — snake.settings.soundEnabled 검사.
+ * BF-567 soundEnabled (#sound-toggle) 도 1차 가드로 유지.
  */
 function playEatSound() {
-  if (!soundEnabled) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
-  // EC-03: AudioContext suspended 상태 처리
-  if (ctx.state === "suspended") ctx.resume().catch(() => {});
-
-  const osc  = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(880, ctx.currentTime);
-  osc.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.08);
-  gain.gain.setValueAtTime(0.35, ctx.currentTime);
-  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
-
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.08);
+  if (!soundEnabled) return; // BF-567 §5-5: soundEnabled 가드
+  // BF-600: 단일 playSound() 경유 — snake.settings.soundEnabled 2차 검사
+  playSound("ding");
 }
 
 /**
- * 게임 오버 효과음 (600ms 하강 sawtooth 파형).
- * 명세 §6-3: 440Hz → 110Hz, gain 0.4 → 0, sawtooth
- * EC-04: 이전 gameover 오실레이터를 먼저 중단.
+ * 게임 오버 효과음.
+ * BF-600: playSound("fail") 경유 — snake.settings.soundEnabled 검사.
+ * BF-567 soundEnabled (#sound-toggle) 도 1차 가드로 유지.
  */
 function playGameOverSound() {
-  if (!soundEnabled) return;
+  if (!soundEnabled) return; // BF-567 §5-6: soundEnabled 가드
+  // BF-600: 단일 playSound() 경유 — snake.settings.soundEnabled 2차 검사
+  playSound("fail");
+}
+
+// ─────────────────────────────────────────────────────────────
+// BF-600: 설정 모달 사운드 토글 — snake.settings.soundEnabled
+// ─────────────────────────────────────────────────────────────
+
+/** localStorage 키 — BF-600 설정 모달 사운드 토글 */
+const LS_SETTINGS_SOUND_KEY = "snake.settings.soundEnabled";
+
+/**
+ * 설정 모달 사운드 ON/OFF 로드.
+ * 키 없으면 기본값 true(ON). 엄격 "true" 비교.
+ * @returns {boolean}
+ */
+function loadSettingsSoundEnabled() {
+  try {
+    const raw = localStorage.getItem(LS_SETTINGS_SOUND_KEY);
+    if (raw === null) return true;   // 기본값 ON
+    return raw === "true";           // 엄격 문자열 비교
+  } catch (_) {
+    return true;                     // private mode 등 — 기본값 ON
+  }
+}
+
+/**
+ * 설정 모달 사운드 ON/OFF 를 localStorage 에 영속화.
+ * @param {boolean} enabled
+ */
+function saveSettingsSoundEnabled(enabled) {
+  try {
+    localStorage.setItem(LS_SETTINGS_SOUND_KEY, String(enabled));
+  } catch (_) {
+    // private mode 등 — 무시
+  }
+}
+
+/**
+ * BF-600: 단일 효과음 재생 함수.
+ * snake.settings.soundEnabled (설정 모달 토글) 를 검사한다.
+ * 첫 사용자 인터랙션 후 AudioContext.resume() 로 자동재생 정책에 대응.
+ * @param {"ding"|"fail"} type
+ */
+function playSound(type) {
+  if (!loadSettingsSoundEnabled()) return; // AC-3: 설정 모달 off 시 무음
   const ctx = getAudioContext();
   if (!ctx) return;
-  // EC-03: AudioContext suspended 상태 처리
-  if (ctx.state === "suspended") ctx.resume().catch(() => {});
-
-  // EC-04: 이전 gameover 오실레이터 중단
-  if (_gameoverOsc) {
-    try { _gameoverOsc.stop(); } catch (_) {}
-    _gameoverOsc = null;
+  /** @param {AudioContext} c */
+  const doPlay = function (c) {
+    const osc  = c.createOscillator();
+    const gain = c.createGain();
+    osc.connect(gain);
+    gain.connect(c.destination);
+    if (type === "ding") {
+      // AC-1: 880Hz sine 100ms
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, c.currentTime);
+      gain.gain.setValueAtTime(0.3, c.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.1);
+      osc.start(c.currentTime);
+      osc.stop(c.currentTime + 0.1);
+    } else if (type === "fail") {
+      // AC-2: 220Hz square 300ms
+      osc.type = "square";
+      osc.frequency.setValueAtTime(220, c.currentTime);
+      gain.gain.setValueAtTime(0.3, c.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.3);
+      osc.start(c.currentTime);
+      osc.stop(c.currentTime + 0.3);
+    }
+  };
+  // 자동재생 정책 대응: suspended 상태이면 resume 후 재생
+  if (ctx.state === "suspended") {
+    ctx.resume().then(() => doPlay(ctx)).catch(() => {});
+  } else {
+    doPlay(ctx);
   }
-
-  const osc  = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc.type = "sawtooth";
-  osc.frequency.setValueAtTime(440, ctx.currentTime);
-  osc.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.6);
-  gain.gain.setValueAtTime(0.4, ctx.currentTime);
-  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
-
-  _gameoverOsc = osc;
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.6);
-  osc.onended = () => { if (_gameoverOsc === osc) _gameoverOsc = null; };
 }
 
 /**
@@ -2787,6 +2824,8 @@ function openSettingsModal(source) {
   // draftSettings 초기화: pendingSettings 우선, 그 다음 currentSettings
   const base = pendingSettings || currentSettings || SNAKE_SETTINGS_DEFAULTS;
   draftSettings = Object.assign({}, base);
+  // BF-600: 설정 모달 사운드 토글 — localStorage 에서 복원 (AC-4)
+  draftSettings.soundEnabled = loadSettingsSoundEnabled();
   reflectDraftToControls();
   settingsModalEl.removeAttribute("hidden");
   console.log("[BF-579] settings.modal.open source=" + (source || "unknown"));
@@ -2840,8 +2879,12 @@ function saveSettingsModal() {
     showValidationMsg(v.msg);
     return;
   }
+  // BF-600: 사운드 토글 — 별도 localStorage 키에 영속 (AC-3)
+  if (typeof draftSettings.soundEnabled === "boolean") {
+    saveSettingsSoundEnabled(draftSettings.soundEnabled);
+  }
   const merged = validateAndMergeSettings(draftSettings);
-  // localStorage 영속
+  // localStorage 영속 (validateAndMergeSettings 는 soundEnabled 를 무시하므로 bf-snake-settings 오염 없음)
   if (typeof saveSnakeSettings === "function") {
     saveSnakeSettings(merged);
   } else {
