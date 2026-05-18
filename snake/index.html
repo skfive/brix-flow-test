@@ -246,9 +246,16 @@
             </div>
           </div>
 
-          <!-- 효과음 안내 (planner §5-3 결정에 따라 안내만) -->
+          <!-- 효과음 — BF-600 (설정 모달 토글 + snake.settings.soundEnabled) -->
           <div class="settings-section">
-            <p class="settings-section-note">효과음은 화면 우상단 🔊 버튼으로 변경하세요.</p>
+            <p class="settings-section-title">효과음</p>
+            <div class="ctrl-row">
+              <span class="ctrl-label">효과음</span>
+              <button class="ctrl-toggle" type="button" role="switch" aria-checked="true" data-key="soundEnabled">
+                <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
+                <span class="ctrl-toggle-text">on</span>
+              </button>
+            </div>
           </div>
 
           <!-- 검증 메시지 영역 — BF-582 AC3 -->
