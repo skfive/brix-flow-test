@@ -96,7 +96,8 @@ const _LS_RENDER_BACKEND_KEY = "bf-snake-render-backend";
 
 /**
  * 렌더 백엔드 선택.
- * 우선순위: localStorage 오버라이드 > PIXI 전역 존재 여부 > canvas2d 폴백.
+ * 우선순위: localStorage 오버라이드 > URL ?backend= 파라미터 > PIXI 전역 존재 여부 > canvas2d 폴백.
+ * BF-608: URL 파라미터 ?backend=pixi / ?backend=canvas2d 세션 오버라이드 추가.
  * @type {"pixi"|"canvas2d"}
  */
 const RENDER_BACKEND = (() => {
@@ -104,6 +105,13 @@ const RENDER_BACKEND = (() => {
     const override = localStorage.getItem(_LS_RENDER_BACKEND_KEY);
     if (override === "pixi" || override === "canvas2d") return override;
   } catch (_) { /* private mode */ }
+  // BF-608: URL 파라미터 ?backend=pixi / ?backend=canvas2d 세션 오버라이드
+  try {
+    const urlParam = new URLSearchParams(
+      typeof location !== "undefined" ? location.search : ""
+    ).get("backend");
+    if (urlParam === "pixi" || urlParam === "canvas2d") return urlParam;
+  } catch (_) { /* Node.js / SSR 환경 무시 */ }
   if (typeof PIXI === "undefined") {
     console.warn("[BF-595] pixi 로드 실패 — canvas2d 폴백");
     return "canvas2d";
