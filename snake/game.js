@@ -864,6 +864,9 @@ function playGameOverSound() {
 /** localStorage 키 — BF-600 설정 모달 사운드 토글 */
 const LS_SETTINGS_SOUND_KEY = "snake.settings.soundEnabled";
 
+/** localStorage 키 — BF-604 사운드 음량 슬라이더 */
+const LS_SOUND_VOLUME_KEY = "snake.settings.soundVolume";
+
 /**
  * 설정 모달 사운드 ON/OFF 로드.
  * 키 없으면 기본값 true(ON). 엄격 "true" 비교.
@@ -891,6 +894,40 @@ function saveSettingsSoundEnabled(enabled) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// BF-604: 사운드 음량 슬라이더 — snake.settings.soundVolume
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 사운드 음량 (0~100) 로드. 키 없으면 기본값 50.
+ * @returns {number}
+ */
+function loadSoundVolume() {
+  try {
+    const raw = localStorage.getItem(LS_SOUND_VOLUME_KEY);
+    if (raw === null) return 50;          // 기본값 50
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 50;
+  } catch (_) {
+    return 50;                            // private mode 등 — 기본값
+  }
+}
+
+/**
+ * 사운드 음량을 localStorage 에 영속화.
+ * @param {number} volume 0~100
+ */
+function saveSoundVolume(volume) {
+  try {
+    localStorage.setItem(LS_SOUND_VOLUME_KEY, String(volume));
+  } catch (_) {
+    // private mode 등 — 무시
+  }
+}
+
+/** 사운드 음량 (0~100) — 페이지 로드 시 localStorage 에서 복원 (BF-604) */
+let _soundVolume = loadSoundVolume();
+
 /**
  * BF-600: 단일 효과음 재생 함수.
  * snake.settings.soundEnabled (설정 모달 토글) 를 검사한다.
@@ -899,6 +936,7 @@ function saveSettingsSoundEnabled(enabled) {
  */
 function playSound(type) {
   if (!loadSettingsSoundEnabled()) return; // AC-3: 설정 모달 off 시 무음
+  if (_soundVolume === 0) return;          // BF-604 AC4: 음량 0 = 무음 (토글 off 동일 효과)
   const ctx = getAudioContext();
   if (!ctx) return;
   /** @param {AudioContext} c */
@@ -907,11 +945,12 @@ function playSound(type) {
     const gain = c.createGain();
     osc.connect(gain);
     gain.connect(c.destination);
+    const masterGain = 0.3 * (_soundVolume / 100); // BF-604 AC2: 마스터 게인 스케일
     if (type === "ding") {
       // AC-1: 880Hz sine 100ms
       osc.type = "sine";
       osc.frequency.setValueAtTime(880, c.currentTime);
-      gain.gain.setValueAtTime(0.3, c.currentTime);
+      gain.gain.setValueAtTime(masterGain, c.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.1);
       osc.start(c.currentTime);
       osc.stop(c.currentTime + 0.1);
@@ -919,7 +958,7 @@ function playSound(type) {
       // AC-2: 220Hz square 300ms
       osc.type = "square";
       osc.frequency.setValueAtTime(220, c.currentTime);
-      gain.gain.setValueAtTime(0.3, c.currentTime);
+      gain.gain.setValueAtTime(masterGain, c.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.3);
       osc.start(c.currentTime);
       osc.stop(c.currentTime + 0.3);
@@ -2783,6 +2822,14 @@ function reflectDraftToControls() {
     const valEl = slider.parentElement.querySelector(".ctrl-slider-value");
     if (valEl) valEl.textContent = (tens / 10).toFixed(1);
   }
+  // 슬라이더 (soundVolume) — BF-604
+  const volSlider = settingsModalEl.querySelector('.ctrl-slider input[type="range"][data-key="soundVolume"]');
+  if (volSlider) {
+    const v = typeof d.soundVolume === "number" ? Math.round(d.soundVolume) : 50;
+    volSlider.value = String(v);
+    const valEl = volSlider.parentElement.querySelector(".ctrl-slider-value");
+    if (valEl) valEl.textContent = String(v);
+  }
   // 의존 컨트롤 disabled — itemsEnabled = false 면 itemSpawnRate row 회색
   const rateRow = slider ? slider.closest(".ctrl-row") : null;
   if (rateRow) {
@@ -2826,6 +2873,8 @@ function openSettingsModal(source) {
   draftSettings = Object.assign({}, base);
   // BF-600: 설정 모달 사운드 토글 — localStorage 에서 복원 (AC-4)
   draftSettings.soundEnabled = loadSettingsSoundEnabled();
+  // BF-604: 음량 슬라이더 — 현재 _soundVolume 값으로 복원 (AC3)
+  draftSettings.soundVolume = _soundVolume;
   reflectDraftToControls();
   settingsModalEl.removeAttribute("hidden");
   console.log("[BF-579] settings.modal.open source=" + (source || "unknown"));
@@ -2882,6 +2931,11 @@ function saveSettingsModal() {
   // BF-600: 사운드 토글 — 별도 localStorage 키에 영속 (AC-3)
   if (typeof draftSettings.soundEnabled === "boolean") {
     saveSettingsSoundEnabled(draftSettings.soundEnabled);
+  }
+  // BF-604: 음량 슬라이더 — localStorage 영속 + _soundVolume 즉시 갱신 (AC3)
+  if (typeof draftSettings.soundVolume === "number") {
+    _soundVolume = draftSettings.soundVolume;
+    saveSoundVolume(draftSettings.soundVolume);
   }
   const merged = validateAndMergeSettings(draftSettings);
   // localStorage 영속 (validateAndMergeSettings 는 soundEnabled 를 무시하므로 bf-snake-settings 오염 없음)
@@ -2944,13 +2998,20 @@ function handleToggleClick(tog) {
   reflectDraftToControls();
 }
 
-/** 슬라이더 input 핸들러 (itemSpawnRate). */
+/** 슬라이더 input 핸들러 (itemSpawnRate, soundVolume). */
 function handleSliderInput(slider) {
   const key = slider.getAttribute("data-key");
   if (!key || !draftSettings) return;
-  const tens = Number(slider.value);
-  if (!Number.isFinite(tens)) return;
-  draftSettings[key] = Math.max(0, Math.min(1, tens / 10));
+  const raw = Number(slider.value);
+  if (!Number.isFinite(raw)) return;
+  if (key === "soundVolume") {
+    // BF-604: 음량 0~100 integer — _soundVolume 즉시 갱신 (AC2: 다음 효과음부터 반영)
+    const vol = Math.max(0, Math.min(100, Math.round(raw)));
+    draftSettings[key] = vol;
+    _soundVolume = vol;
+  } else {
+    draftSettings[key] = Math.max(0, Math.min(1, raw / 10));
+  }
   reflectDraftToControls();
 }
 
