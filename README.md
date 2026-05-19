@@ -1,5 +1,38 @@
 # brix-flow-test
 
+## 로컬 실행
+
+### 방법 A — npm 정적 서버 (권장)
+
+```sh
+npm install        # http-server devDep 설치 (최초 1회)
+npm start          # → http://localhost:8080/ 기동
+# snake 게임: http://localhost:8080/snake/
+# pixi 백엔드 강제: http://localhost:8080/snake/?backend=pixi
+# canvas2d 백엔드 강제: http://localhost:8080/snake/?backend=canvas2d
+```
+
+> **권장 이유**: 상대 경로 로드·Web Audio·localStorage·`?backend=` URL 파라미터가 모두
+> 정상 동작합니다.
+
+> **함정**: `npm install` 없이 실행하면 `http-server: command not found` 오류 발생.
+
+### 방법 B — file:// 직접 열기
+
+```sh
+open snake/index.html        # macOS
+xdg-open snake/index.html    # Linux
+start snake/index.html       # Windows
+```
+
+> **동작 조건**: pixi.js 및 game.js 가 `type="module"` 없는 일반 `<script>` 로 로드되므로
+> CORS 차단 없이 동작합니다 (BF-522).
+
+> **함정**: `?backend=` URL 파라미터 테스트 시에는 file:// 주소에 파라미터를 직접 붙여야
+> 합니다 — 예: `file:///path/to/snake/index.html?backend=pixi`
+
+---
+
 ## SPA 라우트
 
 | 경로 | 설명 |
