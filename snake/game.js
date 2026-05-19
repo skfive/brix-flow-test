@@ -83,13 +83,9 @@ function formatPlayTime(ms) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// DOM 참조
-// ─────────────────────────────────────────────────────────────
-const canvas    = document.getElementById("game-canvas");
-const ctx       = canvas.getContext("2d");
-
-// ─────────────────────────────────────────────────────────────
 // BF-595: pixi.js 렌더 백엔드 feature flag
+// BF-612: canvas.getContext("2d") 보다 먼저 선언 필수 —
+//   동일 canvas 에서 2D ctx 를 먼저 취득하면 WebGL context 생성이 차단됨 (브라우저 spec).
 // ─────────────────────────────────────────────────────────────
 /** localStorage 키 — 런타임 오버라이드 (L1 롤백용) */
 const _LS_RENDER_BACKEND_KEY = "bf-snake-render-backend";
@@ -98,6 +94,7 @@ const _LS_RENDER_BACKEND_KEY = "bf-snake-render-backend";
  * 렌더 백엔드 선택.
  * 우선순위: localStorage 오버라이드 > URL ?backend= 파라미터 > PIXI 전역 존재 여부 > canvas2d 폴백.
  * BF-608: URL 파라미터 ?backend=pixi / ?backend=canvas2d 세션 오버라이드 추가.
+ * BF-612: ctx 취득 전에 결정하여 WebGL 차단 방지.
  * @type {"pixi"|"canvas2d"}
  */
 const RENDER_BACKEND = (() => {
@@ -118,6 +115,18 @@ const RENDER_BACKEND = (() => {
   }
   return "pixi";
 })();
+
+// ─────────────────────────────────────────────────────────────
+// DOM 참조
+// ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById("game-canvas");
+// BF-612: PIXI 모드에서는 canvas.getContext("2d") 를 먼저 취득하지 않음.
+// 2D ctx 를 먼저 취득하면 동일 canvas 에서 WebGL context 생성이 차단됨 (브라우저 spec).
+// canvas2d 모드이면 즉시 취득, pixi 모드이면 null (pixi init 실패 시 initGame 에서 재취득).
+let ctx = RENDER_BACKEND === "canvas2d" ? canvas.getContext("2d") : null;
+
+/** BF-612: pixi 초기화 성공 여부 — render() 에서 실제 렌더 경로 선택에 사용 */
+let _pixiActive = false;
 
 // BF-595: pixi 색상 상수 (designer §2, §6 — hex→0x 변환)
 const PX_BG          = 0x0d0d0d;
@@ -2424,7 +2433,9 @@ function updateMultiplierStatsUI() {
 
 /** 전체 프레임 렌더 */
 function render() {
-  if (RENDER_BACKEND === "pixi") {
+  // BF-612: RENDER_BACKEND 상수가 아닌 _pixiActive 플래그로 분기
+  // pixi init 실패 시에도 canvas2d 폴백이 동작하도록 함
+  if (_pixiActive) {
     // BF-595: pixi 렌더 백엔드 — scene graph 갱신 + renderer.render()
     SnakeRenderer.renderFrame(state);
   } else {
@@ -3097,11 +3108,17 @@ function initGame() {
   }
   state = createInitialState(cols, rows, hs, currentSettings);
   // BF-595: pixi 렌더러 초기화 (최초 initGame 시 1회)
+  // BF-612: _pixiActive 플래그로 init 성공 여부를 런타임에 추적
   if (RENDER_BACKEND === "pixi") {
     const ok = SnakeRenderer.init(canvas, canvas.width, canvas.height);
-    if (!ok) {
-      // pixi 초기화 실패 → canvas2d 폴백 (전역 RENDER_BACKEND 는 const 이므로 런타임 경고만)
-      console.warn("[BF-595] SnakeRenderer.init 실패 — canvas2d draw* 로 동작");
+    if (ok) {
+      _pixiActive = true;
+    } else {
+      // pixi 초기화 실패 → canvas2d 폴백
+      // BF-612: init 실패 시 2D ctx 를 재취득하여 canvas2d draw* 함수가 동작하도록 함
+      console.warn("[BF-595] SnakeRenderer.init 실패 — canvas2d draw* 로 폴백 (BF-612)");
+      if (!ctx) ctx = canvas.getContext("2d");
+      _pixiActive = false;
     }
   }
   // BF-595: KPI 리셋 (새 게임마다)
