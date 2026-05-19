@@ -884,6 +884,9 @@ const LS_SETTINGS_SOUND_KEY = "snake.settings.soundEnabled";
 /** localStorage 키 — BF-604 사운드 음량 슬라이더 */
 const LS_SOUND_VOLUME_KEY = "snake.settings.soundVolume";
 
+/** localStorage 키 — BF-614 사운드 피치 슬라이더 */
+const LS_SOUND_PITCH_KEY = "snake.settings.soundPitch";
+
 /**
  * 설정 모달 사운드 ON/OFF 로드.
  * 키 없으면 기본값 true(ON). 엄격 "true" 비교.
@@ -945,6 +948,40 @@ function saveSoundVolume(volume) {
 /** 사운드 음량 (0~100) — 페이지 로드 시 localStorage 에서 복원 (BF-604) */
 let _soundVolume = loadSoundVolume();
 
+// ─────────────────────────────────────────────────────────────
+// BF-614: 사운드 피치 슬라이더 — snake.settings.soundPitch
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 사운드 피치 (0.5~2.0) 로드. 키 없으면 기본값 1.0.
+ * @returns {number}
+ */
+function loadSoundPitch() {
+  try {
+    const raw = localStorage.getItem(LS_SOUND_PITCH_KEY);
+    if (raw === null) return 1.0;          // 기본값 1.0
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.max(0.5, Math.min(2.0, n)) : 1.0;
+  } catch (_) {
+    return 1.0;                            // private mode 등 — 기본값
+  }
+}
+
+/**
+ * 사운드 피치를 localStorage 에 영속화.
+ * @param {number} pitch 0.5~2.0
+ */
+function saveSoundPitch(pitch) {
+  try {
+    localStorage.setItem(LS_SOUND_PITCH_KEY, String(pitch));
+  } catch (_) {
+    // private mode 등 — 무시
+  }
+}
+
+/** 사운드 피치 (0.5~2.0) — 페이지 로드 시 localStorage 에서 복원 (BF-614) */
+let _soundPitch = loadSoundPitch();
+
 /**
  * BF-600: 단일 효과음 재생 함수.
  * snake.settings.soundEnabled (설정 모달 토글) 를 검사한다.
@@ -964,17 +1001,17 @@ function playSound(type) {
     gain.connect(c.destination);
     const masterGain = 0.3 * (_soundVolume / 100); // BF-604 AC2: 마스터 게인 스케일
     if (type === "ding") {
-      // AC-1: 880Hz sine 100ms
+      // AC-1: 880Hz sine 100ms — BF-614: 피치 배수 적용 (gain 경로와 독립)
       osc.type = "sine";
-      osc.frequency.setValueAtTime(880, c.currentTime);
+      osc.frequency.setValueAtTime(880 * _soundPitch, c.currentTime);
       gain.gain.setValueAtTime(masterGain, c.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.1);
       osc.start(c.currentTime);
       osc.stop(c.currentTime + 0.1);
     } else if (type === "fail") {
-      // AC-2: 220Hz square 300ms
+      // AC-2: 220Hz square 300ms — BF-614: 피치 배수 적용 (gain 경로와 독립)
       osc.type = "square";
-      osc.frequency.setValueAtTime(220, c.currentTime);
+      osc.frequency.setValueAtTime(220 * _soundPitch, c.currentTime);
       gain.gain.setValueAtTime(masterGain, c.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.3);
       osc.start(c.currentTime);
@@ -2849,6 +2886,14 @@ function reflectDraftToControls() {
     const valEl = volSlider.parentElement.querySelector(".ctrl-slider-value");
     if (valEl) valEl.textContent = String(v);
   }
+  // 슬라이더 (soundPitch) — BF-614
+  const pitchSlider = settingsModalEl.querySelector('.ctrl-slider input[type="range"][data-key="soundPitch"]');
+  if (pitchSlider) {
+    const p = typeof d.soundPitch === "number" ? d.soundPitch : 1.0;
+    pitchSlider.value = String(p);
+    const valEl = pitchSlider.parentElement.querySelector(".ctrl-slider-value");
+    if (valEl) valEl.textContent = p.toFixed(1);
+  }
   // 의존 컨트롤 disabled — itemsEnabled = false 면 itemSpawnRate row 회색
   const rateRow = slider ? slider.closest(".ctrl-row") : null;
   if (rateRow) {
@@ -2894,6 +2939,8 @@ function openSettingsModal(source) {
   draftSettings.soundEnabled = loadSettingsSoundEnabled();
   // BF-604: 음량 슬라이더 — 현재 _soundVolume 값으로 복원 (AC3)
   draftSettings.soundVolume = _soundVolume;
+  // BF-614: 피치 슬라이더 — 현재 _soundPitch 값으로 복원 (AC3)
+  draftSettings.soundPitch = _soundPitch;
   reflectDraftToControls();
   settingsModalEl.removeAttribute("hidden");
   console.log("[BF-579] settings.modal.open source=" + (source || "unknown"));
@@ -2955,6 +3002,11 @@ function saveSettingsModal() {
   if (typeof draftSettings.soundVolume === "number") {
     _soundVolume = draftSettings.soundVolume;
     saveSoundVolume(draftSettings.soundVolume);
+  }
+  // BF-614: 피치 슬라이더 — localStorage 영속 + _soundPitch 즉시 갱신 (AC3)
+  if (typeof draftSettings.soundPitch === "number") {
+    _soundPitch = draftSettings.soundPitch;
+    saveSoundPitch(draftSettings.soundPitch);
   }
   const merged = validateAndMergeSettings(draftSettings);
   // localStorage 영속 (validateAndMergeSettings 는 soundEnabled 를 무시하므로 bf-snake-settings 오염 없음)
@@ -3028,6 +3080,11 @@ function handleSliderInput(slider) {
     const vol = Math.max(0, Math.min(100, Math.round(raw)));
     draftSettings[key] = vol;
     _soundVolume = vol;
+  } else if (key === "soundPitch") {
+    // BF-614: 피치 0.5~2.0 — _soundPitch 즉시 갱신 (AC2: 다음 효과음부터 반영)
+    const pitch = Math.max(0.5, Math.min(2.0, Math.round(raw * 10) / 10));
+    draftSettings[key] = pitch;
+    _soundPitch = pitch;
   } else {
     draftSettings[key] = Math.max(0, Math.min(1, raw / 10));
   }
