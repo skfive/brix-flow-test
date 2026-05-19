@@ -28,13 +28,15 @@ export const DIR = {
 // ─────────────────────────────────────────────────────────────
 // 난이도 파라미터 (s1 §2)
 // ─────────────────────────────────────────────────────────────
-const DIFFICULTY_PARAMS = {
+export const DIFFICULTY_PARAMS = {
   normal: {
     tickIntervalMs:       120,
     visionRange:          8,
     avoidanceThreshold:   5,
     respawnDelayTicks:    20,
     foodPriorityWeight:   0.7,
+    // BF-629: 적 AI v2 추가 파라미터 (명세 §4.2)
+    contestRadius: 6, threatRadius: 4, threatWeight: 0.5, contestFoodBoost: 0.18, itemSeekWeight: 0.6,
   },
   easy: {
     tickIntervalMs:       240,
@@ -42,7 +44,36 @@ const DIFFICULTY_PARAMS = {
     avoidanceThreshold:   2,
     respawnDelayTicks:    10,
     foodPriorityWeight:   0.4,
+    // BF-629: 적 AI v2 추가 파라미터 (명세 §4.2)
+    contestRadius: 3, threatRadius: 2, threatWeight: 0.2, contestFoodBoost: 0.10, itemSeekWeight: 0.3,
   },
+};
+
+// ─────────────────────────────────────────────────────────────
+// BF-629: 적 AI v2 — Feature Flags & 상수 (명세 §2.3)
+// ─────────────────────────────────────────────────────────────
+
+/** Feature Flag — 적 AI v2 활성화. false → 기존 greedy 폴백 (BF-584). */
+export let ENEMY_AI_V2_ENABLED = true;
+/** Feature Flag — extras 전용 먹이/아이템 풀. false → extraFoods=[] (cpuCount≤1 과 동일). */
+export let MULTI_FOOD_ENABLED = true;
+/** extras 1마리당 동시 먹이 수 (명세 §5.3) */
+export const FOOD_PER_EXTRA_ENEMY = 2.25;
+/** 동시 먹이 상한 (≈단일 1개의 10배) */
+export const FOOD_POOL_CAP = 10;
+/** extras 1마리당 동시 아이템 수 */
+export const ITEM_PER_EXTRA_ENEMY = 1.0;
+/** 동시 아이템 상한 */
+export const ITEM_POOL_CAP = 5;
+/** 틱당 풀 보충 최대 개수 */
+export const POOL_MAX_SPAWN_PER_TICK = 1;
+/** 적 AI 타깃 가치 — 아이템별 (명세 §4.3) */
+export const ENEMY_TARGET_VALUE_ITEM = {
+  SPEED_UP:     3,
+  SHIELD:       3,
+  SLOW_DOWN:    1,
+  LENGTH_BURST: 2,
+  REVERSE:      1,
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -243,6 +274,9 @@ export function createInitialState(cols, rows, highScore = 0, settings = SNAKE_S
     initialStats[String(initialFood.multiplier)].spawned++;
   }
 
+  const enmStats = createEnemyStats();
+  enmStats.enemiesSpawned = extraCpus.length; // 초기 스폰 카운트
+
   return {
     cols,
     rows,
@@ -281,6 +315,10 @@ export function createInitialState(cols, rows, highScore = 0, settings = SNAKE_S
     settings:             eff,
     // BF-584: 추가 CPU 지렁이 (cpuCount > 1 일 때 N-1 개)
     extraCpus,
+    // BF-629: 경쟁 레인 풀 + 적 통계
+    extraFoods: [],
+    extraItems: [],
+    enemyStats: enmStats,
   };
 }
 
@@ -336,7 +374,16 @@ export function spawnExtraCpus(cols, rows, cpuCount, snake, mainCpu) {
     if (body.length !== 3) continue; // 격자 밖 → skip
     const overlap = body.some(c => occupied.has(`${c.x},${c.y}`));
     if (overlap) continue;
-    extras.push({ body, dir: DIR.LEFT, recentPositions: [] });
+    extras.push({
+      body,
+      dir:               DIR.LEFT,
+      recentPositions:   [],
+      id:                `e${extras.length}`,  // BF-629: 안정 식별자
+      score:             0,                    // BF-629: 누적 점수 (KPI 전용)
+      pendingGrowth:     0,                    // BF-629: 성장 카운터
+      dead:              false,                // BF-629: 사망 플래그
+      respawnTicksLeft:  0,                    // BF-629: 재생성 대기 틱
+    });
     body.forEach(c => occupied.add(`${c.x},${c.y}`));
   }
   return extras;
@@ -1590,4 +1637,262 @@ export function formatPlayTime(ms) {
     return `${totalMin}분 ${remainSec}초`;
   }
   return `${totalSec}초`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// BF-629: 적 스네이크 통계 구조 (명세 §8.1)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 적 스네이크 KPI 누적 통계 초기 구조 (명세 §8.1, createItemStats 패턴 차용).
+ *
+ * @returns {Object}
+ */
+export function createEnemyStats() {
+  return {
+    enemiesSpawned:    0,
+    respawned:         0,
+    died:              { wall: 0, self: 0, head_on: 0 },
+    foodEaten:         0,
+    foodMultSum:       0,
+    itemAcquired:      { SPEED_UP: 0, SLOW_DOWN: 0, LENGTH_BURST: 0, SHIELD: 0, REVERSE: 0 },
+    itemConsumed:      { LENGTH_BURST: 0, SHIELD: 0, REVERSE: 0 },
+    itemExpired:       0,
+    tickMode:          { FORAGE: 0, CONTEST: 0, EVADE: 0 },
+    contestWins:       0,
+    maxScore:          0,
+    poolStarvedTicks:  0,
+    avgConcurFoodSum:  0,
+    avgConcurFoodN:    0,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// BF-629: 적 AI v2 — 순수 함수 (no DOM, 단위 테스트 가능)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 적이 노릴 최우선 타깃 선택 (extraFoods + extraItems 통합, 명세 §4.6).
+ *
+ * @param {{x:number,y:number}} head
+ * @param {Array<{x:number,y:number,multiplier:number}>} foods  extraFoods
+ * @param {Array<{type:string,x:number,y:number}>} items        extraItems
+ * @param {Object} params  DIFFICULTY_PARAMS 엔트리
+ * @returns {{pos:{x:number,y:number}, kind:"food"|"item", value:number}|null}
+ */
+export function pickEnemyTarget(head, foods, items, params) {
+  let best = null;
+  let bestKey = Infinity;
+  const itemSeekWeight = params.itemSeekWeight ?? 0.6;
+
+  for (const f of foods) {
+    const v = f.multiplier || 1;
+    const dist = Math.abs(head.x - f.x) + Math.abs(head.y - f.y);
+    const key = dist / Math.max(1, v);
+    if (key < bestKey) {
+      best = { pos: f, kind: "food", value: v };
+      bestKey = key;
+    }
+  }
+
+  for (const it of items) {
+    const v = ENEMY_TARGET_VALUE_ITEM[it.type] ?? 1;
+    const dist = Math.abs(head.x - it.x) + Math.abs(head.y - it.y);
+    const key = dist / Math.max(1, v) / Math.max(0.01, itemSeekWeight);
+    if (key < bestKey) {
+      best = { pos: it, kind: "item", value: v };
+      bestKey = key;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * 방향 d 로 이동했을 때 타깃에 가까워지는 점수 (명세 §4.7, computeFoodScore 일반화).
+ *
+ * @param {{x:number,y:number}} head
+ * @param {{x:number,y:number}} dir
+ * @param {{pos:{x:number,y:number}}|null} target
+ * @returns {number}  0.0 | 0.5 | 1.0
+ */
+export function computeEnemyTargetScore(head, dir, target) {
+  if (!target) return 0;
+  const nextPos   = { x: head.x + dir.x, y: head.y + dir.y };
+  const distBefore = Math.abs(head.x - target.pos.x) + Math.abs(head.y - target.pos.y);
+  const distAfter  = Math.abs(nextPos.x - target.pos.x) + Math.abs(nextPos.y - target.pos.y);
+  if (distAfter < distBefore) return 1.0;
+  if (distAfter === distBefore) return 0.5;
+  return 0.0;
+}
+
+/**
+ * 다음 위치가 상대 머리 인접 → head-on 위험 점수 (명세 §4.8).
+ *
+ * @param {{x:number,y:number}} nextPos
+ * @param {Array<{x:number,y:number}>} opponentHeads
+ * @returns {number}  0.0 | 0.5 | 1.0
+ */
+export function computeEnemyThreatScore(nextPos, opponentHeads) {
+  let risk = 0;
+  for (const h of opponentHeads) {
+    if (!h) continue;
+    const d = Math.abs(nextPos.x - h.x) + Math.abs(nextPos.y - h.y);
+    if (d <= 1) risk = Math.max(risk, 1.0);
+    else if (d === 2) risk = Math.max(risk, 0.5);
+  }
+  return risk;
+}
+
+/**
+ * 행동 모드 결정 (FORAGE / CONTEST / EVADE, 명세 §4.1).
+ * 우선순위: EVADE > CONTEST > FORAGE.
+ *
+ * @param {{x:number,y:number}} enemyHead
+ * @param {{x:number,y:number}|null} playerHead
+ * @param {{pos:{x:number,y:number}}|null} bestTarget
+ * @param {Object} params
+ * @returns {"FORAGE"|"CONTEST"|"EVADE"}
+ */
+export function decideEnemyMode(enemyHead, playerHead, bestTarget, params) {
+  const threatRadius  = params.threatRadius  ?? 4;
+  const contestRadius = params.contestRadius ?? 6;
+
+  // EVADE: 플레이어 머리가 가까이 있음
+  if (playerHead) {
+    const playerDist = Math.abs(enemyHead.x - playerHead.x) + Math.abs(enemyHead.y - playerHead.y);
+    if (playerDist <= threatRadius) return "EVADE";
+  }
+
+  // CONTEST: 타깃에 플레이어보다 적이 더 가깝거나 같고, 플레이어도 타깃에 가까이 있음
+  if (bestTarget && playerHead) {
+    const enemyDist  = Math.abs(enemyHead.x - bestTarget.pos.x) + Math.abs(enemyHead.y - bestTarget.pos.y);
+    const playerDist = Math.abs(playerHead.x - bestTarget.pos.x) + Math.abs(playerHead.y - bestTarget.pos.y);
+    if (enemyDist <= playerDist && playerDist <= contestRadius) return "CONTEST";
+  }
+
+  return "FORAGE";
+}
+
+/**
+ * 모드별 가중치 반환 (명세 §4.9).
+ *
+ * @param {"FORAGE"|"CONTEST"|"EVADE"} mode
+ * @param {Object} params
+ * @returns {{wSafe:number, wTgt:number, wThreat:number}}
+ */
+export function getEnemyWeights(mode, params) {
+  const wSafeBase = 1 - params.foodPriorityWeight;
+  const wTgtBase  = params.foodPriorityWeight;
+  const tw        = params.threatWeight ?? 0.5;
+
+  switch (mode) {
+    case "CONTEST":
+      return { wSafe: wSafeBase * 0.8, wTgt: wTgtBase + (params.contestFoodBoost ?? 0.18), wThreat: tw * 0.7 };
+    case "EVADE":
+      return { wSafe: wSafeBase * 1.3, wTgt: wTgtBase * 0.4, wThreat: tw * 1.5 };
+    default: // FORAGE
+      return { wSafe: wSafeBase,       wTgt: wTgtBase,        wThreat: tw * 0.5 };
+  }
+}
+
+/**
+ * 적 스네이크 방향 결정 — 통합 AI (명세 §4.4).
+ * ENEMY_AI_V2_ENABLED=false → 단순 greedy(맨해튼 거리 최소) 폴백.
+ *
+ * @param {Object} enemy  EnemyUnit (body, dir, recentPositions, ...)
+ * @param {Object} world  { cols, rows, snake, cpu, otherEnemies, extraFoods, extraItems }
+ * @param {"normal"|"easy"} [difficulty="normal"]
+ * @returns {{x:number,y:number}}
+ */
+export function chooseEnemyDir(enemy, world, difficulty = "normal") {
+  const params  = DIFFICULTY_PARAMS[difficulty] ?? DIFFICULTY_PARAMS.normal;
+  const { body, dir: curDir, recentPositions } = enemy;
+  if (!body || body.length === 0) return curDir || DIR.LEFT;
+
+  const head    = body[0];
+  const { cols, rows } = world;
+  const allDirs = [DIR.UP, DIR.DOWN, DIR.LEFT, DIR.RIGHT];
+
+  // 점유 셀: player + mainCpu + 다른 enemy 몸통 + 자기 몸통(머리 제외)
+  const occupied = new Set([
+    ...(world.snake        || []).map(s => `${s.x},${s.y}`),
+    ...(world.cpu          || []).map(s => `${s.x},${s.y}`),
+    ...(world.otherEnemies || []).flatMap(e => e.body || []).map(s => `${s.x},${s.y}`),
+    ...body.slice(1).map(s => `${s.x},${s.y}`),
+  ]);
+
+  // 유효 방향 후보 (반대방향 + 즉시 충돌 제거, §4.5)
+  const candidates = allDirs.filter(d => {
+    if (d.x + curDir.x === 0 && d.y + curDir.y === 0) return false;
+    const nx = head.x + d.x;
+    const ny = head.y + d.y;
+    if (isWallCollision({ x: nx, y: ny }, cols, rows)) return false;
+    if (occupied.has(`${nx},${ny}`)) return false;
+    return true;
+  });
+
+  if (candidates.length === 0) return curDir; // 탈출 불가 → 현 방향 유지
+
+  // ENEMY_AI_V2_ENABLED=false → 단순 greedy 폴백 (기존 tickExtraCpus 로직)
+  if (!ENEMY_AI_V2_ENABLED) {
+    const foods = world.extraFoods || [];
+    if (foods.length === 0) return candidates[0];
+    const target = foods[0];
+    let chosen = candidates[0];
+    let bestDist = Infinity;
+    for (const d of candidates) {
+      const dist = Math.abs((head.x + d.x) - target.x) + Math.abs((head.y + d.y) - target.y);
+      if (dist < bestDist) { bestDist = dist; chosen = d; }
+    }
+    return chosen;
+  }
+
+  // 타깃 선택
+  const bestTarget = pickEnemyTarget(head, world.extraFoods || [], world.extraItems || [], params);
+
+  // BF-576 동일: 루프 감지 → 타깃 최단거리 강제
+  const headKey    = `${head.x},${head.y}`;
+  const visitCount = (recentPositions || []).filter(p => p === headKey).length;
+  if (visitCount >= 3 && bestTarget !== null) {
+    const sorted = [...candidates].sort((a, b) => {
+      const da = Math.abs((head.x + a.x) - bestTarget.pos.x) + Math.abs((head.y + a.y) - bestTarget.pos.y);
+      const db = Math.abs((head.x + b.x) - bestTarget.pos.x) + Math.abs((head.y + b.y) - bestTarget.pos.y);
+      return da - db;
+    });
+    return sorted[0];
+  }
+
+  // 행동 모드 결정
+  const playerHead = (world.snake || []).length > 0 ? world.snake[0] : null;
+  const mode       = decideEnemyMode(head, playerHead, bestTarget, params);
+  const weights    = getEnemyWeights(mode, params);
+
+  // 위협 머리 목록 (head-on 위험 계산용)
+  const opponentHeads = [
+    playerHead,
+    (world.cpu || []).length > 0 ? world.cpu[0] : null,
+    ...(world.otherEnemies || []).filter(e => !e.dead && e.body && e.body.length > 0).map(e => e.body[0]),
+  ].filter(Boolean);
+
+  // 각 후보 점수 계산
+  const scored = candidates.map(d => {
+    const safeLen   = lookAhead(head, d, params.visionRange, cols, rows, occupied);
+    const tgtScore  = computeEnemyTargetScore(head, d, bestTarget);
+    const nextPos   = { x: head.x + d.x, y: head.y + d.y };
+    const threat    = computeEnemyThreatScore(nextPos, opponentHeads);
+
+    let score;
+    if (safeLen < params.avoidanceThreshold) {
+      score = safeLen * 0.1 + tgtScore * weights.wTgt - threat * weights.wThreat;
+    } else {
+      score = (safeLen / params.visionRange) * weights.wSafe
+            + tgtScore * weights.wTgt
+            - threat * weights.wThreat;
+    }
+    return { d, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].d;
 }

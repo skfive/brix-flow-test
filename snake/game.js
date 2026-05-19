@@ -39,6 +39,18 @@ const {
   loadSnakeSettings,
   saveSnakeSettings,
   validateAndMergeSettings,
+  // BF-629: 적 AI v2
+  DIFFICULTY_PARAMS,
+  ENEMY_AI_V2_ENABLED,
+  MULTI_FOOD_ENABLED,
+  FOOD_PER_EXTRA_ENEMY,
+  FOOD_POOL_CAP,
+  ITEM_PER_EXTRA_ENEMY,
+  ITEM_POOL_CAP,
+  POOL_MAX_SPAWN_PER_TICK,
+  chooseEnemyDir,
+  createEnemyStats,
+  ENEMY_TARGET_VALUE_ITEM,
 } = globalThis;
 
 // BF-560: HUD 유틸 (logic.js ES module 을 직접 import — file:// 호환 없이 globalThis 경유 불가)
@@ -751,6 +763,9 @@ const EFFECT_KPI_KEY = "bf-snake-effect-kpi";
 /** localStorage 키 — BF-545 아이템 시스템 KPI (명세 §10-1, §10-2) */
 const ITEM_STATS_KEY = "bf-snake-item-stats";
 const ITEM_KPI_KEY   = "bf-snake-item-kpi";
+/** localStorage 키 — BF-629 적 AI KPI (명세 §8.2) */
+const ENEMY_KPI_KEY   = "bf-snake-enemy-kpi";
+const ENEMY_STATS_KEY = "bf-snake-enemy-stats";
 
 /** Z 키 힌트 localStorage 플래그 (명세 §6-7) */
 const Z_HINT_KEY = "bf-snake-z-hint-shown";
@@ -1232,6 +1247,67 @@ function logItemKPI() {
       .map(t => `${t}:${iStats[t]?.acquired || 0}`).join(" ");
     console.log(`[BF-545 KPI] 아이템 획득: ${acqStr} | 총:${totalAcquired} 사용:${totalUsed} 만료:${totalExpired}`);
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 적 AI KPI 로깅 — BF-629 (명세 §8.2)
+// ─────────────────────────────────────────────────────────────
+
+/** 적 AI KPI 세션 기록 + 누적 통계 저장 (명세 §8.2) */
+function logEnemyKPI() {
+  if (!state.extraCpus || state.extraCpus.length === 0) return;
+  const es = state.enemyStats;
+  if (!es) return;
+
+  // 세션 KPI 저장
+  const kpiEntry = {
+    timestamp:        Date.now(),
+    enemiesSpawned:   es.enemiesSpawned || 0,
+    respawned:        es.respawned      || 0,
+    died:             Object.assign({}, es.died),
+    foodEaten:        es.foodEaten      || 0,
+    foodMultSum:      es.foodMultSum    || 0,
+    itemAcquired:     Object.assign({}, es.itemAcquired),
+    itemConsumed:     Object.assign({}, es.itemConsumed),
+    itemExpired:      es.itemExpired    || 0,
+    tickMode:         Object.assign({}, es.tickMode),
+    contestWins:      es.contestWins    || 0,
+    maxScore:         es.maxScore       || 0,
+    poolStarvedTicks: es.poolStarvedTicks || 0,
+    avgConcurFood:    es.avgConcurFoodN > 0
+      ? Math.round((es.avgConcurFoodSum / es.avgConcurFoodN) * 10) / 10
+      : 0,
+  };
+  try { localStorage.setItem(ENEMY_KPI_KEY, JSON.stringify(kpiEntry)); } catch (_) { /* EC-5 */ }
+
+  // 누적 통계 업데이트
+  let accumulated = {};
+  try {
+    const v = localStorage.getItem(ENEMY_STATS_KEY);
+    if (v) accumulated = JSON.parse(v);
+  } catch (_) { /* ignore */ }
+  accumulated.totalGames = (accumulated.totalGames || 0) + 1;
+  accumulated.totalFoodEaten = (accumulated.totalFoodEaten || 0) + (es.foodEaten || 0);
+  accumulated.totalRespawned = (accumulated.totalRespawned || 0) + (es.respawned || 0);
+  try { localStorage.setItem(ENEMY_STATS_KEY, JSON.stringify(accumulated)); } catch (_) { /* EC-5 */ }
+
+  // console 출력 (명세 §8.2)
+  const died = es.died || {};
+  const iAcq = es.itemAcquired || {};
+  const mode = es.tickMode || {};
+  const avgM = es.foodEaten > 0
+    ? Math.round((es.foodMultSum / es.foodEaten) * 10) / 10
+    : 0;
+  console.log(
+    `[BF-628 KPI] enemies=${es.enemiesSpawned || 0} ` +
+    `died(wall:${died.wall || 0} self:${died.self || 0} head_on:${died.head_on || 0}) ` +
+    `food=${es.foodEaten || 0}(avgM ${avgM}) ` +
+    `items(SU:${iAcq.SPEED_UP || 0} SD:${iAcq.SLOW_DOWN || 0}) ` +
+    `mode(F:${mode.FORAGE || 0} C:${mode.CONTEST || 0} E:${mode.EVADE || 0}) ` +
+    `contestWin=${es.contestWins || 0} ` +
+    `poolStarved=${es.poolStarvedTicks || 0} ` +
+    `maxScore=${es.maxScore || 0}`
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2297,68 +2373,406 @@ function drawExtraCpus() {
   });
 }
 
-/** BF-584: 추가 CPU 지렁이 (extraCpus) 1 틱 이동.
- *  player + main CPU + 다른 extras + 자기 몸통 + 격자 경계를 장애물로 인식.
- *  음식 방향 Manhattan 거리 최소 방향 우선 (단순 greedy).
- *  유효 방향이 없으면 해당 extra 제거 (사망). 음식은 먹지 않음 (점수 격리). */
-function tickExtraCpus() {
+/** BF-629: extras 전용 먹이 풀(extraFoods) Canvas2D 렌더링. */
+function drawExtraFoods() {
+  if (!state.extraFoods || state.extraFoods.length === 0) return;
+  state.extraFoods.forEach((f) => {
+    const cx = f.x * CELL + CELL / 2;
+    const cy = f.y * CELL + CELL / 2;
+    const r  = CELL / 2 - 4;
+    const m  = f.multiplier || 1;
+    // 기존 MULTIPLIER_COLORS 재사용 (약간 작게 + 반투명으로 시각 구분)
+    const colorDef = (MULTIPLIER_COLORS && MULTIPLIER_COLORS[m])
+      || { fill: "#ffcc00", glow: "rgba(255,200,0,0.3)" };
+    ctx.globalAlpha = 0.75;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = colorDef.fill;
+    ctx.fill();
+    ctx.strokeStyle = colorDef.glow;
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+    const fontSize = Math.round(CELL * 0.45);
+    ctx.fillStyle    = "#ffffff";
+    ctx.font         = `bold ${fontSize}px 'Courier New', monospace`;
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`${m}×`, cx, cy);
+    ctx.globalAlpha = 1.0;
+  });
+}
+
+/** BF-629: extras 전용 아이템 풀(extraItems) Canvas2D 렌더링. */
+function drawExtraItems() {
+  if (!state.extraItems || state.extraItems.length === 0) return;
+  state.extraItems.forEach((it) => {
+    const cx = it.x * CELL + CELL / 2;
+    const cy = it.y * CELL + CELL / 2;
+    ctx.globalAlpha = 0.65;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#ff9933";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,153,51,0.4)";
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+  });
+}
+
+/**
+ * BF-629: 적 스네이크 경쟁 레인 틱 처리 (tickExtraCpus 대체, 명세 §5).
+ * ENEMY_AI_V2_ENABLED=false → 각 enemy가 기존 greedy AI 폴백(chooseEnemyDir 내부 처리).
+ * moveCpu=true 인 틱에만 호출 (기존 호출 지점 유지).
+ */
+function tickEnemies() {
   if (!state.extraCpus || state.extraCpus.length === 0) return;
 
-  const cols = state.cols;
-  const rows = state.rows;
-  const dirsAll = [DIR.UP, DIR.DOWN, DIR.LEFT, DIR.RIGHT];
-  const playerCells = state.snake.map((s) => `${s.x},${s.y}`);
-  const mainCpuCells = (state.cpu || []).map((s) => `${s.x},${s.y}`);
+  const cols       = state.cols;
+  const rows       = state.rows;
+  const nowMs      = Date.now();
+  const difficulty = (state.settings && state.settings.difficulty) || "normal";
+  const params     = (DIFFICULTY_PARAMS && DIFFICULTY_PARAMS[difficulty]) || { respawnDelayTicks: 20 };
+  const itemsOn    = !!(state.settings && state.settings.itemsEnabled);
 
-  const survivors = [];
-  for (let i = 0; i < state.extraCpus.length; i++) {
-    const e    = state.extraCpus[i];
+  let extraCpus  = state.extraCpus.map(e => Object.assign({}, e));
+  let extraFoods = (state.extraFoods || []).slice();
+  let extraItems = (state.extraItems || []).slice();
+  let enmStats   = state.enemyStats
+    ? Object.assign({}, state.enemyStats, {
+        died:         Object.assign({}, state.enemyStats.died),
+        itemAcquired: Object.assign({}, state.enemyStats.itemAcquired),
+        itemConsumed: Object.assign({}, state.enemyStats.itemConsumed),
+        tickMode:     Object.assign({}, state.enemyStats.tickMode),
+      })
+    : (typeof createEnemyStats === "function" ? createEnemyStats() : {
+        enemiesSpawned: 0, respawned: 0, died: { wall: 0, self: 0, head_on: 0 },
+        foodEaten: 0, foodMultSum: 0,
+        itemAcquired: { SPEED_UP: 0, SLOW_DOWN: 0, LENGTH_BURST: 0, SHIELD: 0, REVERSE: 0 },
+        itemConsumed: { LENGTH_BURST: 0, SHIELD: 0, REVERSE: 0 },
+        itemExpired: 0, tickMode: { FORAGE: 0, CONTEST: 0, EVADE: 0 },
+        contestWins: 0, maxScore: 0, poolStarvedTicks: 0,
+        avgConcurFoodSum: 0, avgConcurFoodN: 0,
+      });
+
+  // ── Step 1: extraItems 만료 정리 ─────────────────────────────
+  const itemsBefore = extraItems.length;
+  extraItems = extraItems.filter(it => nowMs < it.expiresAt);
+  enmStats.itemExpired += (itemsBefore - extraItems.length);
+
+  // ── Step 2: alive enemy 처리 ─────────────────────────────────
+  // 새 머리 위치 추적 (extra-extra head-on 감지용)
+  const newHeadMap = {}; // idx → newHead
+  const deathCause = {}; // idx → "wall"|"self"|"head_on"
+
+  const playerCells  = (state.snake || []).map(s => `${s.x},${s.y}`);
+  const mainCpuCells = (state.cpu   || []).map(s => `${s.x},${s.y}`);
+
+  for (let i = 0; i < extraCpus.length; i++) {
+    const e = extraCpus[i];
+    if (e.dead) continue;
     const body = e.body || [];
-    if (body.length === 0) continue;
+    if (body.length === 0) { deathCause[i] = "self"; continue; }
 
-    const obstacles = new Set([...playerCells, ...mainCpuCells]);
-    for (let j = 0; j < state.extraCpus.length; j++) {
-      if (j === i) continue;
-      const ob = state.extraCpus[j].body || [];
-      ob.forEach((c) => obstacles.add(`${c.x},${c.y}`));
-    }
-    // 자기 몸통 (머리 제외 — 머리 다음 칸 이동 후 자리)
-    body.slice(1).forEach((c) => obstacles.add(`${c.x},${c.y}`));
+    const otherEnemies = extraCpus.filter((_, j) => j !== i && !extraCpus[j].dead);
+    const world = {
+      cols, rows,
+      snake:        state.snake || [],
+      cpu:          state.cpu   || [],
+      otherEnemies,
+      extraFoods,
+      extraItems,
+    };
 
+    // a. 방향 결정
+    const newDir = (typeof chooseEnemyDir === "function")
+      ? chooseEnemyDir(e, world, difficulty)
+      : e.dir || DIR.LEFT;
+
+    // b. recentPositions 갱신 (루프 감지용)
     const head = body[0];
-    const cur  = e.dir || DIR.LEFT;
-    const candidates = dirsAll.filter((d) => {
-      // 자살 방향 제거
-      if (d.x + cur.x === 0 && d.y + cur.y === 0) return false;
-      const nx = head.x + d.x;
-      const ny = head.y + d.y;
-      if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) return false;
-      if (obstacles.has(`${nx},${ny}`)) return false;
-      return true;
-    });
+    const headKey = `${head.x},${head.y}`;
+    const newRecentPositions = [...(e.recentPositions || []), headKey].slice(-15);
+    extraCpus[i] = Object.assign({}, extraCpus[i], { dir: newDir, recentPositions: newRecentPositions });
 
-    if (candidates.length === 0) continue; // 사망 — 제거
+    // c. 새 머리 위치
+    const newHead = { x: head.x + newDir.x, y: head.y + newDir.y };
+    newHeadMap[i] = newHead;
 
-    // 음식 거리 최소 방향 (state.food 가 있을 때만)
-    let chosen = candidates[0];
-    if (state.food) {
-      let bestDist = Infinity;
-      for (const d of candidates) {
-        const nx = head.x + d.x;
-        const ny = head.y + d.y;
-        const dist = Math.abs(nx - state.food.x) + Math.abs(ny - state.food.y);
-        if (dist < bestDist) {
-          bestDist = dist;
-          chosen   = d;
+    // d. 충돌 검사 — 벽 / 자기 몸 (BF-572: player/cpu 몸통 통과 허용)
+    const selfBody = body.slice(1);
+    if (newHead.x < 0 || newHead.x >= cols || newHead.y < 0 || newHead.y >= rows) {
+      deathCause[i] = "wall";
+    } else if (selfBody.some(s => s.x === newHead.x && s.y === newHead.y)) {
+      deathCause[i] = "self";
+    }
+  }
+
+  // extra-extra head-on 감지 (명세 §5.1-d, EC-8)
+  const newHeadIdxs = Object.keys(newHeadMap).map(Number);
+  for (let ii = 0; ii < newHeadIdxs.length; ii++) {
+    for (let jj = ii + 1; jj < newHeadIdxs.length; jj++) {
+      const ia = newHeadIdxs[ii];
+      const ib = newHeadIdxs[jj];
+      if (deathCause[ia] || deathCause[ib]) continue;
+      const ha = newHeadMap[ia];
+      const hb = newHeadMap[ib];
+      // 동일 셀 이동
+      if (ha.x === hb.x && ha.y === hb.y) {
+        deathCause[ia] = "head_on";
+        deathCause[ib] = "head_on";
+        continue;
+      }
+      // 교차 이동 (서로 위치 교환)
+      const oldA = (extraCpus[ia].body || [])[0];
+      const oldB = (extraCpus[ib].body || [])[0];
+      if (oldA && oldB) {
+        if (ha.x === oldB.x && ha.y === oldB.y && hb.x === oldA.x && hb.y === oldA.y) {
+          deathCause[ia] = "head_on";
+          deathCause[ib] = "head_on";
         }
       }
     }
-
-    const newHead = { x: head.x + chosen.x, y: head.y + chosen.y };
-    const newBody = [newHead, ...body.slice(0, -1)];
-    survivors.push({ body: newBody, dir: chosen, recentPositions: [] });
   }
-  state = Object.assign({}, state, { extraCpus: survivors });
+
+  // speedStack 추가용 버퍼 (SPEED_UP/SLOW_DOWN 효과)
+  const newSpeedEntries = [];
+
+  // 사망/이동 처리 + 먹이/아이템 섭취
+  const finalEnemies = [];
+  for (let i = 0; i < extraCpus.length; i++) {
+    const e = extraCpus[i];
+
+    if (e.dead) {
+      // 재생성 대기 중 (Step 3에서 처리)
+      finalEnemies.push(e);
+      continue;
+    }
+
+    if (deathCause[i]) {
+      // 사망 처리
+      const cause = deathCause[i];
+      enmStats.died[cause] = (enmStats.died[cause] || 0) + 1;
+      finalEnemies.push(Object.assign({}, e, {
+        dead:             true,
+        respawnTicksLeft: params.respawnDelayTicks || 20,
+      }));
+      continue;
+    }
+
+    const newHead = newHeadMap[i];
+    if (!newHead) { finalEnemies.push(e); continue; }
+
+    let pending = e.pendingGrowth || 0;
+    let score   = e.score || 0;
+
+    // e. 먹이 섭취 (extraFoods에서만 — 레인 분리, §3.2)
+    let ateFoodIdx = -1;
+    for (let fi = 0; fi < extraFoods.length; fi++) {
+      if (extraFoods[fi].x === newHead.x && extraFoods[fi].y === newHead.y) {
+        ateFoodIdx = fi; break;
+      }
+    }
+    if (ateFoodIdx >= 0) {
+      const f = extraFoods[ateFoodIdx];
+      const m = f.multiplier || 1;
+      pending += m;
+      score   += m * 10;
+      enmStats.foodEaten++;
+      enmStats.foodMultSum += m;
+      enmStats.maxScore = Math.max(enmStats.maxScore, score);
+      extraFoods.splice(ateFoodIdx, 1);
+    }
+
+    // f. 아이템 섭취 (extraItems에서만)
+    let ateItemIdx = -1;
+    for (let ki = 0; ki < extraItems.length; ki++) {
+      if (extraItems[ki].x === newHead.x && extraItems[ki].y === newHead.y) {
+        ateItemIdx = ki; break;
+      }
+    }
+    if (ateItemIdx >= 0) {
+      const it    = extraItems[ateItemIdx];
+      const itype = it.type;
+      enmStats.itemAcquired[itype] = (enmStats.itemAcquired[itype] || 0) + 1;
+      // INSTANT 속도 효과만 적용 (§5.4)
+      if ((itype === "SPEED_UP" || itype === "SLOW_DOWN")
+          && ITEM_DURATION_MS && ITEM_DURATION_MS[itype]) {
+        newSpeedEntries.push({
+          type:        itype,
+          target:      `extra:${e.id || i}`,
+          expiresAtMs: nowMs + ITEM_DURATION_MS[itype],
+        });
+      } else {
+        // 효과 미적용 소멸 (§5.4: LENGTH_BURST/SHIELD/REVERSE)
+        if (enmStats.itemConsumed[itype] !== undefined) {
+          enmStats.itemConsumed[itype]++;
+        }
+      }
+      extraItems.splice(ateItemIdx, 1);
+    }
+
+    // g. body 이동 (pendingGrowth 적용)
+    let newBody;
+    if (pending > 0) {
+      newBody = [newHead, ...(e.body || [])];
+      pending--;
+    } else {
+      newBody = [newHead, ...(e.body || []).slice(0, -1)];
+    }
+
+    finalEnemies.push(Object.assign({}, e, {
+      body:          newBody,
+      score,
+      pendingGrowth: pending,
+    }));
+  }
+
+  // ── Step 3: 사망 enemy 재생성 처리 (§5.5) ───────────────────
+  const allOccupied = new Set([
+    ...playerCells,
+    ...mainCpuCells,
+    ...finalEnemies.filter(e => !e.dead).flatMap(e => e.body || []).map(c => `${c.x},${c.y}`),
+  ]);
+  const cols34 = Math.max(0, Math.min(cols - 3, Math.floor(cols * 3 / 4) - 1));
+  const rows34 = Math.max(0, Math.min(rows - 1, Math.floor(rows * 3 / 4)));
+  const midX   = Math.floor(cols / 2);
+  const respawnSlots = [
+    { x: cols34,                               y: Math.max(0, Math.floor(rows / 4)) },
+    { x: Math.max(0, Math.floor(cols / 4) - 1), y: rows34 },
+    { x: Math.max(0, Math.floor(cols / 4) - 1), y: Math.max(0, Math.floor(rows / 4)) },
+    { x: Math.max(0, midX - 1),               y: Math.max(0, Math.floor(rows / 8)) },
+  ];
+
+  for (let i = 0; i < finalEnemies.length; i++) {
+    const e = finalEnemies[i];
+    if (!e.dead) continue;
+
+    const ticks = (e.respawnTicksLeft || 1) - 1;
+    if (ticks > 0) {
+      finalEnemies[i] = Object.assign({}, e, { respawnTicksLeft: ticks });
+      continue;
+    }
+
+    // 재생성 슬롯 탐색
+    let respawned = false;
+    for (const slot of respawnSlots) {
+      const body = [
+        { x: slot.x,     y: slot.y },
+        { x: slot.x + 1, y: slot.y },
+        { x: slot.x + 2, y: slot.y },
+      ].filter(c => c.x >= 0 && c.x < cols && c.y >= 0 && c.y < rows);
+      if (body.length !== 3) continue;
+      if (body.some(c => allOccupied.has(`${c.x},${c.y}`))) continue;
+
+      body.forEach(c => allOccupied.add(`${c.x},${c.y}`));
+      finalEnemies[i] = Object.assign({}, e, {
+        body,
+        dir:             DIR.LEFT,
+        dead:            false,
+        respawnTicksLeft: 0,
+        pendingGrowth:   0,
+        recentPositions: [],
+      });
+      enmStats.respawned++;
+      respawned = true;
+      break;
+    }
+
+    if (!respawned) {
+      // 빈 슬롯 없음 → 다음 틱 재시도 (EC-3)
+      finalEnemies[i] = Object.assign({}, e, { respawnTicksLeft: 1 });
+    }
+  }
+
+  // ── Step 4: 풀 보충 (§5.3) ────────────────────────────────────
+  const aliveCount = finalEnemies.filter(e => !e.dead).length;
+  const multiFoodOn = (typeof MULTI_FOOD_ENABLED !== "undefined") ? MULTI_FOOD_ENABLED : true;
+
+  if (multiFoodOn && aliveCount >= 1) {
+    const foodPerEnemy = (typeof FOOD_PER_EXTRA_ENEMY !== "undefined") ? FOOD_PER_EXTRA_ENEMY : 2.25;
+    const foodCap      = (typeof FOOD_POOL_CAP       !== "undefined") ? FOOD_POOL_CAP       : 10;
+    const maxSpawn     = (typeof POOL_MAX_SPAWN_PER_TICK !== "undefined") ? POOL_MAX_SPAWN_PER_TICK : 1;
+    const targetFc     = Math.min(foodCap, Math.ceil(aliveCount * foodPerEnemy));
+
+    let spawned = 0;
+    while (extraFoods.length < targetFc && spawned < maxSpawn) {
+      const occupiedForSpawn = new Set([
+        ...playerCells,
+        ...mainCpuCells,
+        ...finalEnemies.flatMap(e => e.body || []).map(c => `${c.x},${c.y}`),
+        ...extraFoods.map(f => `${f.x},${f.y}`),
+        ...extraItems.map(it => `${it.x},${it.y}`),
+        ...(state.food ? [`${state.food.x},${state.food.y}`] : []),
+        ...(state.item ? [`${state.item.x},${state.item.y}`] : []),
+      ]);
+      const empty = [];
+      for (let ry = 0; ry < rows; ry++) {
+        for (let rx = 0; rx < cols; rx++) {
+          if (!occupiedForSpawn.has(`${rx},${ry}`)) empty.push({ x: rx, y: ry });
+        }
+      }
+      if (empty.length === 0) { enmStats.poolStarvedTicks++; break; }
+      const cell = empty[Math.floor(Math.random() * empty.length)];
+      const mult = (typeof pickMultiplier === "function") ? pickMultiplier() : 1;
+      extraFoods.push({ x: cell.x, y: cell.y, multiplier: mult, spawnedAt: nowMs });
+      spawned++;
+    }
+
+    // 아이템 풀 보충 (itemsEnabled 시)
+    if (itemsOn) {
+      const itemPerEnemy = (typeof ITEM_PER_EXTRA_ENEMY !== "undefined") ? ITEM_PER_EXTRA_ENEMY : 1.0;
+      const itemCap      = (typeof ITEM_POOL_CAP        !== "undefined") ? ITEM_POOL_CAP        : 5;
+      const targetIc     = Math.min(itemCap, Math.ceil(aliveCount * itemPerEnemy));
+
+      let iSpawned = 0;
+      while (extraItems.length < targetIc && iSpawned < maxSpawn) {
+        const occupiedForItem = new Set([
+          ...playerCells,
+          ...mainCpuCells,
+          ...finalEnemies.flatMap(e => e.body || []).map(c => `${c.x},${c.y}`),
+          ...extraFoods.map(f => `${f.x},${f.y}`),
+          ...extraItems.map(it => `${it.x},${it.y}`),
+          ...(state.food ? [`${state.food.x},${state.food.y}`] : []),
+          ...(state.item ? [`${state.item.x},${state.item.y}`] : []),
+        ]);
+        const empty = [];
+        for (let ry = 0; ry < rows; ry++) {
+          for (let rx = 0; rx < cols; rx++) {
+            if (!occupiedForItem.has(`${rx},${ry}`)) empty.push({ x: rx, y: ry });
+          }
+        }
+        if (empty.length === 0) { enmStats.poolStarvedTicks++; break; }
+        const cell  = empty[Math.floor(Math.random() * empty.length)];
+        const itype = (typeof pickItemType === "function") ? pickItemType() : "SPEED_UP";
+        const lifespan = (typeof ITEM_LIFESPAN_MS !== "undefined") ? ITEM_LIFESPAN_MS : 10000;
+        extraItems.push({ type: itype, x: cell.x, y: cell.y, spawnedAt: nowMs, expiresAt: nowMs + lifespan });
+        iSpawned++;
+      }
+    }
+  }
+
+  // ── Step 5: KPI — avgConcurFood ──────────────────────────────
+  enmStats.avgConcurFoodSum = (enmStats.avgConcurFoodSum || 0) + extraFoods.length;
+  enmStats.avgConcurFoodN   = (enmStats.avgConcurFoodN   || 0) + 1;
+
+  // speedStack 갱신 (SPEED_UP/SLOW_DOWN 효과)
+  let newSpeedStack = state.speedStack || [];
+  if (newSpeedEntries.length > 0) {
+    // 동일 target/type 재획득 → 타이머 리셋 (기존 updateItemTimers 정책 동일)
+    newSpeedStack = newSpeedStack.filter(e =>
+      !newSpeedEntries.some(n => n.type === e.type && n.target === e.target)
+    );
+    newSpeedStack = [...newSpeedStack, ...newSpeedEntries];
+  }
+
+  state = Object.assign({}, state, {
+    extraCpus:  finalEnemies,
+    extraFoods,
+    extraItems,
+    enemyStats: enmStats,
+    speedStack: newSpeedStack,
+  });
 }
 
 /** 먹이 — BF-533: 배수별 색상·레이블 렌더링 (명세 §2-1) */
@@ -2479,6 +2893,8 @@ function render() {
     // Canvas2D 폴백 경로 (롤백 가능 — BF-595 §3-5, §8)
     drawBackground();
     drawFood();
+    drawExtraFoods();     // BF-629: extras 전용 먹이 풀 렌더링
+    drawExtraItems();     // BF-629: extras 전용 아이템 풀 렌더링
     drawItem();           // BF-545: 보드 위 아이템 렌더링
     drawSnake();
     drawCpuSnake();
@@ -2573,7 +2989,8 @@ function showGameOver() {
 
   goOverlay.removeAttribute("hidden");
   logKPI();
-  logItemKPI();  // BF-545: 아이템 KPI 세션 기록
+  logItemKPI();     // BF-545: 아이템 KPI 세션 기록
+  logEnemyKPI();    // BF-629: 적 AI KPI 세션 기록
   // BF-595: render FPS KPI 집계 (게임 종료 시 1회)
   _flushFpsKpi();
 }
@@ -2748,8 +3165,8 @@ function loop(ts) {
 
   state = tickWithItems(state, nowMs, movePlayer, moveCpu);
 
-  // BF-584: 추가 CPU 지렁이 (extraCpus) 1 틱 이동 — main CPU 와 동일 간격 (moveCpu 일 때만)
-  if (moveCpu) tickExtraCpus();
+  // BF-629: 적 스네이크 경쟁 레인 처리 (tickExtraCpus → tickEnemies)
+  if (moveCpu) tickEnemies();
 
   // BF-537: 먹이 수집 감지 → 이팩트 트리거 (명세 §6-4)
   if (prevFood !== null && state.food !== prevFood) {

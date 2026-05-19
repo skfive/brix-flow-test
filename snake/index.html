@@ -307,9 +307,23 @@
 
       // ── 난이도 파라미터 (s1 §2) ──────────────────────────────
       var DIFFICULTY_PARAMS = {
-        normal: { tickIntervalMs: 120, visionRange: 8,  avoidanceThreshold: 5,  respawnDelayTicks: 20, foodPriorityWeight: 0.7 },
-        easy:   { tickIntervalMs: 240, visionRange: 3,  avoidanceThreshold: 2,  respawnDelayTicks: 10, foodPriorityWeight: 0.4 },
+        normal: { tickIntervalMs: 120, visionRange: 8,  avoidanceThreshold: 5,  respawnDelayTicks: 20, foodPriorityWeight: 0.7,
+          // BF-629: 적 AI v2 추가 파라미터 (명세 §4.2)
+          contestRadius: 6, threatRadius: 4, threatWeight: 0.5, contestFoodBoost: 0.18, itemSeekWeight: 0.6 },
+        easy:   { tickIntervalMs: 240, visionRange: 3,  avoidanceThreshold: 2,  respawnDelayTicks: 10, foodPriorityWeight: 0.4,
+          // BF-629: 적 AI v2 추가 파라미터 (명세 §4.2)
+          contestRadius: 3, threatRadius: 2, threatWeight: 0.2, contestFoodBoost: 0.10, itemSeekWeight: 0.3 },
       };
+
+      // ── BF-629: 적 AI v2 Feature Flags & 상수 (명세 §2.3) ──────
+      var ENEMY_AI_V2_ENABLED   = true;
+      var MULTI_FOOD_ENABLED    = true;
+      var FOOD_PER_EXTRA_ENEMY  = 2.25;
+      var FOOD_POOL_CAP         = 10;
+      var ITEM_PER_EXTRA_ENEMY  = 1.0;
+      var ITEM_POOL_CAP         = 5;
+      var POOL_MAX_SPAWN_PER_TICK = 1;
+      var ENEMY_TARGET_VALUE_ITEM = { SPEED_UP: 3, SHIELD: 3, SLOW_DOWN: 1, LENGTH_BURST: 2, REVERSE: 1 };
 
       // ── 배수 아이템 (BF-533, 명세 §3) ───────────────────────
       var MULTIPLIER_WEIGHTS = [
@@ -530,6 +544,10 @@
           settings:             eff,
           // BF-584: 추가 CPU 지렁이
           extraCpus:            extraCpus,
+          // BF-629: 경쟁 레인 풀 + 적 통계
+          extraFoods:           [],
+          extraItems:           [],
+          enemyStats:           createEnemyStats(),
         };
       }
 
@@ -560,7 +578,8 @@
           if (body.length !== 3) continue;
           var overlap = body.some(function (c) { return occupied[c.x + "," + c.y]; });
           if (overlap) continue;
-          extras.push({ body: body, dir: DIR.LEFT, recentPositions: [] });
+          extras.push({ body: body, dir: DIR.LEFT, recentPositions: [],
+            id: 'e' + extras.length, score: 0, pendingGrowth: 0, dead: false, respawnTicksLeft: 0 }); // BF-629
           body.forEach(function (c) { occupied[c.x + "," + c.y] = true; });
         }
         return extras;
@@ -1213,6 +1232,162 @@
         });
       }
 
+      // ── BF-629: 적 AI v2 순수 함수 ──────────────────────────────
+
+      function createEnemyStats() {
+        return {
+          enemiesSpawned: 0, respawned: 0,
+          died: { wall: 0, self: 0, head_on: 0 },
+          foodEaten: 0, foodMultSum: 0,
+          itemAcquired: { SPEED_UP: 0, SLOW_DOWN: 0, LENGTH_BURST: 0, SHIELD: 0, REVERSE: 0 },
+          itemConsumed: { LENGTH_BURST: 0, SHIELD: 0, REVERSE: 0 },
+          itemExpired: 0, tickMode: { FORAGE: 0, CONTEST: 0, EVADE: 0 },
+          contestWins: 0, maxScore: 0, poolStarvedTicks: 0,
+          avgConcurFoodSum: 0, avgConcurFoodN: 0,
+        };
+      }
+
+      function pickEnemyTarget(head, foods, items, params) {
+        var best = null, bestKey = Infinity;
+        var itemSeekWeight = params.itemSeekWeight != null ? params.itemSeekWeight : 0.6;
+        for (var fi = 0; fi < foods.length; fi++) {
+          var f = foods[fi], v = f.multiplier || 1;
+          var dist = Math.abs(head.x - f.x) + Math.abs(head.y - f.y);
+          var key = dist / Math.max(1, v);
+          if (key < bestKey) { best = { pos: f, kind: "food", value: v }; bestKey = key; }
+        }
+        for (var ii = 0; ii < items.length; ii++) {
+          var it = items[ii];
+          var iv = ENEMY_TARGET_VALUE_ITEM[it.type] != null ? ENEMY_TARGET_VALUE_ITEM[it.type] : 1;
+          var idist = Math.abs(head.x - it.x) + Math.abs(head.y - it.y);
+          var ikey = idist / Math.max(1, iv) / Math.max(0.01, itemSeekWeight);
+          if (ikey < bestKey) { best = { pos: it, kind: "item", value: iv }; bestKey = ikey; }
+        }
+        return best;
+      }
+
+      function computeEnemyTargetScore(head, dir, target) {
+        if (!target) return 0;
+        var nextX = head.x + dir.x, nextY = head.y + dir.y;
+        var distBefore = Math.abs(head.x - target.pos.x) + Math.abs(head.y - target.pos.y);
+        var distAfter  = Math.abs(nextX - target.pos.x) + Math.abs(nextY - target.pos.y);
+        return distAfter < distBefore ? 1.0 : distAfter === distBefore ? 0.5 : 0.0;
+      }
+
+      function computeEnemyThreatScore(nextPos, opponentHeads) {
+        var risk = 0;
+        for (var i = 0; i < opponentHeads.length; i++) {
+          var h = opponentHeads[i];
+          if (!h) continue;
+          var d = Math.abs(nextPos.x - h.x) + Math.abs(nextPos.y - h.y);
+          if (d <= 1) risk = Math.max(risk, 1.0);
+          else if (d === 2) risk = Math.max(risk, 0.5);
+        }
+        return risk;
+      }
+
+      function decideEnemyMode(enemyHead, playerHead, bestTarget, params) {
+        var threatRadius = params.threatRadius != null ? params.threatRadius : 4;
+        var contestRadius = params.contestRadius != null ? params.contestRadius : 6;
+        if (playerHead) {
+          var pd = Math.abs(enemyHead.x - playerHead.x) + Math.abs(enemyHead.y - playerHead.y);
+          if (pd <= threatRadius) return "EVADE";
+        }
+        if (bestTarget && playerHead) {
+          var ed = Math.abs(enemyHead.x - bestTarget.pos.x) + Math.abs(enemyHead.y - bestTarget.pos.y);
+          var ppd = Math.abs(playerHead.x - bestTarget.pos.x) + Math.abs(playerHead.y - bestTarget.pos.y);
+          if (ed <= ppd && ppd <= contestRadius) return "CONTEST";
+        }
+        return "FORAGE";
+      }
+
+      function getEnemyWeights(mode, params) {
+        var wSafeBase = 1 - params.foodPriorityWeight;
+        var wTgtBase  = params.foodPriorityWeight;
+        var tw        = params.threatWeight != null ? params.threatWeight : 0.5;
+        if (mode === "CONTEST") return { wSafe: wSafeBase * 0.8, wTgt: wTgtBase + (params.contestFoodBoost || 0.18), wThreat: tw * 0.7 };
+        if (mode === "EVADE")   return { wSafe: wSafeBase * 1.3, wTgt: wTgtBase * 0.4, wThreat: tw * 1.5 };
+        return { wSafe: wSafeBase, wTgt: wTgtBase, wThreat: tw * 0.5 };
+      }
+
+      function chooseEnemyDir(enemy, world, difficulty) {
+        if (!difficulty) difficulty = "normal";
+        var params = DIFFICULTY_PARAMS[difficulty] || DIFFICULTY_PARAMS.normal;
+        var body = enemy.body, curDir = enemy.dir || DIR.LEFT;
+        if (!body || body.length === 0) return curDir;
+        var head = body[0];
+        var cols = world.cols, rows = world.rows;
+        var allDirs = [DIR.UP, DIR.DOWN, DIR.LEFT, DIR.RIGHT];
+        var occupiedSet = {};
+        (world.snake || []).forEach(function(s) { occupiedSet[s.x+','+s.y] = true; });
+        (world.cpu   || []).forEach(function(s) { occupiedSet[s.x+','+s.y] = true; });
+        (world.otherEnemies || []).forEach(function(e) {
+          (e.body || []).forEach(function(s) { occupiedSet[s.x+','+s.y] = true; });
+        });
+        body.slice(1).forEach(function(s) { occupiedSet[s.x+','+s.y] = true; });
+        var candidates = allDirs.filter(function(d) {
+          if (d.x + curDir.x === 0 && d.y + curDir.y === 0) return false;
+          var nx = head.x + d.x, ny = head.y + d.y;
+          if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) return false;
+          if (occupiedSet[nx+','+ny]) return false;
+          return true;
+        });
+        if (candidates.length === 0) return curDir;
+        if (!ENEMY_AI_V2_ENABLED) {
+          var foods = world.extraFoods || [];
+          if (foods.length === 0) return candidates[0];
+          var tgt = foods[0];
+          var chosen = candidates[0]; var bestDist = Infinity;
+          for (var ci = 0; ci < candidates.length; ci++) {
+            var dd = Math.abs((head.x + candidates[ci].x) - tgt.x) + Math.abs((head.y + candidates[ci].y) - tgt.y);
+            if (dd < bestDist) { bestDist = dd; chosen = candidates[ci]; }
+          }
+          return chosen;
+        }
+        var bestTarget = pickEnemyTarget(head, world.extraFoods || [], world.extraItems || [], params);
+        var headKey = head.x + ',' + head.y;
+        var visitCount = (enemy.recentPositions || []).filter(function(p) { return p === headKey; }).length;
+        if (visitCount >= 3 && bestTarget) {
+          var sorted = candidates.slice().sort(function(a, b) {
+            var da = Math.abs((head.x+a.x)-bestTarget.pos.x)+Math.abs((head.y+a.y)-bestTarget.pos.y);
+            var db = Math.abs((head.x+b.x)-bestTarget.pos.x)+Math.abs((head.y+b.y)-bestTarget.pos.y);
+            return da - db;
+          });
+          return sorted[0];
+        }
+        var playerHead = (world.snake || []).length > 0 ? world.snake[0] : null;
+        var mode    = decideEnemyMode(head, playerHead, bestTarget, params);
+        var weights = getEnemyWeights(mode, params);
+        var opponentHeads = [playerHead, (world.cpu||[]).length > 0 ? world.cpu[0] : null];
+        (world.otherEnemies || []).forEach(function(e) {
+          if (!e.dead && e.body && e.body.length > 0) opponentHeads.push(e.body[0]);
+        });
+        function lookAhead(d) {
+          var pos = { x: head.x, y: head.y }; var count = 0;
+          while (count < params.visionRange) {
+            pos = { x: pos.x + d.x, y: pos.y + d.y };
+            if (pos.x < 0 || pos.x >= cols || pos.y < 0 || pos.y >= rows || occupiedSet[pos.x+','+pos.y]) break;
+            count++;
+          }
+          return count;
+        }
+        var scored = candidates.map(function(d) {
+          var safeLen  = lookAhead(d);
+          var tgtScore = computeEnemyTargetScore(head, d, bestTarget);
+          var nextPos  = { x: head.x + d.x, y: head.y + d.y };
+          var threat   = computeEnemyThreatScore(nextPos, opponentHeads);
+          var score;
+          if (safeLen < params.avoidanceThreshold) {
+            score = safeLen * 0.1 + tgtScore * weights.wTgt - threat * weights.wThreat;
+          } else {
+            score = (safeLen / params.visionRange) * weights.wSafe + tgtScore * weights.wTgt - threat * weights.wThreat;
+          }
+          return { d: d, score: score };
+        });
+        scored.sort(function(a, b) { return b.score - a.score; });
+        return scored[0].d;
+      }
+
       // game.js 에서 globalThis 로 참조 (BF-518/522)
       Object.assign(globalThis, {
         CELL:                    CELL,
@@ -1255,6 +1430,23 @@
         clampInitialLength:           clampInitialLength,
         // BF-584: 추가 CPU 지렁이 스폰 헬퍼
         spawnExtraCpus:               spawnExtraCpus,
+        // BF-629: 적 AI v2
+        DIFFICULTY_PARAMS:            DIFFICULTY_PARAMS,
+        ENEMY_AI_V2_ENABLED:          ENEMY_AI_V2_ENABLED,
+        MULTI_FOOD_ENABLED:           MULTI_FOOD_ENABLED,
+        FOOD_PER_EXTRA_ENEMY:         FOOD_PER_EXTRA_ENEMY,
+        FOOD_POOL_CAP:                FOOD_POOL_CAP,
+        ITEM_PER_EXTRA_ENEMY:         ITEM_PER_EXTRA_ENEMY,
+        ITEM_POOL_CAP:                ITEM_POOL_CAP,
+        POOL_MAX_SPAWN_PER_TICK:      POOL_MAX_SPAWN_PER_TICK,
+        ENEMY_TARGET_VALUE_ITEM:      ENEMY_TARGET_VALUE_ITEM,
+        createEnemyStats:             createEnemyStats,
+        pickEnemyTarget:              pickEnemyTarget,
+        computeEnemyTargetScore:      computeEnemyTargetScore,
+        computeEnemyThreatScore:      computeEnemyThreatScore,
+        decideEnemyMode:              decideEnemyMode,
+        getEnemyWeights:              getEnemyWeights,
+        chooseEnemyDir:               chooseEnemyDir,
       });
     })();
     </script>
