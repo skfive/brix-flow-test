@@ -5,7 +5,7 @@
   "description": "Vanilla HTML/CSS/JS 기반 SPA — notepad(BF-402) + timer(BF-407)",
   "type": "module",
   "scripts": {
-    "start": "http-server . -p 8080 --no-dotfiles",
+    "start": "http-server . -p 8888 --no-dotfiles",
     "test": "node --test tests/snake-BF608.test.js",
     "test:snake": "node --test tests/snake-BF608.test.js",
     "test:e2e": "BRIX_E2E_SKIP=1 node --test tests/snake-BF608.test.js",
