@@ -246,7 +246,7 @@
             </div>
           </div>
 
-          <!-- 효과음 — BF-600 (설정 모달 토글 + snake.settings.soundEnabled) -->
+          <!-- 효과음 — BF-600 (설정 모달 토글 + snake.settings.soundEnabled) / BF-604 (음량 슬라이더) -->
           <div class="settings-section">
             <p class="settings-section-title">효과음</p>
             <div class="ctrl-row">
@@ -255,6 +255,15 @@
                 <span class="ctrl-toggle-track" aria-hidden="true"><span class="ctrl-toggle-thumb"></span></span>
                 <span class="ctrl-toggle-text">on</span>
               </button>
+            </div>
+            <!-- BF-604: 음량 슬라이더 (snake.settings.soundVolume, 0~100, 기본 50) -->
+            <div class="ctrl-row">
+              <span class="ctrl-label">음량</span>
+              <div class="ctrl-slider">
+                <input type="range" id="sound-volume-slider" min="0" max="100" step="1" value="50"
+                       aria-label="효과음 음량" data-key="soundVolume">
+                <span class="ctrl-slider-value">50</span>
+              </div>
             </div>
           </div>
 
