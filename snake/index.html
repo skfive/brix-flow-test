@@ -1058,24 +1058,31 @@
 
         var dir        = s.nextDir;
         var head       = s.snake[0];
-        var cpuHead    = s.cpu[0];
+        // BF-635: cpu=[] (솔로 모드) 시 cpuHead 가 undefined → TypeError 방지
+        var cpuHead    = s.cpu.length > 0 ? s.cpu[0] : null;
+        // BF-635: cpu 없으면 CPU 이동/충돌 처리 전체 비활성화
+        var canMoveCpu = moveCpu && cpuHead !== null;
         // BF-576: 방문 이력 갱신 (최근 15 틱) — 다음 틱에서 루프 감지에 사용
-        var newCpuRecentPositions = (s.cpuRecentPositions || []).concat([cpuHead.x + "," + cpuHead.y]).slice(-15);
+        var newCpuRecentPositions = cpuHead
+          ? (s.cpuRecentPositions || []).concat([cpuHead.x + "," + cpuHead.y]).slice(-15)
+          : (s.cpuRecentPositions || []);
         var newHead    = movePlayer
           ? { x: head.x    + dir.x,       y: head.y    + dir.y       }
           : { x: head.x,                  y: head.y                  };
-        var newCpuHead = moveCpu
+        var newCpuHead = canMoveCpu
           ? { x: cpuHead.x + newCpuDir.x, y: cpuHead.y + newCpuDir.y }
-          : { x: cpuHead.x,               y: cpuHead.y               };
+          : cpuHead
+            ? { x: cpuHead.x,             y: cpuHead.y               }  // moveCpu=false 이동 없음
+            : { x: 0,                     y: 0                       }; // 솔로 모드 더미값
 
         // 충돌 검사 (BF-572: T3 제거, T4-SWAP 추가)
-        var headOnNormal   = movePlayer && moveCpu && newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
-        var headOnSwap     = movePlayer && moveCpu && newHead.x === cpuHead.x && newHead.y === cpuHead.y && newCpuHead.x === head.x && newCpuHead.y === head.y;
+        var headOnNormal   = movePlayer && canMoveCpu && newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
+        var headOnSwap     = movePlayer && canMoveCpu && newHead.x === cpuHead.x && newHead.y === cpuHead.y && newCpuHead.x === head.x && newCpuHead.y === head.y;
         var headOn         = headOnNormal || headOnSwap;
-        var playerHitWall  = movePlayer && isWallCollision(newHead,    s.cols, s.rows);
-        var cpuHitWall     = moveCpu    && isWallCollision(newCpuHead, s.cols, s.rows);
-        var playerHitSelf  = movePlayer && isSelfCollision(newHead,    s.snake);
-        var cpuHitSelf     = moveCpu    && isSelfCollision(newCpuHead, s.cpu);
+        var playerHitWall  = movePlayer  && isWallCollision(newHead,    s.cols, s.rows);
+        var cpuHitWall     = canMoveCpu  && isWallCollision(newCpuHead, s.cols, s.rows);
+        var playerHitSelf  = movePlayer  && isSelfCollision(newHead,    s.snake);
+        var cpuHitSelf     = canMoveCpu  && isSelfCollision(newCpuHead, s.cpu);
         // T3 제거 — 상대방 몸통 통과 허용 (BF-572)
 
         var playerDead = headOn || playerHitWall || playerHitSelf;
@@ -1127,7 +1134,7 @@
 
         // 먹이 처리
         var playerAteFood = movePlayer && s.food !== null && newHead.x === s.food.x && newHead.y === s.food.y;
-        var cpuAteFood    = moveCpu && !playerAteFood && s.food !== null && newCpuHead.x === s.food.x && newCpuHead.y === s.food.y;
+        var cpuAteFood    = canMoveCpu && !playerAteFood && s.food !== null && newCpuHead.x === s.food.x && newCpuHead.y === s.food.y; // BF-635
         var foodM   = (s.food && s.food.multiplier) || 1;
         var playerM = playerAteFood ? foodM : 0;
         var cpuM    = cpuAteFood    ? foodM : 0;
@@ -1141,7 +1148,7 @@
         } else { newSnake = s.snake; }
 
         var newCPU;
-        if (moveCpu) {
+        if (canMoveCpu) {  // BF-635: canMoveCpu (솔로 모드 guard)
           if (newCpuPending > 0) { newCPU = [newCpuHead].concat(s.cpu); newCpuPending--; }
           else                    { newCPU = [newCpuHead].concat(s.cpu.slice(0, -1)); }
         } else { newCPU = s.cpu; }
@@ -1177,7 +1184,7 @@
 
         if (curItem !== null) {
           var playerHitItem = movePlayer && newHead.x === curItem.x && newHead.y === curItem.y;
-          var cpuHitItem    = moveCpu && !playerHitItem && newCpuHead.x === curItem.x && newCpuHead.y === curItem.y;
+          var cpuHitItem    = canMoveCpu && !playerHitItem && newCpuHead.x === curItem.x && newCpuHead.y === curItem.y; // BF-635
 
           if (playerHitItem) {
             var itype = curItem.type;
