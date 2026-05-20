@@ -1300,37 +1300,41 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
   }
 
   // ── 2. 새 헤드 위치 계산 ─────────────────────────────────
-  const dir       = s.nextDir;
-  const head      = s.snake[0];
-  const cpuHead   = s.cpu[0];
+  const dir     = s.nextDir;
+  const head    = s.snake[0];
+  // BF-635: cpu=[] (솔로 모드) 시 cpuHead 가 undefined → 좌표 접근 TypeError 방지
+  const cpuHead = s.cpu.length > 0 ? s.cpu[0] : null;
+  // BF-635: cpu 가 없으면 CPU 이동/충돌 처리 전체 비활성화
+  const canMoveCpu = moveCpu && cpuHead !== null;
   // BF-576: 방문 이력 갱신 (최근 15 틱)
-  const newCpuRecentPositions = [
-    ...(s.cpuRecentPositions || []),
-    `${cpuHead.x},${cpuHead.y}`,
-  ].slice(-15);
-  const newHead   = movePlayer
+  const newCpuRecentPositions = cpuHead
+    ? [...(s.cpuRecentPositions || []), `${cpuHead.x},${cpuHead.y}`].slice(-15)
+    : (s.cpuRecentPositions || []);
+  const newHead    = movePlayer
     ? { x: head.x    + dir.x,       y: head.y    + dir.y       }
     : { x: head.x,                  y: head.y                  };  // 이동 없음
-  const newCpuHead = moveCpu
+  const newCpuHead = canMoveCpu
     ? { x: cpuHead.x + newCpuDir.x, y: cpuHead.y + newCpuDir.y }
-    : { x: cpuHead.x,               y: cpuHead.y               }; // 이동 없음
+    : cpuHead
+      ? { x: cpuHead.x,             y: cpuHead.y               }  // moveCpu=false 이동 없음
+      : { x: 0,                     y: 0                       }; // 솔로 모드 더미값
 
   // ── 3. 충돌 검사 ──────────────────────────────────────────
   // T4: head-on (양쪽 모두 이동할 때만 가능)
-  const headOnNormal = movePlayer && moveCpu &&
+  const headOnNormal = movePlayer && canMoveCpu &&
     newHead.x === newCpuHead.x && newHead.y === newCpuHead.y;
 
   // T4-SWAP: 교차 이동 — 두 머리가 서로 위치를 교환 (BF-572)
-  const headOnSwap = movePlayer && moveCpu &&
+  const headOnSwap = movePlayer && canMoveCpu &&
     newHead.x === cpuHead.x  && newHead.y === cpuHead.y &&
     newCpuHead.x === head.x  && newCpuHead.y === head.y;
 
   const headOn = headOnNormal || headOnSwap;
 
-  const playerHitWall = movePlayer && isWallCollision(newHead,    s.cols, s.rows);
-  const cpuHitWall    = moveCpu   && isWallCollision(newCpuHead,  s.cols, s.rows);
-  const playerHitSelf = movePlayer && isSelfCollision(newHead,    s.snake);
-  const cpuHitSelf    = moveCpu   && isSelfCollision(newCpuHead,  s.cpu);
+  const playerHitWall = movePlayer  && isWallCollision(newHead,    s.cols, s.rows);
+  const cpuHitWall    = canMoveCpu  && isWallCollision(newCpuHead, s.cols, s.rows);
+  const playerHitSelf = movePlayer  && isSelfCollision(newHead,    s.snake);
+  const cpuHitSelf    = canMoveCpu  && isSelfCollision(newCpuHead, s.cpu);
   // T3 제거 — 상대방 몸통 통과 허용 (BF-572)
 
   let playerDead = headOn || playerHitWall || playerHitSelf;
@@ -1405,7 +1409,7 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
   const playerAteFood = movePlayer &&
     s.food !== null &&
     newHead.x === s.food.x && newHead.y === s.food.y;
-  const cpuAteFood    = moveCpu && !playerAteFood &&
+  const cpuAteFood    = canMoveCpu && !playerAteFood &&  // BF-635: canMoveCpu (null 가드)
     s.food !== null &&
     newCpuHead.x === s.food.x && newCpuHead.y === s.food.y;
 
@@ -1430,7 +1434,7 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
   }
 
   let newCPU;
-  if (moveCpu) {
+  if (canMoveCpu) {  // BF-635: canMoveCpu (cpu=[] 솔로 모드 guard)
     if (newCpuPending > 0) {
       newCPU = [newCpuHead, ...s.cpu];
       newCpuPending--;
@@ -1438,7 +1442,7 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
       newCPU = [newCpuHead, ...s.cpu.slice(0, -1)];
     }
   } else {
-    newCPU = s.cpu; // CPU 이동 없음
+    newCPU = s.cpu; // CPU 이동 없음 (또는 솔로 모드)
   }
 
   // ── 9. 점수 + multiplierStats ────────────────────────────
@@ -1487,7 +1491,7 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
 
   if (curItem !== null) {
     const playerHitItem = movePlayer && newHead.x === curItem.x && newHead.y === curItem.y;
-    const cpuHitItem    = moveCpu && !playerHitItem &&
+    const cpuHitItem    = canMoveCpu && !playerHitItem &&  // BF-635: canMoveCpu (null 가드)
       newCpuHead.x === curItem.x && newCpuHead.y === curItem.y;
 
     if (playerHitItem) {
