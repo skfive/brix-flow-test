@@ -1430,3 +1430,39 @@ body {
   .ctrl-slider input[type="range"] { height: 8px; }
   .settings-btn { min-height: 44px; flex: 1; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   BF-631: Debug 오버레이 (D 키 토글, 기본 hidden)
+   ───────────────────────────────────────────────────────────── */
+#debug-overlay {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.72);
+  color: #0f0;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: 4px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+}
+
+#debug-overlay[hidden] {
+  display: none;
+}
+
+.dbg-row {
+  display: block;
+}
+
+.dbg-row b {
+  color: #7fff7f;
+  margin-right: 4px;
+}
