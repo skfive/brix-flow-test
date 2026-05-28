@@ -1,0 +1,6 @@
+{
+  "name": "tetris-spa",
+  "private": true,
+  "type": "commonjs",
+  "description": "BF-642 · 본 디렉토리만 CommonJS 로 해석 — tetris/*.js 는 비-module IIFE/UMD 패턴 (file:// CORS 안전). Node 측 단위 테스트는 require() 로 로드."
+}
