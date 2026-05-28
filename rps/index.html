@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>가위바위보</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="dark">
+
+  <!-- ========== Header (§4.6) ========== -->
+  <header class="app-header">
+    <div class="app-header__logo">
+      <span class="app-header__icons" aria-hidden="true">✊✌️🖐</span>
+      <h1 class="app-header__title">가위바위보</h1>
+    </div>
+    <button class="theme-toggle" id="theme-btn" aria-label="테마 변경" title="테마 전환">🌙</button>
+  </header>
+
+  <!-- ========== Main Game (§10.3 DOM 구조) ========== -->
+  <main class="game" id="game" data-game-state="idle">
+
+    <!-- 점수판 (§5.4) -->
+    <section class="scoreboard" aria-label="점수판">
+      <div class="score-item" data-type="win">
+        <span class="score-item__count" id="count-win">0</span>
+        <span class="score-item__label">승</span>
+      </div>
+      <div class="score-divider" aria-hidden="true"></div>
+      <div class="score-item" data-type="draw">
+        <span class="score-item__count" id="count-draw">0</span>
+        <span class="score-item__label">무</span>
+      </div>
+      <div class="score-divider" aria-hidden="true"></div>
+      <div class="score-item" data-type="lose">
+        <span class="score-item__count" id="count-lose">0</span>
+        <span class="score-item__label">패</span>
+      </div>
+    </section>
+
+    <!-- 배틀 영역 (§5.1, §5.2) -->
+    <div class="battle-area" role="img" aria-label="대전 현황">
+      <!-- 플레이어 카드 -->
+      <div class="choice-card"
+           id="player-card"
+           data-owner="player"
+           data-state="idle"
+           data-choice="none"
+           aria-label="나의 선택: 아직 선택하지 않음">
+        <div class="choice-card__icon" id="player-icon" aria-hidden="true">❓</div>
+        <div class="choice-card__label">나</div>
+        <div class="choice-card__name" id="player-name" aria-hidden="true"></div>
+      </div>
+
+      <!-- VS 구분자 -->
+      <div class="vs-divider" aria-hidden="true">
+        <span>VS</span>
+      </div>
+
+      <!-- CPU 카드 -->
+      <div class="choice-card"
+           id="cpu-card"
+           data-owner="cpu"
+           data-state="idle"
+           data-choice="none"
+           aria-label="컴퓨터의 선택: 아직 선택하지 않음">
+        <div class="choice-card__icon" id="cpu-icon" aria-hidden="true">❓</div>
+        <div class="choice-card__label">컴퓨터</div>
+        <div class="choice-card__name" id="cpu-name" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- 결과 배너 (§5.3) -->
+    <div class="result-banner"
+         id="result-banner"
+         data-result="none"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true">
+      <span class="result-banner__icon" id="result-icon" aria-hidden="true"></span>
+      <span class="result-banner__text" id="result-text"></span>
+    </div>
+
+    <!-- 선택 버튼 패널 (§5.5) -->
+    <div class="choice-panel" role="group" aria-label="선택지">
+      <button class="choice-btn" data-choice="scissors" aria-label="가위 선택">
+        <span class="choice-btn__icon" aria-hidden="true">✌️</span>
+        <span class="choice-btn__name">가위</span>
+      </button>
+      <button class="choice-btn" data-choice="rock" aria-label="바위 선택">
+        <span class="choice-btn__icon" aria-hidden="true">✊</span>
+        <span class="choice-btn__name">바위</span>
+      </button>
+      <button class="choice-btn" data-choice="paper" aria-label="보 선택">
+        <span class="choice-btn__icon" aria-hidden="true">🖐</span>
+        <span class="choice-btn__name">보</span>
+      </button>
+    </div>
+
+    <!-- 리셋 버튼 (§5.7) -->
+    <button class="reset-btn" id="reset-btn" aria-label="점수 초기화">
+      점수 초기화
+    </button>
+
+    <!-- 키보드 단축키 힌트 (§8.2) -->
+    <p class="keyboard-hint">
+      단축키: <kbd>1</kbd> 가위 &nbsp; <kbd>2</kbd> 바위 &nbsp; <kbd>3</kbd> 보 &nbsp; <kbd>R</kbd> 초기화
+    </p>
+
+  </main>
+
+  <!-- 로직 먼저, UI 나중 (UMD globalThis.RpsLogic 등록 순서) -->
+  <script src="logic.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
