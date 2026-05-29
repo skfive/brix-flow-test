@@ -1,0 +1,11 @@
+// Prisma 스키마 — brix-CMS
+// 자세한 내용: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
