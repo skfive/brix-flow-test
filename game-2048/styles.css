@@ -1,0 +1,544 @@
+/* game-2048/styles.css — 2048 디자인 토큰 + 레이아웃 + 애니메이션
+ * BF-660 · docs/design/2048-BF-657.md §2, §3, §4, §5, §6
+ * 외부 의존성 0건 (system font, CSS 변수 자체 정의)
+ * 라이트 우선 Warm Sand 팔레트 — 기존 다크 기본 모듈과 반전 (§1.3 차별화)
+ */
+
+/* ═══════════════════════════════════════════════════════
+   §10.2 CSS 변수 전체 (라이트 기본)
+════════════════════════════════════════════════════════ */
+:root {
+  /* === 베이스 토큰 (라이트 기본) === */
+  --color-bg-canvas:      #FAF8EF;
+  --color-bg-surface:     #FFFFFF;
+  --color-bg-subtle:      #F5F0E8;
+  --color-border-default: #DDD5C8;
+  --color-text-primary:   #3D3120;
+  --color-text-secondary: #8A7D6E;
+  --color-accent:         #F5821F;
+  --color-accent-on:      #FFFFFF;
+
+  /* === 공간 토큰 === */
+  --space-1: 4px;  --space-2: 8px;   --space-3: 12px;
+  --space-4: 16px; --space-5: 24px;  --space-6: 32px;
+
+  /* === 반경 === */
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+
+  /* === 폰트 === */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+  /* === 보드 전용 === */
+  --board-bg:        #BBADA0;
+  --board-gap:       12px;
+  --cell-empty-bg:   rgba(238,228,218,0.35);
+  --board-radius:    8px;
+  --tile-radius:     6px;
+  --tile-size:       100px;
+
+  /* === 타일 11단계 컬러 시스템 (§2.3) === */
+  --tile-2:    #EEE4DA;
+  --tile-4:    #EDE0C8;
+  --tile-8:    #F2B179;
+  --tile-16:   #F59563;
+  --tile-32:   #F67C5F;
+  --tile-64:   #F65E3B;
+  --tile-128:  #EDCF72;
+  --tile-256:  #EDCC61;
+  --tile-512:  #EDC850;
+  --tile-1024: #EDC53F;
+  --tile-2048: #EDC22E;
+  --tile-super: #3C3A32;
+
+  /* === 오버레이 === */
+  --overlay-bg:      rgba(250,248,239,0.85);
+  --overlay-surface: #FFFFFF;
+  --gameover-accent: #C9A888;
+  --win-accent:      #EDC22E;
+
+  /* === 모션 타이밍 (§6) === */
+  --slide-duration:  100ms;
+  --slide-easing:    ease-in-out;
+  --merge-duration:  200ms;
+}
+
+/* === 다크 테마 오버라이드 (§2.1, §9) === */
+[data-theme="dark"] {
+  --color-bg-canvas:      #1A1614;
+  --color-bg-surface:     #231E1B;
+  --color-bg-subtle:      #2D2620;
+  --color-border-default: #3D3028;
+  --color-text-primary:   #EDE8E0;
+  --color-text-secondary: #A09080;
+  --color-accent:         #F5A050;
+  --color-accent-on:      #FFFFFF;
+  --board-bg:        #5A4A40;
+  --cell-empty-bg:   rgba(90,74,64,0.40);
+  --overlay-bg:      rgba(26,22,20,0.88);
+  --overlay-surface: #231E1B;
+}
+
+/* ═══════════════════════════════════════════════════════
+   리셋
+════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   §4.1 페이지 배경 — 라이트 우선 컴팩트 카드 레이아웃
+════════════════════════════════════════════════════════ */
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 40px 12px 48px;
+  transition: background 200ms, color 200ms;
+}
+
+/* ═══════════════════════════════════════════════════════
+   §4.2 게임 카드 (max 480px 컴팩트 중앙 카드)
+════════════════════════════════════════════════════════ */
+.game-card {
+  background: var(--color-bg-surface);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  padding: var(--space-5);
+  width: 100%;
+  max-width: 480px;
+  transition: background 200ms, box-shadow 200ms;
+}
+[data-theme="dark"] .game-card {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.40);
+}
+
+/* ═══════════════════════════════════════════════════════
+   §4.4 헤더
+════════════════════════════════════════════════════════ */
+.game-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+/* §3.2 게임 타이틀 "2048" — tile-64 컬러로 연결 */
+.game-title {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+  color: #F65E3B; /* var(--tile-64) */
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.score-group {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* §5.3 점수 박스 */
+.score-box {
+  background: var(--board-bg);
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-width: 80px;
+  text-align: center;
+  position: relative;
+  overflow: visible;
+}
+.score-box__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(249,246,242,0.75);
+  margin-bottom: 2px;
+}
+.score-box__value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: #F9F6F2;
+}
+
+/* 점수 bump 애니메이션 */
+@keyframes scoreBump {
+  0%   { transform: scale(1.0); }
+  40%  { transform: scale(1.25); }
+  100% { transform: scale(1.0); }
+}
+.score-bump { animation: scoreBump 200ms ease-out; }
+
+/* 테마 토글 버튼 */
+.theme-toggle {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { background: var(--color-border-default); }
+.theme-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* ═══════════════════════════════════════════════════════
+   §4.5 게임 안내 + 새 게임 버튼
+════════════════════════════════════════════════════════ */
+.game-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  gap: var(--space-2);
+}
+.game-desc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+.game-desc strong { color: var(--color-text-primary); }
+
+/* §5.4 새 게임 버튼 */
+.btn-new-game {
+  background: var(--board-bg);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #F9F6F2;
+  flex-shrink: 0;
+  transition: background 150ms, color 150ms;
+}
+.btn-new-game:hover { background: var(--color-accent); color: var(--color-accent-on); }
+.btn-new-game:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* ═══════════════════════════════════════════════════════
+   §4.3, §5.2 보드 (4×4 그리드)
+════════════════════════════════════════════════════════ */
+.board {
+  background: var(--board-bg);
+  border-radius: var(--board-radius);
+  padding: var(--board-gap);
+  position: relative;
+  user-select: none;
+  touch-action: none;
+}
+
+/* 빈 셀 레이어 (배경 격자) */
+.board__cells {
+  display: grid;
+  grid-template-columns: repeat(4, var(--tile-size));
+  grid-template-rows: repeat(4, var(--tile-size));
+  gap: var(--board-gap);
+}
+.cell {
+  background: var(--cell-empty-bg);
+  border-radius: var(--tile-radius);
+}
+
+/* 타일 절대 포지셔닝 레이어 */
+.board__tiles {
+  position: absolute;
+  top: var(--board-gap);
+  left: var(--board-gap);
+  width: calc(4 * var(--tile-size) + 3 * var(--board-gap));
+  height: calc(4 * var(--tile-size) + 3 * var(--board-gap));
+}
+
+/* ═══════════════════════════════════════════════════════
+   §5.1 타일 — CSS 변수 포지셔닝 + transition
+════════════════════════════════════════════════════════ */
+.tile {
+  position: absolute;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  border-radius: var(--tile-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  line-height: 1;
+  transition: transform var(--slide-duration) var(--slide-easing);
+  transform: translate(
+    calc(var(--tx, 0) * (var(--tile-size) + var(--board-gap))),
+    calc(var(--ty, 0) * (var(--tile-size) + var(--board-gap)))
+  );
+}
+.tile__num { pointer-events: none; }
+
+/* ═══════════════════════════════════════════════════════
+   §6.3 신규 타일 등장 애니메이션 (Spawn)
+════════════════════════════════════════════════════════ */
+@keyframes tileSpawn {
+  0% {
+    transform: translate(
+      calc(var(--tx, 0) * (var(--tile-size) + var(--board-gap))),
+      calc(var(--ty, 0) * (var(--tile-size) + var(--board-gap)))
+    ) scale(0);
+  }
+  60% {
+    transform: translate(
+      calc(var(--tx, 0) * (var(--tile-size) + var(--board-gap))),
+      calc(var(--ty, 0) * (var(--tile-size) + var(--board-gap)))
+    ) scale(1.1);
+  }
+  100% {
+    transform: translate(
+      calc(var(--tx, 0) * (var(--tile-size) + var(--board-gap))),
+      calc(var(--ty, 0) * (var(--tile-size) + var(--board-gap)))
+    ) scale(1.0);
+  }
+}
+.tile--new {
+  animation: tileSpawn 200ms ease-out both;
+}
+
+/* ═══════════════════════════════════════════════════════
+   §6.2 합치기 팝 애니메이션 (Merge Pop)
+════════════════════════════════════════════════════════ */
+@keyframes tileMergePop {
+  0% {
+    transform: translate(
+      calc(var(--tx, 0) * (var(--tile-size) + var(--board-gap))),
+      calc(var(--ty, 0) * (var(--tile-size) + var(--board-gap)))
+    ) scale(1.0);
+  }
+  40% {
+    transform: translate(
+      calc(var(--tx, 0) * (var(--tile-size) + var(--board-gap))),
+      calc(var(--ty, 0) * (var(--tile-size) + var(--board-gap)))
+    ) scale(1.18);
+  }
+  100% {
+    transform: translate(
+      calc(var(--tx, 0) * (var(--tile-size) + var(--board-gap))),
+      calc(var(--ty, 0) * (var(--tile-size) + var(--board-gap)))
+    ) scale(1.0);
+  }
+}
+.tile--merged {
+  animation: tileMergePop var(--merge-duration) ease-out both;
+  z-index: 2;
+}
+
+/* ═══════════════════════════════════════════════════════
+   §10.4 타일 컬러 — attribute selector 패턴
+════════════════════════════════════════════════════════ */
+.tile[data-value="2"]    { background: var(--tile-2);    color: #776E65; }
+.tile[data-value="4"]    { background: var(--tile-4);    color: #776E65; }
+.tile[data-value="8"]    { background: var(--tile-8);    color: #F9F6F2; }
+.tile[data-value="16"]   { background: var(--tile-16);   color: #F9F6F2; }
+.tile[data-value="32"]   { background: var(--tile-32);   color: #F9F6F2; }
+.tile[data-value="64"]   { background: var(--tile-64);   color: #F9F6F2; }
+.tile[data-value="128"]  { background: var(--tile-128);  color: #F9F6F2; }
+.tile[data-value="256"]  { background: var(--tile-256);  color: #F9F6F2; }
+.tile[data-value="512"]  { background: var(--tile-512);  color: #F9F6F2; }
+.tile[data-value="1024"] { background: var(--tile-1024); color: #F9F6F2; }
+.tile[data-value="2048"] {
+  background: var(--tile-2048);
+  color: #F9F6F2;
+  /* §2.3.4 2048 글로우 효과 */
+  box-shadow: 0 0 20px rgba(237,194,46,0.60), 0 0 40px rgba(237,194,46,0.30);
+}
+/* §2.3.5 슈퍼 타일 (4096+) */
+.tile[data-value="super"] {
+  background: var(--tile-super);
+  color: #F9F6F2;
+}
+
+/* ═══════════════════════════════════════════════════════
+   §5.1, §3.2 타일 숫자 크기 — data-value 기준
+════════════════════════════════════════════════════════ */
+.tile[data-value="2"]   .tile__num,
+.tile[data-value="4"]   .tile__num,
+.tile[data-value="8"]   .tile__num,
+.tile[data-value="16"]  .tile__num,
+.tile[data-value="32"]  .tile__num,
+.tile[data-value="64"]  .tile__num   { font-size: 40px; }
+
+.tile[data-value="128"] .tile__num,
+.tile[data-value="256"] .tile__num,
+.tile[data-value="512"] .tile__num  { font-size: 32px; }
+
+.tile[data-value="1024"] .tile__num,
+.tile[data-value="2048"] .tile__num { font-size: 26px; }
+
+.tile[data-value="super"] .tile__num { font-size: 20px; }
+
+/* ═══════════════════════════════════════════════════════
+   §5.5, §5.6 오버레이 (GameOver / WIN)
+════════════════════════════════════════════════════════ */
+.overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--board-radius);
+  background: var(--overlay-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease-out;
+}
+.overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.overlay__card {
+  background: var(--overlay-surface);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  width: 260px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+[data-theme="dark"] .overlay__card {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.50);
+}
+.overlay__icon {
+  font-size: 36px;
+  margin-bottom: var(--space-2);
+}
+.overlay__title {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: var(--space-3);
+}
+.overlay__title--gameover { color: var(--gameover-accent); }
+.overlay__title--win      { color: var(--win-accent); }
+.overlay__sub {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
+}
+.overlay__score-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+.overlay__score-value {
+  font-family: var(--font-mono);
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-5);
+}
+.overlay__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+/* §5.4 버튼 스타일 */
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-on);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: opacity 150ms;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: border-color 150ms, color 150ms;
+}
+.btn-ghost:hover { border-color: var(--color-text-secondary); color: var(--color-text-primary); }
+.btn-ghost:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* ═══════════════════════════════════════════════════════
+   §5.7 득점 팝업 (ScorePopup)
+════════════════════════════════════════════════════════ */
+@keyframes scorePopup {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80%  { opacity: 0.8; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-40px); }
+}
+.score-popup {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-accent);
+  font-size: 15px;
+  font-weight: 700;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: scorePopup 800ms ease-out forwards;
+  z-index: 20;
+}
+
+/* ═══════════════════════════════════════════════════════
+   §4.6 반응형 레이아웃 (Mobile < 520px)
+════════════════════════════════════════════════════════ */
+@media (max-width: 519px) {
+  :root {
+    --tile-size: 72px;
+    --board-gap: 10px;
+  }
+  body {
+    padding: 20px 12px 40px;
+  }
+  .game-title {
+    font-size: 36px;
+  }
+  .score-box {
+    min-width: 60px;
+    padding: 6px 8px;
+  }
+  .score-box__value {
+    font-size: 16px;
+  }
+  .tile[data-value="2"]   .tile__num,
+  .tile[data-value="4"]   .tile__num,
+  .tile[data-value="8"]   .tile__num,
+  .tile[data-value="16"]  .tile__num,
+  .tile[data-value="32"]  .tile__num,
+  .tile[data-value="64"]  .tile__num  { font-size: 28px; }
+
+  .tile[data-value="128"] .tile__num,
+  .tile[data-value="256"] .tile__num,
+  .tile[data-value="512"] .tile__num  { font-size: 22px; }
+
+  .tile[data-value="1024"] .tile__num,
+  .tile[data-value="2048"] .tile__num { font-size: 18px; }
+
+  .tile[data-value="super"] .tile__num { font-size: 16px; }
+}

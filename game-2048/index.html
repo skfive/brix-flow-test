@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2048</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<!-- §10.3 DOM 구조 · §7 상태 전이 data-game-state -->
+<body data-theme="light" data-game-state="playing">
+
+  <!-- 게임 카드 (§4.2 컴팩트 중앙 카드) -->
+  <div class="game-card">
+
+    <!-- 헤더 (§4.4) -->
+    <header class="game-header">
+      <h1 class="game-title">2048</h1>
+      <div class="header-right">
+        <div class="score-group">
+          <!-- §5.3 점수 박스 -->
+          <div class="score-box" id="score-box">
+            <span class="score-box__label">SCORE</span>
+            <span class="score-box__value" id="score-value">0</span>
+          </div>
+          <div class="score-box" id="best-box">
+            <span class="score-box__label">BEST</span>
+            <span class="score-box__value" id="best-value">0</span>
+          </div>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" aria-label="테마 변경">🌙</button>
+      </div>
+    </header>
+
+    <!-- 게임 안내 + 새 게임 버튼 (§4.5) -->
+    <div class="game-meta">
+      <p class="game-desc">타일을 합쳐서 <strong>2048</strong>을 만드세요!</p>
+      <button class="btn-new-game" id="btn-new-game" aria-label="새 게임 시작">새 게임</button>
+    </div>
+
+    <!-- 4×4 보드 (§4.3, §5.2) -->
+    <div class="board" id="game-board" role="grid" aria-label="2048 게임 보드">
+
+      <!-- 빈 셀 레이어 (JS로 16개 생성) -->
+      <div class="board__cells" aria-hidden="true"></div>
+
+      <!-- 타일 레이어 (JS 동적 생성) -->
+      <div class="board__tiles" id="tile-container"></div>
+
+      <!-- §5.5 게임오버 오버레이 -->
+      <div class="overlay overlay--gameover" id="overlay-gameover"
+           aria-hidden="true" role="dialog" aria-label="게임 오버">
+        <div class="overlay__card">
+          <p class="overlay__title overlay__title--gameover">Game Over</p>
+          <p class="overlay__score-label">최종 점수</p>
+          <p class="overlay__score-value" id="final-score">0</p>
+          <button class="btn-primary" id="btn-retry">다시 하기</button>
+        </div>
+      </div>
+
+      <!-- §5.6 WIN 오버레이 -->
+      <div class="overlay overlay--win" id="overlay-win"
+           aria-hidden="true" role="dialog" aria-label="승리">
+        <div class="overlay__card">
+          <p class="overlay__icon" aria-hidden="true">✨</p>
+          <p class="overlay__title overlay__title--win">You Win!</p>
+          <p class="overlay__sub">2048 달성!</p>
+          <div class="overlay__actions">
+            <button class="btn-ghost" id="btn-continue">계속 하기</button>
+            <button class="btn-primary" id="btn-new-from-win">새 게임</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- .board -->
+
+  </div><!-- .game-card -->
+
+  <script src="logic.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
