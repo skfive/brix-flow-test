@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>숫자 야구 — BF-652 Mockup</title>
+  <style>
+    /* ========================================
+       디자인 토큰 (baseball-BF-651.md §2 §3)
+    ======================================== */
+    :root {
+      /* 폰트 */
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+        "Pretendard", "Apple SD Gothic Neo", sans-serif;
+      --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+      /* 다크 default */
+      --color-bg-canvas:      #0A0C10;
+      --color-bg-surface:     #141820;
+      --color-bg-subtle:      #1C2230;
+      --color-border-default: #252D3A;
+      --color-border-strong:  #38465A;
+      --color-text-primary:   #EAE8E0;
+      --color-text-secondary: #9098A4;
+      --color-text-muted:     #565E6A;
+      --color-focus-ring:     rgba(245, 166, 35, 0.55);
+
+      /* 게임 토큰 — 스트라이크/볼/아웃 */
+      --bs-strike:       #F5A623;
+      --bs-strike-bg:    #241800;
+      --bs-strike-glow:  rgba(245, 166, 35, 0.45);
+      --bs-ball:         #3DBE6C;
+      --bs-ball-bg:      #041408;
+      --bs-ball-glow:    rgba(61, 190, 108, 0.35);
+      --bs-out:          #4A5568;
+
+      /* 결과 상태 */
+      --bs-win:          #F5A623;
+      --bs-win-bg:       #201200;
+      --bs-win-glow:     rgba(245, 166, 35, 0.40);
+      --bs-lose:         #E85858;
+      --bs-lose-bg:      #1F0808;
+      --bs-lose-glow:    rgba(232, 88, 88, 0.35);
+
+      /* 공간 */
+      --space-1: 4px;   --space-2: 8px;   --space-3: 12px;
+      --space-4: 16px;  --space-5: 24px;  --space-6: 32px;
+      --space-7: 48px;  --space-8: 64px;
+
+      /* 반경 */
+      --radius-sm: 4px;  --radius-md: 8px;  --radius-lg: 12px;
+      --radius-input: 10px;
+
+      /* 그림자 */
+      --shadow-card:         0 4px 20px rgba(0, 0, 0, 0.40);
+      --shadow-input-focus:  0 0 0 3px var(--color-focus-ring);
+      --shadow-strike-dot:   0 0 8px var(--bs-strike-glow);
+      --shadow-ball-dot:     0 0 6px var(--bs-ball-glow);
+
+      /* 모션 */
+      --motion-fast:   120ms;
+      --motion-mid:    220ms;
+      --motion-result: 350ms;
+      --ease-out:      cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    [data-theme="light"] {
+      --color-bg-canvas:      #F5F5F0;
+      --color-bg-surface:     #FFFFFF;
+      --color-bg-subtle:      #EEEEE8;
+      --color-border-default: #D8D8D0;
+      --color-border-strong:  #B0B0A8;
+      --color-text-primary:   #1A1A16;
+      --color-text-secondary: #606068;
+      --color-text-muted:     #9A9A93;
+      --color-focus-ring:     rgba(200, 120, 10, 0.50);
+      --shadow-card:          0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    /* ========================================
+       리셋 & 기본
+    ======================================== */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      margin: 0; padding: 0;
+      min-height: 100vh;
+      background: var(--color-bg-canvas);
+      color: var(--color-text-primary);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.5;
+      transition: background var(--motion-mid) var(--ease-out),
+                  color var(--motion-mid) var(--ease-out);
+    }
+
+    button { cursor: pointer; font-family: inherit; }
+    input  { font-family: inherit; }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+
+    /* ========================================
+       헤더 (§4.2)
+    ======================================== */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      padding: 0 var(--space-5);
+      background: var(--color-bg-surface);
+      border-bottom: 1px solid var(--color-border-default);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .app-header__logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .app-header__logo-icon { font-size: 22px; }
+
+    .app-header__title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--color-border-strong);
+      color: var(--color-text-secondary);
+      border-radius: var(--radius-md);
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      transition: background var(--motion-fast), border-color var(--motion-fast);
+    }
+    .theme-toggle:hover {
+      background: var(--color-bg-subtle);
+      border-color: var(--bs-strike);
+    }
+
+    /* ========================================
+       게임 정보 바 (§4.3 / §5.5)
+    ======================================== */
+    .info-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-5);
+      height: 48px;
+      background: var(--color-bg-surface);
+      border-bottom: 1px solid var(--color-border-default);
+    }
+
+    .inning-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .inning-bar__label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .inning-bar__dots {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .inning-dot {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      transition: background var(--motion-fast);
+    }
+    .inning-dot--active { background: var(--bs-strike); }
+    .inning-dot--used   { background: var(--bs-out); }
+    .inning-dot--last   { background: var(--bs-lose); }
+
+    .info-bar__count {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--color-text-secondary);
+    }
+
+    /* ========================================
+       메인 레이아웃 (§4.1)
+    ======================================== */
+    .game {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: var(--space-5) var(--space-5) var(--space-8);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    .card {
+      background: var(--color-bg-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--color-border-default);
+    }
+
+    /* ========================================
+       입력 영역 (§4.4 / §5.1 / §5.2)
+    ======================================== */
+    .input-area {
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-5);
+    }
+
+    .input-area__title {
+      width: 100%;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      letter-spacing: 0.5px;
+      text-align: left;
+      margin: 0;
+    }
+
+    .digit-inputs {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: center;
+    }
+
+    .digit-input {
+      width: 64px; height: 72px;
+      border-radius: var(--radius-input);
+      border: 2px solid var(--color-border-strong);
+      background: var(--color-bg-subtle);
+      color: var(--color-text-primary);
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color var(--motion-fast) var(--ease-out),
+                  background var(--motion-fast) var(--ease-out),
+                  box-shadow var(--motion-fast) var(--ease-out);
+    }
+    .digit-input::placeholder { color: var(--color-text-muted); font-size: 1.5rem; }
+    .digit-input:focus {
+      border-color: var(--bs-strike);
+      background: #1A2235;
+      box-shadow: var(--shadow-input-focus);
+    }
+    .digit-input.filled {
+      border-color: var(--bs-strike);
+      border-width: 1.5px;
+      background: var(--color-bg-surface);
+    }
+    .digit-input.error {
+      border-color: var(--bs-lose);
+      background: rgba(232, 88, 88, 0.10);
+      color: var(--bs-lose);
+    }
+    .digit-input:disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    .input-error {
+      font-size: 12px;
+      color: var(--bs-lose);
+      min-height: 18px;
+      margin: calc(-1 * var(--space-3)) 0 0;
+      text-align: center;
+    }
+
+    .submit-btn {
+      height: 52px;
+      min-width: 180px;
+      padding: 0 var(--space-6);
+      border-radius: var(--radius-md);
+      background: var(--bs-strike);
+      color: #0A0C10;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      transition: transform var(--motion-fast) var(--ease-out),
+                  filter var(--motion-fast) var(--ease-out);
+    }
+    .submit-btn:hover:not(:disabled) {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+    }
+    .submit-btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+    .submit-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .submit-btn:focus-visible {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 3px;
+    }
+    .submit-btn .btn-icon { font-size: 18px; }
+
+    /* ========================================
+       시도 기록 (§4.5 / §5.3)
+    ======================================== */
+    .history-card {
+      padding: var(--space-5);
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-3);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--color-border-default);
+    }
+    .history-header__label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .history-header__note {
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
+
+    .history-list {
+      list-style: none;
+      margin: 0; padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .history-empty {
+      text-align: center;
+      padding: var(--space-7) 0;
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    .history-row {
+      display: grid;
+      grid-template-columns: 36px 90px 70px 1fr;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-2);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid transparent;
+      transition: background var(--motion-fast);
+    }
+    .history-row:hover { background: var(--color-bg-subtle); }
+    .history-row[data-latest="true"] {
+      border-left-color: var(--bs-strike);
+      background: rgba(245, 166, 35, 0.05);
+    }
+
+    .history-row__index {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      text-align: right;
+    }
+
+    .history-row__guess {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      letter-spacing: 0.15em;
+    }
+
+    .history-row__score {
+      display: flex;
+      gap: var(--space-1);
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .score-s { color: var(--bs-strike); }
+    .score-b { color: var(--bs-ball); }
+    .score-out { color: var(--color-text-muted); }
+
+    .history-row__dots {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      opacity: 0;
+      animation: dotIn var(--motion-mid) var(--ease-out) both;
+    }
+    .dot--strike {
+      background: var(--bs-strike);
+      box-shadow: var(--shadow-strike-dot);
+    }
+    .dot--ball {
+      background: var(--bs-ball);
+      box-shadow: var(--shadow-ball-dot);
+    }
+    .dot--out {
+      background: var(--bs-out);
+    }
+
+    @keyframes dotIn {
+      from { opacity: 0; transform: scale(0.3); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ========================================
+       결과 패널 (§4.6 / §5.4)
+    ======================================== */
+    .result-panel[data-result="none"] { display: none; }
+
+    .result-panel {
+      border-radius: var(--radius-lg);
+      padding: var(--space-7) var(--space-6);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      animation: slideUp var(--motion-result) var(--ease-out) both;
+    }
+
+    .result-panel[data-result="win"] {
+      background: var(--bs-win-bg);
+      border: 2px solid var(--bs-win);
+      box-shadow: 0 0 24px var(--bs-win-glow);
+    }
+    .result-panel[data-result="lose"] {
+      background: var(--bs-lose-bg);
+      border: 2px solid var(--bs-lose);
+      box-shadow: 0 0 24px var(--bs-lose-glow);
+    }
+
+    .result-panel__emoji {
+      font-size: 48px;
+      line-height: 1;
+    }
+
+    .result-panel__title {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 2px;
+    }
+    .result-panel[data-result="win"]  .result-panel__title { color: var(--bs-win); }
+    .result-panel[data-result="lose"] .result-panel__title { color: var(--bs-lose); }
+
+    .result-panel__desc {
+      margin: 0;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+    }
+
+    .result-panel__answer {
+      margin: 0;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+    }
+
+    .answer-digits {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--bs-strike);
+      letter-spacing: 0.2em;
+    }
+
+    .new-game-btn {
+      margin-top: var(--space-2);
+      height: 44px;
+      min-width: 140px;
+      padding: 0 var(--space-5);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border: 2px solid var(--bs-strike);
+      transition: transform var(--motion-fast), filter var(--motion-fast);
+    }
+    .result-panel[data-result="win"] .new-game-btn {
+      background: var(--bs-strike);
+      color: #0A0C10;
+    }
+    .result-panel[data-result="lose"] .new-game-btn {
+      background: transparent;
+      color: var(--bs-strike);
+    }
+    .new-game-btn:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+    .new-game-btn:active { transform: scale(0.97); }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ========================================
+       게임 상태별 UI 제어 (§6)
+    ======================================== */
+    [data-game-state="win"]  .digit-input,
+    [data-game-state="lose"] .digit-input {
+      pointer-events: none; opacity: 0.45;
+    }
+    [data-game-state="win"]  .submit-btn,
+    [data-game-state="lose"] .submit-btn {
+      display: none;
+    }
+
+    /* ========================================
+       반응형 (§4.7)
+    ======================================== */
+    @media (max-width: 560px) {
+      .game { padding: var(--space-4); gap: var(--space-3); }
+      .input-area { padding: var(--space-5); }
+      .digit-input { width: 56px; height: 68px; font-size: 1.75rem; }
+
+      .history-row {
+        grid-template-columns: 28px 1fr 52px 1fr;
+        gap: var(--space-2);
+      }
+    }
+
+    @media (max-width: 400px) {
+      .digit-input { width: 48px; height: 60px; font-size: 1.6rem; }
+      .input-area { padding: var(--space-4); }
+    }
+
+    /* ========================================
+       설명 배너 (mockup 전용 — dev 산출물에는 없음)
+    ======================================== */
+    .mockup-badge {
+      position: fixed;
+      bottom: var(--space-3);
+      right: var(--space-3);
+      background: rgba(245, 166, 35, 0.15);
+      border: 1px solid rgba(245, 166, 35, 0.40);
+      color: var(--bs-strike);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px var(--space-2);
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.5px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 헤더 -->
+  <header class="app-header">
+    <div class="app-header__logo">
+      <span class="app-header__logo-icon" aria-hidden="true">⚾</span>
+      <h1 class="app-header__title">숫자 야구</h1>
+    </div>
+    <button class="theme-toggle" type="button" id="theme-toggle" aria-label="테마 변경">🌙</button>
+  </header>
+
+  <!-- 게임 정보 바 -->
+  <div class="info-bar">
+    <div class="inning-bar">
+      <span class="inning-bar__label">남은 기회</span>
+      <div class="inning-bar__dots" id="inning-dots"
+           role="progressbar" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0"
+           aria-label="남은 기회">
+        <!-- JS로 생성 -->
+      </div>
+    </div>
+    <span class="info-bar__count" id="try-count">시도: 0</span>
+  </div>
+
+  <!-- 메인 게임 -->
+  <main class="game" id="game" data-game-state="idle">
+
+    <!-- 입력 영역 -->
+    <section class="card input-area" aria-label="숫자 입력">
+      <p class="input-area__title">4자리 숫자를 추리하세요 (중복 없음)</p>
+      <div class="digit-inputs" id="digit-inputs"
+           role="group" aria-label="4자리 숫자 입력">
+        <input class="digit-input" type="text" inputmode="numeric"
+               maxlength="1" pattern="[0-9]"
+               aria-label="첫 번째 자리" autocomplete="off" placeholder="·" />
+        <input class="digit-input" type="text" inputmode="numeric"
+               maxlength="1" pattern="[0-9]"
+               aria-label="두 번째 자리" autocomplete="off" placeholder="·" />
+        <input class="digit-input" type="text" inputmode="numeric"
+               maxlength="1" pattern="[0-9]"
+               aria-label="세 번째 자리" autocomplete="off" placeholder="·" />
+        <input class="digit-input" type="text" inputmode="numeric"
+               maxlength="1" pattern="[0-9]"
+               aria-label="네 번째 자리" autocomplete="off" placeholder="·" />
+      </div>
+      <p class="input-error" id="input-error" role="alert" aria-live="assertive"></p>
+      <button class="submit-btn" type="button" id="submit-btn"
+              aria-label="숫자 던지기 — 추리 제출" disabled>
+        <span class="btn-icon" aria-hidden="true">⚾</span>
+        던지기!
+      </button>
+    </section>
+
+    <!-- 시도 기록 -->
+    <section class="card history-card" aria-label="시도 기록">
+      <div class="history-header">
+        <span class="history-header__label">시도 기록</span>
+        <span class="history-header__note">최신순 ↑</span>
+      </div>
+      <ol class="history-list" id="history-list">
+        <li class="history-empty" id="history-empty">아직 시도 기록 없음</li>
+      </ol>
+    </section>
+
+    <!-- 결과 패널 -->
+    <section class="result-panel" id="result-panel"
+             data-result="none"
+             role="status" aria-live="polite" aria-labelledby="result-title">
+      <span class="result-panel__emoji" id="result-emoji" aria-hidden="true"></span>
+      <h2 class="result-panel__title" id="result-title"></h2>
+      <p class="result-panel__desc" id="result-desc"></p>
+      <p class="result-panel__answer">
+        정답: <strong class="answer-digits" id="answer-digits"></strong>
+      </p>
+      <button class="new-game-btn" type="button" id="new-game-btn">🔄 새 게임</button>
+    </section>
+
+  </main>
+
+  <!-- mockup 전용 라벨 -->
+  <div class="mockup-badge" aria-hidden="true">MOCKUP · BF-652</div>
+
+  <script>
+    /* ========================================
+       테마 토글
+    ======================================== */
+    (function () {
+      try {
+        var saved = localStorage.getItem('bf-theme');
+        var theme = (saved === 'light' || saved === 'dark') ? saved : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (_e) {}
+    })();
+
+    var themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', function () {
+      var current = document.documentElement.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      themeBtn.textContent = next === 'dark' ? '🌙' : '☀';
+      try { localStorage.setItem('bf-theme', next); } catch (_e) {}
+    });
+
+    /* ========================================
+       게임 상태
+    ======================================== */
+    var MAX_TRIES = 9;
+
+    var state = {
+      secret: [],
+      history: [],   /* [{guess, strike, ball}] */
+      isOver: false
+    };
+
+    /* ========================================
+       비밀번호 생성
+    ======================================== */
+    function generateSecret() {
+      var digits = [];
+      while (digits.length < 4) {
+        var d = Math.floor(Math.random() * 10);
+        if (digits.indexOf(d) === -1) digits.push(d);
+      }
+      return digits;
+    }
+
+    /* ========================================
+       판정
+    ======================================== */
+    function judge(secret, guess) {
+      var s = 0, b = 0;
+      for (var i = 0; i < 4; i++) {
+        if (guess[i] === secret[i]) {
+          s++;
+        } else if (secret.indexOf(guess[i]) !== -1) {
+          b++;
+        }
+      }
+      return { strike: s, ball: b };
+    }
+
+    /* ========================================
+       이닝 바 렌더
+    ======================================== */
+    function renderInningBar() {
+      var container = document.getElementById('inning-dots');
+      container.innerHTML = '';
+      var usedCount = state.history.length;
+      container.setAttribute('aria-valuenow', usedCount);
+      for (var i = 0; i < MAX_TRIES; i++) {
+        var dot = document.createElement('span');
+        dot.className = 'inning-dot';
+        if (i < usedCount) {
+          /* 소진된 기회 */
+          dot.classList.add('inning-dot--used');
+        } else if (i === MAX_TRIES - 1 && usedCount === MAX_TRIES - 1) {
+          /* 마지막 1칸 남음 */
+          dot.classList.add('inning-dot--last');
+        } else {
+          dot.classList.add('inning-dot--active');
+        }
+        container.appendChild(dot);
+      }
+      document.getElementById('try-count').textContent = '시도: ' + usedCount;
+    }
+
+    /* ========================================
+       시도 기록 행 생성
+    ======================================== */
+    function createHistoryRow(entry, isLatest) {
+      var li = document.createElement('li');
+      li.className = 'history-row';
+      if (isLatest) li.setAttribute('data-latest', 'true');
+
+      var idx = document.createElement('span');
+      idx.className = 'history-row__index';
+      idx.textContent = '#' + entry.index;
+
+      var guess = document.createElement('span');
+      guess.className = 'history-row__guess';
+      guess.textContent = entry.guess.join(' ');
+
+      var score = document.createElement('span');
+      score.className = 'history-row__score';
+      if (entry.strike === 0 && entry.ball === 0) {
+        score.innerHTML = '<span class="score-out">아웃</span>';
+      } else {
+        var sSpan = document.createElement('span');
+        sSpan.className = 'score-s';
+        sSpan.textContent = entry.strike + 'S';
+        var bSpan = document.createElement('span');
+        bSpan.className = 'score-b';
+        bSpan.textContent = entry.ball + 'B';
+        score.appendChild(sSpan);
+        score.appendChild(bSpan);
+      }
+
+      /* 도트 */
+      var dotsEl = document.createElement('div');
+      dotsEl.className = 'history-row__dots';
+      dotsEl.setAttribute('aria-label',
+        '스트라이크 ' + entry.strike + ', 볼 ' + entry.ball +
+        ', 아웃 ' + (4 - entry.strike - entry.ball));
+
+      /* 순서: S → B → O */
+      var dotTypes = [];
+      for (var i = 0; i < entry.strike; i++) dotTypes.push('strike');
+      for (var j = 0; j < entry.ball;   j++) dotTypes.push('ball');
+      for (var k = 0; k < 4 - entry.strike - entry.ball; k++) dotTypes.push('out');
+
+      dotTypes.forEach(function (type, di) {
+        var dot = document.createElement('span');
+        dot.className = 'dot dot--' + type;
+        dot.style.animationDelay = (di * 50) + 'ms';
+        dotsEl.appendChild(dot);
+      });
+
+      /* aria-label for li */
+      li.setAttribute('aria-label',
+        entry.index + '번째 시도 ' + entry.guess.join('') +
+        ' — 스트라이크 ' + entry.strike + ', 볼 ' + entry.ball);
+
+      li.appendChild(idx);
+      li.appendChild(guess);
+      li.appendChild(score);
+      li.appendChild(dotsEl);
+      return li;
+    }
+
+    /* ========================================
+       시도 기록 렌더
+    ======================================== */
+    function renderHistory() {
+      var list = document.getElementById('history-list');
+      var emptyEl = document.getElementById('history-empty');
+
+      if (state.history.length === 0) {
+        list.innerHTML = '';
+        list.appendChild(emptyEl);
+        return;
+      }
+      list.innerHTML = '';
+
+      /* 최신이 위 (history 는 push 순서, 역순 렌더) */
+      for (var i = state.history.length - 1; i >= 0; i--) {
+        var isLatest = i === state.history.length - 1;
+        list.appendChild(createHistoryRow(state.history[i], isLatest));
+      }
+    }
+
+    /* ========================================
+       결과 패널 렌더
+    ======================================== */
+    function showResult(isWin) {
+      var panel = document.getElementById('result-panel');
+      var emoji = document.getElementById('result-emoji');
+      var title = document.getElementById('result-title');
+      var desc  = document.getElementById('result-desc');
+      var ansDigits = document.getElementById('answer-digits');
+
+      panel.setAttribute('data-result', isWin ? 'win' : 'lose');
+      emoji.textContent = isWin ? '🎉' : '💀';
+      title.textContent = isWin ? '정답!' : '실패!';
+
+      if (isWin) {
+        desc.textContent = state.history.length + '번째 시도만에 맞혔습니다';
+      } else {
+        desc.textContent = MAX_TRIES + '번의 기회를 모두 소진했습니다';
+      }
+      ansDigits.textContent = state.secret.join(' ');
+    }
+
+    /* ========================================
+       입력 유효성 검사
+    ======================================== */
+    var inputs = Array.prototype.slice.call(
+      document.querySelectorAll('.digit-input')
+    );
+
+    function getGuessDigits() {
+      return inputs.map(function (inp) {
+        var v = inp.value.trim();
+        return v === '' ? null : parseInt(v, 10);
+      });
+    }
+
+    function validateAndUpdate() {
+      var digits = getGuessDigits();
+      var allFilled = digits.every(function (d) { return d !== null; });
+      var hasDup = false;
+      var errorMsg = '';
+
+      /* 중복 검사 */
+      if (allFilled) {
+        var seen = {};
+        digits.forEach(function (d) {
+          if (d !== null) {
+            if (seen[d]) hasDup = true;
+            seen[d] = true;
+          }
+        });
+      }
+
+      /* error 상태 표시 */
+      inputs.forEach(function (inp) { inp.classList.remove('error'); });
+      if (hasDup) {
+        var counts = {};
+        digits.forEach(function (d, i) {
+          if (d !== null) { counts[d] = (counts[d] || 0) + 1; }
+        });
+        digits.forEach(function (d, i) {
+          if (d !== null && counts[d] > 1) {
+            inputs[i].classList.add('error');
+          }
+        });
+        errorMsg = '중복된 숫자가 있습니다';
+      }
+
+      document.getElementById('input-error').textContent = errorMsg;
+      document.getElementById('submit-btn').disabled = !allFilled || hasDup || state.isOver;
+    }
+
+    /* ========================================
+       입력칸 이벤트
+    ======================================== */
+    inputs.forEach(function (input, idx) {
+      input.addEventListener('input', function () {
+        /* 숫자 외 문자 제거 */
+        this.value = this.value.replace(/[^0-9]/g, '').slice(-1);
+
+        if (this.value.length === 1) {
+          this.classList.add('filled');
+          /* 다음 칸 포커스 */
+          if (idx < inputs.length - 1) {
+            inputs[idx + 1].focus();
+          }
+        } else {
+          this.classList.remove('filled');
+        }
+        validateAndUpdate();
+      });
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Backspace') {
+          if (this.value === '' && idx > 0) {
+            e.preventDefault();
+            inputs[idx - 1].value = '';
+            inputs[idx - 1].classList.remove('filled');
+            inputs[idx - 1].focus();
+          } else {
+            this.classList.remove('filled');
+          }
+          validateAndUpdate();
+        }
+        if (e.key === 'ArrowLeft'  && idx > 0)            inputs[idx - 1].focus();
+        if (e.key === 'ArrowRight' && idx < inputs.length - 1) inputs[idx + 1].focus();
+        if (e.key === 'Enter') document.getElementById('submit-btn').click();
+      });
+
+      input.addEventListener('focus', function () {
+        this.select();
+      });
+    });
+
+    /* ========================================
+       제출 버튼
+    ======================================== */
+    document.getElementById('submit-btn').addEventListener('click', function () {
+      if (state.isOver) return;
+      var digits = getGuessDigits();
+      if (digits.some(function (d) { return d === null; })) return;
+
+      /* 판정 */
+      var result = judge(state.secret, digits);
+
+      state.history.push({
+        index: state.history.length + 1,
+        guess: digits,
+        strike: result.strike,
+        ball:   result.ball
+      });
+
+      /* 이전 최신 행 표시 해제 */
+      document.querySelectorAll('.history-row[data-latest="true"]').forEach(function (el) {
+        el.removeAttribute('data-latest');
+      });
+
+      renderHistory();
+      renderInningBar();
+
+      /* 입력 초기화 */
+      inputs.forEach(function (inp) {
+        inp.value = '';
+        inp.classList.remove('filled', 'error');
+      });
+      document.getElementById('input-error').textContent = '';
+      document.getElementById('submit-btn').disabled = true;
+
+      /* 게임 종료 판단 */
+      if (result.strike === 4) {
+        state.isOver = true;
+        document.getElementById('game').setAttribute('data-game-state', 'win');
+        showResult(true);
+      } else if (state.history.length >= MAX_TRIES) {
+        state.isOver = true;
+        document.getElementById('game').setAttribute('data-game-state', 'lose');
+        showResult(false);
+      } else {
+        document.getElementById('game').setAttribute('data-game-state', 'playing');
+        inputs[0].focus();
+      }
+    });
+
+    /* ========================================
+       새 게임 버튼
+    ======================================== */
+    document.getElementById('new-game-btn').addEventListener('click', function () {
+      initGame();
+    });
+
+    /* ========================================
+       키보드 단축키
+    ======================================== */
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 't' || e.key === 'T') {
+        if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+          themeBtn.click();
+        }
+      }
+    });
+
+    /* ========================================
+       게임 초기화
+    ======================================== */
+    function initGame() {
+      state.secret  = generateSecret();
+      state.history = [];
+      state.isOver  = false;
+
+      document.getElementById('game').setAttribute('data-game-state', 'idle');
+      document.getElementById('result-panel').setAttribute('data-result', 'none');
+      document.getElementById('history-list').innerHTML = '';
+      document.getElementById('history-list').appendChild(
+        (function () {
+          var li = document.createElement('li');
+          li.className = 'history-empty';
+          li.id = 'history-empty';
+          li.textContent = '아직 시도 기록 없음';
+          return li;
+        })()
+      );
+      document.getElementById('input-error').textContent = '';
+
+      inputs.forEach(function (inp) {
+        inp.value = '';
+        inp.classList.remove('filled', 'error');
+        inp.removeAttribute('disabled');
+      });
+      document.getElementById('submit-btn').disabled = true;
+
+      renderInningBar();
+      inputs[0].focus();
+
+      /* 개발용 힌트 (mockup 전용) */
+      console.log('[숫자 야구 Mockup] 비밀번호:', state.secret.join(''));
+    }
+
+    /* ========================================
+       시작
+    ======================================== */
+    initGame();
+
+    /* 테마 버튼 초기 아이콘 동기화 */
+    (function () {
+      var t = document.documentElement.getAttribute('data-theme');
+      themeBtn.textContent = t === 'light' ? '☀' : '🌙';
+    })();
+  </script>
+</body>
+</html>
