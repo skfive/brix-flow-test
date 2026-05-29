@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>숫자 야구</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      /* FOUC 방지 — 다크 default */
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = (saved === "light" || saved === "dark") ? saved : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <!-- 헤더 -->
+    <header class="app-header">
+      <div class="app-header__logo">
+        <span class="app-header__logo-icon" aria-hidden="true">⚾</span>
+        <h1 class="app-header__title">숫자 야구</h1>
+      </div>
+      <button class="theme-toggle" type="button" id="theme-toggle" aria-label="테마 변경">🌙</button>
+    </header>
+
+    <!-- 게임 정보 바 -->
+    <div class="info-bar">
+      <div class="inning-bar" aria-label="남은 기회">
+        <span class="inning-bar__label">남은 기회</span>
+        <div class="inning-bar__dots" id="inning-dots"
+             role="progressbar" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0">
+          <!-- JS로 9개 span.inning-dot 생성 -->
+        </div>
+      </div>
+      <span class="info-bar__count" id="try-count">시도: 0</span>
+    </div>
+
+    <!-- 메인 게임 -->
+    <main class="game" id="game" data-game-state="idle">
+
+      <!-- 입력 영역 -->
+      <section class="card input-area" aria-label="숫자 입력">
+        <p class="input-area__title">4자리 숫자를 추리하세요 (중복 없음)</p>
+        <div class="digit-inputs" id="digit-inputs"
+             role="group" aria-label="4자리 숫자 입력">
+          <input class="digit-input" type="text" inputmode="numeric"
+                 maxlength="1" pattern="[0-9]"
+                 aria-label="첫 번째 자리" autocomplete="off" placeholder="·" />
+          <input class="digit-input" type="text" inputmode="numeric"
+                 maxlength="1" pattern="[0-9]"
+                 aria-label="두 번째 자리" autocomplete="off" placeholder="·" />
+          <input class="digit-input" type="text" inputmode="numeric"
+                 maxlength="1" pattern="[0-9]"
+                 aria-label="세 번째 자리" autocomplete="off" placeholder="·" />
+          <input class="digit-input" type="text" inputmode="numeric"
+                 maxlength="1" pattern="[0-9]"
+                 aria-label="네 번째 자리" autocomplete="off" placeholder="·" />
+        </div>
+        <p class="input-error" id="input-error" role="alert" aria-live="assertive"></p>
+        <button class="submit-btn" type="button" id="submit-btn"
+                aria-label="숫자 던지기 — 추리 제출" disabled>
+          <span class="btn-icon" aria-hidden="true">⚾</span>
+          던지기!
+        </button>
+      </section>
+
+      <!-- 시도 기록 -->
+      <section class="card history-card" aria-label="시도 기록">
+        <div class="history-header">
+          <span class="history-header__label">시도 기록</span>
+          <span class="history-header__note">최신순 ↑</span>
+        </div>
+        <ol class="history-list" id="history-list" reversed>
+          <li class="history-empty" id="history-empty">아직 시도 기록 없음</li>
+        </ol>
+      </section>
+
+      <!-- 결과 패널 (초기 hidden) -->
+      <section class="result-panel" id="result-panel"
+               data-result="none"
+               role="status" aria-live="polite" aria-labelledby="result-title">
+        <span class="result-panel__emoji" id="result-emoji" aria-hidden="true"></span>
+        <h2 class="result-panel__title" id="result-title"></h2>
+        <p class="result-panel__desc" id="result-desc"></p>
+        <p class="result-panel__answer">
+          정답: <strong class="answer-digits" id="answer-digits"></strong>
+        </p>
+        <button class="new-game-btn" type="button" id="new-game-btn">🔄 새 게임</button>
+      </section>
+
+    </main>
+
+    <script src="./logic.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
