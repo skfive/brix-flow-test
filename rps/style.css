@@ -1,0 +1,476 @@
+/* rps/style.css
+ * BF-792 · 가위바위보 게임 스타일
+ * 명세: docs/design/rps-BF-789.md §2~§5
+ * system font 만 사용 — 외부 CDN/웹폰트 0건 (vanilla-static)
+ */
+
+/* =========================================================
+   디자인 토큰 (§2 컬러 · §3 폰트 · §4.2 spacing)
+   ========================================================= */
+:root {
+  /* 베이스 (다크 = 기본, §2.1) */
+  --color-bg-canvas:      #0F1115;
+  --color-bg-surface:     #171A21;
+  --color-bg-subtle:      #1E222B;
+  --color-border-default: #262B36;
+  --color-border-strong:  #3A4150;
+  --color-text-primary:   #E8E8E4;
+  --color-text-secondary: #9A9A93;
+  --color-text-muted:     #6B6B66;
+  --color-accent:         #5B82F0;
+  --color-danger:         #E55858;
+
+  /* spacing 토큰 (§4.2) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* radius (§4.2) */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* 폰트 (§3) — system font only */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+  /* 결과 컬러 (§2.2) */
+  --rps-win:       #28C840;
+  --rps-win-bg:    #0A1F0E;
+  --rps-win-glow:  rgba(40, 200, 64, 0.30);
+  --rps-lose:      #E82828;
+  --rps-lose-bg:   #1F0A0A;
+  --rps-lose-glow: rgba(232, 40, 40, 0.30);
+  --rps-draw:      #F5C400;
+  --rps-draw-bg:   #1F1900;
+  --rps-draw-glow: rgba(245, 196, 0, 0.25);
+
+  /* 선택지 컬러 (§2.3) */
+  --rps-scissors:    #F5C400;
+  --rps-scissors-bg: #1F1900;
+  --rps-rock:        #9A9A93;
+  --rps-rock-bg:     #1A1C22;
+  --rps-paper:       #5B82F0;
+  --rps-paper-bg:    #0A1020;
+
+  /* 카드 상태 토큰 */
+  --card-idle-bg:     #1E222B;
+  --card-idle-border: #3A4150;
+
+  /* CPU thinking 점 */
+  --thinking-dot-color: #9A9A93;
+}
+
+/* ========== 라이트 테마 오버라이드 (§2.4) ========== */
+[data-theme="light"] {
+  --color-bg-canvas:      #FAFAF9;
+  --color-bg-surface:     #FFFFFF;
+  --color-bg-subtle:      #F1F1EF;
+  --color-border-default: #E5E5E2;
+  --color-border-strong:  #D5D5D0;
+  --color-text-primary:   #1A1A19;
+  --color-text-secondary: #6B6B66;
+  --color-accent:         #3563E9;
+  --color-danger:         #D14343;
+  --card-idle-bg:         #F1F1EF;
+  --card-idle-border:     #D5D5D0;
+  --rps-win-bg:      #E8F9EC;
+  --rps-lose-bg:     #FDE8E8;
+  --rps-draw-bg:     #FDF8E1;
+  --rps-scissors-bg: #FDF8E1;
+  --rps-rock-bg:     #F1F1EF;
+  --rps-paper-bg:    #EEF2FD;
+}
+
+/* ========== 리셋 & 베이스 ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ========== Header (§1.3) ========== */
+.app-header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.app-header__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.app-header__icons {
+  font-size: 20px;
+  letter-spacing: -2px;
+}
+.app-header__title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+.theme-toggle {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: 18px;
+  width: 40px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.theme-toggle:hover { background: var(--color-border-default); }
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ========== 게임 메인 (§4.1) ========== */
+.game {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-4);
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ========== 점수판 (§4.3, §5.2) ========== */
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  width: 100%;
+  max-width: 420px;
+}
+.score-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 80px;
+}
+.score-item__count {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+.score-item[data-type="win"]  .score-item__count { color: var(--rps-win); }
+.score-item[data-type="draw"] .score-item__count { color: var(--rps-draw); }
+.score-item[data-type="lose"] .score-item__count { color: var(--rps-lose); }
+.score-item__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+.score-divider {
+  width: 1px;
+  height: 44px;
+  background: var(--color-border-default);
+}
+@keyframes scorePop {
+  0%   { transform: scale(1.0); }
+  40%  { transform: scale(1.3); }
+  100% { transform: scale(1.0); }
+}
+.score-pop { animation: scorePop 0.25s ease-out; }
+
+/* ========== 배틀 영역 (§4.3, §5.1) ========== */
+.battle-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+/* ========== 선택지 카드 (§5.1) ========== */
+.choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  height: 180px;
+  background: var(--card-idle-bg);
+  border: 2px solid var(--card-idle-border);
+  border-radius: var(--radius-lg);
+  gap: var(--space-2);
+  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.choice-card__icon {
+  font-size: 64px;
+  line-height: 1;
+  transition: transform 0.3s;
+}
+.choice-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.choice-card__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  min-height: 20px;
+}
+
+/* 카드 — thinking 상태 (§5.1) */
+.choice-card[data-state="thinking"] { border-style: dashed; }
+
+/* 카드 — 게임 상태별 글로우 (§5.1) */
+.game[data-game-state="result-win"] .choice-card[data-owner="player"] {
+  border-color: var(--rps-win);
+  box-shadow: 0 0 20px var(--rps-win-glow), 0 0 40px rgba(40,200,64,0.12);
+}
+.game[data-game-state="result-lose"] .choice-card[data-owner="cpu"] {
+  border-color: var(--rps-lose);
+  box-shadow: 0 0 20px var(--rps-lose-glow), 0 0 40px rgba(232,40,40,0.12);
+}
+.game[data-game-state="result-draw"] .choice-card {
+  border-color: var(--rps-draw);
+  box-shadow: 0 0 16px var(--rps-draw-glow);
+}
+
+/* CPU 카드 flipIn (§5.1) */
+@keyframes flipIn {
+  0%   { transform: perspective(800px) rotateY(90deg); opacity: 0; }
+  100% { transform: perspective(800px) rotateY(0deg);  opacity: 1; }
+}
+.flip-in { animation: flipIn 0.3s ease-out; }
+
+/* CPU thinking 점 (§5.1) */
+.thinking-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 32px;
+  line-height: 1;
+}
+.thinking-dots span {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--thinking-dot-color);
+  animation: dotPulse 1.2s infinite ease-in-out;
+}
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%       { opacity: 1.0; transform: scale(1.1); }
+}
+
+/* ========== VS 구분자 (§4.3) ========== */
+.vs-divider {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-bg-subtle);
+  border: 2px solid var(--color-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  letter-spacing: 1px;
+}
+
+/* ========== 결과 배너 (§5.3) ========== */
+.result-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+  width: 100%;
+  max-width: 320px;
+  visibility: hidden;
+  opacity: 0;
+}
+.result-banner.visible {
+  visibility: visible;
+  animation: slideUp 250ms ease-out forwards;
+}
+@keyframes slideUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+.result-banner[data-result="win"] {
+  background: var(--rps-win-bg);
+  border-color: var(--rps-win);
+  color: var(--rps-win);
+}
+.result-banner[data-result="lose"] {
+  background: var(--rps-lose-bg);
+  border-color: var(--rps-lose);
+  color: var(--rps-lose);
+}
+.result-banner[data-result="draw"] {
+  background: var(--rps-draw-bg);
+  border-color: var(--rps-draw);
+  color: var(--rps-draw);
+}
+.result-banner__icon { font-size: 28px; }
+.result-banner__text { font-size: 26px; }
+
+/* ========== 선택 버튼 패널 (§4.3, §5.4) ========== */
+.choice-panel {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  width: 100%;
+}
+.choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 130px;
+  height: 96px;
+  background: var(--color-bg-surface);
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s, opacity 0.2s;
+}
+.choice-btn:hover:not(:disabled) { transform: translateY(-2px); }
+.choice-btn:active:not(:disabled) { transform: scale(0.95); }
+.choice-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.choice-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 선택지별 hover 컬러 (§5.4) */
+.choice-btn[data-choice="scissors"]:hover:not(:disabled) {
+  background: var(--rps-scissors-bg);
+  border-color: var(--rps-scissors);
+}
+.choice-btn[data-choice="rock"]:hover:not(:disabled) {
+  background: var(--rps-rock-bg);
+  border-color: var(--rps-rock);
+}
+.choice-btn[data-choice="paper"]:hover:not(:disabled) {
+  background: var(--rps-paper-bg);
+  border-color: var(--rps-paper);
+}
+
+.choice-btn__icon { font-size: 30px; line-height: 1; }
+.choice-btn__name { font-size: 14px; font-weight: 700; }
+
+/* thinking 중 버튼 비활성 (§5.4) */
+.game[data-game-state="thinking"] .choice-btn {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ========== 리셋 버튼 (§5.6) ========== */
+.reset-btn {
+  background: transparent;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: 0 var(--space-3);
+  height: 32px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.reset-btn:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+.reset-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ========== 키보드 힌트 (§3) ========== */
+.keyboard-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+kbd {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* ========== 반응형 (§4.4) ========== */
+@media (max-width: 639px) {
+  .battle-area {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .choice-card {
+    width: 130px;
+    height: 150px;
+  }
+  .choice-card__icon { font-size: 52px; }
+  .vs-divider {
+    width: 44px;
+    height: 44px;
+    font-size: 13px;
+  }
+  .choice-btn {
+    width: 100px;
+    height: 80px;
+  }
+  .choice-btn__icon { font-size: 24px; }
+  .scoreboard { max-width: 100%; }
+}
