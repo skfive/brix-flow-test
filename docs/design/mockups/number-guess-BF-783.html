@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>숫자 맞추기 게임 — UI 시안 mockup (BF-785)</title>
+  <style>
+    :root {
+      --ng-color-primary: #4f46e5;
+      --ng-color-primary-hover: #4338ca;
+      --ng-color-low: #0ea5e9;
+      --ng-color-high: #f59e0b;
+      --ng-color-success: #10b981;
+      --ng-color-error: #ef4444;
+      --ng-color-bg: #0f172a;
+      --ng-color-bg-2: #1e293b;
+      --ng-color-surface: #ffffff;
+      --ng-color-surface-muted: #f1f5f9;
+      --ng-color-text: #0f172a;
+      --ng-color-text-muted: #64748b;
+      --ng-color-border: #cbd5e1;
+      --ng-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      --ng-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+      --ng-space-xs: 8px;
+      --ng-space-sm: 12px;
+      --ng-space-md: 20px;
+      --ng-space-lg: 28px;
+      --ng-radius: 16px;
+      --ng-radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--ng-font-sans);
+      color: #e2e8f0;
+      background: linear-gradient(160deg, var(--ng-color-bg), var(--ng-color-bg-2));
+      min-height: 100vh;
+      padding: 40px 16px;
+      line-height: 1.5;
+    }
+
+    .doc-header {
+      max-width: 1100px;
+      margin: 0 auto 32px;
+      text-align: center;
+    }
+    .doc-header h1 {
+      font-size: clamp(1.4rem, 3vw, 1.9rem);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .doc-header p {
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+    .doc-header .legend {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+    }
+
+    /* 상태 카드들을 나란히 배치하는 시뮬레이션 그리드 */
+    .state-grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+      align-items: start;
+    }
+
+    .state-wrap { display: flex; flex-direction: column; gap: 10px; }
+    .state-label {
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #cbd5e1;
+    }
+    .state-label code {
+      font-family: var(--ng-font-mono);
+      background: rgba(148,163,184,0.18);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    /* ===== 실제 게임 카드 (#game) ===== */
+    .game {
+      background: var(--ng-color-surface);
+      color: var(--ng-color-text);
+      border-radius: var(--ng-radius);
+      border-top: 4px solid var(--ng-color-border);
+      box-shadow: 0 20px 50px -12px rgba(0,0,0,0.45);
+      padding: var(--ng-space-lg);
+      display: flex;
+      flex-direction: column;
+      gap: var(--ng-space-md);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .game-top {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .attempt-chip {
+      background: var(--ng-color-surface-muted);
+      color: var(--ng-color-text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: var(--ng-radius-sm);
+    }
+    .attempt-chip strong { color: var(--ng-color-text); }
+
+    .game h2 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: center;
+    }
+    .game .subtitle {
+      font-size: 0.95rem;
+      color: var(--ng-color-text-muted);
+      text-align: center;
+      margin-top: -10px;
+    }
+
+    .message {
+      min-height: 1.6em;
+      text-align: center;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--ng-color-text-muted);
+    }
+    .message.is-low   { color: var(--ng-color-low); }
+    .message.is-high  { color: var(--ng-color-high); }
+    .message.is-error { color: var(--ng-color-error); }
+    .message.is-won   { color: var(--ng-color-success); font-size: 1.3rem; font-weight: 700; }
+
+    .guess-input {
+      width: 100%;
+      font-family: var(--ng-font-mono);
+      font-size: 1.5rem;
+      font-weight: 600;
+      text-align: center;
+      padding: 12px;
+      border: 1px solid var(--ng-color-border);
+      border-radius: var(--ng-radius-sm);
+      background: var(--ng-color-surface-muted);
+      color: var(--ng-color-text);
+    }
+    .guess-input::placeholder { color: var(--ng-color-text-muted); font-weight: 400; }
+    /* focus 링 시뮬레이션 (idle 카드에 적용) */
+    .guess-input.is-focused {
+      outline: none;
+      border-color: var(--ng-color-primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.35);
+      background: #fff;
+    }
+    .guess-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn {
+      width: 100%;
+      font-family: var(--ng-font-sans);
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 13px;
+      border: none;
+      border-radius: var(--ng-radius-sm);
+      cursor: pointer;
+      color: #fff;
+    }
+    .btn-submit { background: var(--ng-color-primary); }
+    .btn-submit:hover { background: var(--ng-color-primary-hover); }
+    .btn-submit:active { transform: translateY(1px); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-restart { background: var(--ng-color-success); }
+    .btn-restart:hover { filter: brightness(0.95); }
+
+    /* ===== 상태별 카드 강조 ===== */
+    .game.state-error { border-top-color: var(--ng-color-error); }
+    .game.state-won {
+      border-top-color: var(--ng-color-success);
+      background: #f0fdf4;
+    }
+
+    /* 버튼 표시 규칙 시뮬레이션 */
+    .btn-restart { display: none; }
+    .game.state-won .btn-restart { display: block; }
+    .game.state-won .btn-submit { display: none; }
+
+    .hint-note {
+      max-width: 1100px;
+      margin: 36px auto 0;
+      background: rgba(15,23,42,0.5);
+      border: 1px solid rgba(148,163,184,0.25);
+      border-radius: 12px;
+      padding: 20px 24px;
+      font-size: 0.88rem;
+      color: #cbd5e1;
+    }
+    .hint-note h3 { font-size: 1rem; margin-bottom: 10px; color: #f1f5f9; }
+    .hint-note ul { padding-left: 18px; }
+    .hint-note li { margin-bottom: 6px; }
+    .swatches { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+    .swatch { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+    .swatch span.dot {
+      width: 18px; height: 18px; border-radius: 5px; display: inline-block;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+  </style>
+</head>
+<body>
+  <header class="doc-header">
+    <h1>숫자 맞추기 게임 — UI 시안 mockup</h1>
+    <p>BF-785 · vanilla-static · system font only · 외부 의존성 0건</p>
+    <p class="legend">5개 시각 상태를 나란히 배치한 시뮬레이션입니다. 실제 게임은 단일 카드가 <code>data-state</code> 로 전환됩니다.</p>
+  </header>
+
+  <main class="state-grid">
+
+    <!-- 1) idle -->
+    <div class="state-wrap">
+      <div class="state-label">① 게임 시작 — <code>data-state="idle"</code></div>
+      <div class="game state-idle">
+        <div class="game-top">
+          <span class="attempt-chip">시도 횟수: <strong>0</strong>회</span>
+        </div>
+        <h2>숫자 맞추기</h2>
+        <p class="subtitle">1부터 100 사이의 숫자를 맞혀보세요</p>
+        <p class="message">1부터 100 사이의 숫자를 입력하세요</p>
+        <input class="guess-input is-focused" type="number" value="" placeholder="1 ~ 100" aria-label="숫자 입력">
+        <button class="btn btn-submit" type="button">추측하기</button>
+        <button class="btn btn-restart" type="button">다시 하기</button>
+      </div>
+    </div>
+
+    <!-- 2) too-low -->
+    <div class="state-wrap">
+      <div class="state-label">② 더 큰 숫자 힌트 — <code>data-state="playing"</code> · is-low</div>
+      <div class="game state-playing">
+        <div class="game-top">
+          <span class="attempt-chip">시도 횟수: <strong>2</strong>회</span>
+        </div>
+        <h2>숫자 맞추기</h2>
+        <p class="subtitle">1부터 100 사이의 숫자를 맞혀보세요</p>
+        <p class="message is-low">더 큰 숫자입니다 ⬆</p>
+        <input class="guess-input" type="number" value="30" aria-label="숫자 입력">
+        <button class="btn btn-submit" type="button">추측하기</button>
+        <button class="btn btn-restart" type="button">다시 하기</button>
+      </div>
+    </div>
+
+    <!-- 3) too-high -->
+    <div class="state-wrap">
+      <div class="state-label">③ 더 작은 숫자 힌트 — <code>data-state="playing"</code> · is-high</div>
+      <div class="game state-playing">
+        <div class="game-top">
+          <span class="attempt-chip">시도 횟수: <strong>3</strong>회</span>
+        </div>
+        <h2>숫자 맞추기</h2>
+        <p class="subtitle">1부터 100 사이의 숫자를 맞혀보세요</p>
+        <p class="message is-high">더 작은 숫자입니다 ⬇</p>
+        <input class="guess-input" type="number" value="70" aria-label="숫자 입력">
+        <button class="btn btn-submit" type="button">추측하기</button>
+        <button class="btn btn-restart" type="button">다시 하기</button>
+      </div>
+    </div>
+
+    <!-- 4) error -->
+    <div class="state-wrap">
+      <div class="state-label">④ 잘못된 입력 — <code>data-state="error"</code> · is-error</div>
+      <div class="game state-error">
+        <div class="game-top">
+          <span class="attempt-chip">시도 횟수: <strong>3</strong>회</span>
+        </div>
+        <h2>숫자 맞추기</h2>
+        <p class="subtitle">1부터 100 사이의 숫자를 맞혀보세요</p>
+        <p class="message is-error">1~100 사이의 정수를 입력하세요</p>
+        <input class="guess-input" type="number" value="150" aria-label="숫자 입력">
+        <button class="btn btn-submit" type="button">추측하기</button>
+        <button class="btn btn-restart" type="button">다시 하기</button>
+      </div>
+    </div>
+
+    <!-- 5) won -->
+    <div class="state-wrap">
+      <div class="state-label">⑤ 정답 — <code>data-state="won"</code> · is-won</div>
+      <div class="game state-won">
+        <div class="game-top">
+          <span class="attempt-chip">시도 횟수: <strong>5</strong>회</span>
+        </div>
+        <h2>숫자 맞추기</h2>
+        <p class="subtitle">1부터 100 사이의 숫자를 맞혀보세요</p>
+        <p class="message is-won">🎉 정답입니다! 5번 만에 맞혔어요</p>
+        <input class="guess-input" type="number" value="42" disabled aria-label="숫자 입력">
+        <button class="btn btn-submit" type="button" disabled>추측하기</button>
+        <button class="btn btn-restart" type="button">다시 하기</button>
+      </div>
+    </div>
+
+  </main>
+
+  <section class="hint-note">
+    <h3>구현 참고 (dev-1)</h3>
+    <ul>
+      <li>위 5개 카드는 <strong>시각 시뮬레이션</strong>입니다. 실제 게임은 단일 <code>#game</code> 카드가 <code>data-state</code> 속성 전환으로 동일 효과를 냅니다.</li>
+      <li>too-low / too-high 는 둘 다 <code>data-state="playing"</code> 이며, <code>#message</code> 의 <code>is-low</code> / <code>is-high</code> 클래스로 색·방향을 구분합니다.</li>
+      <li>재시작 버튼은 <code>won</code> 상태에서만 노출됩니다. 명세 §6.6 / §7.3 참조.</li>
+      <li>픽셀 단위 일치 의무는 없습니다 — 색/타이포/레이아웃 의도만 전달합니다.</li>
+    </ul>
+    <div class="swatches">
+      <span class="swatch"><span class="dot" style="background:#4f46e5"></span>primary #4f46e5</span>
+      <span class="swatch"><span class="dot" style="background:#0ea5e9"></span>too-low #0ea5e9</span>
+      <span class="swatch"><span class="dot" style="background:#f59e0b"></span>too-high #f59e0b</span>
+      <span class="swatch"><span class="dot" style="background:#10b981"></span>success #10b981</span>
+      <span class="swatch"><span class="dot" style="background:#ef4444"></span>error #ef4444</span>
+    </div>
+  </section>
+</body>
+</html>

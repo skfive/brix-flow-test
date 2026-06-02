@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>숫자 맞추기 게임</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <div id="game" data-state="idle">
+      <div class="game-top">
+        <span class="attempt-chip">시도 횟수: <strong id="attempt-count">0</strong>회</span>
+      </div>
+      <h1>숫자 맞추기</h1>
+      <p class="subtitle">1부터 100 사이의 숫자를 맞혀보세요</p>
+      <p id="message" class="message">1부터 100 사이의 숫자를 입력하세요</p>
+      <input id="guess-input" class="guess-input" type="number" min="1" max="100"
+             inputmode="numeric" placeholder="1 ~ 100" aria-label="숫자 입력">
+      <button id="submit-btn" class="btn btn-submit" type="button">추측하기</button>
+      <button id="restart-btn" class="btn btn-restart" type="button">다시 하기</button>
+    </div>
+  </main>
+  <script src="./game.js"></script>
+</body>
+</html>
