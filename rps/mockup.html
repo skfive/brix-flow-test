@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>가위바위보 UI 시안 — BF-789 mockup</title>
+  <style>
+    /* =========================================================
+       BF-789 가위바위보 시안 mockup — 시각 시뮬레이션 전용
+       (dev 산출물 X · 외부 의존성 0건 · system font)
+       명세: docs/design/rps-BF-789.md §2~§5
+       ========================================================= */
+    :root {
+      /* 베이스 (다크 = 기본) */
+      --color-bg-canvas:      #0F1115;
+      --color-bg-surface:     #171A21;
+      --color-bg-subtle:      #1E222B;
+      --color-border-default: #262B36;
+      --color-border-strong:  #3A4150;
+      --color-text-primary:   #E8E8E4;
+      --color-text-secondary: #9A9A93;
+      --color-text-muted:     #6B6B66;
+      --color-accent:         #5B82F0;
+      --color-danger:         #E55858;
+      /* 결과 컬러 */
+      --rps-win:   #28C840; --rps-win-bg:   #0A1F0E; --rps-win-glow:  rgba(40,200,64,.30);
+      --rps-lose:  #E82828; --rps-lose-bg:  #1F0A0A; --rps-lose-glow: rgba(232,40,40,.30);
+      --rps-draw:  #F5C400; --rps-draw-bg:  #1F1900; --rps-draw-glow: rgba(245,196,0,.25);
+      /* 선택지 컬러 */
+      --rps-scissors: #F5C400; --rps-scissors-bg: #1F1900;
+      --rps-rock:     #9A9A93; --rps-rock-bg:     #1A1C22;
+      --rps-paper:    #5B82F0; --rps-paper-bg:    #0A1020;
+      /* spacing / radius */
+      --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
+      --radius-sm:4px; --radius-md:8px; --radius-lg:12px;
+      /* 폰트 */
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+      --font-mono: ui-monospace, Menlo, Consolas, monospace;
+    }
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg-canvas);
+      color: var(--color-text-primary);
+      padding: var(--space-6) var(--space-4) var(--space-7);
+      line-height: 1.5;
+    }
+
+    /* ---- mockup 도큐먼트 chrome (시안 외 설명용) ---- */
+    .doc-title { text-align:center; font-size:24px; font-weight:800; letter-spacing:2px; margin-bottom:var(--space-2); }
+    .doc-sub   { text-align:center; color:var(--color-text-secondary); font-size:13px; margin-bottom:var(--space-6); }
+    .section-label {
+      max-width:960px; margin:var(--space-7) auto var(--space-4);
+      font-size:13px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+      color:var(--color-accent); border-left:3px solid var(--color-accent);
+      padding-left:var(--space-3);
+    }
+    .grid {
+      max-width:960px; margin:0 auto; display:flex; flex-wrap:wrap; gap:var(--space-5);
+      justify-content:center;
+    }
+    .panel {
+      background:var(--color-bg-canvas); border:1px solid var(--color-border-default);
+      border-radius:var(--radius-lg); padding:var(--space-5); flex:1 1 420px; min-width:300px;
+    }
+    .panel__cap {
+      font-size:12px; font-weight:600; letter-spacing:1px; text-transform:uppercase;
+      color:var(--color-text-secondary); margin-bottom:var(--space-4); text-align:center;
+    }
+
+    /* =========================================================
+       실제 시안 컴포넌트 (명세 그대로)
+       ========================================================= */
+    .app-header {
+      height:56px; display:flex; align-items:center; justify-content:space-between;
+      padding:0 var(--space-5); background:var(--color-bg-surface);
+      border-bottom:1px solid var(--color-border-default); border-radius:var(--radius-md) var(--radius-md) 0 0;
+    }
+    .app-header__logo { display:flex; align-items:center; gap:var(--space-2); }
+    .app-header__icons { font-size:20px; letter-spacing:-2px; }
+    .app-header__title { font-size:20px; font-weight:800; letter-spacing:2px; }
+    .theme-toggle {
+      background:var(--color-bg-subtle); border:1px solid var(--color-border-strong);
+      border-radius:var(--radius-md); color:var(--color-text-primary); cursor:pointer;
+      font-size:18px; width:40px; height:36px; display:flex; align-items:center; justify-content:center;
+    }
+
+    .game {
+      display:flex; flex-direction:column; align-items:center; gap:var(--space-5);
+      padding:var(--space-6) var(--space-4); background:var(--color-bg-canvas);
+    }
+
+    /* 점수판 */
+    .scoreboard {
+      display:flex; align-items:center; justify-content:space-around;
+      background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+      border-radius:var(--radius-lg); padding:var(--space-4) var(--space-5); width:100%; max-width:420px;
+    }
+    .score-item { display:flex; flex-direction:column; align-items:center; gap:var(--space-1); min-width:72px; }
+    .score-item__count { font-family:var(--font-mono); font-size:28px; font-weight:700; line-height:1; }
+    .score-item[data-type="win"]  .score-item__count { color:var(--rps-win); }
+    .score-item[data-type="draw"] .score-item__count { color:var(--rps-draw); }
+    .score-item[data-type="lose"] .score-item__count { color:var(--rps-lose); }
+    .score-item__label { font-size:11px; font-weight:600; letter-spacing:1.5px; color:var(--color-text-secondary); text-transform:uppercase; }
+    .score-divider { width:1px; height:44px; background:var(--color-border-default); }
+
+    /* 배틀 영역 */
+    .battle-area { display:flex; align-items:center; justify-content:center; gap:var(--space-5); width:100%; }
+    .choice-card {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      width:150px; height:170px; background:var(--color-bg-subtle); border:2px solid var(--color-border-strong);
+      border-radius:var(--radius-lg); gap:var(--space-2); position:relative;
+    }
+    .choice-card__icon { font-size:60px; line-height:1; }
+    .choice-card__label { font-size:12px; font-weight:600; color:var(--color-text-secondary); letter-spacing:1px; text-transform:uppercase; }
+    .choice-card__name { font-size:14px; font-weight:700; color:var(--color-text-primary); min-height:20px; }
+    .choice-card[data-state="thinking"] { border-style:dashed; }
+
+    /* thinking 점 3개 */
+    .thinking-dots { display:flex; align-items:center; gap:6px; height:60px; }
+    .thinking-dots span {
+      width:10px; height:10px; border-radius:50%; background:var(--color-text-secondary);
+      animation:dotPulse 1.2s infinite ease-in-out;
+    }
+    .thinking-dots span:nth-child(2){ animation-delay:.2s; }
+    .thinking-dots span:nth-child(3){ animation-delay:.4s; }
+    @keyframes dotPulse { 0%,100%{ opacity:.2; transform:scale(.8);} 50%{ opacity:1; transform:scale(1.1);} }
+
+    /* 상태별 카드 글로우 */
+    .game[data-game-state="result-win"]  .choice-card[data-owner="player"] {
+      border-color:var(--rps-win); box-shadow:0 0 20px var(--rps-win-glow), 0 0 40px rgba(40,200,64,.12);
+    }
+    .game[data-game-state="result-lose"] .choice-card[data-owner="cpu"] {
+      border-color:var(--rps-lose); box-shadow:0 0 20px var(--rps-lose-glow), 0 0 40px rgba(232,40,40,.12);
+    }
+    .game[data-game-state="result-draw"] .choice-card {
+      border-color:var(--rps-draw); box-shadow:0 0 16px var(--rps-draw-glow);
+    }
+
+    /* VS */
+    .vs-divider {
+      width:56px; height:56px; border-radius:50%; background:var(--color-bg-subtle);
+      border:2px solid var(--color-border-default); display:flex; align-items:center; justify-content:center;
+      font-size:16px; font-weight:800; color:var(--color-text-secondary); flex-shrink:0; letter-spacing:1px;
+    }
+
+    /* 결과 배너 */
+    .result-banner {
+      display:flex; align-items:center; justify-content:center; gap:var(--space-2);
+      min-height:52px; padding:var(--space-3) var(--space-6); border-radius:var(--radius-lg);
+      border:1px solid transparent; font-size:26px; font-weight:800; letter-spacing:3px;
+      width:100%; max-width:320px;
+    }
+    .result-banner--placeholder { border:1px dashed var(--color-border-default); color:var(--color-text-muted); font-size:14px; letter-spacing:1px; font-weight:600; }
+    .result-banner[data-result="win"]  { background:var(--rps-win-bg);  border-color:var(--rps-win);  color:var(--rps-win); }
+    .result-banner[data-result="lose"] { background:var(--rps-lose-bg); border-color:var(--rps-lose); color:var(--rps-lose); }
+    .result-banner[data-result="draw"] { background:var(--rps-draw-bg); border-color:var(--rps-draw); color:var(--rps-draw); }
+    .result-banner__icon { font-size:26px; }
+    .result-caption { font-size:13px; color:var(--color-text-secondary); margin-top:calc(-1 * var(--space-3)); }
+
+    /* 선택 버튼 패널 */
+    .choice-panel { display:flex; gap:var(--space-4); justify-content:center; width:100%; }
+    .choice-btn {
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-2);
+      width:120px; height:90px; background:var(--color-bg-surface); border:2px solid var(--color-border-strong);
+      border-radius:var(--radius-lg); cursor:pointer; color:var(--color-text-primary); font-family:var(--font-sans);
+      transition:background .15s, border-color .15s, transform .1s, opacity .2s;
+    }
+    .choice-btn:hover:not(:disabled) { transform:translateY(-2px); }
+    .choice-btn:active:not(:disabled) { transform:scale(.95); }
+    .choice-btn:disabled { opacity:.45; cursor:not-allowed; }
+    .choice-btn[data-choice="scissors"]:hover:not(:disabled) { background:var(--rps-scissors-bg); border-color:var(--rps-scissors); }
+    .choice-btn[data-choice="rock"]:hover:not(:disabled)     { background:var(--rps-rock-bg);     border-color:var(--rps-rock); }
+    .choice-btn[data-choice="paper"]:hover:not(:disabled)    { background:var(--rps-paper-bg);    border-color:var(--rps-paper); }
+    .choice-btn__icon { font-size:28px; line-height:1; }
+    .choice-btn__name { font-size:14px; font-weight:700; }
+    /* 강제 상태 데모용 (hover/active 정적 표현) */
+    .choice-btn.is-hover[data-choice="rock"] { background:var(--rps-rock-bg); border-color:var(--rps-rock); transform:translateY(-2px); }
+    .choice-btn.is-active[data-choice="paper"] { transform:scale(.95); border-color:var(--rps-paper); }
+
+    /* 초기화 버튼 */
+    .reset-btn {
+      background:transparent; border:1px solid var(--color-border-default); border-radius:var(--radius-md);
+      color:var(--color-text-secondary); cursor:pointer; font-family:var(--font-sans); font-size:12px;
+      padding:0 var(--space-3); height:32px;
+    }
+    .reset-btn.is-hover { border-color:var(--color-danger); color:var(--color-danger); }
+
+    /* 키보드 힌트 */
+    .keyboard-hint { font-size:12px; color:var(--color-text-muted); text-align:center; }
+    kbd {
+      background:var(--color-bg-subtle); border:1px solid var(--color-border-strong); border-radius:var(--radius-sm);
+      padding:1px 6px; font-family:var(--font-mono); font-size:11px;
+    }
+
+    /* 라이트 테마 데모 래퍼 */
+    .light-demo {
+      --color-bg-canvas:#FAFAF9; --color-bg-surface:#FFFFFF; --color-bg-subtle:#F1F1EF;
+      --color-border-default:#E5E5E2; --color-border-strong:#D5D5D0;
+      --color-text-primary:#1A1A19; --color-text-secondary:#6B6B66; --color-text-muted:#8A8A85;
+      --color-accent:#3563E9;
+      --rps-win-bg:#E8F9EC; --rps-lose-bg:#FDE8E8; --rps-draw-bg:#FDF8E1;
+      --rps-scissors-bg:#FDF8E1; --rps-rock-bg:#F1F1EF; --rps-paper-bg:#EEF2FD;
+      background:#FAFAF9; color:#1A1A19; border-radius:var(--radius-lg);
+    }
+
+    /* 모바일 데모 프레임 */
+    .mobile-frame { max-width:340px; margin:0 auto; border:1px solid var(--color-border-strong); border-radius:18px; overflow:hidden; }
+    .mobile-frame .battle-area { flex-direction:column; gap:var(--space-3); }
+    .mobile-frame .choice-card { width:130px; height:150px; }
+    .mobile-frame .choice-card__icon { font-size:52px; }
+    .mobile-frame .vs-divider { width:44px; height:44px; font-size:13px; }
+    .mobile-frame .choice-btn { width:92px; height:80px; }
+    .mobile-frame .choice-btn__icon { font-size:24px; }
+    .mobile-frame .scoreboard { max-width:100%; }
+
+    /* 토큰 스와치 */
+    .swatches { max-width:960px; margin:0 auto; display:flex; flex-wrap:wrap; gap:var(--space-3); }
+    .swatch { display:flex; align-items:center; gap:var(--space-2); background:var(--color-bg-surface); border:1px solid var(--color-border-default); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3); font-size:12px; }
+    .swatch__chip { width:22px; height:22px; border-radius:var(--radius-sm); border:1px solid var(--color-border-strong); }
+    .swatch code { font-family:var(--font-mono); color:var(--color-text-secondary); }
+  </style>
+</head>
+<body>
+
+  <h1 class="doc-title">가위바위보 · UI 시안 mockup</h1>
+  <p class="doc-sub">BF-789 · designer 시각 시뮬레이션 (정적) · 명세: docs/design/rps-BF-789.md</p>
+
+  <!-- ===================== 컬러 토큰 스와치 ===================== -->
+  <div class="section-label">컬러 토큰</div>
+  <div class="swatches">
+    <div class="swatch"><span class="swatch__chip" style="background:#28C840"></span>WIN <code>#28C840</code></div>
+    <div class="swatch"><span class="swatch__chip" style="background:#E82828"></span>LOSE <code>#E82828</code></div>
+    <div class="swatch"><span class="swatch__chip" style="background:#F5C400"></span>DRAW / 가위 <code>#F5C400</code></div>
+    <div class="swatch"><span class="swatch__chip" style="background:#9A9A93"></span>바위 <code>#9A9A93</code></div>
+    <div class="swatch"><span class="swatch__chip" style="background:#5B82F0"></span>보 / accent <code>#5B82F0</code></div>
+    <div class="swatch"><span class="swatch__chip" style="background:#0F1115"></span>캔버스 <code>#0F1115</code></div>
+    <div class="swatch"><span class="swatch__chip" style="background:#171A21"></span>표면 <code>#171A21</code></div>
+    <div class="swatch"><span class="swatch__chip" style="background:#E8E8E4"></span>텍스트 <code>#E8E8E4</code></div>
+  </div>
+
+  <!-- ===================== 게임 상태 5종 ===================== -->
+  <div class="section-label">게임 상태 — idle / thinking / win / lose / draw</div>
+  <div class="grid">
+
+    <!-- idle -->
+    <div class="panel">
+      <div class="panel__cap">① idle — 대기 (data-game-state="idle")</div>
+      <header class="app-header">
+        <div class="app-header__logo"><span class="app-header__icons">✊✌️🖐</span><span class="app-header__title">가위바위보</span></div>
+        <button class="theme-toggle">🌙</button>
+      </header>
+      <main class="game" data-game-state="idle">
+        <section class="scoreboard">
+          <div class="score-item" data-type="win"><span class="score-item__count">0</span><span class="score-item__label">승</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="draw"><span class="score-item__count">0</span><span class="score-item__label">무</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="lose"><span class="score-item__count">0</span><span class="score-item__label">패</span></div>
+        </section>
+        <div class="battle-area">
+          <div class="choice-card" data-owner="player"><div class="choice-card__icon">❓</div><div class="choice-card__label">나</div><div class="choice-card__name"></div></div>
+          <div class="vs-divider">VS</div>
+          <div class="choice-card" data-owner="cpu"><div class="choice-card__icon">❓</div><div class="choice-card__label">컴퓨터</div><div class="choice-card__name"></div></div>
+        </div>
+        <div class="result-banner result-banner--placeholder">결과 배너 (선택 후 표시)</div>
+        <div class="choice-panel">
+          <button class="choice-btn" data-choice="scissors"><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <button class="choice-btn" data-choice="rock"><span class="choice-btn__icon">✊</span><span class="choice-btn__name">바위</span></button>
+          <button class="choice-btn" data-choice="paper"><span class="choice-btn__icon">🖐</span><span class="choice-btn__name">보</span></button>
+        </div>
+        <button class="reset-btn">점수 초기화</button>
+        <p class="keyboard-hint">단축키: <kbd>R</kbd> 바위 &nbsp; <kbd>P</kbd> 보 &nbsp; <kbd>S</kbd> 가위 &nbsp; <kbd>Esc</kbd> 초기화</p>
+      </main>
+    </div>
+
+    <!-- thinking -->
+    <div class="panel">
+      <div class="panel__cap">② thinking — CPU 생각 중 (버튼 비활성)</div>
+      <header class="app-header">
+        <div class="app-header__logo"><span class="app-header__icons">✊✌️🖐</span><span class="app-header__title">가위바위보</span></div>
+        <button class="theme-toggle">🌙</button>
+      </header>
+      <main class="game" data-game-state="thinking">
+        <section class="scoreboard">
+          <div class="score-item" data-type="win"><span class="score-item__count">3</span><span class="score-item__label">승</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="draw"><span class="score-item__count">1</span><span class="score-item__label">무</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="lose"><span class="score-item__count">2</span><span class="score-item__label">패</span></div>
+        </section>
+        <div class="battle-area">
+          <div class="choice-card" data-owner="player" data-choice="rock"><div class="choice-card__icon">✊</div><div class="choice-card__label">나</div><div class="choice-card__name">바위</div></div>
+          <div class="vs-divider">VS</div>
+          <div class="choice-card" data-owner="cpu" data-state="thinking"><div class="thinking-dots"><span></span><span></span><span></span></div><div class="choice-card__label">컴퓨터</div><div class="choice-card__name">…</div></div>
+        </div>
+        <div class="result-banner result-banner--placeholder">판정 대기 중…</div>
+        <div class="choice-panel">
+          <button class="choice-btn" data-choice="scissors" disabled><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <button class="choice-btn" data-choice="rock" disabled><span class="choice-btn__icon">✊</span><span class="choice-btn__name">바위</span></button>
+          <button class="choice-btn" data-choice="paper" disabled><span class="choice-btn__icon">🖐</span><span class="choice-btn__name">보</span></button>
+        </div>
+        <button class="reset-btn">점수 초기화</button>
+        <p class="keyboard-hint">생각 중에는 입력이 차단됩니다 (AC-05)</p>
+      </main>
+    </div>
+
+    <!-- win -->
+    <div class="panel">
+      <div class="panel__cap">③ result-win — 승리 (player 카드 초록 글로우)</div>
+      <main class="game" data-game-state="result-win">
+        <section class="scoreboard">
+          <div class="score-item" data-type="win"><span class="score-item__count">4</span><span class="score-item__label">승</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="draw"><span class="score-item__count">1</span><span class="score-item__label">무</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="lose"><span class="score-item__count">2</span><span class="score-item__label">패</span></div>
+        </section>
+        <div class="battle-area">
+          <div class="choice-card" data-owner="player" data-choice="rock"><div class="choice-card__icon">✊</div><div class="choice-card__label">나</div><div class="choice-card__name">바위</div></div>
+          <div class="vs-divider">VS</div>
+          <div class="choice-card" data-owner="cpu" data-choice="scissors"><div class="choice-card__icon">✌️</div><div class="choice-card__label">컴퓨터</div><div class="choice-card__name">가위</div></div>
+        </div>
+        <div class="result-banner" data-result="win"><span class="result-banner__icon">🎉</span>WIN</div>
+        <p class="result-caption">이겼어요!</p>
+        <div class="choice-panel">
+          <button class="choice-btn" data-choice="scissors"><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <button class="choice-btn" data-choice="rock"><span class="choice-btn__icon">✊</span><span class="choice-btn__name">바위</span></button>
+          <button class="choice-btn" data-choice="paper"><span class="choice-btn__icon">🖐</span><span class="choice-btn__name">보</span></button>
+        </div>
+      </main>
+    </div>
+
+    <!-- lose -->
+    <div class="panel">
+      <div class="panel__cap">④ result-lose — 패배 (cpu 카드 빨강 글로우)</div>
+      <main class="game" data-game-state="result-lose">
+        <section class="scoreboard">
+          <div class="score-item" data-type="win"><span class="score-item__count">4</span><span class="score-item__label">승</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="draw"><span class="score-item__count">1</span><span class="score-item__label">무</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="lose"><span class="score-item__count">3</span><span class="score-item__label">패</span></div>
+        </section>
+        <div class="battle-area">
+          <div class="choice-card" data-owner="player" data-choice="scissors"><div class="choice-card__icon">✌️</div><div class="choice-card__label">나</div><div class="choice-card__name">가위</div></div>
+          <div class="vs-divider">VS</div>
+          <div class="choice-card" data-owner="cpu" data-choice="rock"><div class="choice-card__icon">✊</div><div class="choice-card__label">컴퓨터</div><div class="choice-card__name">바위</div></div>
+        </div>
+        <div class="result-banner" data-result="lose"><span class="result-banner__icon">😢</span>LOSE</div>
+        <p class="result-caption">아쉬워요, 다시!</p>
+        <div class="choice-panel">
+          <button class="choice-btn" data-choice="scissors"><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <button class="choice-btn" data-choice="rock"><span class="choice-btn__icon">✊</span><span class="choice-btn__name">바위</span></button>
+          <button class="choice-btn" data-choice="paper"><span class="choice-btn__icon">🖐</span><span class="choice-btn__name">보</span></button>
+        </div>
+      </main>
+    </div>
+
+    <!-- draw -->
+    <div class="panel">
+      <div class="panel__cap">⑤ result-draw — 무승부 (양쪽 노랑 글로우)</div>
+      <main class="game" data-game-state="result-draw">
+        <section class="scoreboard">
+          <div class="score-item" data-type="win"><span class="score-item__count">4</span><span class="score-item__label">승</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="draw"><span class="score-item__count">2</span><span class="score-item__label">무</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="lose"><span class="score-item__count">3</span><span class="score-item__label">패</span></div>
+        </section>
+        <div class="battle-area">
+          <div class="choice-card" data-owner="player" data-choice="paper"><div class="choice-card__icon">🖐</div><div class="choice-card__label">나</div><div class="choice-card__name">보</div></div>
+          <div class="vs-divider">VS</div>
+          <div class="choice-card" data-owner="cpu" data-choice="paper"><div class="choice-card__icon">🖐</div><div class="choice-card__label">컴퓨터</div><div class="choice-card__name">보</div></div>
+        </div>
+        <div class="result-banner" data-result="draw"><span class="result-banner__icon">🤝</span>DRAW</div>
+        <p class="result-caption">비겼어요</p>
+        <div class="choice-panel">
+          <button class="choice-btn" data-choice="scissors"><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <button class="choice-btn" data-choice="rock"><span class="choice-btn__icon">✊</span><span class="choice-btn__name">바위</span></button>
+          <button class="choice-btn" data-choice="paper"><span class="choice-btn__icon">🖐</span><span class="choice-btn__name">보</span></button>
+        </div>
+      </main>
+    </div>
+
+  </div>
+
+  <!-- ===================== 버튼 상태 ===================== -->
+  <div class="section-label">선택 버튼 상태 — default / hover / active / disabled</div>
+  <div class="grid">
+    <div class="panel" style="flex:1 1 100%;">
+      <div class="choice-panel" style="flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <button class="choice-btn" data-choice="scissors"><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <p class="keyboard-hint" style="margin-top:8px;">default</p>
+        </div>
+        <div style="text-align:center;">
+          <button class="choice-btn is-hover" data-choice="rock"><span class="choice-btn__icon">✊</span><span class="choice-btn__name">바위</span></button>
+          <p class="keyboard-hint" style="margin-top:8px;">hover (떠오름 + 컬러)</p>
+        </div>
+        <div style="text-align:center;">
+          <button class="choice-btn is-active" data-choice="paper"><span class="choice-btn__icon">🖐</span><span class="choice-btn__name">보</span></button>
+          <p class="keyboard-hint" style="margin-top:8px;">active (눌림 0.95)</p>
+        </div>
+        <div style="text-align:center;">
+          <button class="choice-btn" data-choice="scissors" disabled><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <p class="keyboard-hint" style="margin-top:8px;">disabled (thinking 중)</p>
+        </div>
+      </div>
+      <p class="keyboard-hint" style="margin-top:16px;">초기화 버튼:
+        <button class="reset-btn">점수 초기화 (기본)</button> &nbsp;
+        <button class="reset-btn is-hover">점수 초기화 (hover)</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- ===================== 모바일 레이아웃 ===================== -->
+  <div class="section-label">모바일 레이아웃 (≤ 639px — 카드 세로 적층)</div>
+  <div class="grid">
+    <div class="mobile-frame">
+      <header class="app-header">
+        <div class="app-header__logo"><span class="app-header__icons">✊✌️🖐</span><span class="app-header__title" style="font-size:17px;">가위바위보</span></div>
+        <button class="theme-toggle">🌙</button>
+      </header>
+      <main class="game" data-game-state="result-win" style="gap:16px; padding:20px 12px;">
+        <section class="scoreboard">
+          <div class="score-item" data-type="win"><span class="score-item__count">2</span><span class="score-item__label">승</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="draw"><span class="score-item__count">0</span><span class="score-item__label">무</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="lose"><span class="score-item__count">1</span><span class="score-item__label">패</span></div>
+        </section>
+        <div class="battle-area">
+          <div class="choice-card" data-owner="player" data-choice="paper"><div class="choice-card__icon">🖐</div><div class="choice-card__label">나</div><div class="choice-card__name">보</div></div>
+          <div class="vs-divider">VS</div>
+          <div class="choice-card" data-owner="cpu" data-choice="rock"><div class="choice-card__icon">✊</div><div class="choice-card__label">컴퓨터</div><div class="choice-card__name">바위</div></div>
+        </div>
+        <div class="result-banner" data-result="win"><span class="result-banner__icon">🎉</span>WIN</div>
+        <div class="choice-panel">
+          <button class="choice-btn" data-choice="scissors"><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <button class="choice-btn" data-choice="rock"><span class="choice-btn__icon">✊</span><span class="choice-btn__name">바위</span></button>
+          <button class="choice-btn" data-choice="paper"><span class="choice-btn__icon">🖐</span><span class="choice-btn__name">보</span></button>
+        </div>
+        <button class="reset-btn">점수 초기화</button>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===================== 라이트 테마 ===================== -->
+  <div class="section-label">라이트 테마 (data-theme="light")</div>
+  <div class="grid">
+    <div class="panel light-demo">
+      <div class="panel__cap" style="color:#6B6B66;">라이트 테마 — idle</div>
+      <header class="app-header">
+        <div class="app-header__logo"><span class="app-header__icons">✊✌️🖐</span><span class="app-header__title">가위바위보</span></div>
+        <button class="theme-toggle">☀️</button>
+      </header>
+      <main class="game" data-game-state="result-win">
+        <section class="scoreboard">
+          <div class="score-item" data-type="win"><span class="score-item__count">5</span><span class="score-item__label">승</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="draw"><span class="score-item__count">2</span><span class="score-item__label">무</span></div>
+          <div class="score-divider"></div>
+          <div class="score-item" data-type="lose"><span class="score-item__count">1</span><span class="score-item__label">패</span></div>
+        </section>
+        <div class="battle-area">
+          <div class="choice-card" data-owner="player" data-choice="scissors"><div class="choice-card__icon">✌️</div><div class="choice-card__label">나</div><div class="choice-card__name">가위</div></div>
+          <div class="vs-divider">VS</div>
+          <div class="choice-card" data-owner="cpu" data-choice="paper"><div class="choice-card__icon">🖐</div><div class="choice-card__label">컴퓨터</div><div class="choice-card__name">보</div></div>
+        </div>
+        <div class="result-banner" data-result="win"><span class="result-banner__icon">🎉</span>WIN</div>
+        <div class="choice-panel">
+          <button class="choice-btn" data-choice="scissors"><span class="choice-btn__icon">✌️</span><span class="choice-btn__name">가위</span></button>
+          <button class="choice-btn" data-choice="rock"><span class="choice-btn__icon">✊</span><span class="choice-btn__name">바위</span></button>
+          <button class="choice-btn" data-choice="paper"><span class="choice-btn__icon">🖐</span><span class="choice-btn__name">보</span></button>
+        </div>
+        <button class="reset-btn">점수 초기화</button>
+      </main>
+    </div>
+  </div>
+
+</body>
+</html>
