@@ -1,0 +1,168 @@
+/* number-guess/style.css — 숫자 맞추기 게임 시각 스타일
+ * BF-786 · docs/design/number-guess-BF-783.md §2·§3·§4·§7
+ * vanilla-static · system font only · 외부 의존성 0건
+ */
+:root {
+  --ng-color-primary: #4f46e5;
+  --ng-color-primary-hover: #4338ca;
+  --ng-color-low: #0ea5e9;
+  --ng-color-high: #f59e0b;
+  --ng-color-success: #10b981;
+  --ng-color-error: #ef4444;
+  --ng-color-bg: #0f172a;
+  --ng-color-bg-2: #1e293b;
+  --ng-color-surface: #ffffff;
+  --ng-color-surface-muted: #f1f5f9;
+  --ng-color-text: #0f172a;
+  --ng-color-text-muted: #64748b;
+  --ng-color-border: #cbd5e1;
+  --ng-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --ng-font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --ng-space-xs: 8px;
+  --ng-space-sm: 12px;
+  --ng-space-md: 20px;
+  --ng-space-lg: 28px;
+  --ng-radius: 16px;
+  --ng-radius-sm: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ng-font-sans);
+  color: var(--ng-color-text);
+  background: linear-gradient(160deg, var(--ng-color-bg), var(--ng-color-bg-2));
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  body { padding: 16px; }
+}
+
+/* ===== 게임 카드 (#game) ===== */
+#game {
+  width: 100%;
+  max-width: 420px;
+  background: var(--ng-color-surface);
+  color: var(--ng-color-text);
+  border-radius: var(--ng-radius);
+  border-top: 4px solid var(--ng-color-border);
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.45);
+  padding: var(--ng-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ng-space-md);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.game-top {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.attempt-chip {
+  background: var(--ng-color-surface-muted);
+  color: var(--ng-color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 6px var(--ng-space-sm);
+  border-radius: var(--ng-radius-sm);
+}
+.attempt-chip strong { color: var(--ng-color-text); }
+
+#game h1 {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--ng-color-text-muted);
+  text-align: center;
+  margin-top: -10px;
+}
+
+/* ===== 힌트/상태 메시지 ===== */
+.message {
+  min-height: 1.6em;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ng-color-text-muted);
+}
+.message.is-low   { color: var(--ng-color-low); }
+.message.is-high  { color: var(--ng-color-high); }
+.message.is-error { color: var(--ng-color-error); }
+.message.is-won   {
+  color: var(--ng-color-success);
+  font-size: 1.3rem;
+  font-weight: 700;
+  animation: ng-fade-in 0.3s ease-out;
+}
+
+@keyframes ng-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== 입력 필드 ===== */
+.guess-input {
+  width: 100%;
+  font-family: var(--ng-font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  padding: var(--ng-space-sm);
+  border: 1px solid var(--ng-color-border);
+  border-radius: var(--ng-radius-sm);
+  background: var(--ng-color-surface-muted);
+  color: var(--ng-color-text);
+}
+.guess-input::placeholder { color: var(--ng-color-text-muted); font-weight: 400; }
+.guess-input:focus {
+  outline: none;
+  border-color: var(--ng-color-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35);
+  background: #fff;
+}
+.guess-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ===== 버튼 ===== */
+.btn {
+  width: 100%;
+  font-family: var(--ng-font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 13px;
+  border: none;
+  border-radius: var(--ng-radius-sm);
+  cursor: pointer;
+  color: #fff;
+}
+.btn-submit { background: var(--ng-color-primary); }
+.btn-submit:hover { background: var(--ng-color-primary-hover); }
+.btn-submit:active { transform: translateY(1px); }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-restart { background: var(--ng-color-success); }
+.btn-restart:hover { filter: brightness(0.95); }
+.btn-restart:active { transform: translateY(1px); }
+
+/* ===== 상태 전환 (data-state) — 명세 §7.3 ===== */
+#game[data-state="error"] { border-top-color: var(--ng-color-error); }
+#game[data-state="won"] {
+  border-top-color: var(--ng-color-success);
+  background: #f0fdf4;
+}
+
+/* 재시작 버튼은 won 일 때만 노출, 그때 제출 버튼 숨김 */
+#restart-btn { display: none; }
+#game[data-state="won"] #restart-btn { display: block; }
+#game[data-state="won"] #submit-btn { display: none; }
