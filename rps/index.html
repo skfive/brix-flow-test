@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>가위바위보</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body data-theme="dark">
 
-  <!-- ========== Header (§4.6) ========== -->
+  <!-- ========== Header (§1.3) ========== -->
   <header class="app-header">
     <div class="app-header__logo">
       <span class="app-header__icons" aria-hidden="true">✊✌️🖐</span>
@@ -17,10 +17,10 @@
     <button class="theme-toggle" id="theme-btn" aria-label="테마 변경" title="테마 전환">🌙</button>
   </header>
 
-  <!-- ========== Main Game (§10.3 DOM 구조) ========== -->
+  <!-- ========== Main Game (§5.7 data-game-state) ========== -->
   <main class="game" id="game" data-game-state="idle">
 
-    <!-- 점수판 (§5.4) -->
+    <!-- 점수판 (§5.2) -->
     <section class="scoreboard" aria-label="점수판">
       <div class="score-item" data-type="win">
         <span class="score-item__count" id="count-win">0</span>
@@ -38,7 +38,7 @@
       </div>
     </section>
 
-    <!-- 배틀 영역 (§5.1, §5.2) -->
+    <!-- 배틀 영역 (§5.1) -->
     <div class="battle-area" role="img" aria-label="대전 현황">
       <!-- 플레이어 카드 -->
       <div class="choice-card"
@@ -81,36 +81,36 @@
       <span class="result-banner__text" id="result-text"></span>
     </div>
 
-    <!-- 선택 버튼 패널 (§5.5) -->
+    <!-- 선택 버튼 패널 (§5.4) -->
     <div class="choice-panel" role="group" aria-label="선택지">
-      <button class="choice-btn" data-choice="scissors" aria-label="가위 선택">
+      <button class="choice-btn" data-choice="scissors" aria-label="가위 선택 (S키)">
         <span class="choice-btn__icon" aria-hidden="true">✌️</span>
         <span class="choice-btn__name">가위</span>
       </button>
-      <button class="choice-btn" data-choice="rock" aria-label="바위 선택">
+      <button class="choice-btn" data-choice="rock" aria-label="바위 선택 (R키)">
         <span class="choice-btn__icon" aria-hidden="true">✊</span>
         <span class="choice-btn__name">바위</span>
       </button>
-      <button class="choice-btn" data-choice="paper" aria-label="보 선택">
+      <button class="choice-btn" data-choice="paper" aria-label="보 선택 (P키)">
         <span class="choice-btn__icon" aria-hidden="true">🖐</span>
         <span class="choice-btn__name">보</span>
       </button>
     </div>
 
-    <!-- 리셋 버튼 (§5.7) -->
+    <!-- 리셋 버튼 (§5.6) -->
     <button class="reset-btn" id="reset-btn" aria-label="점수 초기화">
       점수 초기화
     </button>
 
-    <!-- 키보드 단축키 힌트 (§8.2) -->
+    <!-- 키보드 단축키 힌트 (§6-7) -->
     <p class="keyboard-hint">
-      단축키: <kbd>1</kbd> 가위 &nbsp; <kbd>2</kbd> 바위 &nbsp; <kbd>3</kbd> 보 &nbsp; <kbd>R</kbd> 초기화
+      단축키: <kbd>R</kbd> 바위 &nbsp; <kbd>P</kbd> 보 &nbsp; <kbd>S</kbd> 가위 &nbsp; <kbd>Esc</kbd> 초기화
     </p>
 
   </main>
 
-  <!-- 로직 먼저, UI 나중 (UMD globalThis.RpsLogic 등록 순서) -->
-  <script src="logic.js"></script>
-  <script src="main.js"></script>
+  <!-- judge 순수함수 먼저 (globalThis.RpsJudge), 그다음 게임 UI -->
+  <script src="judge.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
