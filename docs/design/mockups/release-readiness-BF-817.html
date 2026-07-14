@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release Readiness Board — UI 시안 mockup (BF-817)</title>
+<style>
+  /* ═══════════════════════════════════════════════════════════════
+     Release Readiness Board — 디자인 토큰
+     명세: docs/design/release-readiness-BF-815.md §2 / §3 / §4.1
+     dev: 아래 :root 블록을 release-readiness/style.css 최상단에 그대로 복사
+          (대비 검증 완료 값 — 임의 조정 금지)
+     vanilla-static: 외부 폰트/아이콘 CDN 0건, system font stack only
+     ═══════════════════════════════════════════════════════════════ */
+  :root {
+    /* base */
+    --rr-color-bg:            #F1F3F5;
+    --rr-color-surface:       #FFFFFF;
+    --rr-color-surface-muted: #F8F9FA;
+    --rr-color-border:        #DDE1E6;
+    --rr-color-border-strong: #8A9199;  /* 3.1:1 on white — WCAG non-text 3:1 ✅ */
+    --rr-color-text:          #1A1D21;  /* 16.1:1 ✅ */
+    --rr-color-text-muted:    #5C636A;  /*  5.6:1 ✅ */
+    --rr-color-accent:        #3563E9;  /*  5.2:1 ✅ */
+    --rr-color-accent-hover:  #2A50C4;
+    --rr-color-track:         #E4E7EB;
+
+    /* status — 색 + 한글 라벨 + 글리프 3중 표기 (색 단독 의존 금지, 기획 §13.3) */
+    --rr-color-pending: #475569; --rr-color-pending-tint: #F8FAFC; --rr-color-pending-line: #CBD5E1;
+    --rr-color-blocked: #B91C1C; --rr-color-blocked-tint: #FEF2F2; --rr-color-blocked-line: #FECACA;
+    --rr-color-done:    #0F7B4F; --rr-color-done-tint:    #ECFDF5; --rr-color-done-line:    #A7F3D0;
+
+    /* release banner (기획 §4.3 3-state) */
+    --rr-color-banner-blocked-text:  #7F1D1D;
+    --rr-color-banner-ready-text:    #065F46;
+    --rr-color-banner-progress-text: #1E3A8A;
+    --rr-color-banner-progress-tint: #EFF6FF;
+
+    /* spacing / radius / shadow */
+    --rr-space-1: 4px;  --rr-space-2: 8px;  --rr-space-3: 12px;
+    --rr-space-4: 16px; --rr-space-5: 24px; --rr-space-6: 32px; --rr-space-7: 48px;
+    --rr-radius-sm: 4px; --rr-radius-md: 8px; --rr-radius-lg: 12px; --rr-radius-pill: 999px;
+    --rr-shadow-card: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10);
+
+    /* type — system font only */
+    --rr-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+                    system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --rr-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: var(--rr-space-6) var(--rr-space-5);
+    background: var(--rr-color-bg);
+    color: var(--rr-color-text);
+    font-family: var(--rr-font-sans);
+    line-height: 1.5;
+  }
+
+  /* 접근성 유틸 — display:none 로 대체 금지 (스크린리더에서도 사라짐) */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  /* ── mockup 전용 스캐폴딩 (실제 산출물 아님 — dev 는 복사하지 말 것) ───── */
+  .mock-wrap   { max-width: 1040px; margin: 0 auto; }
+  .mock-title  { font-size: 26px; font-weight: 700; margin: 0 0 var(--rr-space-2); }
+  .mock-lead   { color: var(--rr-color-text-muted); font-size: 14px; margin: 0 0 var(--rr-space-6); }
+  .mock-section{ margin-bottom: var(--rr-space-7); }
+  .mock-section > h2 {
+    font-size: 13px; font-weight: 700; letter-spacing: .06em;
+    color: var(--rr-color-text-muted);
+    padding-bottom: var(--rr-space-2);
+    border-bottom: 1px solid var(--rr-color-border);
+    margin: 0 0 var(--rr-space-4);
+  }
+  .mock-note {
+    font-size: 13px; color: var(--rr-color-text-muted);
+    margin: 0 0 var(--rr-space-4); padding-left: var(--rr-space-3);
+    border-left: 3px solid var(--rr-color-border);
+  }
+  .mock-grid { display: grid; gap: var(--rr-space-4); }
+  .mock-swatch-label {
+    font-size: 12px; font-weight: 700; color: var(--rr-color-text-muted);
+    margin: 0 0 var(--rr-space-2);
+  }
+  .mock-specimen {
+    background: var(--rr-color-surface); border: 1px dashed var(--rr-color-border-strong);
+    border-radius: var(--rr-radius-md); padding: var(--rr-space-4);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     실제 컴포넌트 CSS — dev 가 style.css 로 가져갈 부분
+     ═══════════════════════════════════════════════════════════════ */
+
+  .rr-board { display: block; }
+
+  .rr-header { margin-bottom: var(--rr-space-5); }
+  .rr-title  { font-size: 26px; font-weight: 700; line-height: 1.3; margin: 0 0 var(--rr-space-1); }
+  .rr-lead   { font-size: 14px; color: var(--rr-color-text-muted); margin: 0; }
+
+  .rr-card {
+    background: var(--rr-color-surface);
+    border: 1px solid var(--rr-color-border);
+    border-radius: var(--rr-radius-lg);
+    box-shadow: var(--rr-shadow-card);
+    padding: var(--rr-space-5);
+    margin-bottom: var(--rr-space-5);
+  }
+
+  /* ── 릴리즈 배너 (§5.1) ────────────────────────────────────────── */
+  .rr-banner {
+    display: flex; align-items: center; gap: var(--rr-space-3);
+    padding: var(--rr-space-3) var(--rr-space-4);
+    border-radius: var(--rr-radius-md);
+    border-left: 4px solid transparent;
+    font-size: 16px; font-weight: 700; line-height: 1.4;
+    margin-bottom: var(--rr-space-5);
+  }
+  .rr-banner-glyph { font-size: 15px; line-height: 1; }
+  .rr-banner[data-banner-state="blocked"] {
+    background: var(--rr-color-blocked-tint);
+    border-left-color: var(--rr-color-blocked);
+    color: var(--rr-color-banner-blocked-text);
+  }
+  .rr-banner[data-banner-state="ready"] {
+    background: var(--rr-color-done-tint);
+    border-left-color: var(--rr-color-done);
+    color: var(--rr-color-banner-ready-text);
+  }
+  .rr-banner[data-banner-state="in-progress"] {
+    background: var(--rr-color-banner-progress-tint);
+    border-left-color: var(--rr-color-accent);
+    color: var(--rr-color-banner-progress-text);
+  }
+  .rr-banner[data-banner-state="hidden"] { display: none; }
+
+  /* ── 진행률 바 (§5.2) ─────────────────────────────────────────── */
+  .rr-progress-row {
+    display: flex; align-items: center; gap: var(--rr-space-4);
+    margin-bottom: var(--rr-space-5);
+  }
+  .rr-progress {
+    flex: 1; height: 10px;
+    background: var(--rr-color-track);
+    border-radius: var(--rr-radius-pill);
+    overflow: hidden;
+  }
+  .rr-progress-fill {
+    height: 100%;
+    /* fill 은 blocked 여부와 무관하게 항상 accent — 진행률(양)과 차단(가부)은 다른 축 (명세 §2.4) */
+    background: var(--rr-color-accent);
+    border-radius: var(--rr-radius-pill);
+    transition: width .25s ease;
+  }
+  .rr-progress-label {
+    margin: 0; font-size: 15px; font-weight: 700;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .rr-progress-empty {
+    margin: 0 0 var(--rr-space-5); font-size: 15px; font-weight: 600;
+    color: var(--rr-color-text-muted);
+  }
+
+  /* ── stat 타일 (§5.3) ─────────────────────────────────────────── */
+  .rr-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--rr-space-3); }
+  .rr-stat {
+    display: flex; flex-direction: column; gap: var(--rr-space-1);
+    padding: var(--rr-space-3) var(--rr-space-4);
+    border: 1px solid; border-radius: var(--rr-radius-md);
+  }
+  .rr-stat-value { font-size: 22px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .rr-stat-label { font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--rr-color-text-muted); }
+  .rr-stat[data-stat="done"]    { background: var(--rr-color-done-tint);    border-color: var(--rr-color-done-line); }
+  .rr-stat[data-stat="done"]    .rr-stat-value { color: var(--rr-color-done); }
+  .rr-stat[data-stat="blocked"] { background: var(--rr-color-blocked-tint); border-color: var(--rr-color-blocked-line); }
+  .rr-stat[data-stat="blocked"] .rr-stat-value { color: var(--rr-color-blocked); }
+  .rr-stat[data-stat="pending"] { background: var(--rr-color-pending-tint); border-color: var(--rr-color-pending-line); }
+  .rr-stat[data-stat="pending"] .rr-stat-value { color: var(--rr-color-pending); }
+
+  /* ── 필터 바 (§5.4) ───────────────────────────────────────────── */
+  .rr-filter-row {
+    display: flex; align-items: baseline; gap: var(--rr-space-3);
+    margin-bottom: var(--rr-space-3);
+  }
+  .rr-filter-label {
+    flex: 0 0 40px;
+    font-size: 12px; font-weight: 700; color: var(--rr-color-text-muted);
+  }
+  /* 좁은 화면에서는 줄바꿈(wrap) — 가로 스크롤 미채택 (명세 D-1) */
+  .rr-chip-group { display: flex; flex-wrap: wrap; gap: var(--rr-space-2); }
+
+  .rr-chip {
+    padding: var(--rr-space-2) 14px;
+    font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1;
+    color: var(--rr-color-text);
+    background: var(--rr-color-surface);
+    border: 1px solid var(--rr-color-border);
+    border-radius: var(--rr-radius-pill);
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .rr-chip:hover, .rr-chip.is-hover {
+    background: var(--rr-color-surface-muted);
+    border-color: var(--rr-color-border-strong);
+  }
+  .rr-chip:active { transform: translateY(1px); }
+  /* 선택 상태 = aria-pressed 속성 선택자 (별도 .is-active 클래스 금지 — 명세 §7.3) */
+  .rr-chip[aria-pressed="true"] {
+    background: var(--rr-color-accent);
+    border-color: var(--rr-color-accent);
+    color: #FFFFFF; font-weight: 700;
+  }
+  .rr-chip[aria-pressed="true"]:hover,
+  .rr-chip[aria-pressed="true"].is-hover {
+    background: var(--rr-color-accent-hover);
+    border-color: var(--rr-color-accent-hover);
+  }
+  .rr-chip:focus-visible, .rr-chip.is-focus,
+  .rr-btn-ghost:focus-visible, .rr-btn-ghost.is-focus,
+  .rr-switch:focus-visible, .rr-switch.is-focus {
+    outline: 2px solid var(--rr-color-accent);
+    outline-offset: 2px;
+  }
+
+  .rr-filter-actions {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--rr-space-3);
+    margin-top: var(--rr-space-4); padding-top: var(--rr-space-4);
+    border-top: 1px solid var(--rr-color-border);
+  }
+
+  /* ── 완료 숨기기 토글 (§5.5) ──────────────────────────────────── */
+  .rr-switch {
+    display: inline-flex; align-items: center; gap: var(--rr-space-3);
+    padding: var(--rr-space-1); border: 0; background: none;
+    font-family: inherit; font-size: 14px; font-weight: 600; color: var(--rr-color-text);
+    cursor: pointer; border-radius: var(--rr-radius-sm);
+  }
+  .rr-switch-track {
+    position: relative; flex: 0 0 auto;
+    width: 44px; height: 24px;
+    background: var(--rr-color-surface-muted);
+    border: 1px solid var(--rr-color-border-strong);  /* 3:1 — 트랙 경계 식별 가능 */
+    border-radius: var(--rr-radius-pill);
+    transition: background .18s ease, border-color .18s ease;
+  }
+  .rr-switch-knob {
+    position: absolute; top: 1px; left: 1px;
+    width: 20px; height: 20px;
+    background: #FFFFFF;
+    border: 1px solid var(--rr-color-border-strong);
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(16,24,40,.15);
+    transition: transform .18s ease;
+  }
+  /* on 상태 = aria-checked 속성 선택자 (명세 §7.3 — ARIA 와 시각이 어긋날 수 없음) */
+  .rr-switch[aria-checked="true"] .rr-switch-track {
+    background: var(--rr-color-accent);
+    border-color: var(--rr-color-accent);
+  }
+  .rr-switch[aria-checked="true"] .rr-switch-knob {
+    transform: translateX(20px);
+    border-color: var(--rr-color-accent);
+  }
+
+  /* ── 필터 초기화 버튼 (§5.6) ──────────────────────────────────── */
+  .rr-btn-ghost {
+    padding: var(--rr-space-2) 14px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    color: var(--rr-color-text);
+    background: transparent;
+    border: 1px solid var(--rr-color-border);
+    border-radius: var(--rr-radius-sm);
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .rr-btn-ghost:hover, .rr-btn-ghost.is-hover {
+    background: var(--rr-color-surface-muted);
+    border-color: var(--rr-color-border-strong);
+  }
+
+  /* ── 결과 개수 announcer (§5.9) ───────────────────────────────── */
+  .rr-live {
+    margin: 0 0 var(--rr-space-3);
+    font-size: 13px; color: var(--rr-color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── 목록 표 (§5.7) ───────────────────────────────────────────── */
+  .rr-list { padding: 0; overflow: hidden; }
+  .rr-table { width: 100%; border-collapse: collapse; }
+  .rr-table th {
+    text-align: left;
+    padding: var(--rr-space-3) var(--rr-space-4);
+    font-size: 12px; font-weight: 700; color: var(--rr-color-text-muted);
+    background: var(--rr-color-surface-muted);
+    border-bottom: 1px solid var(--rr-color-border);
+    white-space: nowrap;
+  }
+  .rr-table th:nth-child(2) { width: 96px; }
+  .rr-table th:nth-child(3) { width: 104px; }
+  .rr-table th:nth-child(4) { width: 34%; }
+  .rr-table td {
+    padding: var(--rr-space-3) var(--rr-space-4);
+    border-bottom: 1px solid var(--rr-color-border);
+    vertical-align: middle;
+    font-size: 14px;
+  }
+  .rr-table tr:last-child td { border-bottom: 0; }
+  .rr-row:hover { background: var(--rr-color-surface-muted); }
+  .rr-item-title { font-size: 15px; font-weight: 600; color: var(--rr-color-text); word-break: keep-all; }
+  .rr-evidence {
+    font-size: 13px; color: var(--rr-color-text-muted);
+    word-break: keep-all; overflow-wrap: anywhere;
+  }
+  .rr-evidence--empty { color: var(--rr-color-border-strong); }
+
+  /* ── Status 배지 (§5.8) — 색 + 한글 라벨 + 글리프 3중 표기 ─────── */
+  .rr-badge {
+    display: inline-flex; align-items: center; gap: var(--rr-space-1);
+    padding: var(--rr-space-1) 10px;
+    font-size: 13px; font-weight: 700; line-height: 1;
+    border: 1px solid; border-radius: var(--rr-radius-pill);
+    white-space: nowrap;
+  }
+  .rr-badge-glyph { font-size: 11px; line-height: 1; }
+  .rr-badge[data-status="pending"] {
+    color: var(--rr-color-pending); background: var(--rr-color-pending-tint); border-color: var(--rr-color-pending-line);
+  }
+  .rr-badge[data-status="blocked"] {
+    color: var(--rr-color-blocked); background: var(--rr-color-blocked-tint); border-color: var(--rr-color-blocked-line);
+  }
+  .rr-badge[data-status="done"] {
+    color: var(--rr-color-done); background: var(--rr-color-done-tint); border-color: var(--rr-color-done-line);
+  }
+
+  /* ── 빈 상태 A / B (§6.3) ─────────────────────────────────────── */
+  .rr-empty {
+    text-align: center;
+    padding: var(--rr-space-7) var(--rr-space-5);
+  }
+  .rr-empty-glyph {
+    display: block; font-size: 48px; line-height: 1;
+    color: var(--rr-color-border-strong);
+    margin-bottom: var(--rr-space-4);
+  }
+  .rr-empty-title { margin: 0 0 var(--rr-space-2); font-size: 16px; font-weight: 700; }
+  .rr-empty-desc  { margin: 0 0 var(--rr-space-4); font-size: 14px; color: var(--rr-color-text-muted); }
+
+  /* ── 반응형: ≤767px 표 → 카드 스택 전환 (§4.5 / §7.4) ─────────── */
+  @media (max-width: 767px) {
+    body { padding: var(--rr-space-4) var(--rr-space-3); }
+    .rr-title { font-size: 22px; }
+    .rr-banner { font-size: 15px; }
+
+    /* 진행률 라벨을 바 위로 (세로 스택) */
+    .rr-progress-row { flex-direction: column-reverse; align-items: stretch; gap: var(--rr-space-2); }
+    .rr-progress-label { white-space: normal; }
+
+    .rr-filter-row { flex-direction: column; align-items: flex-start; gap: var(--rr-space-2); }
+    .rr-filter-actions { flex-direction: column; align-items: stretch; gap: var(--rr-space-3); }
+    .rr-filter-actions .rr-btn-ghost { width: 100%; }
+
+    .rr-list { padding: var(--rr-space-3); }
+    .rr-table thead { position: absolute; left: -9999px; }  /* 스크린리더용 유지 (display:none 금지) */
+    .rr-table, .rr-table tbody, .rr-table tr, .rr-table td { display: block; width: 100%; }
+    .rr-table tr {
+      border: 1px solid var(--rr-color-border);
+      border-radius: var(--rr-radius-md);
+      padding: var(--rr-space-3);
+      margin-bottom: var(--rr-space-3);
+    }
+    .rr-table tr:last-child { margin-bottom: 0; }
+    .rr-table td {
+      display: grid; grid-template-columns: 56px 1fr; gap: var(--rr-space-2);
+      align-items: baseline;
+      padding: var(--rr-space-1) 0; border-bottom: 0;
+    }
+    .rr-table td::before {
+      content: attr(data-label);
+      font-size: 12px; font-weight: 700; color: var(--rr-color-text-muted);
+    }
+    /* 제목 셀은 카드 헤드 — "항목" 라벨은 중복 노이즈이므로 제거 */
+    .rr-table td.rr-cell-title { display: block; margin-bottom: var(--rr-space-2); }
+    .rr-table td.rr-cell-title::before { content: none; }
+    .rr-row:hover { background: transparent; }  /* 터치 환경 hover 잔상 방지 */
+  }
+</style>
+</head>
+<body>
+<div class="mock-wrap">
+
+  <p class="mock-title">Release Readiness Board — UI 시안 mockup</p>
+  <p class="mock-lead">
+    BF-817 · 명세: <code>docs/design/release-readiness-BF-815.md</code> ·
+    tech-stack <code>vanilla-static</code> (외부 의존성 0건 · system font · <code>file://</code> 직접 실행 호환)<br>
+    ※ 본 파일은 <strong>시안 시각화 전용</strong>입니다 — dev 의 실제 산출물이 아니며, 픽셀 단위 일치 의무는 없습니다.
+    <code>.mock-*</code> 클래스는 mockup 스캐폴딩이므로 복사하지 마세요.
+  </p>
+
+  <!-- ══════════════ 섹션 1 — 데스크톱 기본 뷰 (data-view-state="list") ══════════════ -->
+  <section class="mock-section">
+    <h2>1. 기본 뷰 — 초기 로드 (fixture 10건 · done 5 / blocked 2 / pending 3)</h2>
+    <p class="mock-note">
+      기획 AC-01. 진행률 50%, 배너는 <code>blocked</code>(차단 2건 → 최우선 규칙, 기획 §4.3).<br>
+      정보 계층: <strong>배너(릴리즈 가능 여부) → 진행률 → stat → 필터 → 목록</strong> 순으로 읽히도록 배치.<br>
+      <strong>이 섹션만 실제 <code>id</code> 속성을 사용합니다</strong> — 아래 섹션들은 HTML ID 중복을 피하려고 class 만 사용합니다.
+    </p>
+
+    <main id="board" class="rr-board" data-view-state="list">
+      <header class="rr-header">
+        <h1 class="rr-title">Release Readiness</h1>
+        <p class="rr-lead">릴리즈 전 체크리스트 — 역할·상태로 좁혀 보고, 차단 항목을 확인하세요.</p>
+      </header>
+
+      <!-- 요약 패널: 항상 전체 fixture 기준 — 필터·토글의 영향을 받지 않음 (기획 §4.2) -->
+      <section class="rr-card rr-summary" aria-labelledby="summary-heading">
+        <h2 id="summary-heading" class="sr-only">릴리즈 요약</h2>
+
+        <div id="release-banner" class="rr-banner" data-banner-state="blocked">
+          <span class="rr-banner-glyph" aria-hidden="true">▲</span>
+          <span class="rr-banner-text">차단 항목 2건 — 출시 보류</span>
+        </div>
+
+        <div class="rr-progress-row">
+          <div id="progress-bar" class="rr-progress" role="progressbar"
+               aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" aria-label="릴리즈 진행률">
+            <div class="rr-progress-fill" style="width:50%"></div>
+          </div>
+          <p class="rr-progress-label">5/10 완료 (50%)</p>
+        </div>
+
+        <div class="rr-stats">
+          <div class="rr-stat" data-stat="done">
+            <span class="rr-stat-value">5</span><span class="rr-stat-label">완료</span>
+          </div>
+          <div class="rr-stat" data-stat="blocked">
+            <span class="rr-stat-value">2</span><span class="rr-stat-label">차단</span>
+          </div>
+          <div class="rr-stat" data-stat="pending">
+            <span class="rr-stat-value">3</span><span class="rr-stat-label">대기</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 필터 바: 목록만 좁힘 -->
+      <section class="rr-card rr-filters">
+        <div class="rr-filter-row">
+          <span class="rr-filter-label" id="role-filter-label">역할</span>
+          <div class="rr-chip-group" role="group" aria-labelledby="role-filter-label">
+            <button class="rr-chip" type="button" data-role-filter="all" aria-pressed="true">전체</button>
+            <button class="rr-chip" type="button" data-role-filter="planning" aria-pressed="false">기획</button>
+            <button class="rr-chip" type="button" data-role-filter="design" aria-pressed="false">디자인</button>
+            <button class="rr-chip" type="button" data-role-filter="dev" aria-pressed="false">개발</button>
+            <button class="rr-chip" type="button" data-role-filter="qa" aria-pressed="false">QA</button>
+            <button class="rr-chip" type="button" data-role-filter="ops" aria-pressed="false">운영</button>
+          </div>
+        </div>
+        <div class="rr-filter-row">
+          <span class="rr-filter-label" id="status-filter-label">상태</span>
+          <div class="rr-chip-group" role="group" aria-labelledby="status-filter-label">
+            <button class="rr-chip" type="button" data-status-filter="all" aria-pressed="true">전체</button>
+            <button class="rr-chip" type="button" data-status-filter="pending" aria-pressed="false">대기</button>
+            <button class="rr-chip" type="button" data-status-filter="blocked" aria-pressed="false">차단</button>
+            <button class="rr-chip" type="button" data-status-filter="done" aria-pressed="false">완료</button>
+          </div>
+        </div>
+        <div class="rr-filter-actions">
+          <button id="hide-done-toggle" class="rr-switch" type="button" role="switch" aria-checked="false">
+            <span class="rr-switch-track" aria-hidden="true"><span class="rr-switch-knob"></span></span>
+            <span class="rr-switch-text">완료 항목 숨기기</span>
+          </button>
+          <button id="reset-filters-btn" class="rr-btn-ghost" type="button">필터 초기화</button>
+        </div>
+      </section>
+
+      <p class="rr-live" aria-live="polite">총 10건 표시</p>
+
+      <section class="rr-card rr-list">
+        <table class="rr-table">
+          <thead>
+            <tr>
+              <th scope="col">항목</th><th scope="col">역할</th><th scope="col">상태</th><th scope="col">증빙</th>
+            </tr>
+          </thead>
+          <tbody id="item-list">
+            <tr class="rr-row" data-id="rr-001" data-role="planning" data-status="done">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">릴리즈 노트 초안 승인</span></td>
+              <td data-label="역할">기획</td>
+              <td data-label="상태"><span class="rr-badge" data-status="done"><span class="rr-badge-glyph" aria-hidden="true">✓</span>완료</span></td>
+              <td data-label="증빙"><span class="rr-evidence">위키 릴리즈노트 v12 승인 완료 — wiki/release-notes-v12</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-002" data-role="planning" data-status="pending">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">이해관계자 사인오프</span></td>
+              <td data-label="역할">기획</td>
+              <td data-label="상태"><span class="rr-badge" data-status="pending"><span class="rr-badge-glyph" aria-hidden="true">○</span>대기</span></td>
+              <td data-label="증빙"><span class="rr-evidence rr-evidence--empty" aria-hidden="true">—</span><span class="sr-only">증빙 없음</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-003" data-role="design" data-status="done">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">신규 화면 반응형 QA 통과</span></td>
+              <td data-label="역할">디자인</td>
+              <td data-label="상태"><span class="rr-badge" data-status="done"><span class="rr-badge-glyph" aria-hidden="true">✓</span>완료</span></td>
+              <td data-label="증빙"><span class="rr-evidence">Figma 핸드오프 diff 0건 확인</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-004" data-role="design" data-status="done">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">다크모드 대비 검수</span></td>
+              <td data-label="역할">디자인</td>
+              <td data-label="상태"><span class="rr-badge" data-status="done"><span class="rr-badge-glyph" aria-hidden="true">✓</span>완료</span></td>
+              <td data-label="증빙"><span class="rr-evidence">대비 4.6:1 측정 완료 (WCAG AA 충족)</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-005" data-role="dev" data-status="done">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">feature flag 기본값 off 확인</span></td>
+              <td data-label="역할">개발</td>
+              <td data-label="상태"><span class="rr-badge" data-status="done"><span class="rr-badge-glyph" aria-hidden="true">✓</span>완료</span></td>
+              <td data-label="증빙"><span class="rr-evidence">PR #482 머지, flag=off 확인</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-006" data-role="dev" data-status="done">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">DB 마이그레이션 dry-run</span></td>
+              <td data-label="역할">개발</td>
+              <td data-label="상태"><span class="rr-badge" data-status="done"><span class="rr-badge-glyph" aria-hidden="true">✓</span>완료</span></td>
+              <td data-label="증빙"><span class="rr-evidence">스테이징 dry-run 로그: migration-dryrun-0713.log</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-007" data-role="qa" data-status="blocked">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">회귀 테스트 스위트 전체 통과</span></td>
+              <td data-label="역할">QA</td>
+              <td data-label="상태"><span class="rr-badge" data-status="blocked"><span class="rr-badge-glyph" aria-hidden="true">▲</span>차단</span></td>
+              <td data-label="증빙"><span class="rr-evidence">회귀 스위트 3건 실패 — BF-820 대응 중</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-008" data-role="qa" data-status="pending">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">접근성(WCAG AA) 점검</span></td>
+              <td data-label="역할">QA</td>
+              <td data-label="상태"><span class="rr-badge" data-status="pending"><span class="rr-badge-glyph" aria-hidden="true">○</span>대기</span></td>
+              <td data-label="증빙"><span class="rr-evidence rr-evidence--empty" aria-hidden="true">—</span><span class="sr-only">증빙 없음</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-009" data-role="ops" data-status="pending">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">프로덕션 배포 승인 (CAB)</span></td>
+              <td data-label="역할">운영</td>
+              <td data-label="상태"><span class="rr-badge" data-status="pending"><span class="rr-badge-glyph" aria-hidden="true">○</span>대기</span></td>
+              <td data-label="증빙"><span class="rr-evidence rr-evidence--empty" aria-hidden="true">—</span><span class="sr-only">증빙 없음</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-010" data-role="ops" data-status="blocked">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">롤백 절차 리허설 완료</span></td>
+              <td data-label="역할">운영</td>
+              <td data-label="상태"><span class="rr-badge" data-status="blocked"><span class="rr-badge-glyph" aria-hidden="true">▲</span>차단</span></td>
+              <td data-label="증빙"><span class="rr-evidence">롤백 스크립트 권한 이슈 — 인프라팀 대응 대기</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </section>
+
+  <!-- ══════════════ 섹션 2 — 필터 적용 뷰 (역할=QA) ══════════════ -->
+  <section class="mock-section">
+    <h2>2. 필터 적용 — 역할 "QA" 선택 (기획 AC-02)</h2>
+    <p class="mock-note">
+      <strong>이 시안의 핵심 원칙</strong>: 목록은 2건으로 좁혀졌지만
+      <strong>진행률(50%)·배너·stat 타일은 그대로다</strong> — 요약은 항상 전체 fixture 기준(기획 §4.2).<br>
+      요약 패널과 필터 바를 <strong>별개 카드</strong>로 물리적으로 분리한 이유가 이것이다:
+      "필터를 걸었는데 왜 50% 그대로지?" 라는 오해가 레이아웃만으로 해소되도록.
+    </p>
+
+    <div class="rr-board" data-view-state="list">
+      <section class="rr-card rr-summary">
+        <div class="rr-banner" data-banner-state="blocked">
+          <span class="rr-banner-glyph" aria-hidden="true">▲</span>
+          <span class="rr-banner-text">차단 항목 2건 — 출시 보류</span>
+        </div>
+        <div class="rr-progress-row">
+          <div class="rr-progress" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" aria-label="릴리즈 진행률">
+            <div class="rr-progress-fill" style="width:50%"></div>
+          </div>
+          <p class="rr-progress-label">5/10 완료 (50%)</p>
+        </div>
+        <div class="rr-stats">
+          <div class="rr-stat" data-stat="done"><span class="rr-stat-value">5</span><span class="rr-stat-label">완료</span></div>
+          <div class="rr-stat" data-stat="blocked"><span class="rr-stat-value">2</span><span class="rr-stat-label">차단</span></div>
+          <div class="rr-stat" data-stat="pending"><span class="rr-stat-value">3</span><span class="rr-stat-label">대기</span></div>
+        </div>
+      </section>
+
+      <section class="rr-card rr-filters">
+        <div class="rr-filter-row">
+          <span class="rr-filter-label">역할</span>
+          <div class="rr-chip-group" role="group" aria-label="역할 필터">
+            <button class="rr-chip" type="button" data-role-filter="all" aria-pressed="false">전체</button>
+            <button class="rr-chip" type="button" data-role-filter="planning" aria-pressed="false">기획</button>
+            <button class="rr-chip" type="button" data-role-filter="design" aria-pressed="false">디자인</button>
+            <button class="rr-chip" type="button" data-role-filter="dev" aria-pressed="false">개발</button>
+            <button class="rr-chip" type="button" data-role-filter="qa" aria-pressed="true">QA</button>
+            <button class="rr-chip" type="button" data-role-filter="ops" aria-pressed="false">운영</button>
+          </div>
+        </div>
+        <div class="rr-filter-row">
+          <span class="rr-filter-label">상태</span>
+          <div class="rr-chip-group" role="group" aria-label="상태 필터">
+            <button class="rr-chip" type="button" data-status-filter="all" aria-pressed="true">전체</button>
+            <button class="rr-chip" type="button" data-status-filter="pending" aria-pressed="false">대기</button>
+            <button class="rr-chip" type="button" data-status-filter="blocked" aria-pressed="false">차단</button>
+            <button class="rr-chip" type="button" data-status-filter="done" aria-pressed="false">완료</button>
+          </div>
+        </div>
+        <div class="rr-filter-actions">
+          <button class="rr-switch" type="button" role="switch" aria-checked="false">
+            <span class="rr-switch-track" aria-hidden="true"><span class="rr-switch-knob"></span></span>
+            <span class="rr-switch-text">완료 항목 숨기기</span>
+          </button>
+          <button class="rr-btn-ghost" type="button" data-action="reset">필터 초기화</button>
+        </div>
+      </section>
+
+      <p class="rr-live" aria-live="polite">총 2건 표시</p>
+
+      <section class="rr-card rr-list">
+        <table class="rr-table">
+          <thead>
+            <tr><th scope="col">항목</th><th scope="col">역할</th><th scope="col">상태</th><th scope="col">증빙</th></tr>
+          </thead>
+          <tbody>
+            <tr class="rr-row" data-id="rr-007" data-role="qa" data-status="blocked">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">회귀 테스트 스위트 전체 통과</span></td>
+              <td data-label="역할">QA</td>
+              <td data-label="상태"><span class="rr-badge" data-status="blocked"><span class="rr-badge-glyph" aria-hidden="true">▲</span>차단</span></td>
+              <td data-label="증빙"><span class="rr-evidence">회귀 스위트 3건 실패 — BF-820 대응 중</span></td>
+            </tr>
+            <tr class="rr-row" data-id="rr-008" data-role="qa" data-status="pending">
+              <td class="rr-cell-title" data-label="항목"><span class="rr-item-title">접근성(WCAG AA) 점검</span></td>
+              <td data-label="역할">QA</td>
+              <td data-label="상태"><span class="rr-badge" data-status="pending"><span class="rr-badge-glyph" aria-hidden="true">○</span>대기</span></td>
+              <td data-label="증빙"><span class="rr-evidence rr-evidence--empty" aria-hidden="true">—</span><span class="sr-only">증빙 없음</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </section>
+
+  <!-- ══════════════ 섹션 3 — 릴리즈 배너 3-state ══════════════ -->
+  <section class="mock-section">
+    <h2>3. 릴리즈 배너 3-state (기획 §4.3 · AC-09 / AC-10)</h2>
+    <p class="mock-note">
+      판정 우선순위: <code>blocked &gt; 0</code> 이 <strong>최우선</strong> — 완료율이 9/10 여도 차단이 1건이라도 있으면
+      반드시 경고 배너다(기획 EC-08, 긍정 배너 오인 금지).
+    </p>
+    <div class="mock-grid">
+      <div>
+        <p class="mock-swatch-label">data-banner-state="blocked" — blocked &gt; 0 (최우선)</p>
+        <div class="rr-banner" data-banner-state="blocked">
+          <span class="rr-banner-glyph" aria-hidden="true">▲</span>
+          <span class="rr-banner-text">차단 항목 2건 — 출시 보류</span>
+        </div>
+      </div>
+      <div>
+        <p class="mock-swatch-label">data-banner-state="ready" — blocked === 0 &amp;&amp; releaseReady === true</p>
+        <div class="rr-banner" data-banner-state="ready">
+          <span class="rr-banner-glyph" aria-hidden="true">✓</span>
+          <span class="rr-banner-text">출시 준비 완료</span>
+        </div>
+      </div>
+      <div>
+        <p class="mock-swatch-label">data-banner-state="in-progress" — blocked === 0 &amp;&amp; releaseReady === false</p>
+        <div class="rr-banner" data-banner-state="in-progress">
+          <span class="rr-banner-glyph" aria-hidden="true">●</span>
+          <span class="rr-banner-text">진행 중 (70%)</span>
+        </div>
+      </div>
+      <div>
+        <p class="mock-swatch-label">data-banner-state="hidden" — total === 0 → display:none (아래 여백만 존재)</p>
+        <div class="mock-specimen">
+          <div class="rr-banner" data-banner-state="hidden">
+            <span class="rr-banner-glyph" aria-hidden="true">●</span>
+            <span class="rr-banner-text">(숨김 처리되어 렌더되지 않음)</span>
+          </div>
+          <span class="rr-evidence">배너 영역 없음 — 빈 상태 B 에서만 발생 (기획 §12.2)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ 섹션 4 — 배지 + 인터랙션 상태 ══════════════ -->
+  <section class="mock-section">
+    <h2>4. Status 배지 · 인터랙션 상태 (hover / focus / selected)</h2>
+    <p class="mock-note">
+      배지는 <strong>색 + 한글 라벨 + 글리프 3중 표기</strong> — 색 단독으로 구분하지 않는다(기획 §13.3, 색각 이상 대응).<br>
+      아래 hover/focus 는 정적 시뮬레이션(<code>.is-hover</code> / <code>.is-focus</code> 클래스)이다.
+      <strong>dev 는 이 클래스를 구현하지 말고</strong> <code>:hover</code> / <code>:focus-visible</code> 의사클래스를 사용한다.
+    </p>
+
+    <div class="mock-grid">
+      <div class="mock-specimen">
+        <p class="mock-swatch-label">Status 배지 3종 (pending / blocked / done)</p>
+        <span class="rr-badge" data-status="pending"><span class="rr-badge-glyph" aria-hidden="true">○</span>대기</span>
+        <span class="rr-badge" data-status="blocked"><span class="rr-badge-glyph" aria-hidden="true">▲</span>차단</span>
+        <span class="rr-badge" data-status="done"><span class="rr-badge-glyph" aria-hidden="true">✓</span>완료</span>
+      </div>
+
+      <div class="mock-specimen">
+        <p class="mock-swatch-label">필터 칩 — 기본 / hover / 선택(aria-pressed=true) / 선택+hover / focus-visible</p>
+        <button class="rr-chip" type="button" aria-pressed="false">기본</button>
+        <button class="rr-chip is-hover" type="button" aria-pressed="false">hover</button>
+        <button class="rr-chip" type="button" aria-pressed="true">선택됨</button>
+        <button class="rr-chip is-hover" type="button" aria-pressed="true">선택+hover</button>
+        <button class="rr-chip is-focus" type="button" aria-pressed="false">focus</button>
+        <button class="rr-chip is-focus" type="button" aria-pressed="true">선택+focus</button>
+      </div>
+
+      <div class="mock-specimen">
+        <p class="mock-swatch-label">완료 숨기기 토글 — off / on / focus-visible (role=switch + aria-checked)</p>
+        <button class="rr-switch" type="button" role="switch" aria-checked="false">
+          <span class="rr-switch-track" aria-hidden="true"><span class="rr-switch-knob"></span></span>
+          <span class="rr-switch-text">완료 항목 숨기기 (off)</span>
+        </button>
+        <br><br>
+        <button class="rr-switch" type="button" role="switch" aria-checked="true">
+          <span class="rr-switch-track" aria-hidden="true"><span class="rr-switch-knob"></span></span>
+          <span class="rr-switch-text">완료 항목 숨기기 (on)</span>
+        </button>
+        <br><br>
+        <button class="rr-switch is-focus" type="button" role="switch" aria-checked="true">
+          <span class="rr-switch-track" aria-hidden="true"><span class="rr-switch-knob"></span></span>
+          <span class="rr-switch-text">완료 항목 숨기기 (on + focus)</span>
+        </button>
+      </div>
+
+      <div class="mock-specimen">
+        <p class="mock-swatch-label">필터 초기화 버튼 — 기본 / hover / focus-visible</p>
+        <button class="rr-btn-ghost" type="button">필터 초기화</button>
+        <button class="rr-btn-ghost is-hover" type="button">필터 초기화 (hover)</button>
+        <button class="rr-btn-ghost is-focus" type="button">필터 초기화 (focus)</button>
+      </div>
+
+      <div class="mock-specimen">
+        <p class="mock-swatch-label">focus ring 규칙 (기획 AC-13 — 키보드 전용 조작)</p>
+        <span class="rr-evidence">
+          <code>outline: 2px solid var(--rr-color-accent); outline-offset: 2px;</code> —
+          모든 인터랙티브 요소 공통. <code>outline: none</code> 절대 금지.
+          Tab 순서 = DOM 순서(역할 → 상태 → 토글 → 초기화 → 목록), <code>tabindex</code> 임의 지정 금지.
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ 섹션 5 — 빈 상태 A / B ══════════════ -->
+  <section class="mock-section">
+    <h2>5. 빈 상태 A / B (기획 §12 — 문구 고정)</h2>
+    <p class="mock-note">
+      두 상태는 <strong>문구 + 초기화 버튼 유무</strong>로 구분된다. dev 는 <code>#board[data-view-state]</code> 값
+      (<code>empty-filtered</code> / <code>empty-fixture</code>)으로 분기 렌더링한다.<br>
+      ⚠️ 빈 상태 A 에서 <strong>요약 패널(진행률/배너/stat)이 그대로 남아 있는 것은 버그가 아니라 설계</strong>다 (기획 §4.2).
+    </p>
+
+    <div class="mock-grid">
+      <div>
+        <p class="mock-swatch-label">빈 상태 A — data-view-state="empty-filtered" (필터 결과 0건, fixture 는 존재)</p>
+        <section class="rr-card rr-list">
+          <div class="rr-empty" data-empty="filtered">
+            <span class="rr-empty-glyph" aria-hidden="true">⌕</span>
+            <p class="rr-empty-title">선택한 조건에 해당하는 항목이 없습니다.</p>
+            <p class="rr-empty-desc">역할·상태 필터 또는 '완료 항목 숨기기' 조건을 조정해 보세요.</p>
+            <button class="rr-btn-ghost" type="button" data-action="reset">필터 초기화</button>
+          </div>
+        </section>
+        <p class="mock-note" style="margin-top:-12px">
+          발생 예: 상태 필터="완료" + "완료 항목 숨기기" ON (기획 EC-01 / AC-06) → 에러 없이 안전하게 귀결.
+          announcer 는 "총 0건 표시".
+        </p>
+      </div>
+
+      <div>
+        <p class="mock-swatch-label">빈 상태 B — data-view-state="empty-fixture" (fixture 자체가 0건, 방어적 edge)</p>
+        <section class="rr-card rr-summary">
+          <p class="rr-progress-empty">표시할 진행률 없음</p>
+          <span class="rr-evidence">배너 숨김(<code>data-banner-state="hidden"</code>) · stat 타일 숨김 · announcer 숨김</span>
+        </section>
+        <section class="rr-card rr-list">
+          <div class="rr-empty" data-empty="fixture">
+            <span class="rr-empty-glyph" aria-hidden="true">☐</span>
+            <p class="rr-empty-title">등록된 릴리즈 체크리스트 항목이 없습니다.</p>
+            <!-- 초기화 버튼 없음 — 초기화해도 의미가 없으므로 (기획 §12.2) -->
+          </div>
+        </section>
+        <p class="mock-note" style="margin-top:-12px">
+          초기화 버튼 <strong>숨김</strong> · 보조 설명 <strong>없음</strong> — 조치할 것이 없는데 안내를 띄우지 않는다.
+          진행률 <code>0%</code> 로 오인되지 않도록 퍼센트 대신 문구를 노출(기획 §4.1).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ 섹션 6 — 반응형 ══════════════ -->
+  <section class="mock-section">
+    <h2>6. 반응형 — 브레이크포인트 768px (기획 §14)</h2>
+    <p class="mock-note">
+      본 mockup 은 <strong>실제 <code>@media (max-width: 767px)</code> 쿼리로 구현</strong>되어 있다 — 모바일 뷰를 이미지로 흉내 낸 것이 아니다.<br>
+      <strong>확인 방법</strong>: 이 파일을 <code>file://</code> 로 열고 브라우저 창을 768px 미만으로 좁히면 위 섹션 1·2 의 표가 실제로 카드 스택으로 전환된다.<br>
+      커밋된 <code>release-readiness-BF-817-mobile.png</code> 는 390px 뷰포트에서 캡처한 것이다.
+    </p>
+    <div class="mock-specimen">
+      <table class="rr-table" style="width:auto">
+        <thead>
+          <tr><th scope="col">뷰포트</th><th scope="col">목록</th><th scope="col">필터 칩</th><th scope="col">진행률 라벨</th></tr>
+        </thead>
+        <tbody>
+          <tr class="rr-row">
+            <td data-label="뷰포트"><strong>≥ 768px</strong></td>
+            <td data-label="목록">표(table) 유지 — 항목 / 역할(96px) / 상태(104px) / 증빙(34%)</td>
+            <td data-label="필터 칩">가로 배열</td>
+            <td data-label="진행률 라벨">바 우측 인라인</td>
+          </tr>
+          <tr class="rr-row">
+            <td data-label="뷰포트"><strong>≤ 767px</strong></td>
+            <td data-label="목록">카드 스택 전환 — <code>display:block</code> + <code>td::before{content:attr(data-label)}</code></td>
+            <td data-label="필터 칩">줄바꿈(wrap) — 가로 스크롤 미채택</td>
+            <td data-label="진행률 라벨">바 위로 이동 (세로 스택)</td>
+          </tr>
+          <tr class="rr-row">
+            <td data-label="뷰포트"><strong>320px</strong></td>
+            <td data-label="목록">가로 스크롤 <strong>0</strong> — <code>word-break: keep-all; overflow-wrap: anywhere</code></td>
+            <td data-label="필터 칩">2~3줄로 전부 노출</td>
+            <td data-label="진행률 라벨">동일</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="mock-lead">
+    — [이디자인] · BF-817 · 명세 전문: <code>docs/design/release-readiness-BF-815.md</code>
+  </p>
+
+</div>
+</body>
+</html>
