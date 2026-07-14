@@ -1,0 +1,818 @@
+/* incident-command/style.css — Incident Command Center (dark operations)
+ * BF-824 · 시안 docs/design/incident-command-BF-821.md §2~§8 토큰/컴포넌트/상태 규칙
+ * 리터럴 HEX 는 :root 블록에만 존재 (시안 §2.5) · 외부 폰트/CDN 0건 (vanilla-static)
+ */
+
+:root {
+  /* 기반 (시안 §2.1) */
+  --ic-bg: #0B0F17;
+  --ic-surface: #131A26;
+  --ic-surface-raised: #1B2433;
+  --ic-surface-selected: #1E2A3D;
+  --ic-border: #2A3648;
+  --ic-border-interactive: #6B7C94;
+  --ic-text: #E8EDF5;
+  --ic-text-secondary: #9FB0C7;
+  --ic-text-muted: #6B7C94;
+  --ic-accent: #4DA3FF;
+  --ic-accent-fg: #08111C;
+
+  /* Severity (시안 §2.2) */
+  --ic-sev-1-fg: #FF8A8A;
+  --ic-sev-1-bg: #3A1518;
+  --ic-sev-1-border: #7A2A30;
+  --ic-sev-2-fg: #FFC96B;
+  --ic-sev-2-bg: #3A2A10;
+  --ic-sev-2-border: #7A5A20;
+  --ic-sev-3-fg: #7DB8FF;
+  --ic-sev-3-bg: #12283F;
+  --ic-sev-3-border: #2C5480;
+  --ic-sev-4-fg: #B9C7DA;
+  --ic-sev-4-bg: #212C3B;
+  --ic-sev-4-border: #44536B;
+
+  /* Status (시안 §2.3) */
+  --ic-status-bg: #1E2735;
+  --ic-status-detected-fg: #C7D3E3;
+  --ic-status-investigating-fg: #FFC96B;
+  --ic-status-mitigating-fg: #5EEAD4;
+  --ic-status-monitoring-fg: #7DB8FF;
+  --ic-status-resolved-fg: #4ADE80;
+
+  /* Timeline eventType (시안 §2.4) */
+  --ic-evt-detected: #C7D3E3;
+  --ic-evt-update: #7DB8FF;
+  --ic-evt-escalated: #FF8A8A;
+  --ic-evt-resolved: #4ADE80;
+  --ic-evt-escalated-bg: #2A1A1E;
+  --ic-evt-resolved-bg: #12261B;
+
+  /* 기능 색 (시안 §2.5) */
+  --ic-progress-fill: #4ADE80;
+  --ic-progress-track: #212C3B;
+  --ic-danger: #FF5C5C;
+  --ic-danger-bg: #2A1418;
+  --ic-focus: #4DA3FF;
+  --ic-skeleton: #1E2735;
+  --ic-skeleton-shine: #2A3648;
+
+  /* 타이포 (시안 §3) */
+  --ic-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo",
+                  "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --ic-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "D2Coding", monospace;
+
+  /* 스페이싱 · 라디우스 (시안 §4) */
+  --ic-space-1: 4px;
+  --ic-space-2: 8px;
+  --ic-space-3: 12px;
+  --ic-space-4: 16px;
+  --ic-space-5: 20px;
+  --ic-space-6: 24px;
+  --ic-space-7: 32px;
+  --ic-radius-sm: 4px;
+  --ic-radius-md: 8px;
+  --ic-radius-lg: 12px;
+  --ic-radius-pill: 999px;
+  --ic-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --ic-shadow-selected: inset 0 0 0 1px var(--ic-accent);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0 var(--ic-space-4) var(--ic-space-7);
+  background: var(--ic-bg);
+  color: var(--ic-text);
+  font-family: var(--ic-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.ic-mono {
+  font-family: var(--ic-font-mono);
+}
+
+.ic-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ic-focus);
+  outline-offset: 2px;
+}
+
+/* ─────────── 상단바 ─────────── */
+
+.ic-topbar {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--ic-space-6) 0 var(--ic-space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ic-space-3);
+}
+
+.ic-topbar h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.ic-topbar__count {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ic-text-secondary);
+}
+
+/* ─────────── 상태 전환 (시안 §7 — JS 는 data-view-state 만 바꾼다) ─────────── */
+
+#incident-command {
+  display: block;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.ic-skeleton,
+.ic-empty,
+.ic-error,
+.ic-ready-only {
+  display: none;
+}
+
+[data-view-state="loading"] .ic-skeleton {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ic-space-5);
+}
+
+[data-view-state="empty"] .ic-empty {
+  display: block;
+}
+
+[data-view-state="error"] .ic-error {
+  display: flex;
+}
+
+[data-view-state="ready"] .ic-ready-only {
+  display: grid;
+}
+
+/* loading 스켈레톤 */
+
+.ic-skeleton__pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ic-space-2);
+  padding: var(--ic-space-4);
+  background: var(--ic-surface);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg);
+}
+
+.ic-skeleton__block {
+  background: var(--ic-skeleton);
+  border-radius: var(--ic-radius-md);
+  animation: ic-pulse 1.2s ease-in-out infinite;
+}
+
+.ic-skeleton__block--row {
+  height: 64px;
+}
+
+.ic-skeleton__block--head {
+  height: 96px;
+}
+
+.ic-skeleton__block--body {
+  height: 48px;
+}
+
+@keyframes ic-pulse {
+  0%, 100% { background: var(--ic-skeleton); }
+  50% { background: var(--ic-skeleton-shine); }
+}
+
+/* empty */
+
+.ic-empty {
+  padding: var(--ic-space-7) var(--ic-space-4);
+  text-align: center;
+  color: var(--ic-text-secondary);
+}
+
+.ic-empty__mark {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--ic-space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--ic-border-interactive);
+  border-radius: var(--ic-radius-pill);
+}
+
+/* error */
+
+.ic-error {
+  gap: var(--ic-space-3);
+  align-items: flex-start;
+  padding: var(--ic-space-4);
+  background: var(--ic-danger-bg);
+  border: 1px solid var(--ic-danger);
+  border-left-width: 4px;
+  border-radius: var(--ic-radius-md);
+  color: var(--ic-text);
+}
+
+/* ─────────── 레이아웃 (시안 §5.2) ─────────── */
+
+.ic-grid {
+  grid-template-columns: 1fr;
+  gap: var(--ic-space-5);
+  align-items: start;
+}
+
+.ic-panel {
+  min-width: 0;
+  background: var(--ic-surface);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg);
+  box-shadow: var(--ic-shadow-panel);
+}
+
+.ic-list-pane {
+  padding: var(--ic-space-4);
+}
+
+.ic-panel__title {
+  margin: 0 0 var(--ic-space-3);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ─────────── 필터 칩 (시안 §6.3) ─────────── */
+
+.ic-filters {
+  display: flex;
+  gap: var(--ic-space-2);
+  margin-bottom: var(--ic-space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ic-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.ic-chip {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--ic-text-secondary);
+  border: 1px solid var(--ic-border-interactive);
+  border-radius: var(--ic-radius-pill);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ic-chip:hover {
+  background: var(--ic-surface-raised);
+  color: var(--ic-text);
+}
+
+.ic-chip[aria-pressed="true"] {
+  background: var(--ic-accent);
+  color: var(--ic-accent-fg);
+  border-color: var(--ic-accent);
+  font-weight: 700;
+}
+
+.ic-chip--reset {
+  margin-top: var(--ic-space-3);
+  border-color: var(--ic-accent);
+  color: var(--ic-accent);
+}
+
+/* ─────────── 배지 (시안 §6.1 · §6.2) ─────────── */
+
+.ic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ic-space-1);
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: var(--ic-radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.ic-badge--sev[data-severity="P1"] {
+  color: var(--ic-sev-1-fg);
+  background: var(--ic-sev-1-bg);
+  border: 2px solid var(--ic-sev-1-border);
+}
+
+.ic-badge--sev[data-severity="P2"] {
+  color: var(--ic-sev-2-fg);
+  background: var(--ic-sev-2-bg);
+  border: 1px solid var(--ic-sev-2-border);
+}
+
+.ic-badge--sev[data-severity="P3"] {
+  color: var(--ic-sev-3-fg);
+  background: var(--ic-sev-3-bg);
+  border: 1px solid var(--ic-sev-3-border);
+}
+
+.ic-badge--sev[data-severity="P4"] {
+  color: var(--ic-sev-4-fg);
+  background: var(--ic-sev-4-bg);
+  border: 1px solid var(--ic-sev-4-border);
+}
+
+.ic-badge--status {
+  background: var(--ic-status-bg);
+  border: 1px solid var(--ic-border);
+}
+
+.ic-badge--status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: var(--ic-radius-pill);
+  border: 1px solid currentColor;
+  flex: 0 0 auto;
+}
+
+.ic-badge--status[data-status="detected"] {
+  color: var(--ic-status-detected-fg);
+}
+
+.ic-badge--status[data-status="investigating"] {
+  color: var(--ic-status-investigating-fg);
+}
+
+/* 반원 — 우측 절반만 채움 */
+.ic-badge--status[data-status="investigating"]::before {
+  background: linear-gradient(to right, transparent 50%, currentColor 50%);
+}
+
+.ic-badge--status[data-status="mitigating"] {
+  color: var(--ic-status-mitigating-fg);
+}
+
+.ic-badge--status[data-status="mitigating"]::before {
+  background: currentColor;
+}
+
+.ic-badge--status[data-status="monitoring"] {
+  color: var(--ic-status-monitoring-fg);
+}
+
+/* 이중 원(링) */
+.ic-badge--status[data-status="monitoring"]::before {
+  box-shadow: inset 0 0 0 2px var(--ic-status-bg), inset 0 0 0 4px currentColor;
+}
+
+.ic-badge--status[data-status="resolved"] {
+  color: var(--ic-status-resolved-fg);
+}
+
+.ic-badge--status[data-status="resolved"]::before {
+  content: "✓";
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+}
+
+/* ─────────── 목록 행 (시안 §6.4) ─────────── */
+
+.ic-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ic-space-2);
+}
+
+.ic-row {
+  min-height: 64px;
+  padding: var(--ic-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ic-space-2);
+  background: var(--ic-surface);
+  border: 1px solid var(--ic-border-interactive);
+  border-left: 4px solid var(--ic-border-interactive);
+  border-radius: var(--ic-radius-md);
+  cursor: pointer;
+}
+
+.ic-row[data-severity="P1"] { border-left-color: var(--ic-sev-1-fg); }
+.ic-row[data-severity="P2"] { border-left-color: var(--ic-sev-2-fg); }
+.ic-row[data-severity="P3"] { border-left-color: var(--ic-sev-3-fg); }
+.ic-row[data-severity="P4"] { border-left-color: var(--ic-sev-4-fg); }
+
+.ic-row:hover {
+  background: var(--ic-surface-raised);
+}
+
+.ic-row[aria-selected="true"] {
+  background: var(--ic-surface-selected);
+  box-shadow: var(--ic-shadow-selected);
+  border-left-width: 6px;
+}
+
+.ic-row__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ic-space-2);
+}
+
+.ic-row__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.ic-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ic-space-2);
+  font-size: 12px;
+}
+
+.ic-row__at,
+.ic-check__at,
+.ic-detail-head__id,
+.ic-detail-head__times,
+.ic-tl__time {
+  color: var(--ic-text-muted);
+  font-size: 12px;
+}
+
+/* ─────────── Owner (시안 §6.5) ─────────── */
+
+.ic-owner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ic-space-2);
+  color: var(--ic-text-secondary);
+  font-size: 12px;
+}
+
+.ic-owner__avatar {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ic-radius-pill);
+  background: var(--ic-surface-raised);
+  border: 1px solid var(--ic-border-interactive);
+  color: var(--ic-text);
+  font-weight: 700;
+}
+
+.ic-owner__team {
+  color: var(--ic-text-secondary);
+}
+
+.ic-owner__team::before {
+  content: "· ";
+}
+
+/* ─────────── 상세 패널 (시안 §6.5 · §5.1) ─────────── */
+
+.ic-detail-pane {
+  overflow: hidden;
+}
+
+.ic-detail-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ic-space-2);
+  padding: var(--ic-space-4);
+  background: var(--ic-surface-raised);
+  border-bottom: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg) var(--ic-radius-lg) 0 0;
+}
+
+.ic-detail-head__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ic-space-2);
+}
+
+.ic-detail-head__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.ic-detail-head__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ic-space-2);
+}
+
+.ic-detail-head__times {
+  margin: 0;
+}
+
+.ic-detail-pane .ic-panel {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.ic-checklist-panel,
+.ic-timeline-panel {
+  padding: var(--ic-space-4);
+}
+
+.ic-timeline-panel {
+  border-top: 1px solid var(--ic-border);
+}
+
+/* 미선택 / 안내 블록 (시안 §7.5 · §7.6) */
+
+.ic-note {
+  padding: var(--ic-space-4);
+  border: 1px dashed var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  color: var(--ic-text-secondary);
+}
+
+.ic-note p {
+  margin: 0;
+}
+
+.ic-detail-empty {
+  margin: var(--ic-space-4);
+  text-align: center;
+}
+
+.ic-detail-empty__arrow {
+  display: block;
+  margin-bottom: var(--ic-space-2);
+  font-size: 20px;
+}
+
+.ic-filter-empty {
+  text-align: center;
+}
+
+/* ─────────── 진행률 바 (시안 §6.6) ─────────── */
+
+.ic-progress {
+  height: 8px;
+  background: var(--ic-progress-track);
+  border-radius: var(--ic-radius-sm);
+  overflow: hidden;
+}
+
+.ic-progress__fill {
+  height: 100%;
+  width: 0;
+  background: var(--ic-progress-fill);
+  transition: width 180ms ease-out;
+}
+
+.ic-progress__text {
+  margin: var(--ic-space-2) 0 var(--ic-space-3);
+  color: var(--ic-text-secondary);
+  font-size: 12px;
+}
+
+/* ─────────── 체크리스트 (시안 §6.7) ─────────── */
+
+.ic-check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ic-space-2);
+}
+
+.ic-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ic-space-3);
+  padding: var(--ic-space-3);
+  background: var(--ic-surface-raised);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+}
+
+.ic-check__box {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: var(--ic-progress-fill);
+  cursor: pointer;
+}
+
+.ic-check__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-block: 4px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.ic-check__box:checked + .ic-check__label {
+  text-decoration: line-through;
+  color: var(--ic-text-muted);
+}
+
+.ic-check__at {
+  flex: 0 0 auto;
+}
+
+/* ─────────── 타임라인 (시안 §6.8 — 읽기 전용) ─────────── */
+
+.ic-timeline {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--ic-space-5);
+}
+
+.ic-timeline::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 5px;
+  width: 1px;
+  background: var(--ic-border);
+}
+
+.ic-tl {
+  position: relative;
+  display: flex;
+  gap: var(--ic-space-3);
+  padding: var(--ic-space-2) var(--ic-space-2) var(--ic-space-2) var(--ic-space-3);
+  border-radius: var(--ic-radius-md);
+  cursor: default;
+}
+
+.ic-tl::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 14px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--ic-radius-pill);
+  background: var(--ic-evt-update);
+}
+
+.ic-tl[data-event-type="detected"]::before {
+  background: var(--ic-bg);
+  border: 2px solid var(--ic-evt-detected);
+}
+
+.ic-tl[data-event-type="update"]::before {
+  background: var(--ic-evt-update);
+}
+
+.ic-tl[data-event-type="escalated"] {
+  background: var(--ic-evt-escalated-bg);
+  border-left: 2px solid var(--ic-evt-escalated);
+}
+
+/* 마름모 — 색 비의존 형태 인코딩 */
+.ic-tl[data-event-type="escalated"]::before {
+  background: var(--ic-evt-escalated);
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.ic-tl[data-event-type="resolved"] {
+  background: var(--ic-evt-resolved-bg);
+}
+
+.ic-tl[data-event-type="resolved"]::before {
+  background: var(--ic-evt-resolved);
+}
+
+.ic-tl__time {
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+.ic-tl__body {
+  min-width: 0;
+}
+
+.ic-tl__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ic-space-2);
+}
+
+.ic-tl__type {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ic-text);
+}
+
+.ic-tl[data-event-type="escalated"] .ic-tl__type {
+  color: var(--ic-evt-escalated);
+}
+
+.ic-tl[data-event-type="resolved"] .ic-tl__type {
+  color: var(--ic-evt-resolved);
+}
+
+.ic-tl__actor {
+  font-size: 12px;
+  color: var(--ic-text-secondary);
+}
+
+.ic-tl__note {
+  margin: var(--ic-space-1) 0 0;
+  color: var(--ic-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* ─────────── 반응형 (시안 §5.2) ─────────── */
+
+@media (min-width: 768px) {
+  [data-view-state="loading"] .ic-skeleton,
+  [data-view-state="ready"] .ic-ready-only {
+    grid-template-columns: minmax(300px, 360px) 1fr;
+  }
+
+  .ic-grid {
+    grid-template-columns: minmax(300px, 360px) 1fr;
+  }
+
+  .ic-list-pane {
+    position: sticky;
+    top: var(--ic-space-4);
+    max-height: calc(100vh - var(--ic-space-7));
+    overflow-y: auto;
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-view-state="loading"] .ic-skeleton,
+  [data-view-state="ready"] .ic-ready-only,
+  .ic-grid {
+    grid-template-columns: 380px 1fr;
+  }
+}
+
+/* ─────────── 모션 축소 (시안 §8.1) ─────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ic-skeleton__block {
+    animation: none;
+  }
+
+  .ic-progress__fill {
+    transition: none;
+  }
+}
