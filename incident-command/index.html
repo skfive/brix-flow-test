@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Incident Command Center</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="ic-topbar">
+    <h1>Incident Command Center</h1>
+    <p class="ic-topbar__count ic-mono" id="incident-count"></p>
+  </header>
+
+  <!-- 기획 §13.2 — 초기 정적 상태는 loading 스켈레톤. command.js 가 동기적으로 ready/empty/error 로 교체 -->
+  <main id="incident-command" data-view-state="loading">
+    <p id="ic-live" class="ic-sr-only" aria-live="polite" aria-atomic="true"></p>
+
+    <!-- loading: 정적 스켈레톤 (시안 §7.1) -->
+    <div class="ic-skeleton" aria-hidden="true">
+      <div class="ic-skeleton__pane">
+        <div class="ic-skeleton__block ic-skeleton__block--row"></div>
+        <div class="ic-skeleton__block ic-skeleton__block--row"></div>
+        <div class="ic-skeleton__block ic-skeleton__block--row"></div>
+        <div class="ic-skeleton__block ic-skeleton__block--row"></div>
+      </div>
+      <div class="ic-skeleton__pane">
+        <div class="ic-skeleton__block ic-skeleton__block--head"></div>
+        <div class="ic-skeleton__block ic-skeleton__block--body"></div>
+        <div class="ic-skeleton__block ic-skeleton__block--body"></div>
+        <div class="ic-skeleton__block ic-skeleton__block--body"></div>
+      </div>
+    </div>
+
+    <!-- empty: 기획 §13.3 고정 문구 -->
+    <div class="ic-empty">
+      <div class="ic-empty__mark" aria-hidden="true">—</div>
+      <p>표시할 장애가 없습니다.</p>
+    </div>
+
+    <!-- error: 기획 §13.4 고정 문구 · role="alert" (ready/empty 전환 시 command.js 가 DOM 에서 제거) -->
+    <div id="error-banner" role="alert" class="ic-error">
+      <span class="ic-error__glyph" aria-hidden="true">⚠</span>
+      <span>장애 데이터를 불러오지 못했습니다. 페이지를 새로고침해 주세요.</span>
+    </div>
+
+    <div class="ic-grid ic-ready-only">
+      <section class="ic-panel ic-list-pane" aria-label="장애 목록 패널">
+        <h2 class="ic-panel__title">장애 목록</h2>
+
+        <div role="group" aria-label="심각도 필터" class="ic-filters">
+          <button type="button" class="ic-chip" data-severity-filter="all" aria-pressed="true">전체</button>
+          <button type="button" class="ic-chip" data-severity-filter="P1" aria-pressed="false">P1 · 치명</button>
+          <button type="button" class="ic-chip" data-severity-filter="P2" aria-pressed="false">P2 · 높음</button>
+          <button type="button" class="ic-chip" data-severity-filter="P3" aria-pressed="false">P3 · 보통</button>
+          <button type="button" class="ic-chip" data-severity-filter="P4" aria-pressed="false">P4 · 낮음</button>
+        </div>
+
+        <ul id="incident-list" class="ic-list" role="listbox" aria-label="장애 목록"></ul>
+
+        <!-- 필터 결과 0건 (시안 §7.4) -->
+        <div id="filter-empty" class="ic-note ic-note--dashed ic-filter-empty" hidden>
+          <p>해당 심각도의 장애가 없습니다.</p>
+          <button id="reset-severity-filter-btn" type="button" class="ic-chip ic-chip--reset">필터 초기화</button>
+        </div>
+      </section>
+
+      <section id="incident-detail" class="ic-panel ic-detail-pane" data-selected-id="none" aria-label="장애 상세"></section>
+    </div>
+  </main>
+
+  <script src="./fixtures.js"></script>
+  <script src="./command.js"></script>
+</body>
+</html>
