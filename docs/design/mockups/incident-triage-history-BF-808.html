@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Handoff Timeline mockup — BF-808 / 시안 BF-806</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   Incident Handoff Timeline — 시각 mockup (BF-808)
+   시안: docs/design/incident-triage-history-BF-806.md
+   vanilla-static — 외부 link/script/font CDN 0건, file:// 직접 실행 호환
+   ───────────────────────────────────────────────────────────── */
+:root {
+  /* base — BF-800 --it-* 값 계승 (import 아님, 값 복제) */
+  --ith-color-bg:            #F1F3F5;
+  --ith-color-surface:       #FFFFFF;
+  --ith-color-surface-muted: #F8F9FA;
+  --ith-color-border:        #DDE1E6;
+  --ith-color-border-strong: #B9C0C8;
+  --ith-color-text:          #1A1D21;
+  --ith-color-text-muted:    #6B6B66;
+  --ith-color-accent:        #3563E9;
+  --ith-color-accent-hover:  #2A50C4;
+
+  /* status — 시안 §2.2 대비 검증 완료 (5.28~7.58:1) */
+  --ith-color-done:     #0F7B4F;  --ith-color-done-tint:     #ECFDF5;
+  --ith-color-progress: #1D4ED8;  --ith-color-progress-tint: #EFF6FF;
+  --ith-color-blocked:  #B91C1C;  --ith-color-blocked-tint:  #FEF2F2;
+  --ith-color-waiting:  #475569;  --ith-color-waiting-tint:  #F8FAFC;
+
+  /* spacing / radius / shape */
+  --ith-space-1: 4px;  --ith-space-2: 8px;  --ith-space-3: 12px;
+  --ith-space-4: 16px; --ith-space-5: 24px; --ith-space-6: 32px; --ith-space-7: 48px;
+  --ith-radius-sm: 4px; --ith-radius-md: 8px; --ith-radius-lg: 12px; --ith-radius-pill: 999px;
+  --ith-shadow-card: 0 1px 2px rgba(26,29,33,.06), 0 2px 8px rgba(26,29,33,.05);
+  --ith-rail-width: 2px;
+  --ith-node-size: 12px;
+
+  /* type — system font stack only */
+  --ith-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+                   system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ith-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: var(--ith-space-6) var(--ith-space-5);
+  background: var(--ith-color-bg);
+  color: var(--ith-color-text);
+  font-family: var(--ith-font-sans);
+  line-height: 1.5;
+}
+
+.ith-app { max-width: 960px; margin: 0 auto; }
+
+/* ── 헤더 (시안 §4.1) ───────────────────────────── */
+.ith-header { margin-bottom: var(--ith-space-5); }
+.ith-header h1 { font-size: 24px; font-weight: 700; line-height: 1.3; margin: 0 0 var(--ith-space-1); }
+.ith-subtitle { font-size: 14px; color: var(--ith-color-text-muted); margin: 0 0 var(--ith-space-3); }
+.ith-backlink {
+  display: inline-block;
+  font-size: 13px; font-weight: 600;
+  color: var(--ith-color-accent);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.ith-backlink:hover { color: var(--ith-color-accent-hover); }
+
+/* ── 카드 목록 (시안 §4.2) ──────────────────────── */
+.ith-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ith-space-5); }
+
+.ith-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--ith-color-surface);
+  border: 1px solid var(--ith-color-border);
+  border-radius: var(--ith-radius-lg);
+  box-shadow: var(--ith-shadow-card);
+  padding: var(--ith-space-5);
+  transition: box-shadow .15s ease;
+}
+.ith-card:hover { box-shadow: 0 2px 4px rgba(26,29,33,.08), 0 6px 16px rgba(26,29,33,.07); }
+.ith-card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--ith-color-waiting);
+}
+.ith-card[data-overall="done"]::before        { background: var(--ith-color-done); }
+.ith-card[data-overall="in_progress"]::before { background: var(--ith-color-progress); }
+.ith-card[data-overall="blocked"]::before     { background: var(--ith-color-blocked); }
+.ith-card[data-overall="not_started"]::before { background: var(--ith-color-waiting); }
+
+.ith-card__head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: var(--ith-space-4);
+  padding-bottom: var(--ith-space-4);
+  border-bottom: 1px solid var(--ith-color-border);
+  margin-bottom: var(--ith-space-4);
+}
+.ith-card__title { font-size: 18px; font-weight: 600; line-height: 1.4; margin: 0 0 var(--ith-space-1); }
+.ith-card__meta { font-family: var(--ith-font-mono); font-size: 13px; font-weight: 500; color: var(--ith-color-text-muted); margin: 0; }
+
+/* ── 상태 배지 (시안 §5.2) ─────────────────────── */
+.ith-badge {
+  display: inline-block; white-space: nowrap;
+  border-radius: var(--ith-radius-pill);
+  color: #FFFFFF;
+  background: var(--ith-color-waiting);
+}
+.ith-badge[data-status="done"]        { background: var(--ith-color-done); }
+.ith-badge[data-status="in_progress"] { background: var(--ith-color-progress); }
+.ith-badge[data-status="blocked"]     { background: var(--ith-color-blocked); }
+.ith-badge[data-status="not_started"] { background: var(--ith-color-waiting); }
+.ith-badge--overall { font-size: 13px; font-weight: 700; padding: 5px 12px; line-height: 1.2; flex-shrink: 0; }
+.ith-badge--stage   { font-size: 12px; font-weight: 600; padding: 3px 8px;  line-height: 1.2; }
+
+/* ── 타임라인 (시안 §4.3) ──────────────────────── */
+.ith-timeline { list-style: none; margin: 0; padding: 0; }
+
+.ith-timeline__head,
+.ith-stage {
+  display: grid;
+  grid-template-columns: 88px 76px 1fr 148px 84px 72px;
+  gap: var(--ith-space-3);
+  align-items: center;
+  padding: var(--ith-space-3) var(--ith-space-3) var(--ith-space-3) 40px;
+  position: relative;
+  border-radius: var(--ith-radius-sm);
+}
+.ith-timeline__head {
+  padding-top: 0; padding-bottom: var(--ith-space-2);
+  font-size: 12px; font-weight: 500; color: var(--ith-color-text-muted);
+}
+.ith-timeline__head span { display: block; }
+
+/* Stage 행 */
+.ith-stage { min-height: 52px; }
+.ith-stage[data-status="in_progress"] { background: var(--ith-color-progress-tint); }
+.ith-stage[data-status="blocked"]     { background: var(--ith-color-blocked-tint); box-shadow: inset 3px 0 0 var(--ith-color-blocked); }
+.ith-stage[data-status="not_started"] { opacity: .72; }
+
+/* 노드 */
+.ith-stage::before {
+  content: ""; position: absolute;
+  left: 12px; top: 20px;
+  width: var(--ith-node-size); height: var(--ith-node-size);
+  border-radius: 50%;
+  background: var(--ith-color-surface);
+  border: 2px solid var(--ith-color-border-strong);
+  z-index: 1;
+}
+.ith-stage[data-status="done"]::before {
+  background: var(--ith-color-done); border-color: var(--ith-color-done);
+}
+.ith-stage[data-status="in_progress"]::before {
+  background: var(--ith-color-progress); border-color: var(--ith-color-progress);
+  box-shadow: 0 0 0 4px var(--ith-color-progress-tint);
+}
+.ith-stage[data-status="blocked"]::before {
+  background: var(--ith-color-blocked); border-color: var(--ith-color-blocked);
+  box-shadow: 0 0 0 4px var(--ith-color-blocked-tint);
+}
+
+/* 레일 (노드 아래 연결선) */
+.ith-stage::after {
+  content: ""; position: absolute;
+  left: 17px; top: 32px; bottom: -8px;
+  width: var(--ith-rail-width);
+  border-left: var(--ith-rail-width) dashed var(--ith-color-border-strong);
+}
+.ith-stage[data-status="done"]::after {
+  border-left: var(--ith-rail-width) solid var(--ith-color-done);
+}
+.ith-stage:last-child::after { display: none; }
+
+.ith-stage__role { font-size: 15px; font-weight: 600; }
+
+/* ── Stage 필드 (시안 §5.3) ─────────────────────── */
+.ith-field { min-width: 0; }
+.ith-field__label { display: none; font-size: 12px; font-weight: 500; color: var(--ith-color-text-muted); }
+.ith-field__value { font-size: 14px; overflow-wrap: anywhere; }
+.ith-field--time .ith-field__value { font-family: var(--ith-font-mono); font-size: 13px; color: var(--ith-color-text-muted); }
+.ith-empty-value { color: var(--ith-color-text-muted); font-size: 14px; }
+
+/* ── 링크 (시안 §5.4) ──────────────────────────── */
+.ith-link {
+  color: var(--ith-color-accent);
+  font-weight: 600; font-size: 13px;
+  text-decoration: underline; text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+.ith-link:hover { color: var(--ith-color-accent-hover); }
+.ith-link:focus-visible {
+  outline: 2px solid var(--ith-color-accent);
+  outline-offset: 2px; border-radius: var(--ith-radius-sm);
+}
+.ith-link--jira { font-family: var(--ith-font-mono); }
+
+/* ── 빈 상태 (시안 §5.5) ───────────────────────── */
+.ith-empty {
+  background: var(--ith-color-surface-muted);
+  border: 1px dashed var(--ith-color-border);
+  border-radius: var(--ith-radius-md);
+  padding: var(--ith-space-6);
+  text-align: center;
+  font-size: 15px; font-weight: 500;
+  color: var(--ith-color-text-muted);
+  margin: 0;
+}
+
+/* ── 푸터 ──────────────────────────────────────── */
+.ith-footer {
+  margin-top: var(--ith-space-6);
+  font-size: 12px; color: var(--ith-color-text-muted); text-align: center;
+}
+
+/* ── mockup 전용 부록 (dev 산출물 아님) ─────────── */
+.mk-appendix { margin-top: var(--ith-space-7); }
+.mk-appendix h2 {
+  font-size: 16px; font-weight: 700; margin: 0 0 var(--ith-space-3);
+  padding-top: var(--ith-space-5); border-top: 1px dashed var(--ith-color-border-strong);
+}
+.mk-note { font-size: 13px; color: var(--ith-color-text-muted); margin: 0 0 var(--ith-space-3); }
+.mk-panel {
+  background: var(--ith-color-surface); border: 1px solid var(--ith-color-border);
+  border-radius: var(--ith-radius-md); padding: var(--ith-space-4);
+  margin-bottom: var(--ith-space-5);
+}
+.mk-row { display: flex; flex-wrap: wrap; gap: var(--ith-space-4); align-items: center; }
+.mk-swatch { display: flex; align-items: center; gap: var(--ith-space-2); font-size: 12px; color: var(--ith-color-text-muted); font-family: var(--ith-font-mono); }
+.mk-node-demo { width: 12px; height: 12px; border-radius: 50%; background: var(--ith-color-surface); border: 2px solid var(--ith-color-border-strong); }
+.mk-node-demo[data-status="done"]        { background: var(--ith-color-done); border-color: var(--ith-color-done); }
+.mk-node-demo[data-status="in_progress"] { background: var(--ith-color-progress); border-color: var(--ith-color-progress); box-shadow: 0 0 0 4px var(--ith-color-progress-tint); }
+.mk-node-demo[data-status="blocked"]     { background: var(--ith-color-blocked); border-color: var(--ith-color-blocked); box-shadow: 0 0 0 4px var(--ith-color-blocked-tint); }
+
+/* ── 반응형 (시안 §4.4) ────────────────────────── */
+@media (max-width: 720px) {
+  .ith-timeline__head { display: none; }
+  .ith-stage {
+    grid-template-columns: 1fr 1fr;
+    row-gap: var(--ith-space-2);
+    align-items: start;
+  }
+  .ith-stage__role { grid-column: 1; }
+  .ith-stage .ith-badge--stage { grid-column: 2; justify-self: end; }
+  .ith-field__label { display: block; }
+}
+@media (max-width: 480px) {
+  body { padding: var(--ith-space-4) var(--ith-space-3); }
+  .ith-card { padding: var(--ith-space-4); }
+  .ith-card__head { flex-direction: column; align-items: flex-start; gap: var(--ith-space-2); }
+  .ith-stage {
+    grid-template-columns: 1fr;
+    padding-left: 32px;
+  }
+  .ith-stage .ith-badge--stage { grid-column: 1; justify-self: start; }
+  .ith-stage::before { left: 8px; }
+  .ith-stage::after  { left: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="ith-app">
+
+  <header class="ith-header">
+    <h1>인시던트 인계 타임라인</h1>
+    <p class="ith-subtitle">기획 → 디자인 → 개발 → 리뷰 → 테스트 5단계 인계 이력 (읽기 전용 · 정적 fixture 스냅샷)</p>
+    <a class="ith-backlink" href="../index.html">← 심각도 판정 도구로 돌아가기</a>
+  </header>
+
+  <ul class="ith-list" id="history-list">
+
+    <!-- ══ 카드 1: 전 단계 완료 (종합 = done) ══ -->
+    <li class="ith-card" data-overall="done">
+      <div class="ith-card__head">
+        <div>
+          <h2 class="ith-card__title">결제 승인 API 5xx 급증</h2>
+          <p class="ith-card__meta">INC-1001 · BF-900</p>
+        </div>
+        <span class="ith-badge ith-badge--overall" data-status="done">완료</span>
+      </div>
+
+      <ol class="ith-timeline">
+        <li class="ith-timeline__head" aria-hidden="true">
+          <span>역할</span><span>상태</span><span>담당자</span><span>완료 시각</span><span>Jira</span><span>PR</span>
+        </li>
+
+        <li class="ith-stage" data-status="done" data-role="planner">
+          <span class="ith-stage__role">기획</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">박기획</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-08 09:10</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-901" target="_blank" rel="noopener noreferrer" aria-label="BF-901 Jira 이슈 (새 탭에서 열림)">BF-901</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/201" target="_blank" rel="noopener noreferrer" aria-label="BF-901 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <li class="ith-stage" data-status="done" data-role="designer">
+          <span class="ith-stage__role">디자인</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">이디자인</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-08 15:40</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-902" target="_blank" rel="noopener noreferrer" aria-label="BF-902 Jira 이슈 (새 탭에서 열림)">BF-902</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/202" target="_blank" rel="noopener noreferrer" aria-label="BF-902 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <li class="ith-stage" data-status="done" data-role="developer">
+          <span class="ith-stage__role">개발</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">김개발</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-09 11:05</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-903" target="_blank" rel="noopener noreferrer" aria-label="BF-903 Jira 이슈 (새 탭에서 열림)">BF-903</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/203" target="_blank" rel="noopener noreferrer" aria-label="BF-903 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <!-- reviewer 의 PR 은 developer 와 동일 URL (#203) — 기획 EC-04 -->
+        <li class="ith-stage" data-status="done" data-role="reviewer">
+          <span class="ith-stage__role">리뷰</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">최리뷰</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-09 13:20</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-903" target="_blank" rel="noopener noreferrer" aria-label="BF-903 Jira 이슈 (새 탭에서 열림)">BF-903</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/203" target="_blank" rel="noopener noreferrer" aria-label="BF-903 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <li class="ith-stage" data-status="done" data-role="tester">
+          <span class="ith-stage__role">테스트</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">정테스트</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-10 10:00</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-905" target="_blank" rel="noopener noreferrer" aria-label="BF-905 Jira 이슈 (새 탭에서 열림)">BF-905</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/205" target="_blank" rel="noopener noreferrer" aria-label="BF-905 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+      </ol>
+    </li>
+
+    <!-- ══ 카드 2: 개발 진행중 (종합 = in_progress) ══ -->
+    <li class="ith-card" data-overall="in_progress">
+      <div class="ith-card__head">
+        <div>
+          <h2 class="ith-card__title">정적 자산 CDN 응답 지연</h2>
+          <p class="ith-card__meta">INC-1002 · BF-920</p>
+        </div>
+        <span class="ith-badge ith-badge--overall" data-status="in_progress">진행중</span>
+      </div>
+
+      <ol class="ith-timeline">
+        <li class="ith-timeline__head" aria-hidden="true">
+          <span>역할</span><span>상태</span><span>담당자</span><span>완료 시각</span><span>Jira</span><span>PR</span>
+        </li>
+
+        <li class="ith-stage" data-status="done" data-role="planner">
+          <span class="ith-stage__role">기획</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">박기획</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-11 09:00</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-921" target="_blank" rel="noopener noreferrer" aria-label="BF-921 Jira 이슈 (새 탭에서 열림)">BF-921</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/221" target="_blank" rel="noopener noreferrer" aria-label="BF-921 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <li class="ith-stage" data-status="done" data-role="designer">
+          <span class="ith-stage__role">디자인</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">이디자인</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-11 14:30</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-922" target="_blank" rel="noopener noreferrer" aria-label="BF-922 Jira 이슈 (새 탭에서 열림)">BF-922</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/222" target="_blank" rel="noopener noreferrer" aria-label="BF-922 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <!-- in_progress: 완료 시각·PR 은 아직 없음 → '-' placeholder (빈 <a> 생성 금지, AC-04) -->
+        <li class="ith-stage" data-status="in_progress" data-role="developer">
+          <span class="ith-stage__role">개발</span>
+          <span class="ith-badge ith-badge--stage" data-status="in_progress">진행중</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">김개발</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-923" target="_blank" rel="noopener noreferrer" aria-label="BF-923 Jira 이슈 (새 탭에서 열림)">BF-923</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+        </li>
+
+        <li class="ith-stage" data-status="not_started" data-role="reviewer">
+          <span class="ith-stage__role">리뷰</span>
+          <span class="ith-badge ith-badge--stage" data-status="not_started">대기</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+        </li>
+
+        <li class="ith-stage" data-status="not_started" data-role="tester">
+          <span class="ith-stage__role">테스트</span>
+          <span class="ith-badge ith-badge--stage" data-status="not_started">대기</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+        </li>
+      </ol>
+    </li>
+
+    <!-- ══ 카드 3: 개발 차단 (종합 = blocked — 기획 §2.3 규칙 1 최우선) ══ -->
+    <li class="ith-card" data-overall="blocked">
+      <div class="ith-card__head">
+        <div>
+          <h2 class="ith-card__title">인증 토큰 만료 오탐</h2>
+          <p class="ith-card__meta">INC-1003 · BF-930</p>
+        </div>
+        <span class="ith-badge ith-badge--overall" data-status="blocked">차단</span>
+      </div>
+
+      <ol class="ith-timeline">
+        <li class="ith-timeline__head" aria-hidden="true">
+          <span>역할</span><span>상태</span><span>담당자</span><span>완료 시각</span><span>Jira</span><span>PR</span>
+        </li>
+
+        <li class="ith-stage" data-status="done" data-role="planner">
+          <span class="ith-stage__role">기획</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">박기획</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-12 09:00</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-931" target="_blank" rel="noopener noreferrer" aria-label="BF-931 Jira 이슈 (새 탭에서 열림)">BF-931</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/231" target="_blank" rel="noopener noreferrer" aria-label="BF-931 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <li class="ith-stage" data-status="done" data-role="designer">
+          <span class="ith-stage__role">디자인</span>
+          <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">이디자인</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-field__value">2026-07-12 13:10</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-932" target="_blank" rel="noopener noreferrer" aria-label="BF-932 Jira 이슈 (새 탭에서 열림)">BF-932</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/232" target="_blank" rel="noopener noreferrer" aria-label="BF-932 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <li class="ith-stage" data-status="blocked" data-role="developer">
+          <span class="ith-stage__role">개발</span>
+          <span class="ith-badge ith-badge--stage" data-status="blocked">차단</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-field__value">김개발</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span>
+            <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-933" target="_blank" rel="noopener noreferrer" aria-label="BF-933 Jira 이슈 (새 탭에서 열림)">BF-933</a>
+          </span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span>
+            <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/233" target="_blank" rel="noopener noreferrer" aria-label="BF-933 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+          </span>
+        </li>
+
+        <li class="ith-stage" data-status="not_started" data-role="reviewer">
+          <span class="ith-stage__role">리뷰</span>
+          <span class="ith-badge ith-badge--stage" data-status="not_started">대기</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+        </li>
+
+        <li class="ith-stage" data-status="not_started" data-role="tester">
+          <span class="ith-stage__role">테스트</span>
+          <span class="ith-badge ith-badge--stage" data-status="not_started">대기</span>
+          <span class="ith-field ith-field--assignee"><span class="ith-field__label">담당자</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--time"><span class="ith-field__label">완료 시각</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--jira"><span class="ith-field__label">Jira</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+          <span class="ith-field ith-field--pr"><span class="ith-field__label">PR</span><span class="ith-empty-value" aria-label="없음">-</span></span>
+        </li>
+      </ol>
+    </li>
+
+  </ul>
+
+  <p class="ith-footer">정적 fixture 스냅샷 · 실시간 Jira/GitHub 조회 없음 (네트워크 요청 0건)</p>
+
+  <!-- ══════════ mockup 전용 부록 — dev 산출물 아님 (시각 레퍼런스) ══════════ -->
+  <div class="mk-appendix">
+
+    <h2>부록 A · 상태 배지 &amp; 타임라인 노드 레퍼런스</h2>
+    <p class="mk-note">색상 + 한글 라벨 + 노드 형태(채움/윤곽/후광) 3중 채널 — 색맹·흑백 인쇄에서도 상태 구분 가능 (시안 §6)</p>
+    <div class="mk-panel">
+      <div class="mk-row" style="margin-bottom:16px;">
+        <span class="ith-badge ith-badge--overall" data-status="done">완료</span>
+        <span class="ith-badge ith-badge--overall" data-status="in_progress">진행중</span>
+        <span class="ith-badge ith-badge--overall" data-status="blocked">차단</span>
+        <span class="ith-badge ith-badge--overall" data-status="not_started">대기</span>
+        <span class="mk-swatch">← 종합 배지 (13px/700)</span>
+      </div>
+      <div class="mk-row" style="margin-bottom:20px;">
+        <span class="ith-badge ith-badge--stage" data-status="done">완료</span>
+        <span class="ith-badge ith-badge--stage" data-status="in_progress">진행중</span>
+        <span class="ith-badge ith-badge--stage" data-status="blocked">차단</span>
+        <span class="ith-badge ith-badge--stage" data-status="not_started">대기</span>
+        <span class="mk-swatch">← Stage 배지 (12px/600)</span>
+      </div>
+      <div class="mk-row">
+        <span class="mk-swatch"><span class="mk-node-demo" data-status="done"></span>done #0F7B4F</span>
+        <span class="mk-swatch"><span class="mk-node-demo" data-status="in_progress"></span>in_progress #1D4ED8</span>
+        <span class="mk-swatch"><span class="mk-node-demo" data-status="blocked"></span>blocked #B91C1C</span>
+        <span class="mk-swatch"><span class="mk-node-demo"></span>not_started (윤곽) #475569</span>
+      </div>
+    </div>
+
+    <h2>부록 B · 링크 상태</h2>
+    <p class="mk-note">Jira 는 키 원문(mono), PR 은 짧은 라벨 — URL 원문 노출 금지(가로 넘침 방지). Tab 으로 포커스 링 확인 가능</p>
+    <div class="mk-panel">
+      <div class="mk-row">
+        <a class="ith-link ith-link--jira" href="https://jira.example.com/browse/BF-903" target="_blank" rel="noopener noreferrer" aria-label="BF-903 Jira 이슈 (새 탭에서 열림)">BF-903</a>
+        <a class="ith-link ith-link--pr" href="https://github.com/brix-flow/repo/pull/203" target="_blank" rel="noopener noreferrer" aria-label="BF-903 GitHub PR (새 탭에서 열림)">PR 보기 ↗</a>
+        <span class="ith-empty-value" aria-label="없음">-</span>
+        <span class="mk-swatch">← 값이 null 이면 '-' (빈 &lt;a&gt; 금지)</span>
+      </div>
+    </div>
+
+    <h2>부록 C · 빈 목록 상태 (AC-07)</h2>
+    <p class="mk-note">INCIDENT_HISTORY 배열이 빈 배열일 때 카드 목록 대신 표시</p>
+    <p class="ith-empty">표시할 인시던트 이력이 없습니다.</p>
+
+  </div>
+
+</div>
+
+</body>
+</html>
