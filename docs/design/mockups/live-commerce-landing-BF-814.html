@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LiveCart — 라이브커머스 SaaS 랜딩페이지 시안 (BF-814)</title>
+<style>
+/* ===========================================================
+   LiveCart 랜딩 mockup — BF-814 (designer: 이디자인)
+   명세: docs/design/live-commerce-landing-BF-813.md
+   vanilla-static: 외부 의존성 0건 / system font / CSS 변수 자체 정의
+   =========================================================== */
+:root{
+  /* --- color --- */
+  --lc-primary:#FF2D6F; --lc-primary-700:#D1004E; --lc-primary-050:#FFF0F5;
+  --lc-secondary:#6C4CF1; --lc-secondary-050:#F1EDFE;
+  --lc-accent:#00A97A; --lc-accent-bright:#3DDCA8;
+  --lc-bg-ink:#0B0C15; --lc-bg-ink-2:#171932;
+  --lc-canvas:#F7F7FB; --lc-surface:#FFFFFF;
+  --lc-ink-900:#12131C; --lc-ink-600:#4C4F66; --lc-ink-400:#7C8099;
+  --lc-on-ink:#FFFFFF; --lc-on-ink-mute:#B9BDD6;
+  --lc-border:#E4E5EF; --lc-border-ink:#2A2D4A;
+  /* --- type --- */
+  --lc-font:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR","Malgun Gothic",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --lc-font-num:"SF Mono","Cascadia Mono",Consolas,monospace;
+  --lc-fs-display:clamp(34px,5vw + 8px,56px);
+  --lc-fs-h2:clamp(26px,2.4vw + 12px,36px);
+  --lc-fs-h3:20px; --lc-fs-lead:clamp(16px,.6vw + 14px,19px);
+  --lc-fs-body:16px; --lc-fs-caption:14px; --lc-fs-overline:12px;
+  --lc-fs-price:clamp(32px,2vw + 20px,40px);
+  --lc-fs-metric:clamp(26px,1.6vw + 18px,32px);
+  /* --- space / shape --- */
+  --lc-s1:4px; --lc-s2:8px; --lc-s3:12px; --lc-s4:16px; --lc-s5:24px;
+  --lc-s6:32px; --lc-s7:48px; --lc-s8:64px; --lc-s9:96px;
+  --lc-r-sm:8px; --lc-r-md:12px; --lc-r-lg:20px; --lc-r-pill:999px;
+  --lc-max:1160px;
+  --lc-shadow:0 1px 2px rgba(18,19,28,.04),0 8px 24px rgba(18,19,28,.06);
+  --lc-shadow-lg:0 12px 40px rgba(255,45,111,.18);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--lc-font); font-size:var(--lc-fs-body); line-height:1.65;
+  color:var(--lc-ink-900); background:var(--lc-surface);
+  -webkit-font-smoothing:antialiased; word-break:keep-all;
+}
+a{color:inherit;text-decoration:none}
+.lc-wrap{max-width:var(--lc-max);margin:0 auto;padding:0 var(--lc-s6)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+:focus-visible{outline:2px solid var(--lc-secondary);outline-offset:2px;border-radius:var(--lc-r-sm)}
+section{padding:var(--lc-s9) 0}
+h1,h2,h3{letter-spacing:-.015em}
+h2{font-size:var(--lc-fs-h2);font-weight:750;line-height:1.2}
+h3{font-size:var(--lc-fs-h3);font-weight:700;line-height:1.35}
+.lc-eyebrow{
+  display:inline-block;font-size:var(--lc-fs-overline);font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--lc-primary-700);
+  margin-bottom:var(--lc-s3);
+}
+.lc-lead{font-size:var(--lc-fs-lead);color:var(--lc-ink-600);line-height:1.6}
+.lc-caption{font-size:var(--lc-fs-caption);color:var(--lc-ink-400);font-weight:500}
+.lc-section-head{text-align:center;max-width:720px;margin:0 auto var(--lc-s8)}
+.lc-section-head .lc-lead{margin-top:var(--lc-s3)}
+
+/* ---------- button ---------- */
+.lc-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--lc-s2);
+  min-height:48px;padding:0 var(--lc-s5);border-radius:var(--lc-r-pill);
+  font:700 16px/1 var(--lc-font);cursor:pointer;border:1px solid transparent;
+  transition:transform .16s ease,background .16s ease,box-shadow .16s ease;
+  white-space:nowrap;
+}
+.lc-btn--primary{background:var(--lc-primary);color:#fff}
+.lc-btn--primary:hover{background:#E82260;transform:translateY(-1px);box-shadow:var(--lc-shadow-lg)}
+.lc-btn--primary:active{transform:translateY(0) scale(.99)}
+.lc-btn--secondary{background:var(--lc-secondary);color:#fff}
+.lc-btn--secondary:hover{background:#5B3BE0;transform:translateY(-1px)}
+.lc-btn--ghost{background:transparent;border-color:var(--lc-border);color:var(--lc-ink-900)}
+.lc-btn--ghost:hover{background:var(--lc-canvas)}
+.lc-btn--ghost-on-dark{background:transparent;border-color:rgba(255,255,255,.28);color:#fff}
+.lc-btn--ghost-on-dark:hover{background:rgba(255,255,255,.08)}
+.lc-btn--block{width:100%}
+
+/* ---------- header ---------- */
+.lc-header{
+  position:sticky;top:0;z-index:50;height:64px;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--lc-border);
+}
+.lc-header__inner{display:flex;align-items:center;gap:var(--lc-s6);height:64px}
+.lc-header__logo{display:flex;align-items:center;gap:var(--lc-s2);font-weight:800;font-size:18px;letter-spacing:-.02em}
+.lc-header__dot{width:10px;height:10px;border-radius:50%;background:var(--lc-primary);box-shadow:0 0 0 4px rgba(255,45,111,.16)}
+.lc-header__nav{display:flex;gap:var(--lc-s5);margin-left:auto}
+.lc-header__nav a{font-size:15px;font-weight:600;color:var(--lc-ink-600);padding:4px 0;border-bottom:2px solid transparent}
+.lc-header__nav a:hover{color:var(--lc-ink-900);border-bottom-color:var(--lc-primary)}
+.lc-header__cta{display:flex;gap:var(--lc-s2);align-items:center}
+.lc-header__cta .lc-btn{min-height:40px;padding:0 var(--lc-s4);font-size:15px}
+
+/* ---------- hero ---------- */
+.lc-hero{
+  position:relative;overflow:hidden;color:var(--lc-on-ink);
+  background:linear-gradient(160deg,#0B0C15 0%,#171932 62%,#241B3D 100%);
+  padding:var(--lc-s8) 0 var(--lc-s9);
+}
+.lc-hero::after{
+  content:"";position:absolute;top:-160px;right:-120px;width:520px;height:520px;
+  background:radial-gradient(circle,rgba(255,45,111,.22),rgba(255,45,111,0) 68%);
+  pointer-events:none;
+}
+.lc-hero__grid{position:relative;z-index:1;display:grid;grid-template-columns:1.05fr .95fr;gap:var(--lc-s8);align-items:center}
+.lc-hero__badge{
+  display:inline-flex;align-items:center;gap:var(--lc-s2);
+  padding:6px 14px;border-radius:var(--lc-r-pill);
+  background:rgba(255,45,111,.14);border:1px solid rgba(255,45,111,.35);
+  font-size:var(--lc-fs-overline);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#FF7BA4;
+}
+.lc-hero h1{
+  font-size:var(--lc-fs-display);font-weight:800;line-height:1.08;letter-spacing:-.02em;
+  margin:var(--lc-s5) 0 var(--lc-s4);
+}
+.lc-hero h1 .hl{color:var(--lc-primary)}
+.lc-hero__sub{font-size:var(--lc-fs-lead);color:var(--lc-on-ink-mute);line-height:1.6;max-width:36em}
+.lc-hero__actions{display:flex;gap:var(--lc-s3);margin:var(--lc-s6) 0 var(--lc-s3);flex-wrap:wrap}
+.lc-hero__note{font-size:var(--lc-fs-caption);color:var(--lc-on-ink-mute);opacity:.85}
+.lc-metric-strip{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:var(--lc-s4);
+  margin-top:var(--lc-s7);padding-top:var(--lc-s5);border-top:1px solid var(--lc-border-ink);
+}
+.lc-metric__v{font:800 var(--lc-fs-metric)/1.1 var(--lc-font);color:var(--lc-accent-bright);letter-spacing:-.02em}
+.lc-metric__l{font-size:var(--lc-fs-caption);color:var(--lc-on-ink-mute);margin-top:4px}
+
+/* ---------- live preview card ---------- */
+.lc-live-preview{
+  background:var(--lc-bg-ink-2);border:1px solid var(--lc-border-ink);border-radius:var(--lc-r-lg);
+  padding:var(--lc-s4);box-shadow:0 30px 70px rgba(0,0,0,.45);
+}
+.lc-live-preview__bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--lc-s3)}
+.lc-live-badge{
+  display:inline-flex;align-items:center;gap:6px;background:var(--lc-primary);color:#fff;
+  font:700 12px/1 var(--lc-font);letter-spacing:.1em;padding:7px 12px;border-radius:var(--lc-r-pill);
+}
+.lc-live-badge__dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:lc-pulse 1.6s ease-in-out infinite}
+@keyframes lc-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.lc-viewers{font-size:13px;color:var(--lc-on-ink-mute);font-weight:600}
+.lc-stage{
+  position:relative;aspect-ratio:16/9;border-radius:var(--lc-r-md);overflow:hidden;
+  background:linear-gradient(135deg,#3A2260 0%,#7A2E63 48%,#C24A5F 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.lc-stage__play{
+  width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.92);
+  display:flex;align-items:center;justify-content:center;color:var(--lc-bg-ink);font-size:20px;
+  box-shadow:0 8px 24px rgba(0,0,0,.3);
+}
+.lc-stage__product{
+  position:absolute;right:12px;bottom:12px;display:flex;align-items:center;gap:10px;
+  background:rgba(11,12,21,.82);border:1px solid rgba(255,255,255,.14);
+  border-radius:var(--lc-r-md);padding:8px 10px;backdrop-filter:blur(6px);
+}
+.lc-stage__thumb{width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,#FFD5E3,#FF8FB4)}
+.lc-stage__pname{font-size:12px;color:var(--lc-on-ink-mute);line-height:1.3}
+.lc-stage__price{font:800 14px/1.2 var(--lc-font-num);color:#fff}
+.lc-stage__buy{
+  margin-left:6px;background:var(--lc-primary);color:#fff;border:0;border-radius:var(--lc-r-pill);
+  font:700 12px/1 var(--lc-font);padding:9px 12px;cursor:pointer;
+}
+.lc-stage__buy:hover{background:#E82260}
+.lc-toasts{margin-top:var(--lc-s3);display:grid;gap:6px}
+.lc-toast{
+  display:flex;align-items:center;gap:8px;font-size:13px;color:var(--lc-on-ink-mute);
+  background:rgba(255,255,255,.05);border:1px solid var(--lc-border-ink);
+  border-radius:var(--lc-r-sm);padding:8px 10px;
+}
+.lc-toast__dot{width:6px;height:6px;border-radius:50%;background:var(--lc-accent-bright);flex:none}
+.lc-toast b{color:#fff;font-weight:700}
+
+/* ---------- values ---------- */
+.lc-values{background:var(--lc-canvas)}
+.lc-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--lc-s5)}
+.lc-value-card{
+  background:var(--lc-surface);border:1px solid var(--lc-border);border-radius:var(--lc-r-lg);
+  padding:var(--lc-s6);box-shadow:var(--lc-shadow);transition:transform .2s ease,box-shadow .2s ease;
+}
+.lc-value-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(18,19,28,.10)}
+.lc-value-card__icon{
+  width:44px;height:44px;border-radius:var(--lc-r-md);display:flex;align-items:center;justify-content:center;
+  background:var(--lc-primary-050);font-size:20px;margin-bottom:var(--lc-s4);
+}
+.lc-value-card p{color:var(--lc-ink-600);margin-top:var(--lc-s2)}
+.lc-value-card__proof{
+  display:inline-block;margin-top:var(--lc-s4);font-size:var(--lc-fs-caption);font-weight:700;
+  color:var(--lc-accent);background:rgba(0,169,122,.09);padding:4px 10px;border-radius:var(--lc-r-pill);
+}
+
+/* ---------- features ---------- */
+.lc-feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--lc-s5)}
+.lc-feature{
+  display:flex;gap:var(--lc-s4);padding:var(--lc-s5);border:1px solid var(--lc-border);
+  border-radius:var(--lc-r-md);background:var(--lc-surface);
+}
+.lc-feature:hover{border-color:var(--lc-primary);background:#FFFAFC}
+.lc-feature__ico{font-size:22px;line-height:1.2}
+.lc-feature h3{font-size:17px;margin-bottom:2px}
+.lc-feature p{font-size:15px;color:var(--lc-ink-600);line-height:1.55}
+.lc-split{
+  display:grid;grid-template-columns:1fr 1fr;gap:var(--lc-s8);align-items:center;
+  margin-top:var(--lc-s9);
+}
+.lc-split--reverse .lc-split__media{order:2}
+.lc-split__media{
+  aspect-ratio:4/3;border-radius:var(--lc-r-lg);border:1px solid var(--lc-border);
+  background:linear-gradient(140deg,#F1EDFE 0%,#FFF0F5 100%);
+  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+}
+.lc-split__media span{font-size:13px;color:var(--lc-ink-400);font-weight:600}
+.lc-split__media::before{
+  content:"";position:absolute;inset:18%;border:2px dashed rgba(108,76,241,.28);border-radius:var(--lc-r-md);
+}
+.lc-split h2{margin-bottom:var(--lc-s3)}
+.lc-bullets{list-style:none;margin-top:var(--lc-s5);display:grid;gap:var(--lc-s3)}
+.lc-bullets li{display:flex;gap:var(--lc-s3);align-items:flex-start;color:var(--lc-ink-600)}
+.lc-bullets li::before{content:"✓";color:var(--lc-accent);font-weight:800;flex:none}
+
+/* ---------- social proof ---------- */
+.lc-proof{background:var(--lc-canvas)}
+.lc-logo-row{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:var(--lc-s7);
+  padding:var(--lc-s5) 0 var(--lc-s8);
+}
+.lc-logo{
+  font-weight:800;font-size:17px;letter-spacing:-.02em;color:var(--lc-ink-400);
+  filter:grayscale(1);transition:color .2s ease,filter .2s ease;
+}
+.lc-logo:hover{color:var(--lc-ink-900);filter:none}
+.lc-quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--lc-s5)}
+.lc-quote{
+  background:var(--lc-surface);border:1px solid var(--lc-border);border-radius:var(--lc-r-lg);
+  padding:var(--lc-s6);display:flex;flex-direction:column;gap:var(--lc-s4);box-shadow:var(--lc-shadow);
+}
+.lc-tier{
+  align-self:flex-start;font-size:12px;font-weight:700;padding:4px 10px;border-radius:var(--lc-r-pill);
+}
+.lc-tier--smb{background:rgba(0,169,122,.10);color:var(--lc-accent)}
+.lc-tier--mid{background:var(--lc-secondary-050);color:var(--lc-secondary)}
+.lc-tier--ent{background:#EEEFF4;color:var(--lc-ink-600)}
+.lc-quote blockquote{font-size:16px;line-height:1.7;color:var(--lc-ink-900)}
+.lc-quote__metric{font:800 20px/1.2 var(--lc-font);color:var(--lc-primary-700)}
+.lc-quote__who{font-size:var(--lc-fs-caption);color:var(--lc-ink-400);margin-top:auto}
+.lc-quote__who b{display:block;color:var(--lc-ink-900);font-size:15px}
+
+/* ---------- pricing ---------- */
+.lc-track{margin-bottom:var(--lc-s7)}
+.lc-track__head{display:flex;align-items:center;gap:var(--lc-s3);margin-bottom:var(--lc-s5);padding-left:var(--lc-s3);border-left:4px solid var(--track-accent)}
+.lc-track__head h3{font-size:18px}
+.lc-track__head p{font-size:var(--lc-fs-caption);color:var(--lc-ink-400)}
+.lc-track-badge{
+  font:700 11px/1 var(--lc-font);letter-spacing:.1em;padding:6px 10px;border-radius:var(--lc-r-pill);
+  background:var(--track-soft);color:var(--track-accent);
+}
+.lc-track[data-track="live"]{--track-accent:var(--lc-primary-700);--track-soft:var(--lc-primary-050);--plan-accent:var(--lc-primary)}
+.lc-track[data-track="commerce"]{--track-accent:var(--lc-secondary);--track-soft:var(--lc-secondary-050);--plan-accent:var(--lc-secondary)}
+.lc-plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--lc-s5);align-items:stretch}
+.lc-plan-card{
+  position:relative;background:var(--lc-surface);border:1px solid var(--lc-border);
+  border-radius:var(--lc-r-lg);padding:var(--lc-s6) var(--lc-s5);
+  display:flex;flex-direction:column;gap:var(--lc-s3);box-shadow:var(--lc-shadow);
+  transition:transform .2s ease,box-shadow .2s ease;overflow:hidden;
+}
+.lc-plan-card::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--plan-accent)}
+.lc-plan-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(18,19,28,.10)}
+.lc-plan-card--recommended{
+  border:2px solid var(--lc-primary);background:var(--lc-primary-050);box-shadow:var(--lc-shadow-lg);transform:scale(1.03);
+}
+.lc-plan-card--recommended:hover{transform:scale(1.03) translateY(-4px)}
+.lc-plan-card__flag{
+  align-self:flex-start;font:700 11px/1 var(--lc-font);letter-spacing:.06em;
+  background:var(--lc-primary);color:#fff;padding:6px 10px;border-radius:var(--lc-r-pill);
+}
+.lc-plan-card__tag{font:700 11px/1 var(--lc-font);letter-spacing:.1em;color:var(--plan-accent)}
+.lc-plan-card__price{font:800 var(--lc-fs-price)/1.1 var(--lc-font-num);letter-spacing:-.02em}
+.lc-plan-card__price small{font:600 14px/1 var(--lc-font);color:var(--lc-ink-400);margin-left:4px}
+.lc-plan-card__target{
+  font-size:var(--lc-fs-caption);color:var(--lc-ink-600);background:var(--lc-canvas);
+  border-radius:var(--lc-r-sm);padding:8px 10px;
+}
+.lc-plan-card__target b{color:var(--lc-ink-900)}
+.lc-plan-card__value{font-size:15px;font-weight:600;color:var(--lc-primary-700);line-height:1.55}
+.lc-track[data-track="commerce"] .lc-plan-card__value{color:var(--lc-secondary)}
+.lc-plan-card ul{list-style:none;display:grid;gap:8px;font-size:15px;color:var(--lc-ink-600)}
+.lc-plan-card ul li{display:flex;gap:8px}
+.lc-plan-card ul li::before{content:"✓";color:var(--lc-accent);font-weight:800;flex:none}
+.lc-plan-card ul li.is-excluded{color:var(--lc-ink-400)}
+.lc-plan-card ul li.is-excluded::before{content:"–";color:var(--lc-ink-400)}
+.lc-plan-card ul li.is-addon::before{content:"+";color:var(--lc-secondary)}
+.lc-plan-card .lc-btn{margin-top:auto}
+
+.lc-bridge{
+  display:flex;align-items:center;gap:var(--lc-s4);flex-wrap:wrap;
+  background:var(--lc-secondary-050);border:1px dashed rgba(108,76,241,.35);
+  border-radius:var(--lc-r-lg);padding:var(--lc-s5) var(--lc-s6);margin:0 0 var(--lc-s7);
+}
+.lc-bridge__ico{font-size:22px}
+.lc-bridge p{font-size:15px;color:var(--lc-ink-900);font-weight:600}
+.lc-bridge p span{display:block;font-weight:400;color:var(--lc-ink-600);font-size:var(--lc-fs-caption);margin-top:2px}
+
+.lc-compare{margin-top:var(--lc-s8);overflow-x:auto}
+.lc-compare table{width:100%;border-collapse:collapse;min-width:720px;background:var(--lc-surface)}
+.lc-compare caption{text-align:left;font-size:var(--lc-fs-caption);color:var(--lc-ink-400);padding-bottom:var(--lc-s3)}
+.lc-compare th,.lc-compare td{padding:14px 16px;border-bottom:1px solid var(--lc-border);text-align:center;font-size:15px}
+.lc-compare thead th{font-size:14px;font-weight:800;color:var(--lc-ink-900);background:var(--lc-canvas);border-bottom:2px solid var(--lc-border)}
+.lc-compare tbody th{text-align:left;font-weight:600;color:var(--lc-ink-600);position:sticky;left:0;background:var(--lc-surface)}
+.lc-yes{color:var(--lc-accent);font-weight:800}
+.lc-no{color:var(--lc-ink-400);font-weight:700}
+.lc-addon{
+  display:inline-block;font-size:12px;font-weight:700;background:var(--lc-secondary-050);
+  color:var(--lc-secondary);padding:3px 8px;border-radius:var(--lc-r-pill);
+}
+.lc-pricing__foot{margin-top:var(--lc-s5);text-align:center}
+
+/* ---------- final CTA + footer ---------- */
+.lc-cta-band{
+  background:linear-gradient(140deg,#0B0C15 0%,#241B3D 100%);color:var(--lc-on-ink);text-align:center;
+}
+.lc-cta-band h2{color:#fff}
+.lc-cta-band .lc-lead{color:var(--lc-on-ink-mute);margin:var(--lc-s3) auto var(--lc-s6);max-width:36em}
+.lc-cta-band__actions{display:flex;gap:var(--lc-s3);justify-content:center;flex-wrap:wrap}
+.lc-cta-band .lc-caption{color:var(--lc-on-ink-mute);opacity:.8;margin-top:var(--lc-s5)}
+.lc-footer{background:var(--lc-bg-ink);color:var(--lc-on-ink-mute);padding:var(--lc-s8) 0 var(--lc-s5)}
+.lc-footer__grid{display:grid;grid-template-columns:1.4fr repeat(4,1fr);gap:var(--lc-s6)}
+.lc-footer h4{color:#fff;font-size:14px;margin-bottom:var(--lc-s3)}
+.lc-footer ul{list-style:none;display:grid;gap:8px;font-size:14px}
+.lc-footer a:hover{color:#fff}
+.lc-footer__brand{display:flex;align-items:center;gap:var(--lc-s2);color:#fff;font-weight:800;font-size:18px}
+.lc-footer__copy{
+  margin-top:var(--lc-s8);padding-top:var(--lc-s5);border-top:1px solid var(--lc-border-ink);
+  font-size:13px;display:flex;justify-content:space-between;gap:var(--lc-s4);flex-wrap:wrap;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:1023px){
+  .lc-hero__grid{grid-template-columns:1fr}
+  .lc-split,.lc-split--reverse .lc-split__media{grid-template-columns:1fr;order:0}
+  .lc-plan-card--recommended{transform:none}
+  .lc-plan-card--recommended:hover{transform:translateY(-4px)}
+  .lc-footer__grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:767px){
+  :root{--lc-fs-h3:18px}
+  .lc-wrap{padding:0 var(--lc-s5)}
+  section{padding:var(--lc-s8) 0}
+  .lc-header{height:56px}
+  .lc-header__inner{height:56px}
+  .lc-header__nav{display:none}
+  .lc-header__cta{margin-left:auto}
+  .lc-header__cta .lc-btn--ghost{display:none}
+  .lc-hero__actions .lc-btn{width:100%}
+  .lc-btn{min-height:52px}
+  .lc-cards,.lc-feature-grid,.lc-quotes,.lc-plans{grid-template-columns:1fr}
+  .lc-logo-row{gap:var(--lc-s5)}
+  .lc-footer__grid{grid-template-columns:1fr}
+
+  /* 비교표 → 카드 스택 */
+  .lc-compare{overflow:visible}
+  .lc-compare table{min-width:0}
+  .lc-compare thead{display:none}
+  .lc-compare tbody,.lc-compare tr,.lc-compare th,.lc-compare td{display:block;width:100%}
+  .lc-compare tr{
+    border:1px solid var(--lc-border);border-radius:var(--lc-r-md);
+    margin-bottom:var(--lc-s3);padding:var(--lc-s3) var(--lc-s4);
+  }
+  .lc-compare tbody th{position:static;font-weight:800;color:var(--lc-ink-900);padding:4px 0 8px;border:0}
+  .lc-compare td{
+    display:flex;justify-content:space-between;align-items:center;gap:var(--lc-s3);
+    text-align:right;padding:8px 0;border-bottom:1px dashed var(--lc-border);
+  }
+  .lc-compare tr td:last-child{border-bottom:0}
+  .lc-compare td::before{
+    content:attr(data-label);font-size:13px;font-weight:600;color:var(--lc-ink-400);text-align:left;
+  }
+}
+@media (max-width:380px){
+  .lc-metric-strip{grid-template-columns:1fr;gap:var(--lc-s3)}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header class="lc-header">
+  <div class="lc-wrap lc-header__inner">
+    <a class="lc-header__logo" href="#hero"><span class="lc-header__dot" aria-hidden="true"></span>LiveCart</a>
+    <nav class="lc-header__nav" aria-label="주요 섹션">
+      <a href="#values">핵심 가치</a>
+      <a href="#features">기능</a>
+      <a href="#proof">고객 사례</a>
+      <a href="#pricing">요금제</a>
+      <a href="#cta">문의</a>
+    </nav>
+    <div class="lc-header__cta">
+      <a class="lc-btn lc-btn--ghost" href="#cta">로그인</a>
+      <a class="lc-btn lc-btn--primary" href="#pricing">무료로 시작</a>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ============ 1. HERO ============ -->
+<section class="lc-hero" id="hero">
+  <div class="lc-wrap lc-hero__grid">
+    <div>
+      <span class="lc-hero__badge"><span aria-hidden="true">🔴</span> Live Commerce SaaS</span>
+      <h1>방송 켜는 순간,<br><span class="hl">매출</span>이 켜집니다.</h1>
+      <p class="lc-hero__sub">
+        라이브 방송·상품·주문·정산을 한 화면에서. <br>
+        라이브를 하지 않는 날에도 커머스는 계속 돌아갑니다.
+      </p>
+      <div class="lc-hero__actions">
+        <a class="lc-btn lc-btn--primary" href="#pricing">무료로 시작하기</a>
+        <a class="lc-btn lc-btn--ghost-on-dark" href="#features">라이브 데모 보기</a>
+      </div>
+      <p class="lc-hero__note">신용카드 없이 14일 무료 · 5분 셋업 · 언제든 해지</p>
+
+      <div class="lc-metric-strip">
+        <div class="lc-metric">
+          <div class="lc-metric__v">4.2×</div>
+          <div class="lc-metric__l">평균 구매 전환율</div>
+        </div>
+        <div class="lc-metric">
+          <div class="lc-metric__v">5분</div>
+          <div class="lc-metric__l">방송 셋업 시간</div>
+        </div>
+        <div class="lc-metric">
+          <div class="lc-metric__v">+38%</div>
+          <div class="lc-metric__l">방송당 GMV 상승</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 라이브 프리뷰 카드 -->
+    <div class="lc-live-preview" role="img"
+         aria-label="라이브 방송 화면 예시 — 시청자 1,284명, 실시간 구매 알림, 상품 카드 39,000원">
+      <div class="lc-live-preview__bar">
+        <span class="lc-live-badge"><span class="lc-live-badge__dot"></span>LIVE</span>
+        <span class="lc-viewers">👁 시청자 1,284명</span>
+      </div>
+      <div class="lc-stage">
+        <div class="lc-stage__play" aria-hidden="true">▶</div>
+        <div class="lc-stage__product">
+          <div class="lc-stage__thumb" aria-hidden="true"></div>
+          <div>
+            <div class="lc-stage__pname">데일리 코튼 니트</div>
+            <div class="lc-stage__price">39,000원</div>
+          </div>
+          <button class="lc-stage__buy" type="button">바로 구매</button>
+        </div>
+      </div>
+      <div class="lc-toasts">
+        <div class="lc-toast"><span class="lc-toast__dot"></span><span><b>민지님</b>이 방금 구매했어요 · 데일리 코튼 니트</span></div>
+        <div class="lc-toast"><span class="lc-toast__dot"></span><span><b>준호님</b>이 방금 구매했어요 · 라이브 한정 쿠폰 적용</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. 핵심 가치 ============ -->
+<section class="lc-values" id="values">
+  <div class="lc-wrap">
+    <div class="lc-section-head">
+      <span class="lc-eyebrow">Why LiveCart</span>
+      <h2>보는 사람이 사는 사람이 되게</h2>
+      <p class="lc-lead">라이브의 열기를 매출로 바꾸는 데 필요한 세 가지를 기본값으로 제공합니다.</p>
+    </div>
+    <div class="lc-cards">
+      <article class="lc-value-card">
+        <div class="lc-value-card__icon" aria-hidden="true">🛒</div>
+        <h3>끊김 없는 시청 → 구매 동선</h3>
+        <p>영상 위 상품 카드 탭 한 번으로 결제까지. 앱을 나가야 했던 이탈 구간을 없앴습니다.</p>
+        <span class="lc-value-card__proof">평균 결제 단계 4 → 1</span>
+      </article>
+      <article class="lc-value-card">
+        <div class="lc-value-card__icon" aria-hidden="true">🔄</div>
+        <h3>재고·주문·정산 자동 연동</h3>
+        <p>방송 중 팔린 재고는 실시간 차감되고, 주문은 기존 커머스 주문과 같은 테이블로 흐릅니다.</p>
+        <span class="lc-value-card__proof">수기 대사 0건</span>
+      </article>
+      <article class="lc-value-card">
+        <div class="lc-value-card__icon" aria-hidden="true">💎</div>
+        <h3>방송이 끝나도 남는 자산</h3>
+        <p>하이라이트 클립·상품 페이지·CRM 세그먼트가 방송 종료와 동시에 자동 생성됩니다.</p>
+        <span class="lc-value-card__proof">D+7 재구매 +21%</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. 기능 ============ -->
+<section id="features">
+  <div class="lc-wrap">
+    <div class="lc-section-head">
+      <span class="lc-eyebrow">Features</span>
+      <h2>방송용 스튜디오와 커머스 백오피스, 하나로</h2>
+      <p class="lc-lead">따로 쓰던 도구를 합쳤습니다. 켜는 날에도, 켜지 않는 날에도.</p>
+    </div>
+
+    <div class="lc-feature-grid">
+      <div class="lc-feature"><span class="lc-feature__ico" aria-hidden="true">📡</span><div><h3>실시간 스트리밍</h3><p>2초 이하 저지연 송출, 자동 화질 조정.</p></div></div>
+      <div class="lc-feature"><span class="lc-feature__ico" aria-hidden="true">📌</span><div><h3>오버레이 상품 핀</h3><p>말하는 순간 상품 카드를 화면에 고정.</p></div></div>
+      <div class="lc-feature"><span class="lc-feature__ico" aria-hidden="true">💬</span><div><h3>라이브 채팅 · 모더레이션</h3><p>금칙어 필터, 고정 공지, 1:1 응대 전환.</p></div></div>
+      <div class="lc-feature"><span class="lc-feature__ico" aria-hidden="true">🎟️</span><div><h3>쿠폰 · 타임세일 스케줄러</h3><p>방송 흐름에 맞춰 예약 발행·자동 종료.</p></div></div>
+      <div class="lc-feature"><span class="lc-feature__ico" aria-hidden="true">🛰️</span><div><h3>멀티채널 동시 송출</h3><p>자사몰·앱·SNS 로 한 번에 내보내기.</p></div></div>
+      <div class="lc-feature"><span class="lc-feature__ico" aria-hidden="true">📊</span><div><h3>실시간 대시보드</h3><p>시청자·전환·GMV 를 방송 중에 확인.</p></div></div>
+    </div>
+
+    <div class="lc-split">
+      <div class="lc-split__media"><span>라이브 스튜디오 화면 (시안 placeholder)</span></div>
+      <div>
+        <span class="lc-eyebrow">On Air</span>
+        <h2>라이브를 위한 스튜디오</h2>
+        <p class="lc-lead">리허설부터 다시보기까지, 방송 한 판에 필요한 모든 것.</p>
+        <ul class="lc-bullets">
+          <li>브라우저만으로 송출 — 별도 장비·앱 설치 없이 시작</li>
+          <li>진행자용 큐시트와 상품 순서 프리셋</li>
+          <li>방송 종료 즉시 하이라이트 클립 자동 생성</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="lc-split lc-split--reverse">
+      <div class="lc-split__media"><span>커머스 백오피스 화면 (시안 placeholder)</span></div>
+      <div>
+        <span class="lc-eyebrow">Off Air</span>
+        <h2>라이브가 없는 날의 커머스</h2>
+        <p class="lc-lead">방송은 가끔이어도 장사는 매일입니다. 상품·주문·CS·CRM 은 라이브 없이도 그대로 돌아갑니다.</p>
+        <ul class="lc-bullets">
+          <li>상품·재고·주문·배송 관리 (라이브 사용 여부와 무관)</li>
+          <li>고객 세그먼트 · 자동화 메시지 · 재구매 캠페인</li>
+          <li>준비되면 <strong>라이브 애드온</strong>만 켜세요 — 데이터는 그대로 이어집니다</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. 소셜프루프 ============ -->
+<section class="lc-proof" id="proof">
+  <div class="lc-wrap">
+    <div class="lc-section-head">
+      <span class="lc-eyebrow">Customers</span>
+      <h2>3,200+ 브랜드가 LiveCart 위에서 팝니다</h2>
+      <p class="lc-lead">1인 셀러부터 엔터프라이즈까지 — 규모와 상관없이 같은 도구를 씁니다.</p>
+    </div>
+
+    <div class="lc-logo-row" aria-label="고객사 로고">
+      <span class="lc-logo">MOAMOA</span>
+      <span class="lc-logo">Bloomly</span>
+      <span class="lc-logo">한결식품</span>
+      <span class="lc-logo">NOVA WEAR</span>
+      <span class="lc-logo">데일리핏</span>
+      <span class="lc-logo">Kittly</span>
+    </div>
+
+    <div class="lc-quotes">
+      <figure class="lc-quote">
+        <span class="lc-tier lc-tier--smb">소상공인</span>
+        <blockquote>“첫 방송을 고정비 0원으로 해봤어요. 그날 하루 매출이 지난달 전체를 넘겼습니다.”</blockquote>
+        <div class="lc-quote__metric">첫 방송 GMV 1,180만원</div>
+        <figcaption class="lc-quote__who"><b>이수현</b>대표 · MOAMOA (수제 액세서리)</figcaption>
+      </figure>
+      <figure class="lc-quote">
+        <span class="lc-tier lc-tier--mid">중견 브랜드</span>
+        <blockquote>“주 2회 방송이 루틴이 된 뒤로, 재고 소진 속도가 완전히 달라졌습니다.”</blockquote>
+        <div class="lc-quote__metric">방송당 GMV +38%</div>
+        <figcaption class="lc-quote__who"><b>박도윤</b>이커머스팀장 · NOVA WEAR</figcaption>
+      </figure>
+      <figure class="lc-quote">
+        <span class="lc-tier lc-tier--ent">엔터프라이즈</span>
+        <blockquote>“라이브는 분기 1회지만, <strong>매일 쓰는 건 주문·CRM</strong> 이었습니다. 커머스만 먼저 도입하고 1년 뒤 방송을 켰습니다.”</blockquote>
+        <div class="lc-quote__metric">운영 도구 4종 → 1종</div>
+        <figcaption class="lc-quote__who"><b>정하람</b>디지털본부장 · 한결식품</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. PRICING ============ -->
+<section id="pricing">
+  <div class="lc-wrap">
+    <div class="lc-section-head">
+      <span class="lc-eyebrow">Pricing</span>
+      <h2>라이브를 하든, 하지 않든 — 커머스는 계속됩니다</h2>
+      <p class="lc-lead">라이브 전용 플랜과 일반 커머스 겸용 플랜을 따로 준비했습니다. 두 트랙은 언제든 서로 전환할 수 있습니다.</p>
+    </div>
+
+    <!-- 트랙 A -->
+    <div class="lc-track" data-track="live">
+      <div class="lc-track__head">
+        <span class="lc-track-badge">LIVE</span>
+        <div>
+          <h3>트랙 A · 라이브커머스 전용</h3>
+          <p>방송이 매출의 중심인 팀을 위한 플랜</p>
+        </div>
+      </div>
+      <div class="lc-plans">
+        <article class="lc-plan-card">
+          <span class="lc-plan-card__tag">LIVE STARTER</span>
+          <div class="lc-plan-card__price">₩0<small>/월 · 수수료 3.5%</small></div>
+          <p class="lc-plan-card__target"><b>타깃</b> — 이제 첫 방송을 해보려는 1인 셀러</p>
+          <p class="lc-plan-card__value">“고정비 0원으로, 첫 방송의 매출을 먼저 확인하세요.”</p>
+          <ul>
+            <li>월 3회 방송</li>
+            <li>동시 시청 300명</li>
+            <li>상품 핀 · 라이브 채팅</li>
+            <li>기본 대시보드</li>
+          </ul>
+          <a class="lc-btn lc-btn--ghost lc-btn--block" href="#cta">무료로 시작</a>
+        </article>
+
+        <article class="lc-plan-card lc-plan-card--recommended">
+          <span class="lc-plan-card__flag">가장 많이 선택</span>
+          <span class="lc-plan-card__tag">LIVE GROWTH</span>
+          <div class="lc-plan-card__price">₩149,000<small>/월 · 수수료 1.5%</small></div>
+          <p class="lc-plan-card__target"><b>타깃</b> — 주 1회 이상 정기 방송을 돌리는 성장 브랜드</p>
+          <p class="lc-plan-card__value">“방송이 루틴이 되는 순간, 수수료가 아니라 고정비가 이깁니다.”</p>
+          <ul>
+            <li>무제한 방송 · 동시 시청 5,000명</li>
+            <li>멀티채널 동시 송출</li>
+            <li>쿠폰 · 타임세일 스케줄러</li>
+            <li>하이라이트 클립 자동 생성</li>
+            <li>실시간 GMV 대시보드</li>
+          </ul>
+          <a class="lc-btn lc-btn--primary lc-btn--block" href="#cta">14일 무료 체험</a>
+        </article>
+
+        <article class="lc-plan-card">
+          <span class="lc-plan-card__tag">LIVE SCALE</span>
+          <div class="lc-plan-card__price">별도 문의<small></small></div>
+          <p class="lc-plan-card__target"><b>타깃</b> — 자체 앱·다수 브랜드를 운영하는 엔터프라이즈</p>
+          <p class="lc-plan-card__value">“우리 앱 안에서, 우리 브랜드로 방송하세요.”</p>
+          <ul>
+            <li>Growth 전체 기능</li>
+            <li>임베드 SDK · 화이트라벨</li>
+            <li>SSO · 권한 관리</li>
+            <li>전용 CSM · SLA 99.9%</li>
+          </ul>
+          <a class="lc-btn lc-btn--ghost lc-btn--block" href="#cta">영업팀 문의</a>
+        </article>
+      </div>
+    </div>
+
+    <!-- 브리지 -->
+    <div class="lc-bridge">
+      <span class="lc-bridge__ico" aria-hidden="true">↔️</span>
+      <p>
+        라이브는 아직인가요? 커머스 기능만 먼저 쓰고, 준비되면 애드온으로 방송을 켜세요.
+        <span>트랙을 옮겨도 상품·주문·고객 데이터는 100% 그대로 이어집니다. 위약금 없음.</span>
+      </p>
+    </div>
+
+    <!-- 트랙 B -->
+    <div class="lc-track" data-track="commerce">
+      <div class="lc-track__head">
+        <span class="lc-track-badge">COMMERCE</span>
+        <div>
+          <h3>트랙 B · 일반 커머스 겸용</h3>
+          <p>라이브를 하지 않아도 매일 쓰는 커머스 운영 플랜</p>
+        </div>
+      </div>
+      <div class="lc-plans">
+        <article class="lc-plan-card">
+          <span class="lc-plan-card__tag">COMMERCE CORE</span>
+          <div class="lc-plan-card__price">₩89,000<small>/월</small></div>
+          <p class="lc-plan-card__target"><b>타깃</b> — 라이브 계획은 없지만 상품·주문·CS 를 한 곳에서 관리하려는 일반 커머스</p>
+          <p class="lc-plan-card__value">“라이브 기능값은 내지 마세요. 쓰는 만큼만 냅니다.”</p>
+          <ul>
+            <li>상품 · 재고 · 주문 · 배송 관리</li>
+            <li>고객 / CRM 세그먼트</li>
+            <li>결제 · 정산 리포트</li>
+            <li>기본 스토어프론트</li>
+            <li class="is-excluded">라이브 방송 기능 미포함 — 요금에서 제외</li>
+          </ul>
+          <a class="lc-btn lc-btn--ghost lc-btn--block" href="#cta">커머스만 시작하기</a>
+        </article>
+
+        <article class="lc-plan-card">
+          <span class="lc-plan-card__tag">COMMERCE PLUS</span>
+          <div class="lc-plan-card__price">₩119,000<small>/월 · 라이브 애드온 +₩59,000</small></div>
+          <p class="lc-plan-card__target"><b>타깃</b> — 분기·시즌마다 이벤트성 방송만 하는 커머스</p>
+          <p class="lc-plan-card__value">“평소엔 커머스, 필요할 때만 라이브. 애드온은 언제든 끄고 켤 수 있습니다.”</p>
+          <ul>
+            <li>Commerce Core 전체 기능</li>
+            <li>자동화 워크플로 · A/B 테스트</li>
+            <li class="is-addon">애드온 활성 시: 월 2회 방송</li>
+            <li class="is-addon">애드온 활성 시: 동시 시청 1,000명 · 상품 핀</li>
+          </ul>
+          <a class="lc-btn lc-btn--secondary lc-btn--block" href="#cta">14일 무료 체험</a>
+        </article>
+      </div>
+    </div>
+
+    <!-- 겸용 비교표 -->
+    <div class="lc-compare">
+      <table>
+        <caption>플랜 비교 — 어떤 트랙이 우리 얘기인지 한 표로 확인하세요.</caption>
+        <thead>
+          <tr>
+            <th scope="col">비교 항목</th>
+            <th scope="col">Live 트랙</th>
+            <th scope="col">Commerce Core</th>
+            <th scope="col">Commerce Plus + 애드온</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">라이브 방송</th>
+            <td data-label="Live 트랙"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Core"><span class="lc-no" aria-hidden="true">–</span><span class="sr-only">미포함</span></td>
+            <td data-label="Commerce Plus + 애드온"><span class="lc-addon">애드온</span></td>
+          </tr>
+          <tr>
+            <th scope="row">상품 · 재고 관리</th>
+            <td data-label="Live 트랙"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Core"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Plus + 애드온"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+          </tr>
+          <tr>
+            <th scope="row">주문 · 배송</th>
+            <td data-label="Live 트랙"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Core"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Plus + 애드온"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+          </tr>
+          <tr>
+            <th scope="row">CRM · 고객 세그먼트</th>
+            <td data-label="Live 트랙"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Core"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Plus + 애드온"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+          </tr>
+          <tr>
+            <th scope="row">결제 · 정산 리포트</th>
+            <td data-label="Live 트랙"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Core"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Plus + 애드온"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+          </tr>
+          <tr>
+            <th scope="row">멀티채널 동시 송출</th>
+            <td data-label="Live 트랙"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Core"><span class="lc-no" aria-hidden="true">–</span><span class="sr-only">미포함</span></td>
+            <td data-label="Commerce Plus + 애드온"><span class="lc-no" aria-hidden="true">–</span><span class="sr-only">미포함</span></td>
+          </tr>
+          <tr>
+            <th scope="row">하이라이트 클립</th>
+            <td data-label="Live 트랙"><span class="lc-yes" aria-hidden="true">✓</span><span class="sr-only">포함</span></td>
+            <td data-label="Commerce Core"><span class="lc-no" aria-hidden="true">–</span><span class="sr-only">미포함</span></td>
+            <td data-label="Commerce Plus + 애드온"><span class="lc-addon">애드온</span></td>
+          </tr>
+          <tr>
+            <th scope="row">월 고정비</th>
+            <td data-label="Live 트랙">₩0 ~ 149,000</td>
+            <td data-label="Commerce Core">₩89,000</td>
+            <td data-label="Commerce Plus + 애드온">₩119,000 (+59,000)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="lc-caption lc-pricing__foot">
+      모든 플랜 14일 무료 · 계약 기간 없음 · 트랙 간 이동 시 상품·주문·고객 데이터 100% 유지 · 표시 금액은 VAT 별도 (시안용 예시 값)
+    </p>
+  </div>
+</section>
+
+<!-- ============ 6. 최종 CTA ============ -->
+<section class="lc-cta-band" id="cta">
+  <div class="lc-wrap">
+    <h2>오늘 방송, 오늘 매출.</h2>
+    <p class="lc-lead">5분이면 첫 방송을 켤 수 있습니다. 라이브가 아직이라면, 커머스부터 시작하세요.</p>
+    <div class="lc-cta-band__actions">
+      <a class="lc-btn lc-btn--primary" href="#pricing">무료로 시작하기</a>
+      <a class="lc-btn lc-btn--ghost-on-dark" href="#pricing">영업팀과 상담</a>
+    </div>
+    <p class="lc-caption">신용카드 불필요 · 언제든 해지 · 데이터 반출 무료</p>
+  </div>
+</section>
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="lc-footer">
+  <div class="lc-wrap">
+    <div class="lc-footer__grid">
+      <div>
+        <div class="lc-footer__brand"><span class="lc-header__dot" aria-hidden="true"></span>LiveCart</div>
+        <p style="margin-top:12px;font-size:14px">방송을 켜는 커머스, 켜지 않아도 도는 커머스.</p>
+      </div>
+      <div>
+        <h4>제품</h4>
+        <ul>
+          <li><a href="#features">라이브 스튜디오</a></li>
+          <li><a href="#features">커머스 백오피스</a></li>
+          <li><a href="#features">대시보드</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>솔루션</h4>
+        <ul>
+          <li><a href="#pricing">1인 셀러</a></li>
+          <li><a href="#pricing">성장 브랜드</a></li>
+          <li><a href="#pricing">엔터프라이즈</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>리소스</h4>
+        <ul>
+          <li><a href="#proof">고객 사례</a></li>
+          <li><a href="#features">가이드</a></li>
+          <li><a href="#cta">문의하기</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>회사</h4>
+        <ul>
+          <li><a href="#hero">소개</a></li>
+          <li><a href="#cta">채용</a></li>
+          <li><a href="#cta">이용약관</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="lc-footer__copy">
+      <span>© 2026 LiveCart — 시안(mockup) · 실제 서비스 아님</span>
+      <span>brix-Flow BF-814 · designer 이디자인</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
