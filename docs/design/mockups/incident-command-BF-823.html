@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Command Center 시안 — BF-823</title>
+<style>
+/* ============================================================
+   Incident Command Center — 시각 mockup (BF-823 / [이디자인])
+   명세: docs/design/incident-command-BF-821.md
+   vanilla-static: 외부 의존성 0건 (CDN / @font-face / img / script src 없음)
+   ⚠ 이건 dev 산출물이 아니라 시안 시각화입니다. JS 0줄 — 체크박스 취소선은
+     CSS :checked 로만 표현, 진행률 수치는 정적 값.
+   ============================================================ */
+
+:root {
+  /* --- Base / Surface / Text (명세 §2.1) --- */
+  --ic-bg:                #0B0F17;
+  --ic-surface:           #131A26;
+  --ic-surface-raised:    #1B2433;
+  --ic-surface-selected:  #1E2A3D;
+  --ic-border:            #2A3648;   /* 장식 전용 */
+  --ic-border-interactive:#6B7C94;   /* 인터랙티브 경계 (WCAG 3:1) */
+  --ic-text:              #E8EDF5;
+  --ic-text-secondary:    #9FB0C7;
+  --ic-text-muted:        #6B7C94;
+  --ic-accent:            #4DA3FF;
+  --ic-accent-fg:         #08111C;
+
+  /* --- Severity (명세 §2.2) --- */
+  --ic-sev-1-fg: #FF8A8A;  --ic-sev-1-bg: #3A1518;  --ic-sev-1-border: #7A2A30;
+  --ic-sev-2-fg: #FFC96B;  --ic-sev-2-bg: #3A2A10;  --ic-sev-2-border: #7A5A20;
+  --ic-sev-3-fg: #7DB8FF;  --ic-sev-3-bg: #12283F;  --ic-sev-3-border: #2C5480;
+  --ic-sev-4-fg: #B9C7DA;  --ic-sev-4-bg: #212C3B;  --ic-sev-4-border: #44536B;
+
+  /* --- Status (명세 §2.3) --- */
+  --ic-status-bg:               #1E2735;
+  --ic-status-detected-fg:      #C7D3E3;
+  --ic-status-investigating-fg: #FFC96B;
+  --ic-status-mitigating-fg:    #5EEAD4;
+  --ic-status-monitoring-fg:    #7DB8FF;
+  --ic-status-resolved-fg:      #4ADE80;
+
+  /* --- Timeline eventType (명세 §2.4) --- */
+  --ic-evt-detected:   #C7D3E3;
+  --ic-evt-update:     #7DB8FF;
+  --ic-evt-escalated:  #FF8A8A;
+  --ic-evt-resolved:   #4ADE80;
+  --ic-evt-escalated-bg: #2A1A1E;
+  --ic-evt-resolved-bg:  #12261B;
+
+  /* --- Feedback (명세 §2.5) --- */
+  --ic-progress-fill:  #4ADE80;
+  --ic-progress-track: #212C3B;
+  --ic-danger:         #FF5C5C;
+  --ic-danger-bg:      #2A1418;
+  --ic-focus:          #4DA3FF;
+  --ic-skeleton:       #1E2735;
+  --ic-skeleton-shine: #2A3648;
+
+  /* --- Typography (명세 §3) --- */
+  --ic-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo",
+                  "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --ic-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "D2Coding", monospace;
+
+  /* --- Spacing / Radius (명세 §4) --- */
+  --ic-space-1: 4px;  --ic-space-2: 8px;  --ic-space-3: 12px;
+  --ic-space-4: 16px; --ic-space-5: 20px; --ic-space-6: 24px; --ic-space-7: 32px;
+  --ic-radius-sm: 4px; --ic-radius-md: 8px; --ic-radius-lg: 12px; --ic-radius-pill: 999px;
+
+  --ic-shadow-panel: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: var(--ic-space-6);
+  background: var(--ic-bg);
+  color: var(--ic-text);
+  font-family: var(--ic-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* SR 전용 (명세 §6.9) */
+.ic-sr-only {
+  position: absolute; width: 1px; height: 1px;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
+
+/* 공통 포커스 링 (명세 §8.1) */
+:focus-visible {
+  outline: 2px solid var(--ic-focus);
+  outline-offset: 2px;
+}
+
+/* ===== mockup 전용 크롬 (실제 산출물 아님) ===== */
+.mk-note {
+  max-width: 1400px; margin: 0 auto var(--ic-space-6);
+  padding: var(--ic-space-4);
+  border: 1px dashed var(--ic-border-interactive);
+  border-radius: var(--ic-radius-md);
+  color: var(--ic-text-secondary); font-size: 13px;
+}
+.mk-note strong { color: var(--ic-text); }
+.mk-section { max-width: 1400px; margin: 0 auto var(--ic-space-7); }
+.mk-section > h2 {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ic-text-muted); margin: 0 0 var(--ic-space-4);
+  padding-bottom: var(--ic-space-2); border-bottom: 1px solid var(--ic-border);
+}
+.mk-caption { color: var(--ic-text-muted); font-size: 12px; margin: 0 0 var(--ic-space-3); }
+.mk-grid { display: grid; gap: var(--ic-space-4); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.mk-card {
+  background: var(--ic-surface); border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg); padding: var(--ic-space-4);
+}
+.mk-card > h3 {
+  font-size: 12px; font-weight: 700; color: var(--ic-text-secondary);
+  margin: 0 0 var(--ic-space-3); font-family: var(--ic-font-mono);
+}
+.mk-row { display: flex; flex-wrap: wrap; gap: var(--ic-space-3); align-items: center; }
+
+/* ============================================================
+   TOPBAR (명세 §5.1)
+   ============================================================ */
+.ic-topbar {
+  max-width: 1400px; margin: 0 auto var(--ic-space-5);
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--ic-space-4); flex-wrap: wrap;
+}
+.ic-topbar h1 {
+  font-size: 22px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em;
+  margin: 0; color: var(--ic-text);
+}
+.ic-topbar__count {
+  font-family: var(--ic-font-mono); font-size: 12px; font-weight: 500;
+  color: var(--ic-text-muted);
+}
+
+/* ============================================================
+   APP SHELL — 2단 Master-Detail (명세 §5.2)
+   ============================================================ */
+.ic-app {
+  max-width: 1400px; margin: 0 auto;
+  display: grid; gap: var(--ic-space-5);
+  grid-template-columns: minmax(300px, 360px) 1fr;
+  align-items: start;
+}
+.ic-app > * { min-width: 0; }   /* 가로 스크롤 방지 (명세 §5.3) */
+
+@media (min-width: 1280px) {
+  .ic-app { grid-template-columns: 380px 1fr; }
+}
+@media (max-width: 767px) {
+  .ic-app { grid-template-columns: 1fr; }
+}
+
+.ic-pane {
+  background: var(--ic-surface);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg);
+  box-shadow: var(--ic-shadow-panel);
+}
+.ic-pane__head { padding: var(--ic-space-4); border-bottom: 1px solid var(--ic-border); }
+.ic-pane__head h2 { font-size: 16px; font-weight: 600; line-height: 1.4; margin: 0 0 var(--ic-space-3); }
+.ic-pane__body { padding: var(--ic-space-4); }
+
+/* ============================================================
+   FILTER CHIPS (명세 §6.3)
+   ============================================================ */
+.ic-filters {
+  display: flex; gap: var(--ic-space-2);
+  overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+}
+.ic-filters::-webkit-scrollbar { display: none; }
+
+.ic-chip {
+  flex: 0 0 auto;
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  background: transparent;
+  color: var(--ic-text-secondary);
+  border: 1px solid var(--ic-border-interactive);
+  border-radius: var(--ic-radius-pill);
+  padding: 6px 14px; min-height: 36px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.ic-chip:hover { background: var(--ic-surface-raised); color: var(--ic-text); }
+
+/* 활성 상태는 aria-pressed 속성 선택자로 (명세 §6.3 — .is-active 클래스 금지) */
+.ic-chip[aria-pressed="true"] {
+  background: var(--ic-accent);
+  color: var(--ic-accent-fg);
+  border-color: var(--ic-accent);
+  font-weight: 700;
+}
+
+/* ============================================================
+   BADGES (명세 §6.1, §6.2)
+   ============================================================ */
+.ic-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px; border-radius: var(--ic-radius-sm);
+  font-size: 12px; font-weight: 700; line-height: 1; letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* -- Severity -- */
+.ic-badge--sev { border: 1px solid transparent; }
+.ic-badge--sev[data-severity="P1"] { color: var(--ic-sev-1-fg); background: var(--ic-sev-1-bg); border: 2px solid var(--ic-sev-1-border); }
+.ic-badge--sev[data-severity="P2"] { color: var(--ic-sev-2-fg); background: var(--ic-sev-2-bg); border-color: var(--ic-sev-2-border); }
+.ic-badge--sev[data-severity="P3"] { color: var(--ic-sev-3-fg); background: var(--ic-sev-3-bg); border-color: var(--ic-sev-3-border); }
+.ic-badge--sev[data-severity="P4"] { color: var(--ic-sev-4-fg); background: var(--ic-sev-4-bg); border-color: var(--ic-sev-4-border); }
+
+/* -- Status : 색 + 선행 도형 (색 비의존, 명세 §2.3) -- */
+.ic-badge--status { background: var(--ic-status-bg); }
+.ic-badge--status::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto;
+}
+.ic-badge--status[data-status="detected"]      { color: var(--ic-status-detected-fg); }
+.ic-badge--status[data-status="detected"]::before      { border: 2px solid currentColor; background: transparent; } /* ○ 속 빈 원 */
+.ic-badge--status[data-status="investigating"] { color: var(--ic-status-investigating-fg); }
+.ic-badge--status[data-status="investigating"]::before { border: 2px solid currentColor; background: linear-gradient(90deg, transparent 50%, currentColor 50%); } /* ◐ 반원 */
+.ic-badge--status[data-status="mitigating"]    { color: var(--ic-status-mitigating-fg); }
+.ic-badge--status[data-status="mitigating"]::before    { background: currentColor; } /* ● 채운 원 */
+.ic-badge--status[data-status="monitoring"]    { color: var(--ic-status-monitoring-fg); }
+.ic-badge--status[data-status="monitoring"]::before    { background: transparent; border: 2px solid currentColor; box-shadow: inset 0 0 0 1px var(--ic-status-bg); } /* ◎ 이중 원 */
+.ic-badge--status[data-status="resolved"]      { color: var(--ic-status-resolved-fg); }
+.ic-badge--status[data-status="resolved"]::before      { content: "✓"; width: auto; height: auto; border-radius: 0; font-size: 11px; font-weight: 700; } /* ✓ */
+
+/* ============================================================
+   INCIDENT LIST ROW (명세 §6.4)
+   ============================================================ */
+.ic-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ic-space-2); }
+
+.ic-row {
+  background: var(--ic-surface);
+  border: 1px solid var(--ic-border-interactive);
+  border-left: 4px solid var(--ic-border-interactive);   /* severity 레일 */
+  border-radius: var(--ic-radius-md);
+  padding: var(--ic-space-3);
+  min-height: 64px;
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: var(--ic-space-2);
+  transition: background 120ms ease;
+}
+.ic-row:hover { background: var(--ic-surface-raised); }
+
+/* severity 좌측 레일 */
+.ic-row[data-severity="P1"] { border-left-color: var(--ic-sev-1-fg); }
+.ic-row[data-severity="P2"] { border-left-color: var(--ic-sev-2-fg); }
+.ic-row[data-severity="P3"] { border-left-color: var(--ic-sev-3-fg); }
+.ic-row[data-severity="P4"] { border-left-color: var(--ic-sev-4-fg); }
+
+/* 선택 상태는 aria-selected 속성 선택자로 (명세 §6.4) */
+.ic-row[aria-selected="true"] {
+  background: var(--ic-surface-selected);
+  box-shadow: inset 0 0 0 1px var(--ic-accent);
+  border-left-width: 6px;
+}
+
+.ic-row__top { display: flex; align-items: center; gap: var(--ic-space-2); }
+.ic-row__title {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 15px; font-weight: 600; line-height: 1.4;
+  overflow-wrap: anywhere;   /* 320px 가로 스크롤 방지 (명세 §5.3) */
+}
+.ic-row__meta {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--ic-space-2); font-size: 12px; font-weight: 500; line-height: 1.5;
+  color: var(--ic-text-secondary);
+}
+.ic-row__time { font-family: var(--ic-font-mono); color: var(--ic-text-muted); flex: 0 0 auto; }
+
+/* 모바일: 배지를 제목 아래 줄로 (명세 §5.3) */
+@media (max-width: 767px) {
+  .ic-row__top { flex-wrap: wrap; }
+  .ic-row__title { flex: 1 0 100%; order: -1; }
+}
+
+/* ============================================================
+   DETAIL HEADER (명세 §6.5)
+   ============================================================ */
+.ic-detail-head {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--ic-surface-raised);
+  border-bottom: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg) var(--ic-radius-lg) 0 0;
+  padding: var(--ic-space-4);
+}
+.ic-detail-head h2 {
+  font-size: 20px; font-weight: 700; line-height: 1.35; letter-spacing: -0.01em;
+  margin: 0 0 var(--ic-space-3); overflow-wrap: anywhere;
+}
+.ic-detail-head__badges { display: flex; flex-wrap: wrap; gap: var(--ic-space-2); margin-bottom: var(--ic-space-3); }
+.ic-detail-head__foot {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--ic-space-4);
+  font-size: 12px; line-height: 1.5;
+}
+
+.ic-owner { display: inline-flex; align-items: center; gap: var(--ic-space-2); color: var(--ic-text); font-weight: 600; }
+.ic-owner__avatar {
+  width: 24px; height: 24px; border-radius: 50%; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ic-accent); color: var(--ic-accent-fg);
+  font-size: 11px; font-weight: 700;
+}
+.ic-owner__team { color: var(--ic-text-secondary); font-weight: 500; }
+.ic-detail-head__times { font-family: var(--ic-font-mono); color: var(--ic-text-muted); }
+
+/* ============================================================
+   CHECKLIST + PROGRESS (명세 §6.6, §6.7)
+   ============================================================ */
+.ic-section { padding: var(--ic-space-4); border-bottom: 1px solid var(--ic-border); }
+.ic-section:last-child { border-bottom: 0; }
+.ic-section > h3 { font-size: 16px; font-weight: 600; line-height: 1.4; margin: 0 0 var(--ic-space-3); }
+
+.ic-progress {
+  height: 8px; background: var(--ic-progress-track);
+  border-radius: var(--ic-radius-sm); overflow: hidden;
+}
+.ic-progress__fill {
+  height: 100%; background: var(--ic-progress-fill);
+  border-radius: var(--ic-radius-sm);
+  transition: width 180ms ease-out;
+}
+.ic-progress__text {
+  margin: var(--ic-space-2) 0 var(--ic-space-3);
+  font-size: 12px; font-weight: 500; color: var(--ic-text-secondary);
+}
+.ic-progress__text b { font-family: var(--ic-font-mono); font-weight: 700; color: var(--ic-text); }
+
+.ic-checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ic-space-2); }
+.ic-check {
+  display: flex; align-items: flex-start; gap: var(--ic-space-3);
+  background: var(--ic-surface-raised);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  padding: var(--ic-space-3);
+}
+.ic-check input[type="checkbox"] {
+  width: 20px; height: 20px; flex: 0 0 auto; margin: 0;
+  accent-color: var(--ic-progress-fill);
+  cursor: pointer;
+}
+.ic-check label {
+  flex: 1 1 auto; min-width: 0;
+  padding-block: 2px;             /* 터치 타깃 44px 확보 (명세 §6.7) */
+  cursor: pointer; overflow-wrap: anywhere;
+}
+/* 완료 시 취소선 — 인접 선택자 (JS 0줄, 명세 §6.7) */
+.ic-check input[type="checkbox"]:checked + label {
+  text-decoration: line-through;
+  color: var(--ic-text-muted);
+}
+.ic-check__at {
+  flex: 0 0 auto;
+  font-family: var(--ic-font-mono); font-size: 12px; color: var(--ic-text-muted);
+}
+
+/* 체크리스트 없음 (명세 §7.6) */
+.ic-no-checklist {
+  padding: var(--ic-space-5);
+  border: 1px dashed var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  color: var(--ic-text-secondary);
+  text-align: center;
+}
+
+/* ============================================================
+   TIMELINE (명세 §6.8)
+   ============================================================ */
+.ic-timeline {
+  list-style: none; margin: 0; padding: 0 0 0 var(--ic-space-5);
+  position: relative;
+}
+.ic-timeline::before {   /* 세로 레일 */
+  content: ""; position: absolute; left: 5px; top: 6px; bottom: 6px;
+  width: 1px; background: var(--ic-border);
+}
+.ic-timeline > li {
+  position: relative;
+  display: flex; gap: var(--ic-space-3);
+  padding: var(--ic-space-2) var(--ic-space-2) var(--ic-space-2) var(--ic-space-3);
+  border-radius: var(--ic-radius-sm);
+  cursor: default;   /* 읽기 전용 — 클릭 가능해 보이지 않게 (명세 §6.8) */
+}
+.ic-timeline > li + li { margin-top: var(--ic-space-2); }
+
+/* 노드 도형 */
+.ic-timeline > li::before {
+  content: ""; position: absolute; left: -18px; top: 14px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ic-evt-update);
+}
+.ic-timeline > li[data-event-type="detected"]::before {
+  background: var(--ic-bg); border: 2px solid var(--ic-evt-detected);
+  width: 10px; height: 10px; left: -19px;
+}
+.ic-timeline > li[data-event-type="update"]::before { background: var(--ic-evt-update); }
+.ic-timeline > li[data-event-type="escalated"]::before {   /* 마름모 */
+  background: var(--ic-evt-escalated); border-radius: 0;
+  transform: rotate(45deg); width: 10px; height: 10px; left: -19px;
+}
+.ic-timeline > li[data-event-type="resolved"]::before {
+  content: "✓"; background: transparent; color: var(--ic-evt-resolved);
+  font-size: 12px; font-weight: 700; line-height: 1;
+  width: auto; height: auto; left: -20px; top: 12px;
+}
+
+/* escalated 행 강조 (기획 EC-06) */
+.ic-timeline > li[data-event-type="escalated"] {
+  background: var(--ic-evt-escalated-bg);
+  border-left: 2px solid var(--ic-evt-escalated);
+}
+.ic-timeline > li[data-event-type="resolved"] { background: var(--ic-evt-resolved-bg); }
+
+.ic-tl__time {
+  flex: 0 0 auto; width: 42px;
+  font-family: var(--ic-font-mono); font-size: 12px; color: var(--ic-text-muted);
+  padding-top: 2px;
+}
+.ic-tl__body { flex: 1 1 auto; min-width: 0; }
+.ic-tl__type {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+}
+.ic-timeline > li[data-event-type="detected"]  .ic-tl__type { color: var(--ic-evt-detected); }
+.ic-timeline > li[data-event-type="update"]    .ic-tl__type { color: var(--ic-evt-update); }
+.ic-timeline > li[data-event-type="escalated"] .ic-tl__type { color: var(--ic-evt-escalated); }
+.ic-timeline > li[data-event-type="resolved"]  .ic-tl__type { color: var(--ic-evt-resolved); }
+.ic-tl__actor { font-size: 12px; color: var(--ic-text-secondary); margin-left: var(--ic-space-2); }
+.ic-tl__note { margin: var(--ic-space-1) 0 0; color: var(--ic-text); overflow-wrap: anywhere; }
+
+/* ============================================================
+   STATES — loading / empty / error / no-result / no-selection
+   (명세 §7)
+   ============================================================ */
+
+/* -- Loading 스켈레톤 (§7.1) -- */
+.ic-skeleton-list { display: flex; flex-direction: column; gap: var(--ic-space-2); }
+.ic-skel {
+  background: var(--ic-skeleton);
+  border-radius: var(--ic-radius-md);
+  animation: ic-pulse 1.2s ease-in-out infinite;
+}
+.ic-skel--row { height: 64px; }
+.ic-skel--head { height: 96px; margin-bottom: var(--ic-space-3); }
+.ic-skel--line { height: 16px; margin-bottom: var(--ic-space-2); border-radius: var(--ic-radius-sm); }
+.ic-skel--line.w80 { width: 80%; }
+.ic-skel--line.w60 { width: 60%; }
+
+@keyframes ic-pulse {
+  0%, 100% { background: var(--ic-skeleton); }
+  50%      { background: var(--ic-skeleton-shine); }
+}
+
+/* -- Empty (§7.2) -- */
+.ic-empty {
+  padding: var(--ic-space-7) var(--ic-space-4);
+  text-align: center; color: var(--ic-text-secondary);
+}
+.ic-empty__mark {
+  width: 48px; height: 48px; margin: 0 auto var(--ic-space-3);
+  border: 2px dashed var(--ic-border-interactive); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ic-text-muted); font-size: 20px; font-weight: 700;
+}
+
+/* -- Error (§7.3) -- */
+.ic-error {
+  display: flex; align-items: flex-start; gap: var(--ic-space-3);
+  background: var(--ic-danger-bg);
+  border: 1px solid var(--ic-danger);
+  border-left-width: 4px;
+  border-radius: var(--ic-radius-md);
+  padding: var(--ic-space-4);
+  color: var(--ic-text);
+}
+.ic-error__icon { color: var(--ic-danger); font-size: 16px; line-height: 1.4; flex: 0 0 auto; }
+
+/* -- 필터 결과 0건 (§7.4) -- */
+.ic-no-result { padding: var(--ic-space-6) var(--ic-space-4); text-align: center; color: var(--ic-text-secondary); }
+.ic-reset-btn {
+  margin-top: var(--ic-space-3);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  background: transparent; color: var(--ic-accent);
+  border: 1px solid var(--ic-accent); border-radius: var(--ic-radius-pill);
+  padding: 6px 14px; min-height: 36px; cursor: pointer;
+}
+.ic-reset-btn:hover { background: var(--ic-surface-raised); }
+
+/* -- 상세 미선택 (§7.5) -- */
+.ic-no-selection {
+  margin: var(--ic-space-4);
+  padding: var(--ic-space-7) var(--ic-space-4);
+  border: 1px dashed var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  text-align: center; color: var(--ic-text-secondary);
+}
+.ic-no-selection__arrow { display: block; font-size: 20px; color: var(--ic-text-muted); margin-bottom: var(--ic-space-2); }
+
+/* ============================================================
+   모바일 프레임 (mockup 전용 — 375px 시뮬레이션)
+   미디어쿼리는 뷰포트 기준이라 프레임 안에서 안 걸리므로
+   모바일 레이아웃을 명시 클래스로 재현한다.
+   ============================================================ */
+.mk-phone {
+  width: 375px; max-width: 100%;
+  border: 1px solid var(--ic-border-interactive);
+  border-radius: var(--ic-radius-lg);
+  padding: var(--ic-space-3);
+  background: var(--ic-bg);
+  overflow: hidden;
+}
+.mk-phone .ic-app { display: flex; flex-direction: column; gap: var(--ic-space-4); max-width: none; }
+.mk-phone .ic-row__top { flex-wrap: wrap; }
+.mk-phone .ic-row__title { flex: 1 0 100%; order: -1; }
+.mk-phone .ic-topbar { margin-bottom: var(--ic-space-3); }
+.mk-phone .ic-topbar h1 { font-size: 18px; }
+
+/* ============================================================
+   모션 저감 (명세 §8.1 — 필수)
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<p class="mk-note">
+  <strong>[이디자인] Incident Command Center 시안 — BF-823</strong><br>
+  명세: <code>docs/design/incident-command-BF-821.md</code> · 기획: <code>docs/plan/incident-command-BF-821.md</code><br>
+  이 파일은 <strong>시각 시뮬레이션(mockup)</strong> 이며 dev 산출물이 아닙니다 — JS 0줄, 외부 의존성 0건(<code>file://</code> 직접 실행 가능).
+  체크박스 취소선은 CSS <code>:checked</code> 로만 표현되며, 진행률 수치는 정적 값입니다.
+  실제 필터/선택/토글 로직과 진행률 재계산은 dev-1 이 <code>command.js</code> 에 구현합니다.
+</p>
+
+<!-- ============================================================
+     SECTION 1 — 데스크톱 READY (INC-3001 선택)
+     ============================================================ -->
+<section class="mk-section">
+  <h2>1. 데스크톱 · ready 상태 (INC-3001 선택)</h2>
+
+  <header class="ic-topbar">
+    <h1>Incident Command Center</h1>
+    <span class="ic-topbar__count">총 6건 표시</span>
+  </header>
+  <p id="ic-live" class="ic-sr-only" aria-live="polite" aria-atomic="true">결제 게이트웨이 타임아웃 급증 선택됨</p>
+
+  <main id="incident-command" class="ic-app" data-view-state="ready">
+
+    <!-- ── 좌: 목록 패널 ── -->
+    <section class="ic-pane">
+      <div class="ic-pane__head">
+        <h2>장애 목록</h2>
+        <div role="group" aria-label="심각도 필터" class="ic-filters">
+          <button type="button" class="ic-chip" data-severity-filter="all" aria-pressed="true">전체</button>
+          <button type="button" class="ic-chip" data-severity-filter="P1" aria-pressed="false">P1</button>
+          <button type="button" class="ic-chip" data-severity-filter="P2" aria-pressed="false">P2</button>
+          <button type="button" class="ic-chip" data-severity-filter="P3" aria-pressed="false">P3</button>
+          <button type="button" class="ic-chip" data-severity-filter="P4" aria-pressed="false">P4</button>
+        </div>
+      </div>
+      <div class="ic-pane__body">
+        <ul id="incident-list" class="ic-list" role="listbox" aria-label="장애 목록">
+
+          <li class="ic-row" data-id="INC-3001" data-severity="P1" data-status="investigating" role="option" aria-selected="true" tabindex="0">
+            <div class="ic-row__top">
+              <span class="ic-badge ic-badge--sev" data-severity="P1">P1 · 치명</span>
+              <span class="ic-row__title">결제 게이트웨이 타임아웃 급증</span>
+              <span class="ic-badge ic-badge--status" data-status="investigating">조사중</span>
+            </div>
+            <div class="ic-row__meta">
+              <span>김온콜 · Payments</span>
+              <span class="ic-row__time">07-14 02:45</span>
+            </div>
+          </li>
+
+          <li class="ic-row" data-id="INC-3006" data-severity="P1" data-status="investigating" role="option" aria-selected="false" tabindex="0">
+            <div class="ic-row__top">
+              <span class="ic-badge ic-badge--sev" data-severity="P1">P1 · 치명</span>
+              <span class="ic-row__title">알림 발송 지연 (심각도 상향)</span>
+              <span class="ic-badge ic-badge--status" data-status="investigating">조사중</span>
+            </div>
+            <div class="ic-row__meta">
+              <span>한온콜 · Notifications</span>
+              <span class="ic-row__time">07-14 00:50</span>
+            </div>
+          </li>
+
+          <li class="ic-row" data-id="INC-3002" data-severity="P2" data-status="mitigating" role="option" aria-selected="false" tabindex="0">
+            <div class="ic-row__top">
+              <span class="ic-badge ic-badge--sev" data-severity="P2">P2 · 높음</span>
+              <span class="ic-row__title">정적 자산 CDN 5xx 스파이크</span>
+              <span class="ic-badge ic-badge--status" data-status="mitigating">조치중</span>
+            </div>
+            <div class="ic-row__meta">
+              <span>이인프라 · Platform</span>
+              <span class="ic-row__time">07-14 01:40</span>
+            </div>
+          </li>
+
+          <li class="ic-row" data-id="INC-3005" data-severity="P2" data-status="resolved" role="option" aria-selected="false" tabindex="0">
+            <div class="ic-row__top">
+              <span class="ic-badge ic-badge--sev" data-severity="P2">P2 · 높음</span>
+              <span class="ic-row__title">인증 토큰 발급 실패</span>
+              <span class="ic-badge ic-badge--status" data-status="resolved">해결됨</span>
+            </div>
+            <div class="ic-row__meta">
+              <span>정보안 · Security</span>
+              <span class="ic-row__time">07-13 10:15</span>
+            </div>
+          </li>
+
+          <li class="ic-row" data-id="INC-3003" data-severity="P3" data-status="monitoring" role="option" aria-selected="false" tabindex="0">
+            <div class="ic-row__top">
+              <span class="ic-badge ic-badge--sev" data-severity="P3">P3 · 보통</span>
+              <span class="ic-row__title">로그인 세션 만료 오탐</span>
+              <span class="ic-badge ic-badge--status" data-status="monitoring">모니터링</span>
+            </div>
+            <div class="ic-row__meta">
+              <span>박인증 · Identity</span>
+              <span class="ic-row__time">07-13 23:10</span>
+            </div>
+          </li>
+
+          <li class="ic-row" data-id="INC-3004" data-severity="P4" data-status="detected" role="option" aria-selected="false" tabindex="0">
+            <div class="ic-row__top">
+              <span class="ic-badge ic-badge--sev" data-severity="P4">P4 · 낮음</span>
+              <span class="ic-row__title">배치 작업 지연 경고</span>
+              <span class="ic-badge ic-badge--status" data-status="detected">감지됨</span>
+            </div>
+            <div class="ic-row__meta">
+              <span>최데이터 · Data</span>
+              <span class="ic-row__time">07-14 03:00</span>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── 우: 상세 패널 ── -->
+    <section id="incident-detail" class="ic-pane" data-selected-id="INC-3001">
+
+      <header class="ic-detail-head">
+        <h2>결제 게이트웨이 타임아웃 급증</h2>
+        <div class="ic-detail-head__badges">
+          <span class="ic-badge ic-badge--sev" data-severity="P1">P1 · 치명</span>
+          <span class="ic-badge ic-badge--status" data-status="investigating">조사중</span>
+          <span class="ic-badge" style="background: var(--ic-status-bg); color: var(--ic-text-muted); font-family: var(--ic-font-mono);">INC-3001</span>
+        </div>
+        <div class="ic-detail-head__foot">
+          <span class="ic-owner">
+            <span class="ic-owner__avatar" aria-hidden="true">김</span>
+            김온콜 <span class="ic-owner__team">Payments</span>
+          </span>
+          <span class="ic-detail-head__times">감지 2026-07-14 02:10 · 업데이트 2026-07-14 02:45</span>
+        </div>
+      </header>
+
+      <!-- 체크리스트 먼저 (명세 §5.1 — 인터랙티브 우선) -->
+      <div class="ic-section">
+        <h3>복구 체크리스트</h3>
+        <div id="incident-checklist" data-checklist-state="has-items">
+          <div id="checklist-progress" class="ic-progress" role="progressbar"
+               aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"
+               aria-label="복구 체크리스트 진행률">
+            <div class="ic-progress__fill" style="width: 50%"></div>
+          </div>
+          <p class="ic-progress__text"><b>2/4</b> 완료 (<b>50%</b>)</p>
+
+          <ul class="ic-checks">
+            <li class="ic-check" data-checklist-id="chk-3001-1">
+              <input type="checkbox" id="chk-3001-1" data-checklist-id="chk-3001-1" checked>
+              <label for="chk-3001-1">결제 게이트웨이 사이드카 재시작</label>
+              <time class="ic-check__at">07-14 02:20</time>
+            </li>
+            <li class="ic-check" data-checklist-id="chk-3001-2">
+              <input type="checkbox" id="chk-3001-2" data-checklist-id="chk-3001-2" checked>
+              <label for="chk-3001-2">PG사 상태 페이지 확인</label>
+              <time class="ic-check__at">07-14 02:32</time>
+            </li>
+            <li class="ic-check" data-checklist-id="chk-3001-3">
+              <input type="checkbox" id="chk-3001-3" data-checklist-id="chk-3001-3">
+              <label for="chk-3001-3">재시도 큐 우회 라우팅 활성화</label>
+            </li>
+            <li class="ic-check" data-checklist-id="chk-3001-4">
+              <input type="checkbox" id="chk-3001-4" data-checklist-id="chk-3001-4">
+              <label for="chk-3001-4">결제 실패 고객 목록 집계</label>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ic-section">
+        <h3>대응 타임라인</h3>
+        <ol id="incident-timeline" class="ic-timeline">
+          <li data-event-type="detected">
+            <time class="ic-tl__time">02:10</time>
+            <div class="ic-tl__body">
+              <span class="ic-tl__type">감지</span><span class="ic-tl__actor">모니터링 시스템</span>
+              <p class="ic-tl__note">결제 승인 API 5xx 비율 12% 초과 — 자동 알림 발생</p>
+            </div>
+          </li>
+          <li data-event-type="update">
+            <time class="ic-tl__time">02:15</time>
+            <div class="ic-tl__body">
+              <span class="ic-tl__type">진행 갱신</span><span class="ic-tl__actor">김온콜</span>
+              <p class="ic-tl__note">온콜 확인, 게이트웨이 사이드카 로그 조사 착수</p>
+            </div>
+          </li>
+          <li data-event-type="update">
+            <time class="ic-tl__time">02:30</time>
+            <div class="ic-tl__body">
+              <span class="ic-tl__type">진행 갱신</span><span class="ic-tl__actor">김온콜</span>
+              <p class="ic-tl__note">업스트림 PG사 응답 지연 확인, PG사 상태 페이지 확인 중</p>
+            </div>
+          </li>
+          <li data-event-type="update">
+            <time class="ic-tl__time">02:45</time>
+            <div class="ic-tl__body">
+              <span class="ic-tl__type">진행 갱신</span><span class="ic-tl__actor">김온콜</span>
+              <p class="ic-tl__note">PG사 측 부분 장애 공지 확인, 재시도 큐 우회 조치 검토</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+    </section>
+  </main>
+</section>
+
+<!-- ============================================================
+     SECTION 2 — 모바일 (375px 스택)
+     ============================================================ -->
+<section class="mk-section">
+  <h2>2. 모바일 · 375px 세로 스택 (&lt;768px)</h2>
+  <p class="mk-caption">
+    필터 칩 가로 스크롤 · 목록 행 2행 구성(제목이 위, 배지가 아래) · 상세 sticky 헤더 유지 · 가로 스크롤 0
+  </p>
+
+  <div class="mk-phone">
+    <header class="ic-topbar">
+      <h1>Incident Command Center</h1>
+      <span class="ic-topbar__count">총 6건</span>
+    </header>
+
+    <div class="ic-app" data-view-state="ready">
+
+      <section class="ic-pane">
+        <div class="ic-pane__head">
+          <h2>장애 목록</h2>
+          <div role="group" aria-label="심각도 필터" class="ic-filters">
+            <button type="button" class="ic-chip" data-severity-filter="all" aria-pressed="true">전체</button>
+            <button type="button" class="ic-chip" data-severity-filter="P1" aria-pressed="false">P1</button>
+            <button type="button" class="ic-chip" data-severity-filter="P2" aria-pressed="false">P2</button>
+            <button type="button" class="ic-chip" data-severity-filter="P3" aria-pressed="false">P3</button>
+            <button type="button" class="ic-chip" data-severity-filter="P4" aria-pressed="false">P4</button>
+          </div>
+        </div>
+        <div class="ic-pane__body">
+          <ul class="ic-list" role="listbox" aria-label="장애 목록">
+            <li class="ic-row" data-id="INC-3001" data-severity="P1" role="option" aria-selected="true" tabindex="0">
+              <div class="ic-row__top">
+                <span class="ic-row__title">결제 게이트웨이 타임아웃 급증</span>
+                <span class="ic-badge ic-badge--sev" data-severity="P1">P1 · 치명</span>
+                <span class="ic-badge ic-badge--status" data-status="investigating">조사중</span>
+              </div>
+              <div class="ic-row__meta">
+                <span>김온콜 · Payments</span>
+                <span class="ic-row__time">07-14 02:45</span>
+              </div>
+            </li>
+            <li class="ic-row" data-id="INC-3002" data-severity="P2" role="option" aria-selected="false" tabindex="0">
+              <div class="ic-row__top">
+                <span class="ic-row__title">정적 자산 CDN 5xx 스파이크</span>
+                <span class="ic-badge ic-badge--sev" data-severity="P2">P2 · 높음</span>
+                <span class="ic-badge ic-badge--status" data-status="mitigating">조치중</span>
+              </div>
+              <div class="ic-row__meta">
+                <span>이인프라 · Platform</span>
+                <span class="ic-row__time">07-14 01:40</span>
+              </div>
+            </li>
+            <li class="ic-row" data-id="INC-3004" data-severity="P4" role="option" aria-selected="false" tabindex="0">
+              <div class="ic-row__top">
+                <span class="ic-row__title">배치 작업 지연 경고</span>
+                <span class="ic-badge ic-badge--sev" data-severity="P4">P4 · 낮음</span>
+                <span class="ic-badge ic-badge--status" data-status="detected">감지됨</span>
+              </div>
+              <div class="ic-row__meta">
+                <span>최데이터 · Data</span>
+                <span class="ic-row__time">07-14 03:00</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="ic-pane" data-selected-id="INC-3001">
+        <header class="ic-detail-head">
+          <h2>결제 게이트웨이 타임아웃 급증</h2>
+          <div class="ic-detail-head__badges">
+            <span class="ic-badge ic-badge--sev" data-severity="P1">P1 · 치명</span>
+            <span class="ic-badge ic-badge--status" data-status="investigating">조사중</span>
+          </div>
+          <div class="ic-detail-head__foot">
+            <span class="ic-owner">
+              <span class="ic-owner__avatar" aria-hidden="true">김</span>
+              김온콜 <span class="ic-owner__team">Payments</span>
+            </span>
+            <span class="ic-detail-head__times">업데이트 07-14 02:45</span>
+          </div>
+        </header>
+
+        <div class="ic-section">
+          <h3>복구 체크리스트</h3>
+          <div data-checklist-state="has-items">
+            <div class="ic-progress" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" aria-label="복구 체크리스트 진행률">
+              <div class="ic-progress__fill" style="width: 50%"></div>
+            </div>
+            <p class="ic-progress__text"><b>2/4</b> 완료 (<b>50%</b>)</p>
+            <ul class="ic-checks">
+              <li class="ic-check" data-checklist-id="m-chk-1">
+                <input type="checkbox" id="m-chk-1" checked>
+                <label for="m-chk-1">결제 게이트웨이 사이드카 재시작</label>
+              </li>
+              <li class="ic-check" data-checklist-id="m-chk-3">
+                <input type="checkbox" id="m-chk-3">
+                <label for="m-chk-3">재시도 큐 우회 라우팅 활성화</label>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="ic-section">
+          <h3>대응 타임라인</h3>
+          <ol class="ic-timeline">
+            <li data-event-type="detected">
+              <time class="ic-tl__time">02:10</time>
+              <div class="ic-tl__body">
+                <span class="ic-tl__type">감지</span><span class="ic-tl__actor">모니터링 시스템</span>
+                <p class="ic-tl__note">결제 승인 API 5xx 비율 12% 초과</p>
+              </div>
+            </li>
+            <li data-event-type="update">
+              <time class="ic-tl__time">02:15</time>
+              <div class="ic-tl__body">
+                <span class="ic-tl__type">진행 갱신</span><span class="ic-tl__actor">김온콜</span>
+                <p class="ic-tl__note">온콜 확인, 사이드카 로그 조사 착수</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 3 — 상태 갤러리
+     ============================================================ -->
+<section class="mk-section">
+  <h2>3. 상태 갤러리 (loading · empty · error · 결과0건 · 미선택 · 체크리스트없음)</h2>
+
+  <div class="mk-grid">
+
+    <!-- Loading -->
+    <div class="mk-card">
+      <h3>data-view-state="loading" (§7.1)</h3>
+      <p class="mk-caption">index.html 정적 마크업. 인위적 지연 없음 — command.js 실행 즉시 교체. reduced-motion 시 펄스 정지.</p>
+      <div class="ic-skeleton-list">
+        <div class="ic-skel ic-skel--row"></div>
+        <div class="ic-skel ic-skel--row"></div>
+        <div class="ic-skel ic-skel--row"></div>
+        <div class="ic-skel ic-skel--row"></div>
+      </div>
+    </div>
+
+    <!-- Loading 상세 -->
+    <div class="mk-card">
+      <h3>loading — 상세 패널 스켈레톤</h3>
+      <p class="mk-caption">헤더 블록 1 + 본문 라인 3</p>
+      <div class="ic-skel ic-skel--head"></div>
+      <div class="ic-skel ic-skel--line"></div>
+      <div class="ic-skel ic-skel--line w80"></div>
+      <div class="ic-skel ic-skel--line w60"></div>
+    </div>
+
+    <!-- Empty -->
+    <div class="mk-card">
+      <h3>data-view-state="empty" (§7.2)</h3>
+      <p class="mk-caption">문구 고정 · 방어적 상태(fixture 0건)</p>
+      <div class="ic-empty">
+        <div class="ic-empty__mark" aria-hidden="true">—</div>
+        <p>표시할 장애가 없습니다.</p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="mk-card">
+      <h3>data-view-state="error" (§7.3)</h3>
+      <p class="mk-caption">role="alert" · 재시도 버튼 없음(기획 §13.4)</p>
+      <div id="error-banner" class="ic-error" role="alert">
+        <span class="ic-error__icon" aria-hidden="true">⚠</span>
+        <span>장애 데이터를 불러오지 못했습니다. 페이지를 새로고침해 주세요.</span>
+      </div>
+    </div>
+
+    <!-- 필터 결과 0건 -->
+    <div class="mk-card">
+      <h3>필터 결과 0건 (§7.4 · EC-01)</h3>
+      <p class="mk-caption">필터 칩은 그대로 노출 — 다른 칩으로 바로 이동 가능</p>
+      <div role="group" aria-label="심각도 필터" class="ic-filters" style="margin-bottom: var(--ic-space-3);">
+        <button type="button" class="ic-chip" data-severity-filter="all" aria-pressed="false">전체</button>
+        <button type="button" class="ic-chip" data-severity-filter="P1" aria-pressed="false">P1</button>
+        <button type="button" class="ic-chip" data-severity-filter="P4" aria-pressed="true">P4</button>
+      </div>
+      <div class="ic-no-result">
+        <p style="margin:0;">해당 심각도의 장애가 없습니다.</p>
+        <button type="button" id="reset-severity-filter-btn" class="ic-reset-btn">필터 초기화</button>
+      </div>
+    </div>
+
+    <!-- 상세 미선택 -->
+    <div class="mk-card">
+      <h3>data-selected-id="none" (§7.5 · AC-03)</h3>
+      <p class="mk-caption">문구는 기획 고정값. ↑ 화살표는 모바일 방향 보조(§12 flag ①)</p>
+      <div class="ic-no-selection">
+        <span class="ic-no-selection__arrow" aria-hidden="true">↑</span>
+        <p style="margin:0;">왼쪽 목록에서 장애를 선택하세요.</p>
+      </div>
+    </div>
+
+    <!-- 체크리스트 없음 -->
+    <div class="mk-card">
+      <h3>data-checklist-state="no-checklist" (§7.6 · AC-08)</h3>
+      <p class="mk-caption">INC-3004 — 진행률 바를 <strong>렌더링하지 않음</strong> (0% 바 금지)</p>
+      <div data-checklist-state="no-checklist">
+        <div class="ic-no-checklist">해당 장애에 등록된 복구 체크리스트가 없습니다.</div>
+      </div>
+    </div>
+
+    <!-- INC-3004 타임라인 1건 -->
+    <div class="mk-card">
+      <h3>타임라인 1건 (EC-08)</h3>
+      <p class="mk-caption">INC-3004 — 감지 이벤트만. 레일 깨짐 없음</p>
+      <ol class="ic-timeline">
+        <li data-event-type="detected">
+          <time class="ic-tl__time">03:00</time>
+          <div class="ic-tl__body">
+            <span class="ic-tl__type">감지</span><span class="ic-tl__actor">모니터링 시스템</span>
+            <p class="ic-tl__note">야간 정산 배치 예상 종료 시각 20분 초과 — 경고 수준 알림</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================================================
+     SECTION 4 — 컴포넌트 갤러리
+     ============================================================ -->
+<section class="mk-section">
+  <h2>4. 컴포넌트 갤러리</h2>
+
+  <div class="mk-grid">
+
+    <div class="mk-card">
+      <h3>Severity 배지 (§6.1)</h3>
+      <p class="mk-caption">색 + 한글 라벨 + 형태(P1 만 테두리 2px). 대비 7.2~9.2:1</p>
+      <div class="mk-row">
+        <span class="ic-badge ic-badge--sev" data-severity="P1">P1 · 치명</span>
+        <span class="ic-badge ic-badge--sev" data-severity="P2">P2 · 높음</span>
+        <span class="ic-badge ic-badge--sev" data-severity="P3">P3 · 보통</span>
+        <span class="ic-badge ic-badge--sev" data-severity="P4">P4 · 낮음</span>
+      </div>
+    </div>
+
+    <div class="mk-card">
+      <h3>Status 배지 (§6.2)</h3>
+      <p class="mk-caption">공통 배경 + 텍스트 색 + 선행 도형(○ ◐ ● ◎ ✓). 대비 7.3~10.2:1</p>
+      <div class="mk-row">
+        <span class="ic-badge ic-badge--status" data-status="detected">감지됨</span>
+        <span class="ic-badge ic-badge--status" data-status="investigating">조사중</span>
+        <span class="ic-badge ic-badge--status" data-status="mitigating">조치중</span>
+        <span class="ic-badge ic-badge--status" data-status="monitoring">모니터링</span>
+        <span class="ic-badge ic-badge--status" data-status="resolved">해결됨</span>
+      </div>
+    </div>
+
+    <div class="mk-card">
+      <h3>필터 칩 상태 (§6.3)</h3>
+      <p class="mk-caption">활성은 <code>[aria-pressed="true"]</code> 속성 선택자로 스타일링 (.is-active 클래스 금지)</p>
+      <div class="mk-row">
+        <button type="button" class="ic-chip" aria-pressed="false">기본</button>
+        <button type="button" class="ic-chip" aria-pressed="true">활성</button>
+        <button type="button" class="ic-reset-btn" style="margin:0;">필터 초기화</button>
+      </div>
+      <p class="mk-caption" style="margin-top: var(--ic-space-3);">hover / focus 는 실제로 마우스·Tab 으로 확인하세요.</p>
+    </div>
+
+    <div class="mk-card">
+      <h3>진행률 바 변형 (§6.6)</h3>
+      <p class="mk-caption">"N/M 완료 (P%)" 형식 고정. aria-valuenow = percent 정수</p>
+
+      <div class="ic-progress" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" aria-label="진행률 50퍼센트">
+        <div class="ic-progress__fill" style="width: 50%"></div>
+      </div>
+      <p class="ic-progress__text"><b>2/4</b> 완료 (<b>50%</b>) — INC-3001</p>
+
+      <div class="ic-progress" role="progressbar" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100" aria-label="진행률 33퍼센트">
+        <div class="ic-progress__fill" style="width: 33%"></div>
+      </div>
+      <p class="ic-progress__text"><b>1/3</b> 완료 (<b>33%</b>) — INC-3002 (반올림 33.33→33)</p>
+
+      <div class="ic-progress" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" aria-label="진행률 100퍼센트">
+        <div class="ic-progress__fill" style="width: 100%"></div>
+      </div>
+      <p class="ic-progress__text"><b>2/2</b> 완료 (<b>100%</b>) — INC-3003 (status 는 여전히 모니터링 · EC-07)</p>
+    </div>
+
+    <div class="mk-card">
+      <h3>타임라인 노드 4종 (§6.8 · §2.4)</h3>
+      <p class="mk-caption">escalated = 마름모 + 적색 배경행 (EC-06) · resolved = ✓ + 녹색 배경행</p>
+      <ol class="ic-timeline">
+        <li data-event-type="detected">
+          <time class="ic-tl__time">00:10</time>
+          <div class="ic-tl__body">
+            <span class="ic-tl__type">감지</span><span class="ic-tl__actor">모니터링 시스템</span>
+            <p class="ic-tl__note">푸시 알림 발송 지연 평균 4분 초과</p>
+          </div>
+        </li>
+        <li data-event-type="update">
+          <time class="ic-tl__time">00:20</time>
+          <div class="ic-tl__body">
+            <span class="ic-tl__type">진행 갱신</span><span class="ic-tl__actor">한온콜</span>
+            <p class="ic-tl__note">발송 큐 적체 확인, 원인 조사 중</p>
+          </div>
+        </li>
+        <li data-event-type="escalated">
+          <time class="ic-tl__time">00:35</time>
+          <div class="ic-tl__body">
+            <span class="ic-tl__type">에스컬레이션</span><span class="ic-tl__actor">한온콜</span>
+            <p class="ic-tl__note">결제 알림까지 지연 확산 확인 — 심각도 P2→P1 상향, 추가 담당자 투입</p>
+          </div>
+        </li>
+        <li data-event-type="resolved">
+          <time class="ic-tl__time">10:15</time>
+          <div class="ic-tl__body">
+            <span class="ic-tl__type">해결</span><span class="ic-tl__actor">정보안</span>
+            <p class="ic-tl__note">정상 범위 유지 확인, 장애 종결</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="mk-card">
+      <h3>체크리스트 항목 (§6.7)</h3>
+      <p class="mk-caption">네이티브 checkbox · :checked 시 취소선 + 완료 시각. 직접 클릭해보세요(CSS 만으로 동작)</p>
+      <ul class="ic-checks">
+        <li class="ic-check">
+          <input type="checkbox" id="g-chk-1" checked>
+          <label for="g-chk-1">완료된 항목 — 취소선 + 완료 시각</label>
+          <time class="ic-check__at">07-14 02:20</time>
+        </li>
+        <li class="ic-check">
+          <input type="checkbox" id="g-chk-2">
+          <label for="g-chk-2">미완료 항목 — 완료 시각 없음 (completedAt = null)</label>
+        </li>
+      </ul>
+      <p class="mk-caption" style="margin-top: var(--ic-space-3);">
+        ⚠ mockup 은 CSS 만 — 진행률 바 재계산은 dev 가 <code>command.js</code> 로 구현(§6.6 3곳 갱신).
+      </p>
+    </div>
+
+  </div>
+</section>
+
+</body>
+</html>
