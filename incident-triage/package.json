@@ -1,0 +1,6 @@
+{
+  "name": "incident-triage",
+  "private": true,
+  "type": "commonjs",
+  "description": "BF-803 · 본 디렉토리만 CommonJS 로 해석 — incident-triage/triage.js 는 비-module UMD 패턴 (file:// CORS 안전). Node 단위 테스트는 createRequire 로 로드."
+}
