@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>인시던트 인계 타임라인</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="ith-app">
+
+    <header class="ith-header">
+      <h1>인시던트 인계 타임라인</h1>
+      <p class="ith-subtitle">기획 → 디자인 → 개발 → 리뷰 → 테스트 5단계 인계 이력 (읽기 전용 · 정적 fixture 스냅샷)</p>
+      <a class="ith-backlink" href="../index.html">← 심각도 판정 도구로 돌아가기</a>
+    </header>
+
+    <main>
+      <!-- 카드 목록은 history.js 의 init() 이 INCIDENT_HISTORY fixture 로부터 채운다 (AC-01) -->
+      <ul class="ith-list" id="history-list"></ul>
+    </main>
+
+    <p class="ith-footer">정적 fixture 스냅샷 · 실시간 Jira/GitHub 조회 없음 (네트워크 요청 0건)</p>
+
+  </div>
+
+  <!-- classic script (non-module) — file:// CORS 회피, 로드 순서 고정 (기획 §5.2) -->
+  <script src="./fixtures.js"></script>
+  <script src="./history.js"></script>
+</body>
+</html>
