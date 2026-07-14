@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>인시던트 심각도 판정</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="it-app">
+    <header class="it-header">
+      <h1>인시던트 심각도 판정</h1>
+      <p class="it-subtitle">영향도와 긴급도를 선택하면 심각도·SLA·다음 행동이 즉시 판정됩니다.</p>
+    </header>
+
+    <form id="triage-form" class="it-form">
+      <div class="it-groups">
+        <fieldset class="it-fieldset">
+          <legend>영향도</legend>
+          <label class="it-option" for="impact-high">
+            <input type="radio" id="impact-high" name="impact" value="high">
+            <span class="it-option-label">높음</span>
+            <span class="it-option-hint">전사/다수 고객</span>
+          </label>
+          <label class="it-option" for="impact-medium">
+            <input type="radio" id="impact-medium" name="impact" value="medium">
+            <span class="it-option-label">보통</span>
+            <span class="it-option-hint">일부 기능·팀</span>
+          </label>
+          <label class="it-option" for="impact-low">
+            <input type="radio" id="impact-low" name="impact" value="low">
+            <span class="it-option-label">낮음</span>
+            <span class="it-option-hint">개별 사용자</span>
+          </label>
+        </fieldset>
+
+        <fieldset class="it-fieldset">
+          <legend>긴급도</legend>
+          <label class="it-option" for="urgency-high">
+            <input type="radio" id="urgency-high" name="urgency" value="high">
+            <span class="it-option-label">높음</span>
+            <span class="it-option-hint">즉시 대응 필요</span>
+          </label>
+          <label class="it-option" for="urgency-medium">
+            <input type="radio" id="urgency-medium" name="urgency" value="medium">
+            <span class="it-option-label">보통</span>
+            <span class="it-option-hint">수 시간 내</span>
+          </label>
+          <label class="it-option" for="urgency-low">
+            <input type="radio" id="urgency-low" name="urgency" value="low">
+            <span class="it-option-label">낮음</span>
+            <span class="it-option-hint">여유 있음</span>
+          </label>
+        </fieldset>
+      </div>
+    </form>
+
+    <div id="result" class="it-result" data-state="idle" aria-live="polite">
+      <p class="it-result-empty">영향도와 긴급도를 모두 선택하면 심각도가 판정됩니다.</p>
+      <div class="it-result-body">
+        <div class="it-badge">
+          <span class="it-badge-code" id="badge-code"></span>
+          <span class="it-badge-name" id="badge-name"></span>
+        </div>
+        <div class="it-result-main">
+          <div class="it-sla">
+            <span class="it-sla-label">초기 대응 SLA</span>
+            <span class="it-sla-value" id="sla-value"></span>
+          </div>
+          <p class="it-next-action" id="next-action"></p>
+          <p class="it-copy-error" id="copy-error"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="it-actions">
+      <button id="copy-btn" class="it-btn it-btn-primary" type="button" disabled>요약 복사</button>
+      <button id="reset-btn" class="it-btn it-btn-secondary" type="button">초기화</button>
+    </div>
+  </main>
+
+  <script src="./triage.js"></script>
+</body>
+</html>

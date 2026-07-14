@@ -1,0 +1,215 @@
+/* incident-triage/style.css — Incident Severity Triage 시각 스타일
+ * BF-803 · 시안 docs/design/incident-triage-BF-800.md §2(팔레트) §3(타이포) §4(레이아웃) §5(상태) §8.2(:root)
+ * mockup docs/design/mockups/incident-triage-BF-802.html 의 앱 컴포넌트 규칙을 그대로 이식
+ * vanilla-static — 외부 @import·@font-face·CDN 0건, system font stack 만 사용
+ */
+
+:root {
+  /* base */
+  --it-color-bg:             #F1F3F5;
+  --it-color-surface:        #FFFFFF;
+  --it-color-surface-muted:  #F8F9FA;
+  --it-color-border:         #DDE1E6;
+  --it-color-border-strong:  #B9C0C8;
+  --it-color-text:           #1A1D21;
+  --it-color-text-muted:     #6B6B66;
+  --it-color-accent:         #3563E9;
+  --it-color-accent-hover:   #2A50C4;
+  --it-color-success:        #0F7B4F;
+  --it-color-error:          #B91C1C;
+
+  /* severity — 시안 §7.1 대비 검증 완료 (5.02~7.58:1). 임의 변경 금지 */
+  --it-color-p1: #B91C1C;  --it-color-p1-tint: #FEF2F2;
+  --it-color-p2: #B45309;  --it-color-p2-tint: #FFFBEB;
+  --it-color-p3: #1D4ED8;  --it-color-p3-tint: #EFF6FF;
+  --it-color-p4: #475569;  --it-color-p4-tint: #F8FAFC;
+
+  /* spacing / radius */
+  --it-space-1: 4px;  --it-space-2: 8px;   --it-space-3: 12px;
+  --it-space-4: 16px; --it-space-5: 24px;  --it-space-6: 32px; --it-space-7: 48px;
+  --it-radius-sm: 4px; --it-radius-md: 8px; --it-radius-lg: 12px; --it-radius-pill: 999px;
+
+  /* type */
+  --it-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+                  system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --it-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: var(--it-space-6) var(--it-space-5);
+  background: var(--it-color-bg);
+  color: var(--it-color-text);
+  font-family: var(--it-font-sans);
+  line-height: 1.5;
+}
+
+/* ── 레이아웃 (시안 §4) ─────────────────────────────── */
+.it-app {
+  max-width: 880px;
+  margin: 0 auto;
+  background: var(--it-color-surface);
+  border: 1px solid var(--it-color-border);
+  border-radius: var(--it-radius-lg);
+  padding: var(--it-space-5);
+}
+.it-header { margin-bottom: var(--it-space-5); }
+.it-header h1 { font-size: 24px; font-weight: 700; line-height: 1.3; margin: 0 0 var(--it-space-1); }
+.it-subtitle { font-size: 14px; color: var(--it-color-text-muted); margin: 0; }
+
+.it-form { margin: 0; }
+.it-groups { display: grid; grid-template-columns: 1fr 1fr; gap: var(--it-space-5); }
+
+.it-fieldset {
+  border: 1px solid var(--it-color-border);
+  border-radius: var(--it-radius-md);
+  padding: var(--it-space-5);
+  margin: 0;
+  min-width: 0;                            /* 320px 폭에서 가로 스크롤 방지 (AC-10) */
+  background: var(--it-color-surface);
+}
+.it-fieldset legend { font-size: 15px; font-weight: 600; padding: 0 var(--it-space-2); }
+
+/* ── 라디오 카드 (시안 §5.3 · §6.1) ─────────────────── */
+.it-option {
+  display: flex; align-items: center; gap: var(--it-space-3);
+  min-height: 44px;                        /* 터치 타깃 */
+  padding: var(--it-space-3);
+  margin-top: var(--it-space-2);
+  background: var(--it-color-surface-muted);
+  border: 2px solid var(--it-color-border); /* 두께 고정 → checked 시 레이아웃 시프트 없음 */
+  border-radius: var(--it-radius-md);
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.it-option:hover { background: var(--it-color-surface); border-color: var(--it-color-border-strong); }
+.it-option input[type="radio"] {
+  margin: 0; width: 18px; height: 18px;
+  accent-color: var(--it-color-accent);
+  flex: none;
+}
+.it-option-label { font-size: 15px; font-weight: 500; }
+.it-option-hint {
+  font-size: 12px; color: var(--it-color-text-muted);
+  margin-left: auto; text-align: right;
+}
+/* checked — 색 + 테두리 + font-weight + 네이티브 dot 4중 표현 (시안 §7.3) */
+.it-option:has(input:checked) {
+  background: var(--it-color-surface);
+  border-color: var(--it-color-accent);
+}
+.it-option:has(input:checked) .it-option-label { font-weight: 600; }
+/* 포커스 링 — outline: none 금지 (시안 §7.4) */
+.it-option:has(input:focus-visible) { outline: 2px solid var(--it-color-accent); outline-offset: 2px; }
+.it-option input[type="radio"]:focus-visible { outline: 2px solid var(--it-color-accent); outline-offset: 2px; }
+
+/* ── 결과 영역 (시안 §5.1 · §5.2) ───────────────────── */
+.it-result { margin-top: var(--it-space-5); border-radius: var(--it-radius-md); }
+
+/* idle / partial — 결과 숨김 (AC-02 · AC-03) */
+.it-result[data-state="idle"] .it-result-body,
+.it-result[data-state="partial"] .it-result-body { display: none; }
+.it-result[data-state="idle"],
+.it-result[data-state="partial"] {
+  border: 1px dashed var(--it-color-border);
+  background: transparent;
+  padding: var(--it-space-6) var(--it-space-5);
+  text-align: center;
+}
+.it-result-empty { color: var(--it-color-text-muted); font-size: 14px; margin: 0; }
+.it-result[data-state="resolved"] .it-result-empty { display: none; }
+
+/* resolved — severity 색은 --it-sev 로만 참조 (JS 는 data-severity 만 갱신) */
+.it-result[data-state="resolved"] { border: 1px solid var(--it-color-border); padding: 0; }
+.it-result[data-severity="P1"] { --it-sev: var(--it-color-p1); --it-sev-tint: var(--it-color-p1-tint); }
+.it-result[data-severity="P2"] { --it-sev: var(--it-color-p2); --it-sev-tint: var(--it-color-p2-tint); }
+.it-result[data-severity="P3"] { --it-sev: var(--it-color-p3); --it-sev-tint: var(--it-color-p3-tint); }
+.it-result[data-severity="P4"] { --it-sev: var(--it-color-p4); --it-sev-tint: var(--it-color-p4-tint); }
+
+.it-result-body {
+  display: flex; align-items: flex-start; gap: var(--it-space-5);
+  flex-wrap: wrap;
+  background: var(--it-sev-tint);
+  border-left: 4px solid var(--it-sev);
+  border-radius: var(--it-radius-md);
+  padding: var(--it-space-5);
+  animation: it-fade-in 120ms ease-out;
+}
+@keyframes it-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* severity 배지 — 코드 + 한글명 항상 병기 (AC-09) */
+.it-badge {
+  display: flex; flex-direction: column; align-items: center; gap: var(--it-space-1);
+  min-width: 88px;
+  padding: var(--it-space-3) var(--it-space-4);
+  background: var(--it-sev);
+  color: #FFFFFF;
+  border-radius: var(--it-radius-md);
+  flex: none;
+}
+.it-badge-code { font-family: var(--it-font-mono); font-size: 20px; font-weight: 700; line-height: 1; }
+.it-badge-name { font-size: 13px; font-weight: 600; line-height: 1; }
+
+.it-result-main { flex: 1 1 260px; min-width: 0; }
+.it-sla { margin-bottom: var(--it-space-3); }
+.it-sla-label { display: block; font-size: 12px; font-weight: 600; color: var(--it-color-text-muted); }
+.it-sla-value { font-size: 18px; font-weight: 700; line-height: 1.3; }
+.it-next-action { font-size: 16px; line-height: 1.6; margin: 0; word-break: keep-all; }
+
+/* 복사 실패 안내 (EC-06) — 문구가 없으면 자리도 차지하지 않는다 */
+.it-copy-error { color: var(--it-color-error); font-size: 13px; margin: var(--it-space-2) 0 0; }
+.it-copy-error:empty { display: none; }
+
+/* ── 버튼 (시안 §5.4) ───────────────────────────────── */
+.it-actions {
+  display: flex; gap: var(--it-space-3);
+  justify-content: flex-end;
+  margin-top: var(--it-space-5);
+}
+.it-btn {
+  min-height: 44px;
+  padding: 0 var(--it-space-5);
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  border-radius: var(--it-radius-md);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.it-btn:focus-visible { outline: 2px solid var(--it-color-accent); outline-offset: 2px; }
+.it-btn-primary { background: var(--it-color-accent); color: #FFFFFF; }
+.it-btn-primary:hover:not(:disabled) { background: var(--it-color-accent-hover); }
+.it-btn-primary:disabled {
+  background: var(--it-color-border);
+  color: var(--it-color-text-muted);   /* opacity 미사용 — 대비 4.52:1 유지 (시안 §7.2) */
+  cursor: not-allowed;
+}
+.it-btn-primary.is-copied { background: var(--it-color-success); color: #FFFFFF; }
+.it-btn-secondary {
+  background: var(--it-color-surface);
+  border-color: var(--it-color-border-strong);
+  color: var(--it-color-text);
+}
+.it-btn-secondary:hover { background: var(--it-color-surface-muted); }
+
+/* ── 반응형 — 320~480px 세로 스택, 가로 스크롤 0 (AC-10 · 시안 §4.3) ── */
+@media (max-width: 480px) {
+  body { padding: var(--it-space-5) var(--it-space-4); }
+  .it-app { padding: var(--it-space-4); }
+  .it-header h1 { font-size: 20px; }
+  .it-groups { grid-template-columns: 1fr; }
+  .it-fieldset { padding: var(--it-space-4); }
+  .it-option-hint { display: none; }         /* 좁은 폭에서 보조 설명 생략 (판정 로직 무관) */
+  .it-actions { flex-direction: column; }
+  .it-actions .it-btn { width: 100%; }       /* 터치 타깃 확보 */
+}
+
+/* 모션 최소화 선호 사용자 — fade-in 제거 */
+@media (prefers-reduced-motion: reduce) {
+  .it-result-body { animation: none; }
+  .it-option, .it-btn { transition: none; }
+}
