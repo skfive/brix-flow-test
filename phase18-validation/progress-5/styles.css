@@ -1,0 +1,208 @@
+/* BF-906 · progress-5 진행률 체크리스트 검증 페이지
+ * 디자인 SSOT: docs/design/progress-5-BF-905.md §2(토큰)/§4(레이아웃)/§5(컴포넌트)
+ *
+ * 전량 원본 incident-command/style.css :root(--ic-*) 값 복제 — 신규 색상 리터럴 0건(§2, 재사용 기준 §5.4-1).
+ * 사용 토큰만 발췌(장애 심각도/상태/이벤트 색 제외). 레이아웃만 720px 단일 컬럼으로 축소(§4.1).
+ * 다크 단일 테마(§8.3) — 라이트 오버라이드 미정의(신규 색상 방지).
+ */
+
+:root {
+  /* 기반 (명세 §2.1 — 원본 :root 복제) */
+  --ic-bg: #0B0F17;
+  --ic-surface: #131A26;
+  --ic-surface-raised: #1B2433;
+  --ic-border: #2A3648;
+  --ic-text: #E8EDF5;
+  --ic-text-secondary: #9FB0C7;
+  --ic-text-muted: #6B7C94;
+  --ic-accent: #4DA3FF;
+
+  /* 기능 색 — 진행률 (명세 §2.1) */
+  --ic-progress-fill: #4ADE80;
+  --ic-progress-track: #212C3B;
+  --ic-focus: #4DA3FF;
+
+  /* 타이포 (명세 §3 — 원본 그대로) */
+  --ic-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo",
+                  "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --ic-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "D2Coding", monospace;
+
+  /* 스페이싱 · 라디우스 (명세 §2.2) */
+  --ic-space-1: 4px;
+  --ic-space-2: 8px;
+  --ic-space-3: 12px;
+  --ic-space-4: 16px;
+  --ic-space-5: 20px;
+  --ic-space-6: 24px;
+  --ic-space-7: 32px;
+  --ic-radius-sm: 4px;
+  --ic-radius-md: 8px;
+  --ic-radius-lg: 12px;
+  --ic-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0 var(--ic-space-4) var(--ic-space-7);
+  background: var(--ic-bg);
+  color: var(--ic-text);
+  font-family: var(--ic-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.ic-mono {
+  font-family: var(--ic-font-mono);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ic-focus);
+  outline-offset: 2px;
+}
+
+/* ─────────── 상단바 (§5.1) — 원본 복제, max-width 1400px→720px 단일 컬럼(§4.1) ─────────── */
+
+.ic-topbar {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--ic-space-6) 0 var(--ic-space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ic-space-3);
+}
+
+.ic-topbar h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.ic-topbar__count {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ic-text-secondary);
+}
+
+/* ─────────── 본문 컬럼 (§4.1 — 단일 컬럼 720px) ─────────── */
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* ─────────── 패널/카드 (§5) — 원본 .ic-panel 복제 ─────────── */
+
+.ic-panel {
+  min-width: 0;
+  background: var(--ic-surface);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-lg);
+  box-shadow: var(--ic-shadow-panel);
+}
+
+.ic-checklist-panel {
+  padding: var(--ic-space-4);
+}
+
+.ic-panel__title {
+  margin: 0 0 var(--ic-space-3);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ─────────── 안내 블록 (§5.5 · §5.6 — 원본 .ic-note 복제) ─────────── */
+
+.ic-note {
+  padding: var(--ic-space-4);
+  border: 1px dashed var(--ic-border);
+  border-radius: var(--ic-radius-md);
+  color: var(--ic-text-secondary);
+}
+
+.ic-note p {
+  margin: 0;
+}
+
+/* ─────────── 진행률 바 (§5.2 · §5.3 — 검증 핵심, 원본 복제) ─────────── */
+
+.ic-progress {
+  height: 8px;
+  background: var(--ic-progress-track);
+  border-radius: var(--ic-radius-sm);
+  overflow: hidden;
+}
+
+.ic-progress__fill {
+  height: 100%;
+  width: 0;
+  background: var(--ic-progress-fill);
+  transition: width 180ms ease-out;
+}
+
+.ic-progress__text {
+  margin: var(--ic-space-2) 0 var(--ic-space-3);
+  color: var(--ic-text-secondary);
+  font-size: 12px;
+}
+
+/* ─────────── 체크리스트 (§5.4 — 원본 복제) ─────────── */
+
+.ic-check-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ic-space-2);
+}
+
+.ic-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ic-space-3);
+  padding: var(--ic-space-3);
+  background: var(--ic-surface-raised);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ic-radius-md);
+}
+
+.ic-check__box {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: var(--ic-progress-fill);
+  cursor: pointer;
+}
+
+.ic-check__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-block: 4px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.ic-check__box:checked + .ic-check__label {
+  text-decoration: line-through;
+  color: var(--ic-text-muted);
+}
+
+.ic-check__at {
+  flex: 0 0 auto;
+}
+
+/* ─────────── 모션 접근성 보강 (§4.3 — 원본에 없으나 색상 아닌 모션 보강, dev 권장) ─────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ic-progress__fill {
+    transition: none;
+  }
+}
