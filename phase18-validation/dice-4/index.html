@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>주사위 통계 검증 · /phase18-validation/dice-4</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // BF-900 · 다크 default 강제 (원본 dice/ 승계) — flicker 방지 위해 head 인라인
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {
+          // localStorage 사용 불가 환경 (private mode 등) — default 다크 유지
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">주사위 통계 검증 (Phase 18 검증 4/5)</h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="theme-toggle"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- 주사위 조작 영역 (개수 선택 1~5 + 주사위 타일 + 굴리기 CTA) -->
+      <section class="card dice-card" aria-label="주사위">
+        <!-- 주사위 개수 선택 (1~5, default 2) -->
+        <fieldset class="dice-count" aria-label="주사위 개수">
+          <legend class="dice-count__legend">개수</legend>
+          <div class="dice-count__group" role="radiogroup" aria-label="주사위 개수 선택">
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="1"
+              role="radio"
+              aria-checked="false"
+            >1</button>
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="2"
+              role="radio"
+              aria-checked="true"
+            >2</button>
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="3"
+              role="radio"
+              aria-checked="false"
+            >3</button>
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="4"
+              role="radio"
+              aria-checked="false"
+            >4</button>
+            <button
+              type="button"
+              class="dice-count__btn"
+              data-count="5"
+              role="radio"
+              aria-checked="false"
+            >5</button>
+          </div>
+        </fieldset>
+
+        <div
+          class="dice-box"
+          id="dice-box"
+          role="group"
+          aria-label="주사위 결과"
+        >
+          <!-- main.js 가 렌더 — 초기엔 2개 ⚀ ⚀ -->
+        </div>
+
+        <button
+          type="button"
+          class="roll-button"
+          id="btn-roll"
+          aria-label="주사위 굴리기"
+        >
+          🎲 굴리기
+        </button>
+      </section>
+
+      <!-- 통계 카드 (단일 굴림 기준 — 합계 / 평균 / 최대) · 검증 핵심 -->
+      <section class="card stats-card is-empty" aria-labelledby="stats-title">
+        <h2 id="stats-title" class="sr-only">현재 굴림 통계</h2>
+        <div class="stat-row stat-row--sum">
+          <span class="stat-row__label">합계</span>
+          <span
+            class="stat-row__value stat-row__value--sum"
+            id="stat-sum"
+            aria-label="합계"
+            >--</span
+          >
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">평균</span>
+          <span class="stat-row__value" id="stat-avg" aria-label="평균">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">최대</span>
+          <span class="stat-row__value" id="stat-max" aria-label="최대">--</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- 비-module script — file:// CORS 안전 (명세 §6.4) -->
+    <script src="./stats.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
