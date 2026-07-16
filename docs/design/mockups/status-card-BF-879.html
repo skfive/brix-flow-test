@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>서비스 상태 카드 검증 · /phase18-validation/status-card-1 (mockup BF-879)</title>
+    <!--
+      디자인 명세 mockup — docs/design/status-card-BF-879.md
+      BF-881 (Phase 18 검증 1/5) · tech-stack: vanilla-static (외부 의존성 0건, system font, 인라인 <style>)
+      모든 토큰·컴포넌트는 원본 src/app/demo/status/styles.css / status.js 에서 인용 (신규 색 0건).
+      본 파일은 시각 시뮬레이션 — dev 산출물이 아니며 픽셀 일치 의무 없음.
+    -->
+    <style>
+      /* ─────────── 디자인 토큰 (원본 styles.css :root 복제, §2/§3/§4.2) ─────────── */
+      :root {
+        /* 폰트 (clock 셸 복제) — system stack, 외부 폰트 0건 */
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* 셸 색 (clock 셸 복제) */
+        --color-bg-canvas: #fafaf9;
+        --color-bg-surface: #ffffff;
+        --color-bg-subtle: #f1f1ef;
+        --color-border-default: #e5e5e2;
+        --color-border-strong: #d0d0cc;
+        --color-text-primary: #1a1a19;
+        --color-text-secondary: #6b6b66;
+        --color-text-muted: #9a9a93;
+        --color-accent: #3563e9;
+        --color-accent-hover: #2a4fc0;
+        --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+        /* 상태 시맨틱 3색 — kanban 값 (§2.2, 핵심 축) */
+        --color-success: #1a7f37;
+        --color-warning: #9a6700;
+        --color-danger: #cf222e;
+        --color-neutral: #656d76;
+
+        /* 배지 전경 헬퍼 (컴포넌트 로컬, §2.3) */
+        --badge-ink: #ffffff;
+
+        /* spacing / radius / shadow (clock 셸 복제) */
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+        --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+        /* motion (clock 셸 복제) */
+        --motion-fast: 120ms;
+        --motion-mid: 200ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+        /* 타이포 (clock 셸 복제) */
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-h2: 600 16px/1.3 var(--font-sans);
+        --text-label: 500 14px/1.4 var(--font-sans);
+        --text-body: 400 15px/1.65 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+      }
+
+      [data-theme="dark"] {
+        --color-bg-canvas: #0f1115;
+        --color-bg-surface: #171a21;
+        --color-bg-subtle: #1e222b;
+        --color-border-default: #262b36;
+        --color-border-strong: #3a4150;
+        --color-text-primary: #e8e8e4;
+        --color-text-secondary: #9a9a93;
+        --color-text-muted: #6b6b66;
+        --color-accent: #5b82f0;
+        --color-accent-hover: #7596f3;
+        --color-focus-ring: rgba(91, 130, 240, 0.55);
+        --color-success: #3fb950;
+        --color-warning: #d29922;
+        --color-danger: #f85149;
+        --color-neutral: #8b949e;
+        --badge-ink: #0f1115;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+      }
+
+      /* ─────────── reset / base ─────────── */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font: var(--text-body);
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ─────────── topbar (§5.4) ─────────── */
+      .topbar {
+        height: 56px;
+        padding: 0 var(--space-5);
+        display: flex;
+        align-items: center;
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+        flex: 0 0 auto;
+      }
+      .topbar__title {
+        font: var(--text-h1);
+        margin: 0;
+      }
+
+      /* ─────────── page (§4.1) ─────────── */
+      .page {
+        width: 100%;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-5);
+      }
+
+      /* ─────────── 요약 배너 (§5.3) ─────────── */
+      .summary-banner {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-left-width: 4px;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-5);
+        margin-bottom: var(--space-6);
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .summary-banner__icon {
+        font-size: 20px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .summary-banner__body {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        min-width: 0;
+      }
+      .summary-banner__title {
+        font: var(--text-h2);
+        color: var(--color-text-primary);
+      }
+      .summary-banner__sub {
+        font: var(--text-caption);
+        color: var(--color-text-muted);
+      }
+      .summary-banner--operational {
+        border-left-color: var(--color-success);
+      }
+      .summary-banner--operational .summary-banner__icon {
+        color: var(--color-success);
+      }
+      .summary-banner--degraded {
+        border-left-color: var(--color-warning);
+      }
+      .summary-banner--degraded .summary-banner__icon {
+        color: var(--color-warning);
+      }
+      .summary-banner--outage {
+        border-left-color: var(--color-danger);
+      }
+      .summary-banner--outage .summary-banner__icon {
+        color: var(--color-danger);
+      }
+
+      /* ─────────── 서비스 카드 목록 (§5.2/§4.2) ─────────── */
+      .status-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: var(--space-4);
+        grid-template-columns: repeat(2, 1fr);
+        align-items: start;
+      }
+      .status-card {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-5);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+      .status-card__head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .status-card__name {
+        font: var(--text-h2);
+        color: var(--color-text-primary);
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .status-card__desc {
+        font: var(--text-body);
+        color: var(--color-text-secondary);
+        margin: 0;
+        word-break: keep-all;
+      }
+
+      /* ─────────── 상태 배지 (핵심 컴포넌트, §5.1) ─────────── */
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-3);
+        border-radius: 999px; /* pill */
+        font: var(--text-label);
+        color: var(--badge-ink);
+        flex-shrink: 0;
+        letter-spacing: 0.01em;
+      }
+      .status-badge__icon {
+        font-size: 10px;
+        line-height: 1;
+      }
+      .status-badge--operational {
+        background: var(--color-success);
+      }
+      .status-badge--degraded {
+        background: var(--color-warning);
+      }
+      .status-badge--outage {
+        background: var(--color-danger);
+      }
+      .status-badge--unknown {
+        background: var(--color-neutral);
+      }
+
+      /* ─────────── noscript 안내 ─────────── */
+      .noscript-note {
+        font: var(--text-body);
+        color: var(--color-text-secondary);
+      }
+
+      /* ─────────── 반응형 (§4.3, breakpoint 639px) ─────────── */
+      @media (max-width: 639px) {
+        .status-list {
+          grid-template-columns: 1fr;
+        }
+        .page {
+          padding: var(--space-5) var(--space-4);
+        }
+      }
+
+      /* ─────────── mockup 전용 보조 스타일 (dev 산출물 아님 — 시안 주석/레퍼런스 표기) ─────────── */
+      .mock-note {
+        max-width: 720px;
+        margin: 0 auto var(--space-4);
+        padding: var(--space-3) var(--space-4);
+        border: 1px dashed var(--color-border-strong);
+        border-radius: var(--radius-md);
+        background: var(--color-bg-subtle);
+        color: var(--color-text-secondary);
+        font: var(--text-caption);
+      }
+      .mock-note strong {
+        color: var(--color-text-primary);
+      }
+      .mock-ref {
+        max-width: 720px;
+        margin: var(--space-6) auto 0;
+        padding: var(--space-5);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        background: var(--color-bg-surface);
+      }
+      .mock-ref h2 {
+        font: var(--text-h2);
+        margin: 0 0 var(--space-3);
+      }
+      .mock-ref__row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        align-items: center;
+        margin-bottom: var(--space-3);
+      }
+      .mock-swatch {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        font: var(--text-caption);
+        color: var(--color-text-secondary);
+      }
+      .mock-swatch__chip {
+        width: 16px;
+        height: 16px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--color-border-strong);
+        flex-shrink: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- topbar (§4.1/§4.4 — 검증 맥락 문구) -->
+    <header class="topbar">
+      <h1 class="topbar__title">서비스 상태 카드 (Phase 18 검증 1/5)</h1>
+    </header>
+
+    <main class="page">
+      <p class="mock-note">
+        <strong>[이디자인] mockup 안내</strong> — 본 화면은 디자인 명세
+        <code>docs/design/status-card-BF-879.md</code> 의 시각 시뮬레이션입니다.
+        모든 색상·타이포·컴포넌트는 원본 <code>src/app/demo/status/</code>(BF-856)
+        토큰을 그대로 인용했으며 신규 색상은 0건입니다. (Light 테마 기준 — dark 토큰은 명세 §2 참조)
+      </p>
+
+      <!-- 전체 요약 배너 — worst 상태(현재 fixture: outage) 반영 (§5.3) -->
+      <section
+        class="summary-banner summary-banner--outage"
+        aria-label="전체 서비스 상태 요약"
+      >
+        <span class="summary-banner__icon" aria-hidden="true">✕</span>
+        <div class="summary-banner__body">
+          <span class="summary-banner__title">일부 서비스에 장애가 발생했습니다.</span>
+          <span class="summary-banner__sub"
+            >전체 서비스 4개 중 장애 1 · 저하 1 · 정상 2</span
+          >
+        </div>
+      </section>
+
+      <!-- 서비스별 상태 카드 목록 (2열 grid, ≤639px 1열) — 원본 SERVICES fixture 반영 (§5.2) -->
+      <ul class="status-list" aria-label="서비스별 상태 목록">
+        <!-- 웹 서버 · operational -->
+        <li class="status-card" id="status-card-web">
+          <div class="status-card__head">
+            <span class="status-card__name">웹 서버</span>
+            <span
+              class="status-badge status-badge--operational"
+              role="img"
+              aria-label="웹 서버 상태: 정상"
+            >
+              <span class="status-badge__icon" aria-hidden="true">●</span>
+              <span class="status-badge__label">정상</span>
+            </span>
+          </div>
+          <p class="status-card__desc">모든 페이지가 정상적으로 응답하고 있습니다.</p>
+        </li>
+
+        <!-- API 게이트웨이 · operational -->
+        <li class="status-card" id="status-card-api">
+          <div class="status-card__head">
+            <span class="status-card__name">API 게이트웨이</span>
+            <span
+              class="status-badge status-badge--operational"
+              role="img"
+              aria-label="API 게이트웨이 상태: 정상"
+            >
+              <span class="status-badge__icon" aria-hidden="true">●</span>
+              <span class="status-badge__label">정상</span>
+            </span>
+          </div>
+          <p class="status-card__desc">모든 요청이 정상 처리되고 있습니다.</p>
+        </li>
+
+        <!-- 데이터베이스 · degraded -->
+        <li class="status-card" id="status-card-database">
+          <div class="status-card__head">
+            <span class="status-card__name">데이터베이스</span>
+            <span
+              class="status-badge status-badge--degraded"
+              role="img"
+              aria-label="데이터베이스 상태: 저하"
+            >
+              <span class="status-badge__icon" aria-hidden="true">▲</span>
+              <span class="status-badge__label">저하</span>
+            </span>
+          </div>
+          <p class="status-card__desc">일부 쿼리 응답 지연이 관측되고 있습니다.</p>
+        </li>
+
+        <!-- 인증 서비스 · outage -->
+        <li class="status-card" id="status-card-auth">
+          <div class="status-card__head">
+            <span class="status-card__name">인증 서비스</span>
+            <span
+              class="status-badge status-badge--outage"
+              role="img"
+              aria-label="인증 서비스 상태: 장애"
+            >
+              <span class="status-badge__icon" aria-hidden="true">✕</span>
+              <span class="status-badge__label">장애</span>
+            </span>
+          </div>
+          <p class="status-card__desc">로그인 요청이 일시적으로 실패하고 있습니다.</p>
+        </li>
+      </ul>
+
+      <noscript>
+        <p class="noscript-note">
+          이 페이지는 서비스 상태 카드를 표시합니다. JavaScript 를 활성화해 주세요.
+        </p>
+      </noscript>
+
+      <!-- 시안 레퍼런스: 상태 3색 토큰 + 배지 4-variant (§2.2/§5.1) — mockup 전용 참고 블록 -->
+      <section class="mock-ref" aria-label="시안 토큰 레퍼런스">
+        <h2>상태 시맨틱 3색 · 배지 variant (레퍼런스)</h2>
+        <div class="mock-ref__row">
+          <span class="mock-swatch"
+            ><span
+              class="mock-swatch__chip"
+              style="background: var(--color-success)"
+            ></span
+            >--color-success #1a7f37</span
+          >
+          <span class="mock-swatch"
+            ><span
+              class="mock-swatch__chip"
+              style="background: var(--color-warning)"
+            ></span
+            >--color-warning #9a6700</span
+          >
+          <span class="mock-swatch"
+            ><span
+              class="mock-swatch__chip"
+              style="background: var(--color-danger)"
+            ></span
+            >--color-danger #cf222e</span
+          >
+          <span class="mock-swatch"
+            ><span
+              class="mock-swatch__chip"
+              style="background: var(--color-neutral)"
+            ></span
+            >--color-neutral #656d76</span
+          >
+        </div>
+        <div class="mock-ref__row">
+          <span class="status-badge status-badge--operational" role="img" aria-label="예시 상태: 정상">
+            <span class="status-badge__icon" aria-hidden="true">●</span>
+            <span class="status-badge__label">정상</span>
+          </span>
+          <span class="status-badge status-badge--degraded" role="img" aria-label="예시 상태: 저하">
+            <span class="status-badge__icon" aria-hidden="true">▲</span>
+            <span class="status-badge__label">저하</span>
+          </span>
+          <span class="status-badge status-badge--outage" role="img" aria-label="예시 상태: 장애">
+            <span class="status-badge__icon" aria-hidden="true">✕</span>
+            <span class="status-badge__label">장애</span>
+          </span>
+          <span class="status-badge status-badge--unknown" role="img" aria-label="예시 상태: 알 수 없음">
+            <span class="status-badge__icon" aria-hidden="true">?</span>
+            <span class="status-badge__label">알 수 없음</span>
+          </span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
