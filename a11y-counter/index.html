@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>접근성 카운터 검증 · /phase18-validation/counter-2</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="counter-page">
+      <section class="counter-card" aria-labelledby="counter-title">
+        <!-- 원본(/demo/counter) 대비 유일한 시각 차이: h1 문구 (명세 §1.1) -->
+        <h1 id="counter-title" class="counter-title">카운터 (Phase 18 검증 2/5 · 접근성)</h1>
+
+        <!-- 값 표시: 기획 §7.1 고정 계약 — <output aria-live=polite> (변경 금지) -->
+        <output id="counter-value" class="counter-value" aria-live="polite">0</output>
+
+        <div class="counter-controls">
+          <!-- DOM 순서 = Tab 순서 = 시각 순서: +1 → -1 → 초기화 (명세 §4.1/§6.6 고정) -->
+          <button
+            type="button"
+            id="btn-increment"
+            class="counter-btn counter-btn--primary"
+          >
+            +1
+          </button>
+          <button
+            type="button"
+            id="btn-decrement"
+            class="counter-btn counter-btn--secondary"
+          >
+            -1
+          </button>
+          <button
+            type="button"
+            id="btn-reset"
+            class="counter-btn counter-btn--ghost"
+          >
+            초기화
+          </button>
+        </div>
+
+        <p class="counter-hint">
+          <kbd>↑</kbd> +1 &nbsp; <kbd>↓</kbd> -1 &nbsp; <kbd>R</kbd> 초기화
+        </p>
+      </section>
+    </main>
+
+    <!-- vanilla-static: type=module/import 없이 전역 스크립트 로드(file:// 안전). -->
+    <script src="./counter.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
