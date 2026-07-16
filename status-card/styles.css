@@ -1,0 +1,262 @@
+/* BF-882 · status-card SPA 스타일 — 원본 src/app/demo/status/styles.css(BF-856) 무손실 복제
+ * (디자인 §0/§6.1: 신규 색·토큰·컴포넌트 0건. 아래 규칙은 원본과 동일.)
+ *
+ * 토큰: clock/styles.css 의 :root 셸 세트를 그대로 복제(신규 색 0건) +
+ *       상태 시맨틱 3색(success/warning/danger)만 kanban/styles.css 값으로 통일(디자인 §0/§2.2).
+ * 색상 리터럴은 아래 토큰 정의 블록에만 존재하며, 컴포넌트 규칙은 var(--…) 만 참조(디자인 §6.4).
+ */
+
+:root {
+  /* 폰트 (clock 셸 복제) */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* 셸 색 (clock 셸 복제) */
+  --color-bg-canvas: #fafaf9;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f1ef;
+  --color-border-default: #e5e5e2;
+  --color-border-strong: #d0d0cc;
+  --color-text-primary: #1a1a19;
+  --color-text-secondary: #6b6b66;
+  --color-text-muted: #9a9a93;
+  --color-accent: #3563e9;
+  --color-accent-hover: #2a4fc0;
+  --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+  /* 상태 시맨틱 3색 — kanban/styles.css 값으로 통일 (디자인 §2.2/§6.1) */
+  --color-success: #1a7f37;
+  --color-warning: #9a6700;
+  --color-danger: #cf222e;
+  --color-neutral: #656d76;
+
+  /* 배지 전경 헬퍼 (컴포넌트 로컬 — 디자인 토큰 아님, §2.3) */
+  --badge-ink: #ffffff;
+
+  /* spacing / radius / shadow (clock 셸 복제) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* motion (clock 셸 복제) */
+  --motion-fast: 120ms;
+  --motion-mid: 200ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* 타이포 (clock 셸 복제) */
+  --text-h1: 600 20px/1.3 var(--font-sans);
+  --text-h2: 600 16px/1.3 var(--font-sans);
+  --text-label: 500 14px/1.4 var(--font-sans);
+  --text-body: 400 15px/1.65 var(--font-sans);
+  --text-caption: 400 12px/1.4 var(--font-sans);
+}
+
+[data-theme="dark"] {
+  --color-bg-canvas: #0f1115;
+  --color-bg-surface: #171a21;
+  --color-bg-subtle: #1e222b;
+  --color-border-default: #262b36;
+  --color-border-strong: #3a4150;
+  --color-text-primary: #e8e8e4;
+  --color-text-secondary: #9a9a93;
+  --color-text-muted: #6b6b66;
+  --color-accent: #5b82f0;
+  --color-accent-hover: #7596f3;
+  --color-focus-ring: rgba(91, 130, 240, 0.55);
+
+  /* 상태 시맨틱 3색 dark — kanban dark 값 (디자인 §2.2/§6.1) */
+  --color-success: #3fb950;
+  --color-warning: #d29922;
+  --color-danger: #f85149;
+  --color-neutral: #8b949e;
+
+  /* 배지 전경 dark — 어두운 캔버스로 반전(대비 유지, 디자인 §2.3) */
+  --badge-ink: #0f1115;
+
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+}
+
+/* ─────────────────── reset / base ─────────────────── */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font: var(--text-body);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─────────────────── topbar (clock 셸 재사용, 디자인 §5.4) ─────────────────── */
+.topbar {
+  height: 56px;
+  padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  flex: 0 0 auto;
+}
+.topbar__title {
+  font: var(--text-h1);
+  margin: 0;
+}
+
+/* ─────────────────── page (디자인 §4.2) ─────────────────── */
+.page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5);
+}
+
+/* ─────────────────── 요약 배너 (디자인 §5.3/§4.4) ─────────────────── */
+.summary-banner {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-left-width: 4px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.summary-banner__icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.summary-banner__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.summary-banner__title {
+  font: var(--text-h2);
+  color: var(--color-text-primary);
+}
+.summary-banner__sub {
+  font: var(--text-caption);
+  color: var(--color-text-muted);
+}
+.summary-banner--operational {
+  border-left-color: var(--color-success);
+}
+.summary-banner--operational .summary-banner__icon {
+  color: var(--color-success);
+}
+.summary-banner--degraded {
+  border-left-color: var(--color-warning);
+}
+.summary-banner--degraded .summary-banner__icon {
+  color: var(--color-warning);
+}
+.summary-banner--outage {
+  border-left-color: var(--color-danger);
+}
+.summary-banner--outage .summary-banner__icon {
+  color: var(--color-danger);
+}
+
+/* ─────────────────── 서비스 카드 목록 (디자인 §4.5/§5.2) ─────────────────── */
+.status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, 1fr);
+  align-items: start;
+}
+.status-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.status-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+.status-card__name {
+  font: var(--text-h2);
+  color: var(--color-text-primary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.status-card__desc {
+  font: var(--text-body);
+  color: var(--color-text-secondary);
+  margin: 0;
+  word-break: keep-all;
+}
+
+/* ─────────────────── 상태 배지 (핵심 컴포넌트, 디자인 §5.1/§6.2) ─────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px; /* pill */
+  font: var(--text-label);
+  color: var(--badge-ink);
+  flex-shrink: 0;
+  letter-spacing: 0.01em;
+}
+.status-badge__icon {
+  font-size: 10px;
+  line-height: 1;
+}
+.status-badge--operational {
+  background: var(--color-success);
+}
+.status-badge--degraded {
+  background: var(--color-warning);
+}
+.status-badge--outage {
+  background: var(--color-danger);
+}
+.status-badge--unknown {
+  background: var(--color-neutral);
+}
+
+/* ─────────────────── noscript 안내 ─────────────────── */
+.noscript-note {
+  font: var(--text-body);
+  color: var(--color-text-secondary);
+}
+
+/* ─────────────────── 반응형 (디자인 §4.5, breakpoint 639px) ─────────────────── */
+@media (max-width: 639px) {
+  .status-list {
+    grid-template-columns: 1fr;
+  }
+  .page {
+    padding: var(--space-5) var(--space-4);
+  }
+}

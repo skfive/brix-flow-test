@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>서비스 상태 카드 검증 · /phase18-validation/status-card-1</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">서비스 상태 카드 (Phase 18 검증 1/5)</h1>
+    </header>
+
+    <main class="page">
+      <!-- 전체 요약 배너 — main.js 가 fixture 파생값으로 1회 렌더 (디자인 §5.3) -->
+      <section
+        class="summary-banner"
+        id="summary-banner"
+        aria-label="전체 서비스 상태 요약"
+      ></section>
+
+      <!-- 서비스별 상태 카드 목록 — main.js 가 fixture 로 1회 렌더 (디자인 §4.1/§5.2) -->
+      <ul class="status-list" id="status-list" aria-label="서비스별 상태 목록"></ul>
+
+      <noscript>
+        <p class="noscript-note">
+          이 페이지는 서비스 상태 카드를 표시합니다. JavaScript 를 활성화해 주세요.
+        </p>
+      </noscript>
+    </main>
+
+    <!-- vanilla-static: type=module/import 없이 전역 스크립트 로드(file:// 안전). -->
+    <script src="./status.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
