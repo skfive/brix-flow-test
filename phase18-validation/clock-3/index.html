@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>세계시계 검증 · /phase18-validation/clock-3</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // 저장된 테마 복원 — flicker 방지 위해 head 인라인 (light default)
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "light";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {
+          // localStorage 사용 불가 환경(private mode 등) — default 라이트 유지
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">세계시계 검증 (Phase 18 검증 3/5)</h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="btn-theme"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="region-grid">
+        <!-- 카드 3개: 서울 → 뉴욕 → 런던 (planner §3.3 REGIONS 순서) -->
+        <section class="card region-clock" aria-label="서울">
+          <h2 class="region-clock__label">서울</h2>
+          <p class="clock-date" id="clock-seoul-date">2026-07-17 (금)</p>
+          <div
+            class="clock-display"
+            id="clock-seoul-display"
+            role="timer"
+            aria-live="off"
+            aria-label="서울 현재 시각"
+          >
+            <span class="clock-display__prefix" hidden></span>
+            <span class="clock-display__time">
+              <span id="clock-seoul-h">03</span
+              ><span class="clock-display__colon" aria-hidden="true">:</span
+              ><span id="clock-seoul-m">19</span
+              ><span class="clock-display__colon" aria-hidden="true">:</span
+              ><span id="clock-seoul-s">07</span>
+            </span>
+          </div>
+        </section>
+
+        <section class="card region-clock" aria-label="뉴욕">
+          <h2 class="region-clock__label">뉴욕</h2>
+          <p class="clock-date" id="clock-newyork-date">2026-07-16 (목)</p>
+          <div
+            class="clock-display"
+            id="clock-newyork-display"
+            role="timer"
+            aria-live="off"
+            aria-label="뉴욕 현재 시각"
+          >
+            <span class="clock-display__prefix" hidden></span>
+            <span class="clock-display__time">
+              <span id="clock-newyork-h">14</span
+              ><span class="clock-display__colon" aria-hidden="true">:</span
+              ><span id="clock-newyork-m">19</span
+              ><span class="clock-display__colon" aria-hidden="true">:</span
+              ><span id="clock-newyork-s">07</span>
+            </span>
+          </div>
+        </section>
+
+        <section class="card region-clock" aria-label="런던">
+          <h2 class="region-clock__label">런던</h2>
+          <p class="clock-date" id="clock-london-date">2026-07-16 (목)</p>
+          <div
+            class="clock-display"
+            id="clock-london-display"
+            role="timer"
+            aria-live="off"
+            aria-label="런던 현재 시각"
+          >
+            <span class="clock-display__prefix" hidden></span>
+            <span class="clock-display__time">
+              <span id="clock-london-h">19</span
+              ><span class="clock-display__colon" aria-hidden="true">:</span
+              ><span id="clock-london-m">19</span
+              ><span class="clock-display__colon" aria-hidden="true">:</span
+              ><span id="clock-london-s">07</span>
+            </span>
+          </div>
+        </section>
+      </div>
+
+      <noscript>
+        <p>이 페이지는 JavaScript 로 시각을 갱신합니다. JS 를 활성화해 주세요.</p>
+      </noscript>
+    </main>
+
+    <!-- vanilla-static: type=module/import 없이 전역 스크립트 로드(file:// 안전). -->
+    <script src="./regions.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
