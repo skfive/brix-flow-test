@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>주사위 통계 검증(dice-4) mockup · BF-899</title>
+    <style>
+      /* ============================================================
+       * dice-4 (주사위 통계 검증) mockup — BF-897 / task BF-899
+       * 원본 dice/styles.css 의 :root 토큰을 그대로 복제.
+       * 신규 색/폰트/토큰 0건. 배치는 원본 .page 세로 스택 그대로(2-카드).
+       * (mockup 전용: 프레임/갤러리 셸 스타일은 실제 산출물 아님)
+       * 명세: docs/design/dice-4-BF-897.md
+       * ============================================================ */
+
+      /* ── 원본 토큰 복제 (다크 = default) ── */
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+        --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+          "Twemoji Mozilla", "EmojiOne Color", "Android Emoji", sans-serif;
+
+        --color-bg-canvas: #0d1117;
+        --color-bg-surface: #161b22;
+        --color-bg-subtle: #1f2530;
+        --color-border-default: #262c36;
+        --color-border-strong: #3a4150;
+        --color-text-primary: #e8e8e4;
+        --color-text-secondary: #9a9a93;
+        --color-text-muted: #6b6b66;
+        --color-accent: #fb7185;
+        --color-accent-hover: #fda4af;
+        --color-accent-active: #f43f5e;
+        --color-accent-on: #0d1117;
+        --color-focus-ring: rgba(251, 113, 133, 0.55);
+        --color-roll-glow: rgba(251, 113, 133, 0.4);
+        --color-sum-accent: #fb7185;
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-dice: 16px;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+        --shadow-roll: 0 6px 20px var(--color-roll-glow);
+
+        --motion-fast: 120ms;
+        --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-dice: 400 5rem/1 var(--font-emoji);
+        --text-dice-sm: 400 4rem/1 var(--font-emoji);
+        --text-sum: 300 3rem/1 var(--font-mono);
+        --text-stat: 500 1.25rem/1.2 var(--font-mono);
+        --text-stat-label: 500 12px/1.4 var(--font-sans);
+        --text-roll-cta: 600 18px/1 var(--font-sans);
+        --text-button: 500 14px/1 var(--font-sans);
+        --text-body: 400 15px/1.65 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+      }
+
+      /* ── 원본 라이트 오버라이드 복제 (mockup: .theme-light 스코프) ── */
+      .theme-light {
+        --color-bg-canvas: #fafaf9;
+        --color-bg-surface: #ffffff;
+        --color-bg-subtle: #f1f1ef;
+        --color-border-default: #e5e5e2;
+        --color-border-strong: #d0d0cc;
+        --color-text-primary: #1a1a19;
+        --color-text-secondary: #6b6b66;
+        --color-text-muted: #9a9a93;
+        --color-accent: #e11d48;
+        --color-accent-hover: #be123c;
+        --color-accent-active: #9f1239;
+        --color-accent-on: #ffffff;
+        --color-focus-ring: rgba(225, 29, 72, 0.45);
+        --color-roll-glow: rgba(225, 29, 72, 0.25);
+        --color-sum-accent: #e11d48;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      /* ============================================================
+       * 실제 dice-4 산출물에 해당하는 규칙 (원본 재사용)
+       * ============================================================ */
+
+      /* topbar */
+      .topbar {
+        height: 56px;
+        padding: 0 var(--space-5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+        flex: 0 0 auto;
+      }
+      .topbar__title {
+        font: var(--text-h1);
+        margin: 0;
+        color: var(--color-text-primary);
+      }
+      .btn {
+        height: 36px;
+        padding: 0 var(--space-4);
+        border: none;
+        border-radius: var(--radius-md);
+        font: var(--text-button);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        background: transparent;
+        color: var(--color-text-primary);
+      }
+      .btn--ghost {
+        border: 1px solid var(--color-border-strong);
+        color: var(--color-text-secondary);
+      }
+      .btn--ghost:hover {
+        background: var(--color-bg-subtle);
+      }
+
+      /* page (세로 스택 · 원본 재사용) */
+      .page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: var(--space-7) var(--space-5);
+        gap: var(--space-5);
+        background: var(--color-bg-canvas);
+      }
+
+      /* card (원본 재사용) */
+      .card {
+        width: 100%;
+        max-width: 520px;
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+      }
+      .dice-card {
+        padding: var(--space-6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-5);
+      }
+
+      /* 개수 선택 (원본 재사용) */
+      .dice-count {
+        border: none;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .dice-count__legend {
+        font: var(--text-stat-label);
+        color: var(--color-text-secondary);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0;
+      }
+      .dice-count__group {
+        display: inline-flex;
+        gap: var(--space-2);
+        background: var(--color-bg-subtle);
+        padding: var(--space-1);
+        border-radius: var(--radius-md);
+      }
+      .dice-count__btn {
+        min-width: 36px;
+        height: 32px;
+        padding: 0 var(--space-3);
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font: var(--text-button);
+        font-family: var(--font-mono);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+      }
+      .dice-count__btn[aria-checked="true"] {
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+      }
+
+      /* 주사위 박스 (원본 재사용) */
+      .dice-box {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        align-items: center;
+        justify-content: center;
+        min-height: 96px;
+        padding: var(--space-4) 0;
+      }
+      .dice {
+        width: 96px;
+        height: 96px;
+        border-radius: var(--radius-dice);
+        background: var(--color-bg-canvas);
+        border: 1px solid var(--color-border-default);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font: var(--text-dice);
+        font-family: var(--font-emoji);
+        line-height: 1;
+        user-select: none;
+      }
+
+      /* 굴리기 CTA (원본 재사용) */
+      .roll-button {
+        height: 56px;
+        min-width: 200px;
+        padding: 0 var(--space-6);
+        border-radius: var(--radius-md);
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+        font: var(--text-roll-cta);
+        border: none;
+        cursor: pointer;
+        user-select: none;
+        box-shadow: var(--shadow-roll);
+      }
+      .roll-button:hover {
+        background: var(--color-accent-hover);
+        transform: translateY(-1px);
+      }
+
+      /* 통계 카드 (원본 재사용 — 검증 핵심) */
+      .stats-card {
+        padding: var(--space-4) var(--space-6);
+        display: flex;
+        flex-direction: column;
+      }
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: var(--space-3) 0;
+        border-bottom: 1px solid var(--color-border-default);
+      }
+      .stat-row:last-child {
+        border-bottom: none;
+      }
+      .stat-row__label {
+        font: var(--text-stat-label);
+        color: var(--color-text-secondary);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .stat-row__value {
+        font: var(--text-stat);
+        color: var(--color-text-primary);
+        font-variant-numeric: tabular-nums;
+      }
+      .stat-row__value--sum {
+        font: var(--text-sum);
+        color: var(--color-sum-accent);
+      }
+      .stats-card.is-empty .stat-row__value {
+        color: var(--color-text-muted);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* 모바일 프레임 내 반응형 (원본 @media ≤639px 승계) */
+      .viewport-mobile .dice {
+        width: 80px;
+        height: 80px;
+        font: var(--text-dice-sm);
+        font-family: var(--font-emoji);
+      }
+      .viewport-mobile .roll-button {
+        height: 52px;
+        min-width: 100%;
+      }
+      .viewport-mobile .dice-card,
+      .viewport-mobile .stats-card {
+        padding: var(--space-5);
+      }
+      .viewport-mobile .page {
+        padding: var(--space-5) var(--space-4);
+      }
+
+      /* ============================================================
+       * mockup 전용 갤러리 셸 (실제 산출물 아님)
+       * ============================================================ */
+      body {
+        margin: 0;
+        font: 400 15px/1.6 var(--font-sans);
+        background: #e7e7e4;
+        color: #1a1a19;
+        padding: 32px;
+      }
+      .doc-h {
+        max-width: 1180px;
+        margin: 0 auto 8px;
+      }
+      .doc-h h1 {
+        font: 700 24px/1.3 var(--font-sans);
+        margin: 0 0 6px;
+      }
+      .doc-h p {
+        margin: 0;
+        color: #555;
+        font-size: 14px;
+      }
+      .gallery {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+        padding-top: 24px;
+      }
+      .frame {
+        border: 1px solid #cfcfca;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+        background: #fff;
+      }
+      .frame__cap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: #1a1a19;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .frame__cap .tag {
+        font-weight: 500;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.16);
+      }
+      .viewport-desktop .page {
+        min-height: 420px;
+        justify-content: center;
+      }
+      .viewport-mobile {
+        width: 360px;
+        margin: 0 auto;
+      }
+
+      .info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+      @media (max-width: 760px) {
+        .info {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        background: #fff;
+        border: 1px solid #cfcfca;
+        border-radius: 14px;
+        padding: 20px 22px;
+      }
+      .panel h3 {
+        margin: 0 0 12px;
+        font: 700 15px/1.3 var(--font-sans);
+      }
+      .panel table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .panel td,
+      .panel th {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+      }
+      .panel th {
+        color: #888;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .sw {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        background: #f1f1ef;
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .anatomy {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        counter-reset: step;
+      }
+      .anatomy li {
+        position: relative;
+        padding: 8px 8px 8px 34px;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+      }
+      .anatomy li::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: 8px;
+        top: 8px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fb7185;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc-h">
+      <h1>주사위 통계 검증(dice-4) — 디자인 mockup</h1>
+      <p>
+        BF-897 / task BF-899 · 원본 <code>dice/</code>(BF-448/450) 시각 언어 재사용 ·
+        2-카드 축소(히스토리/모달 제외) · 신규 색/폰트/토큰 0건 · 다크 default · 명세:
+        <code>docs/design/dice-4-BF-897.md</code>
+      </p>
+    </div>
+
+    <div class="gallery">
+      <!-- 1. 데스크톱 다크(default) · 굴림 후 상태 -->
+      <div class="frame viewport-desktop">
+        <div class="frame__cap">
+          데스크톱 · 다크(default)
+          <span class="tag">굴림 후 · 주사위 2개 · 통계 갱신</span>
+        </div>
+        <header class="topbar">
+          <h1 class="topbar__title">주사위 통계 검증</h1>
+          <button type="button" class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+        </header>
+        <div class="page">
+          <section class="card dice-card" aria-label="주사위">
+            <fieldset class="dice-count" aria-label="주사위 개수">
+              <legend class="dice-count__legend">개수</legend>
+              <div class="dice-count__group" role="radiogroup" aria-label="주사위 개수 선택">
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">1</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="true">2</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">3</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">4</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">5</button>
+              </div>
+            </fieldset>
+            <div class="dice-box" role="group" aria-label="주사위 결과">
+              <span class="dice" role="img" aria-label="주사위 5">⚄</span>
+              <span class="dice" role="img" aria-label="주사위 3">⚂</span>
+            </div>
+            <button type="button" class="roll-button" aria-label="주사위 굴리기">🎲 굴리기</button>
+          </section>
+
+          <section class="card stats-card" aria-labelledby="stats-title-1">
+            <h2 id="stats-title-1" class="sr-only">현재 굴림 통계</h2>
+            <div class="stat-row stat-row--sum">
+              <span class="stat-row__label">합계</span>
+              <span class="stat-row__value stat-row__value--sum" aria-label="합계">8</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row__label">평균</span>
+              <span class="stat-row__value" aria-label="평균">4.0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row__label">최대</span>
+              <span class="stat-row__value" aria-label="최대">5</span>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 2. 데스크톱 라이트 · 초기(굴림 전) 상태 -->
+      <div class="frame viewport-desktop theme-light">
+        <div class="frame__cap">
+          데스크톱 · 라이트
+          <span class="tag">초기 렌더 · 통계 -- placeholder(is-empty)</span>
+        </div>
+        <header class="topbar">
+          <h1 class="topbar__title">주사위 통계 검증</h1>
+          <button type="button" class="btn btn--ghost" aria-label="테마 전환">☀️</button>
+        </header>
+        <div class="page">
+          <section class="card dice-card" aria-label="주사위">
+            <fieldset class="dice-count" aria-label="주사위 개수">
+              <legend class="dice-count__legend">개수</legend>
+              <div class="dice-count__group" role="radiogroup" aria-label="주사위 개수 선택">
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">1</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="true">2</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">3</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">4</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">5</button>
+              </div>
+            </fieldset>
+            <div class="dice-box" role="group" aria-label="주사위 결과">
+              <span class="dice" role="img" aria-label="주사위 1">⚀</span>
+              <span class="dice" role="img" aria-label="주사위 1">⚀</span>
+            </div>
+            <button type="button" class="roll-button" aria-label="주사위 굴리기">🎲 굴리기</button>
+          </section>
+
+          <section class="card stats-card is-empty" aria-labelledby="stats-title-2">
+            <h2 id="stats-title-2" class="sr-only">현재 굴림 통계</h2>
+            <div class="stat-row stat-row--sum">
+              <span class="stat-row__label">합계</span>
+              <span class="stat-row__value stat-row__value--sum" aria-label="합계">--</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row__label">평균</span>
+              <span class="stat-row__value" aria-label="평균">--</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row__label">최대</span>
+              <span class="stat-row__value" aria-label="최대">--</span>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 3. 모바일 360px 다크 · 5개 선택(wrap) -->
+      <div class="frame viewport-mobile">
+        <div class="frame__cap">
+          모바일 360px · 다크
+          <span class="tag">5개 선택 · wrap · 전폭 CTA</span>
+        </div>
+        <header class="topbar">
+          <h1 class="topbar__title">주사위 통계 검증</h1>
+          <button type="button" class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+        </header>
+        <div class="page">
+          <section class="card dice-card" aria-label="주사위">
+            <fieldset class="dice-count" aria-label="주사위 개수">
+              <legend class="dice-count__legend">개수</legend>
+              <div class="dice-count__group" role="radiogroup" aria-label="주사위 개수 선택">
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">1</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">2</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">3</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="false">4</button>
+                <button type="button" class="dice-count__btn" role="radio" aria-checked="true">5</button>
+              </div>
+            </fieldset>
+            <div class="dice-box" role="group" aria-label="주사위 결과">
+              <span class="dice" role="img" aria-label="주사위 6">⚅</span>
+              <span class="dice" role="img" aria-label="주사위 2">⚁</span>
+              <span class="dice" role="img" aria-label="주사위 4">⚃</span>
+              <span class="dice" role="img" aria-label="주사위 1">⚀</span>
+              <span class="dice" role="img" aria-label="주사위 3">⚂</span>
+            </div>
+            <button type="button" class="roll-button" aria-label="주사위 굴리기">🎲 굴리기</button>
+          </section>
+
+          <section class="card stats-card" aria-labelledby="stats-title-3">
+            <h2 id="stats-title-3" class="sr-only">현재 굴림 통계</h2>
+            <div class="stat-row stat-row--sum">
+              <span class="stat-row__label">합계</span>
+              <span class="stat-row__value stat-row__value--sum" aria-label="합계">16</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row__label">평균</span>
+              <span class="stat-row__value" aria-label="평균">3.2</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row__label">최대</span>
+              <span class="stat-row__value" aria-label="최대">6</span>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 4. anatomy + 토큰 매핑 -->
+      <div class="info">
+        <div class="panel">
+          <h3>화면 anatomy (위 → 아래)</h3>
+          <ul class="anatomy">
+            <li>
+              <strong>topbar</strong> — <code>.topbar__title</code> "주사위 통계 검증" +
+              테마 토글(<code>.btn--ghost</code>) · 원본 재사용
+            </li>
+            <li>
+              <strong>개수 선택</strong> — <code>.dice-count</code>
+              <code>role="radiogroup"</code> 1~5 · default 2 ·
+              선택 시 accent 배경(<code>aria-checked="true"</code>)
+            </li>
+            <li>
+              <strong>주사위 박스</strong> — <code>.dice-box</code> ·
+              <code>.dice</code> 96×96(≥640px) · 이모지 5rem ·
+              <code>flex-wrap</code> 로 다수 시 줄바꿈
+            </li>
+            <li>
+              <strong>굴리기 CTA</strong> — <code>.roll-button</code> · accent 배경 ·
+              <code>--shadow-roll</code> glow · 클릭 시 통계 동시 갱신
+            </li>
+            <li>
+              <strong>통계 카드</strong> — <code>.stats-card</code> ·
+              합계(대형 accent <code>--text-sum</code>) / 평균 / 최대 ·
+              굴림 전 <code>--</code>(<code>.is-empty</code>)
+            </li>
+          </ul>
+          <p style="margin: 14px 0 0; font-size: 12.5px; color: #666">
+            원본 <code>dice/</code> 4-카드(주사위·통계·<s>히스토리</s>·<s>모달</s>) 중
+            통계 검증에 필요한 2-카드만 남긴 축소 배치(planner §5.3). 카드 스택은
+            원본 <code>.page</code> 세로 flex 그대로 처리 — 신규 배치 클래스 0건.
+          </p>
+        </div>
+        <div class="panel">
+          <h3>재사용 토큰 매핑 (신규 색 0건)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>토큰</th>
+                <th>다크(default)</th>
+                <th>용도</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>--color-bg-canvas</code></td>
+                <td><span class="sw" style="background: #0d1117"></span>#0d1117</td>
+                <td>페이지 배경 · 주사위 타일</td>
+              </tr>
+              <tr>
+                <td><code>--color-bg-surface</code></td>
+                <td><span class="sw" style="background: #161b22"></span>#161b22</td>
+                <td>카드 2개 · topbar</td>
+              </tr>
+              <tr>
+                <td><code>--color-accent</code></td>
+                <td><span class="sw" style="background: #fb7185"></span>#fb7185</td>
+                <td>CTA · 선택 개수 · 합계 값</td>
+              </tr>
+              <tr>
+                <td><code>--color-text-primary</code></td>
+                <td><span class="sw" style="background: #e8e8e4"></span>#e8e8e4</td>
+                <td>타이틀 · 평균/최대 값</td>
+              </tr>
+              <tr>
+                <td><code>--color-text-secondary</code></td>
+                <td><span class="sw" style="background: #9a9a93"></span>#9a9a93</td>
+                <td>stat 라벨 · legend</td>
+              </tr>
+              <tr>
+                <td><code>--color-text-muted</code></td>
+                <td><span class="sw" style="background: #6b6b66"></span>#6b6b66</td>
+                <td><code>--</code> placeholder</td>
+              </tr>
+              <tr>
+                <td><code>--color-border-default</code></td>
+                <td><span class="sw" style="background: #262c36"></span>#262c36</td>
+                <td>카드/타일/row 구분선</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin: 14px 0 0; font-size: 12.5px; color: #666">
+            타이포: 타이틀 <code>--text-h1</code> · 합계 <code>--text-sum</code>(mono
+            300, 3rem) · 평균/최대 <code>--text-stat</code>(mono 500) · 라벨
+            <code>--text-stat-label</code>. 라이트 전환 시 accent
+            <code>#fb7185 → #e11d48</code> 자동 대비 보정. 폰트 family/weight 전부 원본 동일.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
