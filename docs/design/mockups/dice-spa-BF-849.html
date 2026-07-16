@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>주사위 굴리기 SPA mockup — BF-849</title>
+    <style>
+      /* =========================================================
+         brix-Flow 공유 토큰 (dice/styles.css :root / [data-theme] 그대로 복제 — 신규 0건)
+         mockup 은 프레임별로 테마를 강제하므로 .theme-dark / .theme-light 로 스코프
+         ========================================================= */
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+        --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+          "Twemoji Mozilla", "EmojiOne Color", "Android Emoji", sans-serif;
+
+        --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+        --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px;
+        --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-dice: 16px;
+
+        --motion-press: 150ms; --motion-fast: 120ms; --motion-mid: 220ms;
+        --motion-roll: 360ms;
+        --ease-out: cubic-bezier(0.2, 0, 0, 1);
+        --scale-press: 0.95;
+
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-dice: 400 5rem/1 var(--font-emoji);
+        --text-dice-sm: 400 4rem/1 var(--font-emoji);
+        --text-sum: 300 3rem/1 var(--font-mono);
+        --text-stat: 500 1.25rem/1.2 var(--font-mono);
+        --text-stat-label: 500 12px/1.4 var(--font-sans);
+        --text-roll-cta: 600 18px/1 var(--font-sans);
+        --text-history: 500 14px/1.4 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+        --text-button: 500 14px/1 var(--font-sans);
+      }
+
+      /* 다크 (default 테마) */
+      .theme-dark {
+        --color-bg-canvas: #0d1117;
+        --color-bg-surface: #161b22;
+        --color-bg-subtle: #1f2530;
+        --color-border-default: #262c36;
+        --color-border-strong: #3a4150;
+        --color-text-primary: #e8e8e4;
+        --color-text-secondary: #9a9a93;
+        --color-text-muted: #6b6b66;
+        --color-accent: #fb7185;
+        --color-accent-hover: #fda4af;
+        --color-accent-active: #f43f5e;
+        --color-accent-on: #0d1117;
+        --color-danger: #e55858;
+        --color-focus-ring: rgba(251, 113, 133, 0.55);
+        --color-roll-glow: rgba(251, 113, 133, 0.4);
+        --color-sum-accent: #fb7185;
+        --color-history-row-stripe: #1a2029;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+        --shadow-roll: 0 6px 20px var(--color-roll-glow);
+        --shadow-roll-active: 0 2px 8px var(--color-roll-glow);
+      }
+      /* 라이트 */
+      .theme-light {
+        --color-bg-canvas: #fafaf9;
+        --color-bg-surface: #ffffff;
+        --color-bg-subtle: #f1f1ef;
+        --color-border-default: #e5e5e2;
+        --color-border-strong: #d0d0cc;
+        --color-text-primary: #1a1a19;
+        --color-text-secondary: #6b6b66;
+        --color-text-muted: #9a9a93;
+        --color-accent: #e11d48;
+        --color-accent-hover: #be123c;
+        --color-accent-active: #9f1239;
+        --color-accent-on: #ffffff;
+        --color-danger: #d14343;
+        --color-focus-ring: rgba(225, 29, 72, 0.45);
+        --color-roll-glow: rgba(225, 29, 72, 0.25);
+        --color-sum-accent: #e11d48;
+        --color-history-row-stripe: #fafaf9;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+        --shadow-roll: 0 6px 20px var(--color-roll-glow);
+        --shadow-roll-active: 0 2px 8px var(--color-roll-glow);
+      }
+
+      /* ───────── mockup 페이지 크롬 (실제 앱 아님 — 시안 갤러리) ───────── */
+      * , *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background: #08090c;
+        color: #e8e8e4;
+        padding: var(--space-6);
+      }
+      .mockup-head { max-width: 1100px; margin: 0 auto var(--space-6); }
+      .mockup-head h1 { font-size: 22px; margin: 0 0 var(--space-2); }
+      .mockup-head p { margin: 0; color: #9a9a93; font-size: 13px; line-height: 1.6; }
+      .frame-grid {
+        max-width: 1100px; margin: 0 auto;
+        display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start;
+      }
+      .frame { display: flex; flex-direction: column; gap: var(--space-3); }
+      .frame__label {
+        font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+        color: #cfcfca; text-transform: uppercase;
+      }
+      .frame__note { font-size: 11px; color: #7d7d77; margin: 0; max-width: 34ch; line-height: 1.5; }
+      .device {
+        border: 1px solid #262c36; border-radius: 20px; overflow: hidden;
+        background: var(--color-bg-canvas);
+      }
+      .device--desktop { width: 560px; }
+      .device--mobile { width: 375px; }
+      .device--mobile.narrow { width: 320px; }
+
+      /* ───────── 실제 앱 스타일 (dice/styles.css 복제) ───────── */
+      .app { background: var(--color-bg-canvas); color: var(--color-text-primary);
+             display: flex; flex-direction: column; min-height: 100%; }
+      .topbar {
+        height: 56px; padding: 0 var(--space-5);
+        display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+        background: var(--color-bg-surface); border-bottom: 1px solid var(--color-border-default);
+      }
+      .topbar__title { font: var(--text-h1); margin: 0; }
+
+      .btn {
+        height: 36px; padding: 0 var(--space-4); border: none; border-radius: var(--radius-md);
+        font: var(--text-button); cursor: pointer; display: inline-flex; align-items: center;
+        justify-content: center; gap: var(--space-2); white-space: nowrap; background: transparent;
+        color: var(--color-text-primary);
+      }
+      .btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+      .btn--ghost { background: transparent; border: 1px solid var(--color-border-strong);
+                    color: var(--color-text-secondary); }
+      .btn--danger { background: var(--color-danger); color: #fff; border: 1px solid var(--color-danger); }
+
+      .page {
+        flex: 1 1 auto; display: flex; flex-direction: column; align-items: center;
+        padding: var(--space-7) var(--space-5); gap: var(--space-5);
+      }
+      .card { width: 100%; max-width: 520px; background: var(--color-bg-surface);
+              border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+      .dice-card { padding: var(--space-6); display: flex; flex-direction: column;
+                   align-items: center; gap: var(--space-5); }
+
+      .dice-count { border: none; padding: 0; margin: 0; width: 100%;
+                    display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+      .dice-count__legend { font: var(--text-stat-label); color: var(--color-text-secondary);
+                            letter-spacing: 0.06em; text-transform: uppercase; }
+      .dice-count__group { display: inline-flex; gap: var(--space-2);
+                           background: var(--color-bg-subtle); padding: var(--space-1); border-radius: var(--radius-md); }
+      .dice-count__btn {
+        min-width: 36px; height: 32px; padding: 0 var(--space-3); border: none; background: transparent;
+        color: var(--color-text-secondary); font: var(--text-button); font-family: var(--font-mono);
+        border-radius: var(--radius-sm); cursor: pointer;
+      }
+      .dice-count__btn[aria-checked="true"] { background: var(--color-accent); color: var(--color-accent-on); }
+      .dice-count__btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+      /* 포커스 갤러리 강제 표시용 */
+      .dice-count__btn.force-focus { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+      .dice-box { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center;
+                  justify-content: center; min-height: 96px; padding: var(--space-4) 0; }
+      .dice {
+        width: 96px; height: 96px; border-radius: var(--radius-dice); background: var(--color-bg-canvas);
+        border: 1px solid var(--color-border-default); display: inline-flex; align-items: center;
+        justify-content: center; font: var(--text-dice); font-family: var(--font-emoji);
+        line-height: 1; user-select: none;
+      }
+
+      .roll-button {
+        height: 56px; min-width: 200px; padding: 0 var(--space-6); border-radius: var(--radius-md);
+        background: var(--color-accent); color: var(--color-accent-on); font: var(--text-roll-cta);
+        border: none; cursor: pointer; user-select: none; box-shadow: var(--shadow-roll);
+      }
+      .roll-button:hover:not(:disabled) { background: var(--color-accent-hover); transform: translateY(-1px); }
+      .roll-button:active:not(:disabled), .roll-button.is-pressed {
+        background: var(--color-accent-active); transform: scale(var(--scale-press)); box-shadow: var(--shadow-roll-active); }
+      .roll-button:disabled { opacity: 0.6; cursor: progress; }
+      .roll-button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
+      .roll-button.force-focus { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
+
+      .stats-card { padding: var(--space-4) var(--space-6); display: flex; flex-direction: column; }
+      .stat-row { display: flex; justify-content: space-between; align-items: baseline;
+                  padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border-default); }
+      .stat-row:last-child { border-bottom: none; }
+      .stat-row__label { font: var(--text-stat-label); color: var(--color-text-secondary);
+                         letter-spacing: 0.06em; text-transform: uppercase; }
+      .stat-row__value { font: var(--text-stat); color: var(--color-text-primary);
+                         font-variant-numeric: tabular-nums; }
+      .stat-row__value--sum { font: var(--text-sum); color: var(--color-sum-accent); }
+
+      .history-card { padding: var(--space-4) var(--space-6) var(--space-5); }
+      .history-card__header { display: flex; justify-content: space-between; align-items: center;
+                              gap: var(--space-3); margin-bottom: var(--space-3); }
+      .history-card__title { margin: 0; font: var(--text-stat-label); color: var(--color-text-secondary);
+                             letter-spacing: 0.06em; text-transform: uppercase; }
+      .history-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+      .history-row {
+        display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: var(--space-3);
+        padding: var(--space-3); font: var(--text-history); border-radius: var(--radius-sm);
+        background: transparent; border: none; width: 100%; text-align: left; color: inherit; cursor: pointer;
+      }
+      .history-row:nth-child(odd) { background: var(--color-history-row-stripe); }
+      .history-row:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: -2px; }
+      .history-row.force-focus { outline: 2px solid var(--color-focus-ring); outline-offset: -2px;
+                                 background: var(--color-bg-subtle); }
+      .history-row__index { font-family: var(--font-mono); color: var(--color-text-secondary);
+                            font-variant-numeric: tabular-nums; }
+      .history-row__dice { font-family: var(--font-emoji); font-size: 1.5rem; line-height: 1;
+                           display: inline-flex; gap: var(--space-1); flex-wrap: wrap; }
+      .history-row__sum { font-family: var(--font-mono); color: var(--color-text-primary);
+                          font-variant-numeric: tabular-nums; justify-self: end; }
+
+      .kbd-hint { margin: 0; color: var(--color-text-muted); font: var(--text-caption); text-align: center; }
+      kbd { padding: 2px 6px; border: 1px solid var(--color-border-default); border-radius: var(--radius-sm);
+            background: var(--color-bg-subtle); font: 11px/1 var(--font-mono); color: var(--color-text-secondary); }
+
+      /* ≤639px 모바일 축소 규칙 — 모바일 프레임에 스코프 (.is-mobile) */
+      .is-mobile .dice { width: 80px; height: 80px; font: var(--text-dice-sm); font-family: var(--font-emoji); }
+      .is-mobile .roll-button { height: 52px; min-width: 100%; }
+      .is-mobile .dice-card, .is-mobile .stats-card, .is-mobile .history-card { padding: var(--space-5); }
+      .is-mobile .history-row { grid-template-columns: 40px 1fr auto; }
+      .is-mobile .page { padding: var(--space-5) var(--space-4); }
+      /* ≤359px */
+      .is-narrow .dice { width: 72px; height: 72px; }
+      .is-narrow .roll-button { height: 48px; }
+
+      /* 상태 갤러리 */
+      .state-gallery { display: flex; flex-wrap: wrap; gap: var(--space-5);
+                       background: var(--color-bg-surface); border: 1px solid var(--color-border-default);
+                       border-radius: var(--radius-lg); padding: var(--space-6); }
+      .state-item { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+      .state-item__label { font-size: 11px; color: var(--color-text-secondary); }
+    </style>
+  </head>
+  <body>
+    <div class="mockup-head">
+      <h1>주사위 굴리기 SPA — 디자인 시안 (BF-849)</h1>
+      <p>
+        기존 디자인 토큰(rose accent, 다크 우선)·공용 버튼만 사용. 데스크톱/모바일 잘림 없음 +
+        키보드 포커스 시각 상태를 프레임별로 확인. 명세: <code>docs/design/dice-spa-BF-849.md</code>.
+        (placeholder 데이터 — 실제 값은 main.js 산출)
+      </p>
+    </div>
+
+    <div class="frame-grid">
+      <!-- 프레임 1: 데스크톱 다크 (기본, 2개) -->
+      <div class="frame">
+        <span class="frame__label">① 데스크톱 · 다크 · 2개 주사위</span>
+        <p class="frame__note">기본 레이아웃. 합계 강조(rose) + compact 히스토리.</p>
+        <div class="device device--desktop theme-dark">
+          <div class="app">
+            <header class="topbar">
+              <h1 class="topbar__title">주사위</h1>
+              <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+            </header>
+            <main class="page">
+              <section class="card dice-card">
+                <fieldset class="dice-count">
+                  <legend class="dice-count__legend">개수</legend>
+                  <div class="dice-count__group" role="radiogroup" aria-label="주사위 개수 선택">
+                    <button class="dice-count__btn" role="radio" aria-checked="false">1</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="true">2</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">3</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">4</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">5</button>
+                  </div>
+                </fieldset>
+                <div class="dice-box" role="group" aria-label="주사위 결과">
+                  <span class="dice" role="img" aria-label="주사위 3">⚂</span>
+                  <span class="dice" role="img" aria-label="주사위 5">⚄</span>
+                </div>
+                <button class="roll-button" type="button" aria-label="주사위 굴리기">🎲 굴리기</button>
+              </section>
+
+              <section class="card stats-card">
+                <div class="stat-row">
+                  <span class="stat-row__label">합계</span>
+                  <span class="stat-row__value stat-row__value--sum">8</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-row__label">평균</span>
+                  <span class="stat-row__value">4.0</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-row__label">최대</span>
+                  <span class="stat-row__value">5</span>
+                </div>
+              </section>
+
+              <section class="card history-card">
+                <div class="history-card__header">
+                  <h2 class="history-card__title">히스토리</h2>
+                  <button class="btn btn--ghost" aria-label="히스토리 전체 삭제">⌫ 전체 삭제</button>
+                </div>
+                <ul class="history-list">
+                  <li><button class="history-row"><span class="history-row__index">#3</span><span class="history-row__dice">⚂ ⚄</span><span class="history-row__sum">합 8</span></button></li>
+                  <li><button class="history-row"><span class="history-row__index">#2</span><span class="history-row__dice">⚀ ⚅</span><span class="history-row__sum">합 7</span></button></li>
+                  <li><button class="history-row"><span class="history-row__index">#1</span><span class="history-row__dice">⚃ ⚃</span><span class="history-row__sum">합 8</span></button></li>
+                </ul>
+              </section>
+
+              <p class="kbd-hint"><kbd>Space</kbd> 굴리기 · <kbd>1</kbd>–<kbd>5</kbd> 개수 · <kbd>T</kbd> 테마</p>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      <!-- 프레임 2: 모바일 375px 다크 (5개 wrap) -->
+      <div class="frame">
+        <span class="frame__label">② 모바일 375px · 다크 · 5개 (잘림 없음)</span>
+        <p class="frame__note">5개 주사위가 flex-wrap 으로 줄바꿈 — 가로 스크롤/절단 없음(BF-848 §6). 굴리기 버튼 풀폭.</p>
+        <div class="device device--mobile theme-dark is-mobile">
+          <div class="app">
+            <header class="topbar">
+              <h1 class="topbar__title">주사위</h1>
+              <button class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+            </header>
+            <main class="page">
+              <section class="card dice-card">
+                <fieldset class="dice-count">
+                  <legend class="dice-count__legend">개수</legend>
+                  <div class="dice-count__group" role="radiogroup" aria-label="주사위 개수 선택">
+                    <button class="dice-count__btn" role="radio" aria-checked="false">1</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">2</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">3</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">4</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="true">5</button>
+                  </div>
+                </fieldset>
+                <div class="dice-box" role="group" aria-label="주사위 결과">
+                  <span class="dice" role="img" aria-label="주사위 6">⚅</span>
+                  <span class="dice" role="img" aria-label="주사위 2">⚁</span>
+                  <span class="dice" role="img" aria-label="주사위 4">⚃</span>
+                  <span class="dice" role="img" aria-label="주사위 1">⚀</span>
+                  <span class="dice" role="img" aria-label="주사위 5">⚄</span>
+                </div>
+                <button class="roll-button" type="button" aria-label="주사위 굴리기">🎲 굴리기</button>
+              </section>
+
+              <section class="card stats-card">
+                <div class="stat-row">
+                  <span class="stat-row__label">합계</span>
+                  <span class="stat-row__value stat-row__value--sum">18</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-row__label">평균</span>
+                  <span class="stat-row__value">3.6</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-row__label">최대</span>
+                  <span class="stat-row__value">6</span>
+                </div>
+              </section>
+
+              <p class="kbd-hint"><kbd>Space</kbd> 굴리기 · <kbd>1</kbd>–<kbd>5</kbd> 개수 · <kbd>T</kbd> 테마</p>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      <!-- 프레임 3: 키보드 포커스 상태 갤러리 -->
+      <div class="frame">
+        <span class="frame__label">③ 키보드 포커스 시각 상태 (:focus-visible)</span>
+        <p class="frame__note">모든 인터랙티브 요소는 <code>--color-focus-ring</code> 2px 아웃라인. 아래는 강제 표시.</p>
+        <div class="state-gallery theme-dark">
+          <div class="state-item">
+            <span class="state-item__label">굴리기 버튼 (offset 3px)</span>
+            <button class="roll-button force-focus" type="button">🎲 굴리기</button>
+          </div>
+          <div class="state-item">
+            <span class="state-item__label">개수 버튼 (offset 2px)</span>
+            <div class="dice-count__group">
+              <button class="dice-count__btn" aria-checked="false">1</button>
+              <button class="dice-count__btn force-focus" aria-checked="false">2</button>
+              <button class="dice-count__btn" aria-checked="true">3</button>
+            </div>
+          </div>
+          <div class="state-item" style="width: 260px;">
+            <span class="state-item__label">히스토리 row (inset outline)</span>
+            <ul class="history-list" style="width: 100%;">
+              <li><button class="history-row force-focus"><span class="history-row__index">#3</span><span class="history-row__dice">⚂ ⚄</span><span class="history-row__sum">합 8</span></button></li>
+            </ul>
+          </div>
+          <div class="state-item">
+            <span class="state-item__label">테마 토글 (공용 .btn)</span>
+            <button class="btn btn--ghost force-focus" style="outline: 2px solid var(--color-focus-ring); outline-offset: 2px;">🌙</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 프레임 4: 굴리기 버튼 상태 갤러리 -->
+      <div class="frame">
+        <span class="frame__label">④ 굴리기 버튼 상태 (default / hover / active / disabled)</span>
+        <p class="frame__note">disabled = 굴림 진행 중(연타 방지, cursor: progress). hover/active 는 CSS 상태 재현.</p>
+        <div class="state-gallery theme-dark">
+          <div class="state-item">
+            <span class="state-item__label">default</span>
+            <button class="roll-button" type="button">🎲 굴리기</button>
+          </div>
+          <div class="state-item">
+            <span class="state-item__label">hover</span>
+            <button class="roll-button" type="button" style="background: var(--color-accent-hover); transform: translateY(-1px);">🎲 굴리기</button>
+          </div>
+          <div class="state-item">
+            <span class="state-item__label">active</span>
+            <button class="roll-button is-pressed" type="button">🎲 굴리기</button>
+          </div>
+          <div class="state-item">
+            <span class="state-item__label">disabled (굴림 중)</span>
+            <button class="roll-button" type="button" disabled>🎲 굴리기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 프레임 5: 라이트 테마 -->
+      <div class="frame">
+        <span class="frame__label">⑤ 라이트 테마 (토큰 대비 확인)</span>
+        <p class="frame__note">rose-600 accent + 라이트 표면. 토글로만 전환.</p>
+        <div class="device device--desktop theme-light">
+          <div class="app">
+            <header class="topbar">
+              <h1 class="topbar__title">주사위</h1>
+              <button class="btn btn--ghost" aria-label="테마 전환">☀️</button>
+            </header>
+            <main class="page">
+              <section class="card dice-card">
+                <fieldset class="dice-count">
+                  <legend class="dice-count__legend">개수</legend>
+                  <div class="dice-count__group" role="radiogroup" aria-label="주사위 개수 선택">
+                    <button class="dice-count__btn" role="radio" aria-checked="false">1</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="true">2</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">3</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">4</button>
+                    <button class="dice-count__btn" role="radio" aria-checked="false">5</button>
+                  </div>
+                </fieldset>
+                <div class="dice-box" role="group" aria-label="주사위 결과">
+                  <span class="dice" role="img" aria-label="주사위 2">⚁</span>
+                  <span class="dice" role="img" aria-label="주사위 6">⚅</span>
+                </div>
+                <button class="roll-button" type="button" aria-label="주사위 굴리기">🎲 굴리기</button>
+              </section>
+              <section class="card stats-card">
+                <div class="stat-row">
+                  <span class="stat-row__label">합계</span>
+                  <span class="stat-row__value stat-row__value--sum">8</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-row__label">평균</span>
+                  <span class="stat-row__value">4.0</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-row__label">최대</span>
+                  <span class="stat-row__value">6</span>
+                </div>
+              </section>
+              <p class="kbd-hint"><kbd>Space</kbd> 굴리기 · <kbd>1</kbd>–<kbd>5</kbd> 개수 · <kbd>T</kbd> 테마</p>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
