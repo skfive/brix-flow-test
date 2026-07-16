@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>시계 카드 mockup — BF-839</title>
+    <style>
+      /* =========================================================
+         brix-Flow 공유 토큰 (timer/stopwatch styles.css §2 그대로 복제 — 신규 없음)
+         mockup 은 프레임별로 테마를 강제하므로 :root=light, .theme-dark 로 override
+         ========================================================= */
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        /* light (기본) */
+        --color-bg-canvas: #fafaf9;
+        --color-bg-surface: #ffffff;
+        --color-bg-subtle: #f1f1ef;
+        --color-border-default: #e5e5e2;
+        --color-border-strong: #d0d0cc;
+        --color-text-primary: #1a1a19;
+        --color-text-secondary: #6b6b66;
+        --color-text-muted: #9a9a93;
+        --color-accent: #3563e9;
+        --color-accent-hover: #2a4fc0;
+        --color-danger: #d14343;
+        --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+        --motion-fast: 120ms;
+        --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-display: 300 128px/1 var(--font-mono);
+        --text-display-md: 300 96px/1 var(--font-mono);
+        --text-display-sm: 300 72px/1 var(--font-mono);
+        --text-label: 500 14px/1.4 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+        --text-button: 500 14px/1 var(--font-sans);
+        --text-button-lg: 600 16px/1 var(--font-sans);
+        --text-button-md: 500 15px/1 var(--font-sans);
+      }
+      .theme-dark {
+        --color-bg-canvas: #0f1115;
+        --color-bg-surface: #171a21;
+        --color-bg-subtle: #1e222b;
+        --color-border-default: #262b36;
+        --color-border-strong: #3a4150;
+        --color-text-primary: #e8e8e4;
+        --color-text-secondary: #9a9a93;
+        --color-text-muted: #6b6b66;
+        --color-accent: #5b82f0;
+        --color-accent-hover: #7596f3;
+        --color-danger: #e55858;
+        --color-focus-ring: rgba(91, 130, 240, 0.55);
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+      }
+
+      /* ---------- mockup 페이지 셸 (실 앱 아님 — 시안 비교용) ---------- */
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: var(--text-caption);
+        background: #e9e9e6;
+        color: #1a1a19;
+        padding: 24px;
+      }
+      .mock-h {
+        font: var(--text-h1);
+        margin: 0 0 4px;
+      }
+      .mock-sub {
+        font: var(--text-caption);
+        color: #6b6b66;
+        margin: 0 0 20px;
+      }
+      .frames {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        align-items: flex-start;
+      }
+      .frame-wrap { display: flex; flex-direction: column; gap: 8px; }
+      .frame-label {
+        font: var(--text-label);
+        color: #1a1a19;
+      }
+      .frame-label small { color: #6b6b66; font-weight: 400; }
+      /* 뷰포트 프레임: 내부는 실제 앱과 동일한 토큰/클래스로 렌더 */
+      .viewport {
+        border: 1px solid #cfcfca;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+      }
+      .viewport--desktop { width: 720px; }
+      .viewport--mobile { width: 360px; }
+
+      /* =========================================================
+         실 앱 클래스 (clock/styles.css 가 구현할 규칙 — mockup 미리보기)
+         ========================================================= */
+      .app {
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        font: var(--text-body, 400 15px/1.65 var(--font-sans));
+        display: flex;
+        flex-direction: column;
+        min-height: 460px;
+      }
+      .viewport--mobile .app { min-height: 620px; }
+      .topbar {
+        height: 56px;
+        padding: 0 var(--space-5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+      }
+      .topbar__title { font: var(--text-h1); margin: 0; }
+      .page {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-7) var(--space-5);
+      }
+      .viewport--mobile .page { padding: var(--space-5) var(--space-4); }
+      .card {
+        width: 100%;
+        max-width: 480px;
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        padding: var(--space-7) var(--space-6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-6);
+      }
+      .viewport--mobile .card {
+        max-width: 100%;
+        padding: var(--space-5) var(--space-4);
+      }
+
+      /* 날짜 */
+      .clock-date {
+        font: var(--text-label);
+        color: var(--color-text-secondary);
+        margin: 0;
+        letter-spacing: 0.02em;
+      }
+      /* 대형 시각 */
+      .clock-display {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+        user-select: none;
+      }
+      .clock-display__prefix {
+        font: var(--text-label);
+        color: var(--color-text-secondary);
+      }
+      .clock-display__time {
+        font: var(--text-display);
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-primary);
+      }
+      .clock-display__colon { color: var(--color-text-muted); }
+      .viewport--desktop .clock-display__time { font: var(--text-display-md); font-variant-numeric: tabular-nums; }
+      .viewport--mobile .clock-display__time { font: var(--text-display-sm); font-variant-numeric: tabular-nums; }
+
+      /* 상태 배지 */
+      .clock-status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        font: var(--text-caption);
+        color: var(--color-text-secondary);
+        margin: 0;
+      }
+      .clock-status__dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--color-text-muted);
+        transition: background var(--motion-fast) var(--ease-out);
+      }
+      .clock-status.is-running .clock-status__dot { background: var(--color-accent); }
+
+      /* controls + 공용 버튼(.btn) — 기존 정의 그대로 */
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        justify-content: center;
+        width: 100%;
+      }
+      .viewport--mobile .controls { flex-direction: column; }
+      .btn {
+        height: 36px;
+        padding: 0 var(--space-4);
+        border: none;
+        border-radius: var(--radius-md);
+        font: var(--text-button);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        white-space: nowrap;
+        background: transparent;
+        color: var(--color-text-primary);
+      }
+      .btn--ghost:hover { background: var(--color-bg-subtle); }
+      .btn--primary-lg {
+        height: 56px;
+        min-width: 140px;
+        padding: 0 var(--space-5);
+        font: var(--text-button-lg);
+        background: var(--color-accent);
+        color: #fff;
+      }
+      .btn--primary-lg:hover { background: var(--color-accent-hover); }
+      .btn--secondary-lg {
+        height: 56px;
+        min-width: 100px;
+        padding: 0 var(--space-4);
+        font: var(--text-button-md);
+        background: var(--color-bg-surface);
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border-strong);
+      }
+      .btn--secondary-lg:hover { background: var(--color-bg-subtle); }
+      .viewport--mobile .controls .btn { width: 100%; min-width: auto; }
+      .btn:focus-visible,
+      .btn.is-focus {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+
+      .kbd-hint {
+        font: var(--text-caption);
+        color: var(--color-text-muted);
+        margin: 0;
+        text-align: center;
+      }
+      .kbd-hint kbd {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        padding: 1px 6px;
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-subtle);
+        color: var(--color-text-secondary);
+      }
+
+      /* ---------- 상태 갤러리 (정적 상태 표현) ---------- */
+      .gallery {
+        margin-top: 36px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      .swatch {
+        background: #fff;
+        border: 1px solid #cfcfca;
+        border-radius: 12px;
+        padding: 20px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 240px;
+      }
+      .swatch__title { font: var(--text-label); color: #1a1a19; }
+      .swatch__note { font: var(--text-caption); color: #6b6b66; margin: 0; }
+      .swatch .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+      /* 갤러리 내부 버튼 미니 프리뷰용 로컬 토큰(라이트 고정) */
+      .swatch .btn--primary-lg,
+      .swatch .btn--secondary-lg { height: 44px; }
+
+      .tokens {
+        margin-top: 36px;
+        font: var(--text-caption);
+        color: #333;
+      }
+      .tokens table { border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+      .tokens th, .tokens td {
+        border: 1px solid #e0e0dc;
+        padding: 6px 12px;
+        text-align: left;
+      }
+      .tokens th { background: #f4f4f1; font-weight: 600; }
+      .chip { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid #0002; vertical-align: middle; margin-right: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1 class="mock-h">시계 카드 — 반응형 mockup (BF-839)</h1>
+    <p class="mock-sub">
+      명세: docs/design/clock-BF-839.md · 기존 brix-Flow 토큰·공용 버튼만 사용 (신규 컬러·폰트·에셋 0건) ·
+      좌: 데스크톱(라이트) / 우: 모바일 360px(다크)
+    </p>
+
+    <div class="frames">
+      <!-- 데스크톱 · 라이트 · 동작 중 · 24시간 -->
+      <div class="frame-wrap">
+        <div class="frame-label">데스크톱 720px <small>· 라이트 · 동작 중 · 24시간</small></div>
+        <div class="viewport viewport--desktop">
+          <div class="app">
+            <header class="topbar">
+              <h1 class="topbar__title">시계</h1>
+              <button type="button" class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+            </header>
+            <main class="page">
+              <section class="card" aria-label="시계">
+                <p class="clock-date">2026-07-16 (목)</p>
+                <div class="clock-display" role="timer" aria-live="off" aria-label="현재 시각">
+                  <span class="clock-display__prefix" hidden>오후</span>
+                  <span class="clock-display__time"><span>14</span><span class="clock-display__colon" aria-hidden="true">:</span><span>08</span><span class="clock-display__colon" aria-hidden="true">:</span><span>32</span></span>
+                </div>
+                <p class="clock-status is-running">
+                  <span class="clock-status__dot" aria-hidden="true"></span><span>동작 중</span>
+                </p>
+                <div class="controls">
+                  <button type="button" class="btn btn--primary-lg" aria-label="시계 정지" aria-pressed="false">⏸ 정지</button>
+                  <button type="button" class="btn btn--secondary-lg" aria-label="12시간 형식으로 전환" aria-pressed="false">24시간</button>
+                </div>
+                <p class="kbd-hint"><kbd>Space</kbd> 정지/재개 · <kbd>H</kbd> 형식 전환</p>
+              </section>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모바일 · 다크 · 정지됨 · 12시간 -->
+      <div class="frame-wrap">
+        <div class="frame-label">모바일 360px <small>· 다크 · 정지됨 · 12시간</small></div>
+        <div class="viewport viewport--mobile">
+          <div class="app theme-dark">
+            <header class="topbar">
+              <h1 class="topbar__title">시계</h1>
+              <button type="button" class="btn btn--ghost" aria-label="테마 전환">☀️</button>
+            </header>
+            <main class="page">
+              <section class="card" aria-label="시계">
+                <p class="clock-date">2026-07-16 (목)</p>
+                <div class="clock-display" role="timer" aria-live="off" aria-label="현재 시각">
+                  <span class="clock-display__prefix">오후</span>
+                  <span class="clock-display__time"><span>02</span><span class="clock-display__colon" aria-hidden="true">:</span><span>08</span><span class="clock-display__colon" aria-hidden="true">:</span><span>32</span></span>
+                </div>
+                <p class="clock-status">
+                  <span class="clock-status__dot" aria-hidden="true"></span><span>정지됨</span>
+                </p>
+                <div class="controls">
+                  <button type="button" class="btn btn--primary-lg" aria-label="시계 재개" aria-pressed="true">▶ 재개</button>
+                  <button type="button" class="btn btn--secondary-lg" aria-label="24시간 형식으로 전환" aria-pressed="true">12시간</button>
+                </div>
+                <p class="kbd-hint"><kbd>Space</kbd> 정지/재개 · <kbd>H</kbd> 형식 전환</p>
+              </section>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 상태 갤러리 ================= -->
+    <div class="gallery">
+      <div class="swatch">
+        <div class="swatch__title">정지/재개 버튼 — 상태별</div>
+        <div class="row">
+          <button type="button" class="btn btn--primary-lg" aria-pressed="false">⏸ 정지</button>
+          <button type="button" class="btn btn--primary-lg" aria-pressed="true">▶ 재개</button>
+        </div>
+        <p class="swatch__note">running: aria-label "시계 정지" · stopped: "시계 재개" · aria-pressed 로 상태 노출</p>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch__title">12/24 형식 버튼 — 상태별</div>
+        <div class="row">
+          <button type="button" class="btn btn--secondary-lg" aria-pressed="false">24시간</button>
+          <button type="button" class="btn btn--secondary-lg" aria-pressed="true">12시간</button>
+        </div>
+        <p class="swatch__note">라벨=현재 형식 · aria-label=누르면 될 동작("12시간 형식으로 전환" 등)</p>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch__title">포커스 링 (키보드)</div>
+        <div class="row">
+          <button type="button" class="btn btn--primary-lg is-focus" aria-pressed="false">⏸ 정지</button>
+          <button type="button" class="btn btn--secondary-lg is-focus" aria-pressed="false">24시간</button>
+        </div>
+        <p class="swatch__note">:focus-visible → 2px --color-focus-ring, offset 2px (기존 .btn 규칙)</p>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch__title">버튼 hover</div>
+        <div class="row">
+          <button type="button" class="btn btn--primary-lg" style="background: var(--color-accent-hover)">⏸ 정지</button>
+          <button type="button" class="btn btn--secondary-lg" style="background: var(--color-bg-subtle)">24시간</button>
+        </div>
+        <p class="swatch__note">primary hover=accent-hover · secondary hover=bg-subtle</p>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch__title">상태 배지</div>
+        <div class="row">
+          <p class="clock-status is-running" style="margin:0"><span class="clock-status__dot"></span><span>동작 중</span></p>
+          <p class="clock-status" style="margin:0"><span class="clock-status__dot"></span><span>정지됨</span></p>
+        </div>
+        <p class="swatch__note">색(accent/muted) + 텍스트 라벨 병기 → 색각 접근성 확보</p>
+      </div>
+    </div>
+
+    <!-- ================= 토큰 매핑 ================= -->
+    <div class="tokens">
+      <table>
+        <tr><th>역할</th><th>토큰(변수)</th><th>light</th><th>dark</th></tr>
+        <tr><td>primary / accent</td><td>--color-accent</td><td><span class="chip" style="background:#3563e9"></span>#3563e9</td><td><span class="chip" style="background:#5b82f0"></span>#5b82f0</td></tr>
+        <tr><td>surface (카드)</td><td>--color-bg-surface</td><td><span class="chip" style="background:#ffffff"></span>#ffffff</td><td><span class="chip" style="background:#171a21"></span>#171a21</td></tr>
+        <tr><td>canvas (배경)</td><td>--color-bg-canvas</td><td><span class="chip" style="background:#fafaf9"></span>#fafaf9</td><td><span class="chip" style="background:#0f1115"></span>#0f1115</td></tr>
+        <tr><td>text primary (시각)</td><td>--color-text-primary</td><td><span class="chip" style="background:#1a1a19"></span>#1a1a19</td><td><span class="chip" style="background:#e8e8e4"></span>#e8e8e4</td></tr>
+        <tr><td>text secondary (날짜/상태)</td><td>--color-text-secondary</td><td><span class="chip" style="background:#6b6b66"></span>#6b6b66</td><td><span class="chip" style="background:#9a9a93"></span>#9a9a93</td></tr>
+        <tr><td>text muted (콜론/정지점)</td><td>--color-text-muted</td><td><span class="chip" style="background:#9a9a93"></span>#9a9a93</td><td><span class="chip" style="background:#6b6b66"></span>#6b6b66</td></tr>
+        <tr><td>대형 시각 폰트</td><td>--text-display / -md / -sm</td><td colspan="2">300 128 / 96 / 72px mono · tabular-nums</td></tr>
+      </table>
+    </div>
+  </body>
+</html>
