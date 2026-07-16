@@ -1,0 +1,218 @@
+/* BF-862 · /demo/counter 카운터 SPA 스타일
+ * 디자인: docs/design/counter-BF-859.md (§2 팔레트, §3 타이포, §4 레이아웃, §6 포커스)
+ * 토큰: 기존 timer/stopwatch/clock 의 :root 시스템을 승계 — 신규 색/폰트 0건(디자인 §2, §7.6).
+ * 다크: 디자인 §2.2 지시대로 @media (prefers-color-scheme: dark) 자동 전환.
+ */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* light tokens (timer/stopwatch/clock 와 공유 — 디자인 §2.1) */
+  --color-accent: #3563e9;
+  --color-accent-hover: #2a4fc0;
+  --color-bg-canvas: #fafaf9;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f1ef;
+  --color-border-default: #e5e5e2;
+  --color-border-strong: #d0d0cc;
+  --color-text-primary: #1a1a19;
+  --color-text-secondary: #6b6b66;
+  --color-text-muted: #9a9a93;
+  --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+  /* spacing / radius / shadow (디자인 §4.2) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+  /* motion */
+  --motion-fast: 120ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* typography (디자인 §3) */
+  --text-h1: 600 20px/1.3 var(--font-sans);
+  --text-display: 300 96px/1 var(--font-mono);
+  --text-display-sm: 300 72px/1 var(--font-mono);
+  --text-button-lg: 600 18px/1 var(--font-sans);
+  --text-button-md: 500 15px/1 var(--font-sans);
+  --text-caption: 400 12px/1.4 var(--font-sans);
+}
+
+/* 다크 테마 — 디자인 §2.2 (시스템 설정 자동 추종) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-accent: #5b82f0;
+    --color-accent-hover: #7596f3;
+    --color-bg-canvas: #0f1115;
+    --color-bg-surface: #171a21;
+    --color-bg-subtle: #1e222b;
+    --color-border-default: #262b36;
+    --color-border-strong: #3a4150;
+    --color-text-primary: #e8e8e4;
+    --color-text-secondary: #9a9a93;
+    --color-text-muted: #6b6b66;
+    --color-focus-ring: rgba(91, 130, 240, 0.55);
+    --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+  }
+}
+
+/* ─────────────────── reset / base ─────────────────── */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font: var(--text-caption);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+}
+
+/* ─────────────────── page (디자인 §7.3) ─────────────────── */
+.counter-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-canvas);
+  padding: var(--space-5);
+}
+
+/* ─────────────────── card (디자인 §5.5, §7.3) ─────────────────── */
+.counter-card {
+  width: min(92vw, 400px);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-6);
+}
+.counter-title {
+  margin: 0;
+  font: var(--text-h1);
+  color: var(--color-text-primary);
+}
+
+/* ─────────────────── 값 표시 (디자인 §4.3, §5.1) ─────────────────── */
+.counter-value {
+  display: block;
+  text-align: center;
+  font: var(--text-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-4);
+  margin: var(--space-6) 0;
+  overflow-wrap: anywhere; /* 극단적 큰 값 방어 */
+  transition: color var(--motion-fast) var(--ease-out);
+}
+
+/* ─────────────────── 컨트롤 행 (디자인 §4.1, §7.3) ─────────────────── */
+.counter-controls {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 버튼 공통 (디자인 §5.2) */
+.counter-btn {
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: var(--text-button-lg);
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+.counter-btn:active {
+  transform: translateY(1px);
+}
+
+/* 포커스 링 — 디자인 §6.2 (outline:none 단독 사용 금지) */
+.counter-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+
+/* +1 주 액션 (디자인 §5.3 primary) */
+.counter-btn--primary {
+  background: var(--color-accent);
+  color: #fff;
+}
+.counter-btn--primary:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-border-strong);
+}
+
+/* -1 보조 (디자인 §5.3 secondary) */
+.counter-btn--secondary {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border-default);
+  color: var(--color-text-primary);
+}
+.counter-btn--secondary:hover {
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border-strong);
+}
+
+/* 초기화 저강조·중립 (디자인 §5.3 ghost — danger 아님) */
+.counter-btn--ghost {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+  font: var(--text-button-md);
+}
+.counter-btn--ghost:hover {
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+/* ─────────────────── 단축키 힌트 (디자인 §5.4) ─────────────────── */
+.counter-hint {
+  margin: var(--space-5) 0 0;
+  text-align: center;
+  font: var(--text-caption);
+  color: var(--color-text-muted);
+}
+.counter-hint kbd {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+
+/* ─────────────────── 반응형 (디자인 §4.4) ─────────────────── */
+@media (max-width: 480px) {
+  .counter-value {
+    font: var(--text-display-sm);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* 모션 최소화 선호 — 디자인 §6.3, §7.5 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

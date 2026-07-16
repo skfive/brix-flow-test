@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>카운터 · /demo/counter</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="counter-page">
+      <section class="counter-card" aria-labelledby="counter-title">
+        <h1 id="counter-title" class="counter-title">카운터</h1>
+
+        <output id="counter-value" class="counter-value" aria-live="polite"
+          >0</output
+        >
+
+        <div class="counter-controls">
+          <!-- DOM 순서 = Tab 순서: +1 → -1 → 초기화 (기획 §6.3 고정) -->
+          <button
+            type="button"
+            id="btn-increment"
+            class="counter-btn counter-btn--primary"
+          >
+            +1
+          </button>
+          <button
+            type="button"
+            id="btn-decrement"
+            class="counter-btn counter-btn--secondary"
+          >
+            -1
+          </button>
+          <button
+            type="button"
+            id="btn-reset"
+            class="counter-btn counter-btn--ghost"
+          >
+            초기화
+          </button>
+        </div>
+
+        <p class="counter-hint">
+          <kbd>↑</kbd> +1 &nbsp; <kbd>↓</kbd> -1 &nbsp; <kbd>R</kbd> 초기화
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
