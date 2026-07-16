@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진행률 체크리스트 검증 · progress-5</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- 상단바 (명세 §4.1 / §5.1) — 원본 incident-command/ 다크 전용 승계, 테마 토글 미포함(§8.3) -->
+    <header class="ic-topbar">
+      <h1>진행률 체크리스트 검증</h1>
+      <p class="ic-topbar__count ic-mono">phase18-validation · 5/5</p>
+    </header>
+
+    <main>
+      <section class="ic-panel ic-checklist-panel" aria-labelledby="checklist-title">
+        <h2 id="checklist-title" class="ic-panel__title">복구 체크리스트</h2>
+
+        <!-- JS 비활성 폴백 (명세 §5.6) -->
+        <noscript>
+          <p class="ic-note ic-note--dashed">이 검증 페이지는 JavaScript 가 필요합니다.</p>
+        </noscript>
+
+        <!-- 체크리스트 컨테이너 — main.js 가 진행률 바/텍스트/항목 리스트를 렌더 (명세 §4.1 / §6.2) -->
+        <div id="progress-5-checklist" data-checklist-state="has-items"></div>
+      </section>
+    </main>
+
+    <!-- 비-module script — file:// CORS 안전 (명세 §6.1-2). command.js 는 로드하지 않음(§5) -->
+    <script src="./fixtures.js"></script>
+    <script src="./progress.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
