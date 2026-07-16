@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>세계시계 검증(clock-3) mockup · BF-891</title>
+    <style>
+      /* ============================================================
+       * clock-3 (세계시계 검증) mockup — BF-891 / task BF-893
+       * 원본 src/app/demo/clock/styles.css 의 :root 토큰을 그대로 복제.
+       * 신규 색/폰트/토큰 0건. 신규는 배치용 .region-grid/.region-clock 만.
+       * (mockup 전용: 프레임/갤러리 셸 스타일은 실제 산출물 아님)
+       * ============================================================ */
+
+      /* ── 원본 토큰 복제 (라이트) ── */
+      :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+          "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+        --color-bg-canvas: #fafaf9;
+        --color-bg-surface: #ffffff;
+        --color-bg-subtle: #f1f1ef;
+        --color-border-default: #e5e5e2;
+        --color-border-strong: #d0d0cc;
+        --color-text-primary: #1a1a19;
+        --color-text-secondary: #6b6b66;
+        --color-text-muted: #9a9a93;
+        --color-accent: #3563e9;
+        --color-accent-hover: #2a4fc0;
+        --color-focus-ring: rgba(53, 99, 233, 0.45);
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+        --motion-fast: 120ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+        --text-h1: 600 20px/1.3 var(--font-sans);
+        --text-label: 500 14px/1.4 var(--font-sans);
+        --text-caption: 400 12px/1.4 var(--font-sans);
+        --text-button: 500 14px/1 var(--font-sans);
+        --text-display-sm: 300 72px/1 var(--font-mono);
+      }
+
+      /* ── 원본 다크 오버라이드 복제 (mockup: .theme-dark 스코프로 적용) ── */
+      .theme-dark {
+        --color-bg-canvas: #0f1115;
+        --color-bg-surface: #171a21;
+        --color-bg-subtle: #1e222b;
+        --color-border-default: #262b36;
+        --color-border-strong: #3a4150;
+        --color-text-primary: #e8e8e4;
+        --color-text-secondary: #9a9a93;
+        --color-text-muted: #6b6b66;
+        --color-accent: #5b82f0;
+        --color-accent-hover: #7596f3;
+        --color-focus-ring: rgba(91, 130, 240, 0.55);
+        --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      /* ============================================================
+       * 실제 clock-3 산출물에 해당하는 규칙 (원본 재사용 + 신규 배치)
+       * ============================================================ */
+
+      /* topbar (원본 재사용) */
+      .topbar {
+        height: 56px;
+        padding: 0 var(--space-5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border-default);
+        flex: 0 0 auto;
+      }
+      .topbar__title {
+        font: var(--text-h1);
+        margin: 0;
+        color: var(--color-text-primary);
+      }
+      .btn {
+        height: 36px;
+        padding: 0 var(--space-4);
+        border: none;
+        border-radius: var(--radius-md);
+        font: var(--text-button);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        background: transparent;
+        color: var(--color-text-primary);
+      }
+      .btn--ghost:hover {
+        background: var(--color-bg-subtle);
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+
+      /* page (원본 재사용) */
+      .page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: var(--space-7) var(--space-5);
+        gap: var(--space-5);
+        background: var(--color-bg-canvas);
+      }
+
+      /* region-grid (신규 배치 컨테이너) */
+      .region-grid {
+        width: 100%;
+        max-width: 1080px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--space-5);
+      }
+
+      /* card (원본 재사용) */
+      .card {
+        width: 100%;
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      /* region-clock (원본 .card 폭/패딩만 오버라이드) */
+      .region-clock {
+        max-width: none;
+        padding: var(--space-6) var(--space-5);
+        gap: var(--space-5);
+      }
+
+      /* 지역 라벨 (신규 최소 요소, 기존 토큰) */
+      .region-clock__label {
+        font: var(--text-label);
+        color: var(--color-text-secondary);
+        margin: 0;
+        text-align: center;
+        letter-spacing: 0.02em;
+      }
+
+      /* 날짜 (원본 .clock-date 재사용) */
+      .clock-date {
+        font: var(--text-label);
+        color: var(--color-text-secondary);
+        margin: 0;
+        text-align: center;
+      }
+
+      /* 대형 시각 (원본 .clock-display 구조 재사용 + 크기 유동) */
+      .clock-display {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+        user-select: none;
+      }
+      .clock-display__prefix[hidden] {
+        display: none;
+      }
+      .region-clock .clock-display__time {
+        font-family: var(--font-mono);
+        font-weight: 300;
+        line-height: 1;
+        font-size: clamp(3rem, 7vw, 4.5rem); /* 48px ~ 72px, 상한=--text-display-sm */
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-primary);
+      }
+      .clock-display__colon {
+        color: var(--color-text-muted);
+      }
+
+      /* ============================================================
+       * mockup 전용 갤러리 셸 (실제 산출물 아님)
+       * ============================================================ */
+      body {
+        margin: 0;
+        font: 400 15px/1.6 var(--font-sans);
+        background: #e7e7e4;
+        color: #1a1a19;
+        padding: 32px;
+      }
+      .doc-h {
+        max-width: 1180px;
+        margin: 0 auto 8px;
+      }
+      .doc-h h1 {
+        font: 700 24px/1.3 var(--font-sans);
+        margin: 0 0 6px;
+      }
+      .doc-h p {
+        margin: 0;
+        color: #555;
+        font-size: 14px;
+      }
+      .gallery {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+        padding-top: 24px;
+      }
+      .frame {
+        border: 1px solid #cfcfca;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+        background: #fff;
+      }
+      .frame__cap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: #1a1a19;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .frame__cap .tag {
+        font-weight: 500;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.16);
+      }
+      /* 데스크톱 프레임 = 실제 페이지 렌더 영역 */
+      .viewport-desktop .page {
+        min-height: 420px;
+        justify-content: center;
+      }
+      /* 모바일 프레임 360px */
+      .viewport-mobile {
+        width: 360px;
+        margin: 0 auto;
+      }
+      .viewport-mobile .page {
+        padding: var(--space-5) var(--space-4);
+      }
+      .viewport-mobile .region-grid {
+        max-width: 420px;
+      }
+
+      /* anatomy / 토큰 표 (mockup 설명용) */
+      .info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+      @media (max-width: 760px) {
+        .info {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        background: #fff;
+        border: 1px solid #cfcfca;
+        border-radius: 14px;
+        padding: 20px 22px;
+      }
+      .panel h3 {
+        margin: 0 0 12px;
+        font: 700 15px/1.3 var(--font-sans);
+      }
+      .panel table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .panel td,
+      .panel th {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+      }
+      .panel th {
+        color: #888;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .sw {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        background: #f1f1ef;
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      .anatomy {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        counter-reset: step;
+      }
+      .anatomy li {
+        position: relative;
+        padding: 8px 8px 8px 34px;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+      }
+      .anatomy li::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: 8px;
+        top: 8px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--color-accent);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc-h">
+      <h1>세계시계 검증(clock-3) — 디자인 mockup</h1>
+      <p>
+        BF-891 / task BF-893 · 원본 <code>/demo/clock</code> 시각 언어 재사용 ·
+        서울 / 뉴욕 / 런던 3-카드 · 신규 색/폰트/토큰 0건 · 명세:
+        <code>docs/design/clock-3-BF-891.md</code>
+      </p>
+    </div>
+
+    <div class="gallery">
+      <!-- 1. 데스크톱 라이트 -->
+      <div class="frame viewport-desktop">
+        <div class="frame__cap">
+          데스크톱 · 라이트 <span class="tag">3열 그리드 · 실제 페이지 셸</span>
+        </div>
+        <header class="topbar">
+          <h1 class="topbar__title">세계시계 검증</h1>
+          <button type="button" class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+        </header>
+        <div class="page">
+          <div class="region-grid">
+            <section class="card region-clock" aria-label="서울">
+              <h2 class="region-clock__label">서울</h2>
+              <p class="clock-date">2026-07-17 (금)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="서울 현재 시각">
+                <span class="clock-display__prefix" hidden></span>
+                <span class="clock-display__time"
+                  >03<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+            <section class="card region-clock" aria-label="뉴욕">
+              <h2 class="region-clock__label">뉴욕</h2>
+              <p class="clock-date">2026-07-16 (목)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="뉴욕 현재 시각">
+                <span class="clock-display__prefix" hidden></span>
+                <span class="clock-display__time"
+                  >14<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+            <section class="card region-clock" aria-label="런던">
+              <h2 class="region-clock__label">런던</h2>
+              <p class="clock-date">2026-07-16 (목)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="런던 현재 시각">
+                <span class="clock-display__prefix" hidden></span>
+                <span class="clock-display__time"
+                  >19<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 데스크톱 다크 -->
+      <div class="frame viewport-desktop theme-dark">
+        <div class="frame__cap">
+          데스크톱 · 다크 <span class="tag">동일 그리드 · 토큰 다크 오버라이드</span>
+        </div>
+        <header class="topbar">
+          <h1 class="topbar__title">세계시계 검증</h1>
+          <button type="button" class="btn btn--ghost" aria-label="테마 전환">☀️</button>
+        </header>
+        <div class="page">
+          <div class="region-grid">
+            <section class="card region-clock" aria-label="서울">
+              <h2 class="region-clock__label">서울</h2>
+              <p class="clock-date">2026-07-17 (금)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="서울 현재 시각">
+                <span class="clock-display__time"
+                  >03<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+            <section class="card region-clock" aria-label="뉴욕">
+              <h2 class="region-clock__label">뉴욕</h2>
+              <p class="clock-date">2026-07-16 (목)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="뉴욕 현재 시각">
+                <span class="clock-display__time"
+                  >14<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+            <section class="card region-clock" aria-label="런던">
+              <h2 class="region-clock__label">런던</h2>
+              <p class="clock-date">2026-07-16 (목)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="런던 현재 시각">
+                <span class="clock-display__time"
+                  >19<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 모바일 360px -->
+      <div class="frame viewport-mobile">
+        <div class="frame__cap">
+          모바일 360px · 라이트 <span class="tag">1열 스택 · 잘림 없음</span>
+        </div>
+        <header class="topbar">
+          <h1 class="topbar__title">세계시계 검증</h1>
+          <button type="button" class="btn btn--ghost" aria-label="테마 전환">🌙</button>
+        </header>
+        <div class="page">
+          <div class="region-grid">
+            <section class="card region-clock" aria-label="서울">
+              <h2 class="region-clock__label">서울</h2>
+              <p class="clock-date">2026-07-17 (금)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="서울 현재 시각">
+                <span class="clock-display__time"
+                  >03<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+            <section class="card region-clock" aria-label="뉴욕">
+              <h2 class="region-clock__label">뉴욕</h2>
+              <p class="clock-date">2026-07-16 (목)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="뉴욕 현재 시각">
+                <span class="clock-display__time"
+                  >14<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+            <section class="card region-clock" aria-label="런던">
+              <h2 class="region-clock__label">런던</h2>
+              <p class="clock-date">2026-07-16 (목)</p>
+              <div class="clock-display" role="timer" aria-live="off" aria-label="런던 현재 시각">
+                <span class="clock-display__time"
+                  >19<span class="clock-display__colon" aria-hidden="true">:</span>19<span
+                    class="clock-display__colon"
+                    aria-hidden="true"
+                    >:</span
+                  >07</span
+                >
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. anatomy + 토큰 매핑 -->
+      <div class="info">
+        <div class="panel">
+          <h3>카드 anatomy (위 → 아래)</h3>
+          <ul class="anatomy">
+            <li>
+              <strong>지역 라벨</strong> — <code>.region-clock__label</code> ·
+              서울/뉴욕/런던 · <code>--text-label</code> ·
+              <code>--color-text-secondary</code> (신규 최소 요소)
+            </li>
+            <li>
+              <strong>날짜</strong> — <code>.clock-date</code> (원본 재사용) ·
+              <code>YYYY-MM-DD (요일)</code> · 지역별로 날짜가 다를 수 있음(서울만 금요일)
+            </li>
+            <li>
+              <strong>대형 시각</strong> — <code>.clock-display</code> (원본 구조) ·
+              <code>HH:MM:SS</code> 24시간 고정 · tabular-nums ·
+              <code>clamp(48–72px)</code> 카드폭 대응
+            </li>
+          </ul>
+          <p style="margin: 14px 0 0; font-size: 12.5px; color: #666">
+            동일 시점(2026-07-16 18:19:07 UTC)을 세 지역으로 투영 → 서울 03:19(+9,
+            익일) · 뉴욕 14:19(EDT −4) · 런던 19:19(BST +1). planner §5.3·§13.2 지역별
+            날짜 차이를 시각화.
+          </p>
+        </div>
+        <div class="panel">
+          <h3>재사용 토큰 매핑 (신규 색 0건)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>토큰</th>
+                <th>라이트</th>
+                <th>용도</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>--color-bg-canvas</code></td>
+                <td><span class="sw" style="background: #fafaf9"></span>#fafaf9</td>
+                <td>페이지 배경</td>
+              </tr>
+              <tr>
+                <td><code>--color-bg-surface</code></td>
+                <td><span class="sw" style="background: #ffffff"></span>#ffffff</td>
+                <td>카드 3개 배경</td>
+              </tr>
+              <tr>
+                <td><code>--color-text-primary</code></td>
+                <td><span class="sw" style="background: #1a1a19"></span>#1a1a19</td>
+                <td>대형 시각 숫자</td>
+              </tr>
+              <tr>
+                <td><code>--color-text-secondary</code></td>
+                <td><span class="sw" style="background: #6b6b66"></span>#6b6b66</td>
+                <td>지역 라벨 · 날짜</td>
+              </tr>
+              <tr>
+                <td><code>--color-text-muted</code></td>
+                <td><span class="sw" style="background: #9a9a93"></span>#9a9a93</td>
+                <td>시각 콜론(:)</td>
+              </tr>
+              <tr>
+                <td><code>--color-border-default</code></td>
+                <td><span class="sw" style="background: #e5e5e2"></span>#e5e5e2</td>
+                <td>topbar 경계선</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin: 14px 0 0; font-size: 12.5px; color: #666">
+            타이포: 타이틀 <code>--text-h1</code> · 라벨/날짜
+            <code>--text-label</code> · 시각 <code>--font-mono</code> 300 ·
+            상한 <code>--text-display-sm</code>(72px). 폰트 family/weight 전부 원본 동일.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
