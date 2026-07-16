@@ -10,7 +10,8 @@
     "test:snake": "node --test tests/snake-BF608.test.js",
     "test:e2e": "BRIX_E2E_SKIP=1 node --test tests/snake-BF608.test.js",
     "test:notepad": "node --test tests/notepad-*.test.js",
-    "test:timer": "node --test tests/timer-*.test.js"
+    "test:timer": "node --test tests/timer-*.test.js",
+    "test:clock": "node --test tests/clock-BF842.test.js"
   },
   "devDependencies": {
     "http-server": "^14.1.1",

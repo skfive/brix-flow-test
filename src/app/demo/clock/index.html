@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>시계 · /demo/clock</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">시계</h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="btn-theme"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="card" aria-label="시계">
+        <p class="clock-date" id="clock-date">2026-07-16 (목)</p>
+        <div
+          class="clock-display"
+          id="clock-display"
+          role="timer"
+          aria-live="off"
+          aria-label="현재 시각"
+        >
+          <span class="clock-display__prefix" id="clock-prefix" hidden>오후</span>
+          <span class="clock-display__time">
+            <span id="disp-h">08</span
+            ><span class="clock-display__colon" aria-hidden="true">:</span
+            ><span id="disp-m">03</span
+            ><span class="clock-display__colon" aria-hidden="true">:</span
+            ><span id="disp-s">07</span>
+          </span>
+        </div>
+        <p class="clock-status is-running" id="clock-status">
+          <span class="clock-status__dot" aria-hidden="true"></span
+          ><span id="clock-status-text">동작 중</span>
+        </p>
+        <div class="controls">
+          <button
+            type="button"
+            class="btn btn--primary-lg"
+            id="btn-toggle"
+            aria-label="시계 정지"
+            aria-pressed="false"
+          >
+            ⏸ 정지
+          </button>
+          <button
+            type="button"
+            class="btn btn--secondary-lg"
+            id="btn-format"
+            aria-label="12시간 형식으로 전환"
+            aria-pressed="false"
+          >
+            24시간
+          </button>
+        </div>
+        <p class="kbd-hint">
+          <kbd>Space</kbd> 정지/재개 · <kbd>H</kbd> 형식 전환
+        </p>
+      </section>
+
+      <!-- 상태 변화(정지/재개) 시에만 1회 안내 (매초 X) -->
+      <div
+        id="sr-announce"
+        class="sr-only"
+        role="status"
+        aria-live="polite"
+      ></div>
+    </main>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
