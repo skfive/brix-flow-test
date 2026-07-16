@@ -586,15 +586,33 @@
       }
 
       function changeDirection(state, newDir) {
-        var cur = state.dir;
-        if (cur.x + newDir.x === 0 && cur.y + newDir.y === 0) return state;
-        return Object.assign({}, state, { nextDir: newDir });
+        // BF-872: 입력 큐(dirQueue) — 한 틱 안 빠른 연속 회전을 버퍼링해
+        //   한 틱에 하나씩 적용. 반전 판정은 "가장 최근 의도 방향"(큐 끝 또는
+        //   nextDir) 기준 → 180° 즉시 반전 자기충돌(AC2) 차단 유지 + U턴 입력 보존.
+        var queue = state.dirQueue || [];
+        var ref = queue.length > 0 ? queue[queue.length - 1] : state.nextDir;
+        if (ref.x + newDir.x === 0 && ref.y + newDir.y === 0) return state;
+        if (ref.x === newDir.x && ref.y === newDir.y) return state;
+        if (queue.length >= 2) return state;
+        if (
+          queue.length === 0 &&
+          state.nextDir.x === state.dir.x &&
+          state.nextDir.y === state.dir.y
+        ) {
+          return Object.assign({}, state, { nextDir: newDir });
+        }
+        return Object.assign({}, state, { dirQueue: queue.concat([newDir]) });
       }
 
       // BF-533: tick — pendingGrowth 방식 (명세 §4-2)
       function tick(state) {
         if (state.status !== "playing") return state;
         var dir = state.nextDir;
+        // BF-872: 입력 큐 소비 — 큐에 대기 중인 다음 방향을 nextDir 로 승격.
+        var _dq = state.dirQueue || [];
+        if (_dq.length > 0) {
+          state = Object.assign({}, state, { nextDir: _dq[0], dirQueue: _dq.slice(1) });
+        }
         var head = state.snake[0];
         var newHead = { x: head.x + dir.x, y: head.y + dir.y };
         if (isWallCollision(newHead, state.cols, state.rows)) {
@@ -1057,6 +1075,12 @@
         }
 
         var dir        = s.nextDir;
+        // BF-872: 입력 큐 소비 — 큐 대기 방향을 nextDir 로 승격. 이후 stateForItem
+        //   (Object.assign({}, s, ...)) 이 이 값을 이어받아 최종 return 에 반영된다.
+        var _dq = s.dirQueue || [];
+        if (_dq.length > 0) {
+          s = Object.assign({}, s, { nextDir: _dq[0], dirQueue: _dq.slice(1) });
+        }
         var head       = s.snake[0];
         // BF-635: cpu=[] (솔로 모드) 시 cpuHead 가 undefined → TypeError 방지
         var cpuHead    = s.cpu.length > 0 ? s.cpu[0] : null;

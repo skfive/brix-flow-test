@@ -492,9 +492,29 @@ export function createMultiplierStats() {
  * @returns {GameState}
  */
 export function changeDirection(state, newDir) {
-  const cur = state.dir;
-  if (cur.x + newDir.x === 0 && cur.y + newDir.y === 0) return state;
-  return { ...state, nextDir: newDir };
+  // BF-872: 입력 큐(dirQueue) 도입 — 한 틱 안에 들어온 빠른 연속 회전을
+  //   큐에 버퍼링해 한 틱에 하나씩 적용한다. 반전 판정은 "가장 최근에 의도된
+  //   방향"(큐가 있으면 큐 끝, 없으면 nextDir) 기준으로 하므로,
+  //   즉시 180° 반전으로 인한 자기충돌 즉사(AC2)는 계속 차단하면서도
+  //   RIGHT→DOWN→LEFT 같은 2단 U턴 입력이 씹히지 않는다.
+  const queue = state.dirQueue || [];
+  const ref = queue.length > 0 ? queue[queue.length - 1] : state.nextDir;
+  // 정반대 방향 무시 (자기충돌 즉사 방지)
+  if (ref.x + newDir.x === 0 && ref.y + newDir.y === 0) return state;
+  // 동일 방향 무시 (큐 낭비 방지)
+  if (ref.x === newDir.x && ref.y === newDir.y) return state;
+  // 큐 상한 2 (과도한 선입력 버퍼 방지)
+  if (queue.length >= 2) return state;
+  // 대기 중인 방향 변경이 아직 없으면 nextDir 에 직접 반영 (기존 동작 보존)
+  if (
+    queue.length === 0 &&
+    state.nextDir.x === state.dir.x &&
+    state.nextDir.y === state.dir.y
+  ) {
+    return { ...state, nextDir: newDir };
+  }
+  // 그 외에는 큐에 버퍼링 (연속 빠른 회전)
+  return { ...state, dirQueue: [...queue, newDir] };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -540,6 +560,12 @@ export function tick(state) {
   if (state.status !== "playing") return state;
 
   const dir = state.nextDir;
+  // BF-872: 입력 큐 소비 — 이번 틱은 nextDir 를 적용하고, 큐에 대기 중인
+  //   다음 방향을 nextDir 로 승격한다 (큐가 비어 있으면 기존 동작과 동일).
+  const _dq = state.dirQueue || [];
+  if (_dq.length > 0) {
+    state = { ...state, nextDir: _dq[0], dirQueue: _dq.slice(1) };
+  }
   const head = state.snake[0];
   const newHead = { x: head.x + dir.x, y: head.y + dir.y };
 
@@ -1301,6 +1327,13 @@ export function tickWithItems(state, nowMs = Date.now(), movePlayer = true, move
 
   // ── 2. 새 헤드 위치 계산 ─────────────────────────────────
   const dir     = s.nextDir;
+  // BF-872: 입력 큐 소비 — 이번 틱은 nextDir 를 적용하고, 큐에 대기 중인
+  //   다음 방향을 nextDir 로 승격한다 (큐가 비면 기존 동작과 동일).
+  //   이후 모든 return 이 { ...s } 를 spread 하므로 여기서 한 번만 갱신한다.
+  const _dq = s.dirQueue || [];
+  if (_dq.length > 0) {
+    s = { ...s, nextDir: _dq[0], dirQueue: _dq.slice(1) };
+  }
   const head    = s.snake[0];
   // BF-635: cpu=[] (솔로 모드) 시 cpuHead 가 undefined → 좌표 접근 TypeError 방지
   const cpuHead = s.cpu.length > 0 ? s.cpu[0] : null;
