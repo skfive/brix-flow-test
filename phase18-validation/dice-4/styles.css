@@ -1,0 +1,438 @@
+/* BF-900 · 주사위 통계 검증 페이지(dice-4) 스타일
+ * 디자인 SSOT: docs/design/dice-4-BF-897.md §2(컬러)/§3(타이포)/§4(레이아웃)/§6(가이드)
+ *  - 전량 dice/styles.css :root / [data-theme="light"] 토큰 복제 — 신규 HEX 0건(§2)
+ *  - 사용 컴포넌트 규칙만 복제(§6.3): topbar/btn/page/card/dice-*/roll-button/stats-*/stat-row
+ *  - 제외(원본 대비 복제 안 함): 히스토리 카드·전체삭제 모달·kbd-hint 규칙(§5.6)
+ *  - 다크 default (원본 승계) — 첫 진입 시 저장값 없으면 dark
+ */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+    "Twemoji Mozilla", "EmojiOne Color", "Android Emoji", sans-serif;
+
+  /* 다크 default (#0d1117 / rose-400 #fb7185) */
+  --color-bg-canvas: #0d1117;
+  --color-bg-surface: #161b22;
+  --color-bg-subtle: #1f2530;
+  --color-border-default: #262c36;
+  --color-border-strong: #3a4150;
+  --color-text-primary: #e8e8e4;
+  --color-text-secondary: #9a9a93;
+  --color-text-muted: #6b6b66;
+  --color-accent: #fb7185;
+  --color-accent-hover: #fda4af;
+  --color-accent-active: #f43f5e;
+  --color-accent-on: #0d1117;
+  --color-focus-ring: rgba(251, 113, 133, 0.55);
+
+  /* 주사위 전용 (§2.2) */
+  --color-roll-glow: rgba(251, 113, 133, 0.4);
+  --color-sum-accent: #fb7185;
+
+  /* spacing (§2.3 — 재사용) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* radius / shadow (§2.4) */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-dice: 16px;
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+  --shadow-roll: 0 6px 20px var(--color-roll-glow);
+  --shadow-roll-active: 0 2px 8px var(--color-roll-glow);
+
+  /* motion (§2.5) */
+  --motion-press: 150ms;
+  --motion-fast: 120ms;
+  --motion-mid: 220ms;
+  --motion-roll: 360ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --scale-press: 0.95;
+
+  /* typography (§3) */
+  --text-h1: 600 20px/1.3 var(--font-sans);
+  --text-dice: 400 5rem/1 var(--font-emoji); /* desktop ≥640px */
+  --text-dice-sm: 400 4rem/1 var(--font-emoji); /* mobile <640px */
+  --text-sum: 300 3rem/1 var(--font-mono);
+  --text-stat: 500 1.25rem/1.2 var(--font-mono);
+  --text-stat-label: 500 12px/1.4 var(--font-sans);
+  --text-roll-cta: 600 18px/1 var(--font-sans);
+  --text-body: 400 15px/1.65 var(--font-sans);
+  --text-caption: 400 12px/1.4 var(--font-sans);
+  --text-button: 500 14px/1 var(--font-sans);
+}
+
+[data-theme="light"] {
+  --color-bg-canvas: #fafaf9;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f1ef;
+  --color-border-default: #e5e5e2;
+  --color-border-strong: #d0d0cc;
+  --color-text-primary: #1a1a19;
+  --color-text-secondary: #6b6b66;
+  --color-text-muted: #9a9a93;
+  --color-accent: #e11d48;
+  --color-accent-hover: #be123c;
+  --color-accent-active: #9f1239;
+  --color-accent-on: #ffffff;
+  --color-focus-ring: rgba(225, 29, 72, 0.45);
+
+  --color-roll-glow: rgba(225, 29, 72, 0.25);
+  --color-sum-accent: #e11d48;
+
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* ───────────── reset / base ───────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font: var(--text-body);
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  transition:
+    background var(--motion-mid) var(--ease-out),
+    color var(--motion-mid) var(--ease-out);
+}
+button {
+  font-family: inherit;
+}
+
+/* sr-only (시각 hidden, SR 노출) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ───────────── topbar ───────────── */
+.topbar {
+  height: 56px;
+  padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  flex: 0 0 auto;
+}
+.topbar__title {
+  font: var(--text-h1);
+  margin: 0;
+  flex: 1 1 auto;
+}
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ───────────── buttons (공유 토큰 복제) ───────────── */
+.btn {
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  font: var(--text-button);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  background: transparent;
+  color: var(--color-text-primary);
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn--ghost {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+.btn--ghost:hover:not(:disabled) {
+  background: var(--color-bg-subtle);
+}
+
+/* ───────────── page / card ───────────── */
+.page {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-7) var(--space-5);
+  gap: var(--space-5);
+}
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+.dice-card {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+/* ───────────── 주사위 개수 선택 (1~5 가변) ───────────── */
+.dice-count {
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+.dice-count__legend {
+  font: var(--text-stat-label);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0;
+}
+.dice-count__group {
+  display: inline-flex;
+  gap: var(--space-2);
+  background: var(--color-bg-subtle);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+}
+.dice-count__btn {
+  min-width: 36px;
+  height: 32px;
+  padding: 0 var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: var(--text-button);
+  font-family: var(--font-mono);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+.dice-count__btn:hover:not([aria-checked="true"]) {
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+}
+.dice-count__btn[aria-checked="true"] {
+  background: var(--color-accent);
+  color: var(--color-accent-on);
+}
+.dice-count__btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ───────────── 주사위 박스 (5rem 이모지) ───────────── */
+.dice-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  padding: var(--space-4) 0;
+}
+.dice {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-dice);
+  background: var(--color-bg-canvas);
+  border: 1px solid var(--color-border-default);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--text-dice);
+  font-family: var(--font-emoji);
+  line-height: 1;
+  user-select: none;
+  transition: border-color var(--motion-fast) var(--ease-out);
+}
+.dice-box.is-rolling .dice {
+  animation: dice-wiggle var(--motion-roll) var(--ease-out);
+}
+@keyframes dice-wiggle {
+  0% {
+    transform: rotate(-2deg);
+  }
+  33% {
+    transform: rotate(2deg);
+  }
+  66% {
+    transform: rotate(-1deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* ───────────── 굴리기 CTA (accent rose) ───────────── */
+.roll-button {
+  height: 56px;
+  min-width: 200px;
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-accent-on);
+  font: var(--text-roll-cta);
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-shadow: var(--shadow-roll);
+  transition:
+    transform var(--motion-press) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+.roll-button:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+.roll-button:active:not(:disabled),
+.roll-button.is-pressed {
+  background: var(--color-accent-active);
+  transform: scale(var(--scale-press));
+  box-shadow: var(--shadow-roll-active);
+}
+.roll-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.roll-button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+/* ───────────── 통계 카드 (합계 강조) — 검증 핵심 ───────────── */
+.stats-card {
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-default);
+}
+.stat-row:last-child {
+  border-bottom: none;
+}
+.stat-row__label {
+  font: var(--text-stat-label);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.stat-row__value {
+  font: var(--text-stat);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.stat-row__value--sum {
+  font: var(--text-sum);
+  color: var(--color-sum-accent);
+  transition: color var(--motion-mid) var(--ease-out);
+}
+.stats-card.is-empty .stat-row__value {
+  color: var(--color-text-muted);
+}
+
+/* ───────────── 반응형 ───────────── */
+@media (max-width: 639px) {
+  .dice {
+    width: 80px;
+    height: 80px;
+    font: var(--text-dice-sm);
+    font-family: var(--font-emoji);
+  }
+  .roll-button {
+    height: 52px;
+    min-width: 100%;
+  }
+  .dice-card,
+  .stats-card {
+    padding: var(--space-5);
+  }
+  .page {
+    padding: var(--space-5) var(--space-4);
+  }
+}
+
+@media (max-width: 359px) {
+  .dice {
+    width: 72px;
+    height: 72px;
+  }
+  .roll-button {
+    height: 48px;
+  }
+}
+
+/* ───────────── prefers-reduced-motion ───────────── */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+  .dice-box.is-rolling .dice {
+    animation: none;
+  }
+  .roll-button:hover {
+    transform: none;
+  }
+  .roll-button:active,
+  .roll-button.is-pressed {
+    transform: none;
+  }
+  .stat-row__value--sum {
+    transition: none;
+  }
+}
