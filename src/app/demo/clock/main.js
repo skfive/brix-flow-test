@@ -189,9 +189,10 @@ document.addEventListener("keydown", (e) => {
     tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable;
   if (isEditable) return;
 
-  // Space — 정지/재개. 버튼 포커스 시 네이티브 클릭과 중복 방지(디자인 §6.6).
+  // Space — 정지/재개. #btn-toggle 포커스 시에만 네이티브 클릭과 중복 방지(디자인 §6.6).
+  // 다른 버튼(형식/테마) 포커스 상태에서도 Space 는 정지/재개를 토글해야 함(기획 AC-5).
   if (e.key === " " || e.code === "Space") {
-    if (tag === "BUTTON") return; // 네이티브 활성화에 위임
+    if (target === btnToggle) return; // 정지/재개 버튼 자체 → 네이티브 활성화에 위임
     e.preventDefault();
     toggleRunning();
     return;
