@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>/demo/tetris · 리더보드 데모</title>
+  <!-- 다크/라이트 초기화: FOUC 방지 (localStorage 우선) -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('tetris:theme');
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+      } catch (e) { /* localStorage 접근 불가 시 기본 dark 유지 */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-status="start" data-submit="idle">
+  <!-- ── Topbar ─────────────────────────────────────────── -->
+  <header class="topbar">
+    <h1 class="topbar__title">TETRIS <span class="topbar__tag">/demo</span></h1>
+    <div class="topbar__actions">
+      <button class="btn-icon" id="btn-open-leaderboard" aria-label="리더보드 열기" title="리더보드">🏆</button>
+      <button class="btn-icon" id="theme-toggle" aria-label="테마 전환" title="테마 전환">🌙</button>
+    </div>
+  </header>
+
+  <!-- ── 모바일 HUD (< 640px) ───────────────────────────── -->
+  <div class="mobile-hud" aria-hidden="true">
+    <div class="mobile-hud__item"><span>SCORE</span><b id="m-score">000000</b></div>
+    <div class="mobile-hud__item"><span>LEVEL</span><b id="m-level">1</b></div>
+    <div class="mobile-hud__item"><span>LINES</span><b id="m-lines">0</b></div>
+  </div>
+
+  <main class="game">
+    <!-- 좌측 HUD -->
+    <aside class="hud hud--left">
+      <div class="stat"><span class="stat__label">SCORE</span><span class="stat__value" id="score-value">000000</span></div>
+      <div class="stat"><span class="stat__label">BEST</span><span class="stat__value stat__value--sub" id="best-value">000000</span></div>
+      <div class="stat"><span class="stat__label">LEVEL</span><span class="stat__value" id="level-value">1</span></div>
+      <div class="stat"><span class="stat__label">LINES</span><span class="stat__value" id="lines-value">0</span></div>
+      <div class="preview">
+        <span class="preview__label">HOLD</span>
+        <div class="piece-preview" id="hold-grid"></div>
+      </div>
+    </aside>
+
+    <!-- 보드 + 오버레이 -->
+    <section class="board-wrapper">
+      <div class="board" id="game-board" role="img" aria-label="테트리스 게임 보드"></div>
+
+      <!-- 시작 오버레이 -->
+      <div class="overlay" id="overlay-start" data-overlay="start" role="dialog" aria-labelledby="start-title">
+        <div class="overlay__card">
+          <h2 class="overlay__title" id="start-title">TETRIS</h2>
+          <p class="overlay__desc">방향키로 이동·회전, Space 하드드롭, C 홀드, P 일시정지</p>
+          <button class="btn btn--primary" id="btn-start">▶ 게임 시작</button>
+          <button class="btn btn--ghost" id="btn-start-leaderboard">🏆 리더보드 보기</button>
+          <p class="start-best">BEST: <span id="start-best">000000</span></p>
+        </div>
+      </div>
+
+      <!-- 일시정지 오버레이 -->
+      <div class="overlay" id="overlay-pause" data-overlay="pause" role="dialog" aria-labelledby="pause-title" hidden>
+        <div class="overlay__card">
+          <h2 class="overlay__title" id="pause-title">일시정지</h2>
+          <button class="btn btn--primary" id="btn-resume">▶ 계속하기</button>
+          <button class="btn btn--secondary" id="btn-pause-restart">↺ 다시 시작</button>
+          <button class="btn btn--danger" id="btn-pause-quit">✕ 메뉴로</button>
+        </div>
+      </div>
+
+      <!-- 게임오버 오버레이 (+ 점수 제출 서브상태 머신) -->
+      <div class="overlay" id="overlay-gameover" data-overlay="gameover" role="dialog" aria-labelledby="go-title" hidden>
+        <div class="overlay__card">
+          <h2 class="overlay__title" id="go-title">💀 GAME OVER</h2>
+          <div class="go-stats">
+            <div class="go-stat"><span>SCORE</span><b id="go-score">000000</b></div>
+            <div class="go-stat"><span>BEST</span><b id="go-best">000000</b></div>
+            <div class="go-stat"><span>LEVEL</span><b id="go-level">1</b></div>
+            <div class="go-stat"><span>LINES</span><b id="go-lines">0</b></div>
+          </div>
+          <span class="new-record-badge" id="go-new-record" hidden>🏆 NEW RECORD!</span>
+
+          <!-- 제출 서브상태: idle (폼) -->
+          <form class="score-submit" id="score-submit" data-when="idle">
+            <label class="score-submit__label" for="nickname-input">리더보드에 점수 등록</label>
+            <input
+              class="score-submit__input"
+              id="nickname-input"
+              type="text"
+              maxlength="20"
+              autocomplete="off"
+              placeholder="닉네임 (1~20자)"
+              aria-label="닉네임"
+              aria-describedby="nickname-help"
+            />
+            <p class="score-submit__help" id="nickname-help">한글/영문/숫자·공백·_·- 만 사용</p>
+            <p class="field-error" id="nickname-error" role="alert" hidden></p>
+            <div class="score-submit__actions">
+              <button class="btn btn--primary" type="submit" id="btn-submit-score">등록</button>
+              <button class="btn btn--ghost" type="button" id="btn-submit-later">나중에</button>
+            </div>
+          </form>
+
+          <!-- 제출 서브상태: saving / success / error -->
+          <div class="save-status" id="save-status" aria-live="polite" data-when="hidden" hidden>
+            <div class="save-status__body">
+              <span class="save-status__icon" id="save-icon" aria-hidden="true"></span>
+              <p class="save-status__msg" id="save-msg"></p>
+            </div>
+            <div class="save-status__actions" id="save-actions"></div>
+          </div>
+
+          <div class="go-actions">
+            <button class="btn btn--primary" id="btn-newgame">▶ 새 게임</button>
+            <button class="btn btn--secondary" id="btn-go-quit">↩ 메뉴로</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 우측 HUD (NEXT) -->
+    <aside class="hud hud--right">
+      <div class="preview">
+        <span class="preview__label">NEXT</span>
+        <div class="piece-preview" id="next-grid"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 모바일 터치 컨트롤 -->
+  <div class="touch-controls" id="touch-controls" aria-hidden="false">
+    <div class="touch-controls__group">
+      <button class="touch-btn" data-cmd="moveLeft" aria-label="왼쪽으로 이동">◀</button>
+      <button class="touch-btn" data-cmd="softDrop" aria-label="소프트 드롭">▼</button>
+      <button class="touch-btn" data-cmd="moveRight" aria-label="오른쪽으로 이동">▶</button>
+    </div>
+    <div class="touch-controls__group">
+      <button class="touch-btn" data-cmd="rotateCW" aria-label="시계방향 회전">↻</button>
+      <button class="touch-btn" data-cmd="hardDrop" aria-label="하드 드롭">⤓</button>
+      <button class="touch-btn" data-cmd="hold" aria-label="홀드">⇄</button>
+      <button class="touch-btn" data-cmd="pause" aria-label="일시정지">⏸</button>
+    </div>
+  </div>
+
+  <!-- 리더보드 오버레이 -->
+  <div class="leaderboard" id="overlay-leaderboard" role="dialog" aria-modal="true" aria-label="리더보드" data-lb-state="loading" hidden>
+    <div class="leaderboard__card">
+      <header class="leaderboard__head">
+        <h2 class="leaderboard__title">🏆 리더보드 <span class="leaderboard__sub">오늘의 Top 10</span></h2>
+        <button class="btn-icon" id="btn-lb-close" aria-label="리더보드 닫기">✕</button>
+      </header>
+      <table class="lb-table">
+        <thead>
+          <tr><th scope="col">순위</th><th scope="col">플레이어</th><th scope="col" class="lb-num">점수</th><th scope="col" class="lb-num">레벨</th><th scope="col" class="lb-num">라인</th></tr>
+        </thead>
+        <tbody id="lb-body"></tbody>
+      </table>
+      <p class="lb-msg" id="lb-empty" hidden>아직 기록이 없습니다. 첫 기록의 주인공이 되어보세요!</p>
+      <div class="lb-msg" id="lb-loading" hidden>불러오는 중…</div>
+      <div class="lb-msg lb-msg--error" id="lb-error" hidden>
+        리더보드를 불러오지 못했습니다.
+        <button class="btn btn--ghost" id="btn-lb-retry">다시 시도</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./game.js"></script>
+</body>
+</html>

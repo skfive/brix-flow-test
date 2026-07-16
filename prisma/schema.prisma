@@ -1,0 +1,30 @@
+// Prisma schema — BF-836 (AC3)
+// planner 계약: docs/planning/tetris-BF-833.md §7
+//
+// 이 저장소는 vanilla-static 프론트가 중심이며 현재 실행 중인 DB/서버가 없다.
+// 본 schema/migration 은 /demo/tetris 리더보드 백엔드의 영속화 계약(SSOT)이며,
+// src/routes/api/tetris 핸들러의 TetrisScoreRepository 포트가 이 스키마를 구현한다.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// 테트리스 리더보드 점수 기록. createdAt 은 서버 시각 기준(클라이언트 시각 불신).
+model TetrisScore {
+  id         String   @id @default(uuid()) @db.Uuid
+  playerName String   @db.VarChar(20)
+  score      Int
+  level      Int
+  lines      Int
+  durationMs Int?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  // 리더보드 정렬/페이지네이션 최적화: score DESC, createdAt ASC (§6.3, §7.2)
+  @@index([score(sort: Desc), createdAt(sort: Asc)], map: "idx_tetris_score_leaderboard")
+  @@map("TetrisScore")
+}
