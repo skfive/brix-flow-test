@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>주사위 · /demo/dice</title>
+    <!-- 기존 dice/styles.css 재사용 — 토큰·공용 버튼·반응형·포커스 규칙 (신규 CSS 0건) -->
+    <link rel="stylesheet" href="../../styles.css" />
+    <script>
+      // 다크 default 강제 (FOUC 방지) — dice/index.html 의 head init 패턴 복제
+      (function () {
+        try {
+          var saved = localStorage.getItem("bf-theme");
+          var theme = saved === "light" || saved === "dark" ? saved : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (_e) {
+          // localStorage 사용 불가 환경 (private mode 등) — default 다크 유지
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 class="topbar__title">주사위 · /demo/dice</h1>
+      <div class="topbar__actions">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          id="theme-toggle"
+          aria-label="테마 전환"
+        >
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="card dice-card" aria-label="주사위 굴리기 데모">
+        <!-- 주사위 표시 (초기 1개 ⚀ — AC-1) -->
+        <div
+          class="dice-box"
+          id="dice-box"
+          role="group"
+          aria-label="주사위 결과"
+        >
+          <!-- main.js 가 렌더 — 초기엔 ⚀ (1) -->
+        </div>
+
+        <!-- 초기/굴림 결과 숫자 (SR aria-live 통지 — AC-1/AC-2) -->
+        <p
+          class="stat-row__value stat-row__value--sum"
+          id="roll-result"
+          aria-live="polite"
+          aria-label="굴린 값"
+        >
+          1
+        </p>
+
+        <button
+          type="button"
+          class="roll-button"
+          id="btn-roll"
+          aria-label="주사위 굴리기"
+        >
+          🎲 굴리기
+        </button>
+      </section>
+
+      <p class="kbd-hint">
+        <kbd>Space</kbd> / <kbd>Enter</kbd> 굴리기 · <kbd>T</kbd> 테마
+      </p>
+    </main>
+
+    <!-- 비-module script — file:// CORS 안전 (import/export/fetch 0건) -->
+    <script src="./roll.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
