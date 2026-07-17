@@ -5,7 +5,7 @@
 > 상위 스토리/파일명 기준: BF-989 · 형제 task: BF-991(planner·완료) / BF-995(developer) / BF-998(tester)
 > 기획 SSOT: `docs/planning/snake-canary-BF-989.md` (BF-991, [박기획]) — 본 문서는 그 규칙/상태/입력/접근성 계약의 **시각 레이어**만 정의한다
 > tech-stack: `vanilla-static` — 외부 의존성 0건 · system font · CSS 변수 자체 정의
-> 대상 라우트: `/demo/snake-canary` (= `src/app/demo/snake-canary/`, 신규 디렉터리)
+> 대상 라우트: `/demo/snake-canary` (= top-level `demo/snake-canary/`, 신규 디렉터리 — file:// 직접 열기 호환 관례, §0 전제 4)
 > mockup 참조: `docs/design/mockups/snake-canary/snake-canary-BF-989.html` (§7)
 
 ---
@@ -16,7 +16,9 @@
 
 **전제 2 — 공용 토큰 재사용, 신규 발명 최소화.** 본 게임은 `src/app/demo/*` 데모 패밀리(counter·clock·status)의 형제 모듈이다. 따라서 **그 형제들이 공유하는 `:root` 토큰 시스템(light 기본 + `prefers-color-scheme: dark` 자동 전환)을 그대로 승계**한다(실측 출처: `src/app/demo/counter/styles.css`). 크롬(제목·점수·상태·버튼·표면·테두리·포커스 링)은 100% 공용 토큰을 쓰고, **게임 고유 시각 요소(보드 배경·격자선·뱀 머리/몸·먹이·오버레이 스크림)만** 최소한의 신규 토큰(`--sc-*` 접두사)으로 추가한다. 다른 게임 구현(루트 `snake/`, `phase18-games/**`, 지뢰찾기 등)의 토큰·레이아웃은 참조하지 않는다.
 
-**전제 3 — mockup은 시각 시뮬레이션 전용.** `docs/design/mockups/snake-canary/snake-canary-BF-989.html`은 dev(BF-995)의 실제 산출물이 아니다. dev는 `src/app/demo/snake-canary/`에 canvas 렌더링으로 실제 게임을 구현하며, mockup의 보드는 CSS grid로 "정지된 한 프레임"을 흉내 낸 것이다. dev는 mockup을 시각 참조 가이드로만 쓰고 픽셀 단위 일치 의무는 없다.
+**전제 3 — mockup은 시각 시뮬레이션 전용.** `docs/design/mockups/snake-canary/snake-canary-BF-989.html`은 dev(BF-995)의 실제 산출물이 아니다. dev는 `demo/snake-canary/`에 canvas 렌더링으로 실제 게임을 구현하며, mockup의 보드는 CSS grid로 "정지된 한 프레임"을 흉내 낸 것이다. dev는 mockup을 시각 참조 가이드로만 쓰고 픽셀 단위 일치 의무는 없다.
+
+**전제 4 — 디렉터리·스크립트 로드는 top-level `demo/*` + 비-module `<script>` 관례를 따른다 (리뷰 정정).** 본 문서 초안은 기획 SSOT(BF-991) 가정 1·2를 승계해 `src/app/demo/snake-canary/` + `<script type="module">`(ES 모듈) 패턴을 지시했으나, 저장소의 최신 vanilla-static 형제 게임(`demo/color-switch/`(BF-979), `demo/minesweeper/`(BF-980), `demo/breakout-canary/` 등)은 이미 **top-level `demo/<game>/` 디렉터리 + 비-module `<script src="main.js">`(IIFE, 전역 노출)** 패턴으로 확립되어 있다. 이 패턴만이 본 게임의 명시 요건인 **`file://` 직접 열기 호환**(CORS로 인해 `type="module"`은 file://에서 로드 실패)을 만족한다. 따라서 경로는 `demo/snake-canary/`, 스크립트는 비-module `<script>`로 정정한다. dev(BF-995)는 이미 이 관례로 올바르게 구현했다. `snake-canary.js`는 `export` 대신 전역/IIFE로 순수 함수를 노출하고, `main.js`는 그 전역을 참조한다. (기획 SSOT의 상반된 가정 1·2는 로직 계약이 아닌 구조 관례이며, file:// AC와 확립된 형제 관례가 우선한다 — 후속 planner 문서 정합성은 §9.3 참조.)
 
 ---
 
@@ -303,7 +305,7 @@
 
 ## 6. dev 구현 가이드
 
-> dev(BF-995)가 `src/app/demo/snake-canary/{index.html,styles.css,snake-canary.js,main.js}` 구현 시 따를 단계별 지침. **로직은 기획 §3~§6, 시각은 본 문서.**
+> dev(BF-995)가 `demo/snake-canary/{index.html,styles.css,snake-canary.js,main.js}`(top-level `demo/*` 관례, §0 전제 4) 구현 시 따를 단계별 지침. **로직은 기획 §3~§6, 시각은 본 문서.**
 
 ### 6.1 토큰 셋업 (styles.css `:root`)
 1. `src/app/demo/counter/styles.css`의 `:root` + dark `@media` 블록을 **그대로 복제**(§2.1). 값 변경 금지.
@@ -311,7 +313,7 @@
 3. §3 타이포 토큰(`--text-score` 등 게임 전용)을 `:root`에 추가.
 
 ### 6.2 마크업 (index.html)
-1. §4.1 골격 그대로. `<script type="module" src="main.js">`(기획 §0 가정 2 — ES 모듈, `file://` 직접 열기 비대상).
+1. §4.1 골격 그대로. **비-module** `<script src="snake-canary.js"></script>` → `<script src="main.js"></script>` 순서로 로드(§0 전제 4 — IIFE/전역 노출, `file://` 직접 열기 호환 필수). `type="module"` 사용 금지(file://에서 CORS로 로드 실패).
 2. `<canvas id="board" width="400" height="400" aria-hidden="true">` — 논리 해상도 속성 고정.
 3. D-pad는 실제 `<button type="button">` + §7.2 `aria-label`. `<nav aria-label="방향 조작">`으로 감쌈.
 4. `<noscript>` 폴백 문구("이 게임은 JavaScript가 필요합니다") 포함(기획 §7.1).
@@ -331,7 +333,7 @@
 5. 오버레이 표시/버튼 노출은 상태에 따라 토글(§5.3·§5.4).
 
 ### 6.5 기존 요소 보존 (기획 §8)
-- `src/app/demo/{counter,clock,status}/**`, `snake/**`, `phase18-games/**`, `package.json` **미변경**. 토큰은 counter에서 **복제**할 뿐 import·수정하지 않는다.
+- `src/app/demo/{counter,clock,status}/**`, `demo/{color-switch,minesweeper,breakout-canary}/**`, `snake/**`, `phase18-games/**`, `package.json` **미변경**. 승계 토큰(§2.1)은 공용 디자인 토큰 값을 **복제**할 뿐 import·수정하지 않는다.
 
 ---
 
@@ -390,6 +392,7 @@
 - **오버레이 사유 배지**: `gameoverReason`(wall/self/board-full)을 배지로 노출할지 문구로만 할지는 §5.4에서 선택 허용. 최소 요건은 "최종 점수 텍스트 표시".
 - **먹이 형태**: 원형 권장이나 라운드 사각도 허용(§5.1). 색-비의존(형태 구분)만 지키면 됨.
 - **BF-989 vs BF-993 번호**: 파일명은 시스템 지정 `owned_paths`(`snake-canary-BF-989.md`)를 따랐고 실제 작업 티켓은 BF-993이다(기획 §0 가정 7과 동일 상황). 운영자 확인 권장.
+- **[리뷰 정정 반영] 디렉터리·스크립트 로드 관례 — 기획 SSOT와 불일치 존재**: 초안은 기획 SSOT(BF-991) 가정 1·2를 그대로 승계해 `src/app/demo/snake-canary/` + `<script type="module">`(ES 모듈, `file://` 비대상)을 지시했으나, 최리뷰(BF-993 review)가 지적한 대로 이는 저장소의 최신 vanilla-static 형제 관례(`demo/*` top-level + 비-module `<script>`, `file://` 호환) 및 본 게임의 명시 `file://` 호환 AC와 어긋난다. 본 개정에서 §0 전제 4·§6.2·§6.5·§14 참조를 `demo/snake-canary/` + 비-module `<script>`로 정정했다. **단, 기획 SSOT(`docs/planning/snake-canary-BF-989.md` §14, 가정 1·2)는 여전히 옛 경로/모듈 가정을 담고 있다** — 해당 문서는 planner(BF-991) 소유라 본 designer task의 `owned_paths` 밖이므로 직접 수정하지 않는다. 후속 문서 정합성을 위해 planner가 SSOT 가정 1·2를 동일하게 정정하도록 운영자 확인을 권장한다. dev(BF-995)는 이미 `demo/snake-canary/` + 비-module로 올바르게 구현했으므로 구현 측 실질 피해는 없다.
 
 ---
 
