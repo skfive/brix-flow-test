@@ -29,6 +29,7 @@
   // ── DOM 참조 ────────────────────────────────────────────
   var scoreEl = document.querySelector('[data-role="score"]');
   var streakEl = document.querySelector('[data-role="streak"]');
+  var streakResetEl = document.querySelector('[data-role="streak-reset"]');
   var timeEl = document.querySelector('[data-role="time"]');
   var ruleBannerEl = document.querySelector(".rule-banner");
   var ruleIconEl = document.querySelector('[data-role="rule-icon"]');
@@ -75,6 +76,13 @@
     // 강제 리플로우로 애니메이션 재시작
     void el.offsetWidth;
     el.classList.add("is-pop");
+  }
+
+  // 연속 리셋 신호(↺): 색 무관 채널로 streak 리셋을 알림 (design §5.1)
+  function setStreakReset(show) {
+    if (!streakResetEl) return;
+    if (show) streakResetEl.removeAttribute("hidden");
+    else streakResetEl.setAttribute("hidden", "");
   }
 
   function renderHud(animate) {
@@ -134,9 +142,9 @@
     feedbackEl.className = "feedback feedback--idle";
     if (state.status === "playing" && state.round) {
       var meta = RULE_META[state.round.rule];
-      var target = state.round.rule === "ink" ? LABEL[state.round.ink] : LABEL[state.round.word];
-      feedbackEl.innerHTML = "글자의 <strong>" + meta.key.replace("글자 ", "") +
-        "</strong>(" + target + ")을 고르세요 — " + meta.trap + "에 속지 마세요";
+      // Stroop 간섭 유지: 규칙 채널(색/뜻)만 안내하고 정답 색상명은 노출하지 않는다.
+      feedbackEl.innerHTML = "<strong>" + meta.key +
+        "</strong>에 맞는 색을 고르세요 — " + meta.trap + "에 속지 마세요";
     } else {
       feedbackEl.textContent = "규칙에 맞는 색을 빠르게 고르세요";
     }
@@ -223,6 +231,7 @@
     renderStimulus();
     renderIdleFeedback();
     clearBtnResults();
+    setStreakReset(false); // 새 라운드 진입 시 리셋 신호 해제
     setAnswersEnabled(true);
     roundStartTs = now();
   }
@@ -256,6 +265,7 @@
     stimulusEl.classList.add(state.lastResult === "correct" ? "is-correct" : "is-wrong");
     renderResultFeedback();
     renderAnswerResult();
+    setStreakReset(state.lastResult === "wrong"); // 오답 → 연속 리셋 신호 표시
     setAnswersEnabled(false);
 
     // 피드백 표시 후 다음 라운드
@@ -287,6 +297,7 @@
   // ── 게임오버 ────────────────────────────────────────────
   function endGame() {
     clearTimers();
+    setStreakReset(false);
     setAnswersEnabled(false);
     renderHud(false);
     renderGameover();
