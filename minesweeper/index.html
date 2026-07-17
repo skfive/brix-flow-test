@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지뢰찾기 · /demo/minesweeper</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="ms-app">
+    <h1 class="ms-title">지뢰찾기</h1>
+
+    <div class="ms-statusbar">
+      <div class="ms-difficulty" id="difficulty" role="radiogroup" aria-label="난이도">
+        <button type="button" role="radio" aria-checked="true"  data-difficulty="beginner">초급</button>
+        <button type="button" role="radio" aria-checked="false" data-difficulty="intermediate">중급</button>
+        <button type="button" role="radio" aria-checked="false" data-difficulty="expert">고급</button>
+      </div>
+      <output class="ms-counter" id="mine-counter" aria-live="polite" aria-label="남은 지뢰">
+        <span class="ms-counter__icon" aria-hidden="true">🚩</span>
+        <span class="ms-counter__value" id="mine-counter-value">010</span>
+      </output>
+      <button type="button" class="ms-restart" id="restart-btn">↻ 재시작</button>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board-scroll">
+        <div id="board" class="ms-board" role="grid" aria-label="지뢰찾기 보드"
+             data-difficulty="beginner" style="--cols:9;">
+          <!-- 셀 버튼은 main.js 가 생성 -->
+        </div>
+      </div>
+      <div id="result-banner" class="ms-banner" data-result="" hidden aria-live="assertive">
+        <p class="ms-banner__title" id="result-title"></p>
+        <button type="button" class="ms-banner__btn" id="result-restart">↻ 다시 하기</button>
+      </div>
+    </div>
+
+    <p class="ms-hint">
+      좌클릭 · Enter/Space: 열기 &nbsp;·&nbsp; 우클릭 · F: 깃발<br>
+      방향키: 셀 이동 &nbsp;·&nbsp; Tab: 보드 진입/이탈
+    </p>
+  </main>
+
+  <script src="./logic.js"></script>
+  <script src="./main.js"></script>
+</body>
+</html>

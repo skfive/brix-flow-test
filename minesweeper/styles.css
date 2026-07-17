@@ -1,0 +1,216 @@
+/* BF-982 · 지뢰찾기 스타일
+ * 디자인 SSOT: docs/design/minesweeper-BF-980.md §2·§3·§4.1 (토큰 미러 — mockup :root 복제)
+ * 기획 SSOT: docs/plan/minesweeper-BF-978.md
+ * vanilla-static — 외부 폰트/CDN 0건, system font. */
+:root{
+  /* ── 표준 토큰(승계) ── */
+  --color-bg-canvas:#0B0F17; --color-bg-surface:#141B26; --color-bg-subtle:#1C2431;
+  --color-border-default:#273140; --color-border-strong:#3A4657;
+  --color-text-primary:#E8EDF4; --color-text-secondary:#9AA7B8; --color-text-muted:#63708A;
+  --color-accent:#5B82F0; --color-accent-hover:#6E90F5; --color-accent-on:#0B0F17;
+  --color-focus-ring:rgba(91,130,240,.55);
+  --color-success:#4ADE80; --color-danger:#E55858;
+
+  /* ── 지뢰찾기 고유 토큰(신규) ── */
+  --board-bg:#070B12; --board-border:#273140;
+  --cell-hidden-face:#232E40; --cell-hidden-face-hover:#2B3A52;
+  --cell-bevel-light:rgba(232,237,244,.12); --cell-bevel-dark:rgba(5,7,12,.50);
+  --cell-revealed-bg:#141B26; --cell-revealed-border:rgba(39,49,64,.9);
+  --flag-glyph:#E55858; --flag-face:#26120F; --flag-ring:rgba(229,88,88,.45);
+  --mine-glyph:#0B0F17; --mine-face:#20293A;
+  --cell-exploded-face:#E55858; --cell-exploded-glyph:#0B0F17;
+  --flag-wrong:#63708A;
+  --overlay-scrim:rgba(5,7,12,.74);
+  --win-tint:rgba(74,222,128,.14); --lose-tint:rgba(229,88,88,.14);
+
+  /* ── 숫자 1~8 색(§2.3 · 색맹 대응: 글리프 1차 구분, 색은 보조) ── */
+  --num-1:#6E90F5; --num-2:#4ADE80; --num-3:#F87171; --num-4:#A78BFA;
+  --num-5:#F0883E; --num-6:#38BDF8; --num-7:#E8EDF4; --num-8:#9AA7B8;
+
+  /* ── 간격·반경·모션(승계) ── */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px; --radius-pill:999px;
+  --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+  --cell-gap:2px;
+  --motion-fast:130ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* ── 폰트(system stack · 웹폰트 금지) ── */
+  --font-sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-mono:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+
+  /* ── 타이포 ── */
+  --text-h1:600 20px/1.3 var(--font-sans);
+  --text-hud-value:700 clamp(20px,6vw,28px)/1 var(--font-mono);
+  --text-hud-label:600 12px/1.2 var(--font-sans);
+  --text-cell:700 clamp(13px,3.2vw,20px)/1 var(--font-mono);
+  --text-glyph:400 clamp(14px,3.4vw,22px)/1 var(--font-sans);
+  --text-banner-title:700 clamp(22px,7vw,30px)/1.2 var(--font-sans);
+  --text-button:600 14px/1 var(--font-sans);
+  --text-body:400 15px/1.5 var(--font-sans);
+  --text-caption:400 13px/1.4 var(--font-sans);
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0; background:var(--color-bg-canvas); color:var(--color-text-primary);
+  font:var(--text-body); -webkit-font-smoothing:antialiased;
+  padding:var(--space-6) var(--space-4) var(--space-7);
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-4);
+}
+
+/* ══ 앱 컨테이너 ══ */
+.ms-app{ display:flex; flex-direction:column; align-items:center; gap:var(--space-4); width:100%; }
+.ms-title{ font:var(--text-h1); margin:0; letter-spacing:.01em; }
+
+/* 상태바 */
+.ms-statusbar{
+  width:100%; max-width:520px;
+  display:flex; align-items:center; justify-content:space-between; gap:var(--space-3);
+  flex-wrap:wrap;
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-lg); padding:var(--space-3) var(--space-4);
+  box-shadow:var(--shadow-panel);
+}
+.ms-difficulty{
+  display:inline-flex; gap:var(--space-1); background:var(--color-bg-canvas);
+  padding:var(--space-1); border-radius:var(--radius-md); border:1px solid var(--color-border-default);
+}
+.ms-difficulty button{
+  font:var(--text-button); border:1px solid transparent; border-radius:var(--radius-sm);
+  padding:var(--space-2) var(--space-3); cursor:pointer;
+  background:var(--color-bg-subtle); color:var(--color-text-secondary);
+  transition:background var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
+}
+.ms-difficulty button:hover{ background:var(--color-border-default); color:var(--color-text-primary); }
+.ms-difficulty button[aria-checked="true"]{
+  background:var(--color-accent); color:var(--color-accent-on); border-color:var(--color-accent);
+  box-shadow:0 1px 6px rgba(91,130,240,.35);
+}
+.ms-counter{ display:inline-flex; align-items:center; gap:var(--space-2); }
+.ms-counter__icon{ font:var(--text-glyph); }
+.ms-counter__value{ font:var(--text-hud-value); color:var(--color-text-primary); font-variant-numeric:tabular-nums; }
+.ms-counter__value.is-negative{ color:var(--color-danger); }
+.ms-restart{
+  font:var(--text-button); cursor:pointer; border-radius:var(--radius-sm);
+  padding:var(--space-2) var(--space-3);
+  background:var(--color-bg-subtle); color:var(--color-text-primary);
+  border:1px solid var(--color-border-strong);
+  transition:background var(--motion-fast) var(--ease-out);
+}
+.ms-restart:hover{ background:var(--color-border-default); }
+
+/* 보드 래퍼(오버레이 배너 기준) + 가로 스크롤 컨테이너 */
+.board-wrap{ position:relative; display:inline-block; max-width:100%; }
+.board-scroll{ max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:var(--space-1); }
+.ms-board{
+  display:grid;
+  grid-template-columns:repeat(var(--cols), var(--cell-size));
+  grid-auto-rows:var(--cell-size);
+  gap:var(--cell-gap); background:var(--board-bg);
+  border:1px solid var(--board-border); border-radius:var(--radius-md);
+  padding:var(--cell-gap);
+}
+
+/* 셀 공통 */
+.cell{
+  font:var(--text-cell); color:var(--color-text-primary);
+  border:0; border-radius:2px; padding:0; margin:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; user-select:none;
+  transition:background var(--motion-fast) var(--ease-out);
+}
+/* 미오픈(볼록 bevel) */
+.cell[data-state="hidden"]{
+  background:var(--cell-hidden-face);
+  box-shadow: inset 2px 2px 0 var(--cell-bevel-light),
+              inset -2px -2px 0 var(--cell-bevel-dark);
+}
+.cell[data-state="hidden"]:hover,
+.cell[data-state="hidden"]:focus-visible{ background:var(--cell-hidden-face-hover); }
+/* 오픈(꺼진 평면) */
+.cell[data-state="revealed"]{
+  background:var(--cell-revealed-bg); cursor:default;
+  box-shadow: inset 0 0 0 1px var(--cell-revealed-border);
+}
+.cell[data-num="1"]{ color:var(--num-1); }
+.cell[data-num="2"]{ color:var(--num-2); }
+.cell[data-num="3"]{ color:var(--num-3); }
+.cell[data-num="4"]{ color:var(--num-4); }
+.cell[data-num="5"]{ color:var(--num-5); }
+.cell[data-num="6"]{ color:var(--num-6); }
+.cell[data-num="7"]{ color:var(--num-7); }
+.cell[data-num="8"]{ color:var(--num-8); }
+/* 플래그 */
+.cell[data-state="flagged"]{
+  background:var(--flag-face); color:var(--flag-glyph); font:var(--text-glyph);
+  box-shadow: inset 0 0 0 1px var(--flag-ring),
+              inset 2px 2px 0 var(--cell-bevel-light),
+              inset -2px -2px 0 var(--cell-bevel-dark);
+}
+/* 지뢰 공개(안전/승리) */
+.cell[data-mine="revealed"]{
+  background:var(--mine-face); color:var(--mine-glyph); font:var(--text-glyph);
+  box-shadow: inset 0 0 0 1px var(--cell-revealed-border);
+}
+/* 폭발(밟은 지뢰) */
+.cell[data-mine="exploded"]{
+  background:var(--cell-exploded-face); color:var(--cell-exploded-glyph); font:var(--text-glyph);
+}
+/* 오답 flag(패배 시 비지뢰에 걸린 flag) */
+.cell[data-state="wrong-flag"]{
+  background:var(--cell-revealed-bg); color:var(--flag-wrong); font:var(--text-glyph);
+  position:relative; box-shadow: inset 0 0 0 1px var(--cell-revealed-border);
+}
+.cell[data-state="wrong-flag"]::after{
+  content:"✖"; position:absolute; font:700 60% var(--font-sans); color:var(--color-danger);
+}
+
+/* 포커스 링(모든 상호작용 요소 · planner §7.1) */
+.cell:focus-visible,
+.ms-difficulty button:focus-visible,
+.ms-restart:focus-visible,
+.ms-banner__btn:focus-visible{
+  outline:2px solid var(--color-focus-ring); outline-offset:2px; z-index:1;
+}
+
+/* 조작 안내 */
+.ms-hint{ font:var(--text-caption); color:var(--color-text-muted); text-align:center; margin:0; max-width:360px; }
+
+/* 결과 배너(보드 오버레이) */
+.ms-banner{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:var(--space-3);
+  background:var(--overlay-scrim); border-radius:var(--radius-md); backdrop-filter:blur(1px);
+  animation:banner-in var(--motion-fast) var(--ease-out);
+}
+.ms-banner[hidden]{ display:none; }
+.ms-banner__title{ font:var(--text-banner-title); margin:0; text-align:center; }
+.ms-banner[data-result="won"]{ box-shadow:inset 0 0 0 2px var(--color-success);
+  background:linear-gradient(var(--win-tint),var(--win-tint)), var(--overlay-scrim); }
+.ms-banner[data-result="won"] .ms-banner__title{ color:var(--color-success); }
+.ms-banner[data-result="lost"]{ box-shadow:inset 0 0 0 2px var(--color-danger);
+  background:linear-gradient(var(--lose-tint),var(--lose-tint)), var(--overlay-scrim); }
+.ms-banner[data-result="lost"] .ms-banner__title{ color:var(--color-danger); }
+.ms-banner__btn{
+  font:var(--text-button); cursor:pointer; border-radius:var(--radius-sm);
+  padding:var(--space-2) var(--space-4);
+  background:var(--color-bg-subtle); color:var(--color-text-primary);
+  border:1px solid var(--color-border-strong);
+}
+.ms-banner__btn:hover{ background:var(--color-border-default); }
+
+@keyframes banner-in{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+
+/* 반응형 셀 스케일(§4.4) — 난이도별 --cell-size 는 main.js 가 data-difficulty 로 세팅 */
+.ms-board[data-difficulty="beginner"]{ --cell-size:clamp(30px,9.5vw,34px); }
+.ms-board[data-difficulty="intermediate"]{ --cell-size:clamp(22px,5.6vw,30px); }
+.ms-board[data-difficulty="expert"]{ --cell-size:clamp(20px,3vw,26px); }
+
+@media (max-width:479px){
+  .ms-statusbar{ justify-content:center; }
+}
+
+/* 모션 감소 — 배너·셀 전환 애니메이션 무효화(§6.4) */
+@media (prefers-reduced-motion: reduce){
+  *{ animation:none !important; transition:none !important; }
+}
