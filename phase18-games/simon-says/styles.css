@@ -68,6 +68,29 @@ body {
 }
 .app__title { font:var(--text-h1); margin:0; letter-spacing:.01em; }
 
+/* 최고기록 chip (BF-948 §4.1·§5.1 — 신규 색 토큰 0건, 기존 :root 변수 참조만) */
+.best-score {
+  display:inline-flex; align-items:center; gap:var(--space-2);
+  padding:var(--space-2) var(--space-4); max-width:88vw;
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-pill);
+  transition:border-color var(--motion-fast) var(--ease-out);
+}
+.best-score__label {
+  font:var(--text-round-label); letter-spacing:.06em; text-transform:uppercase;
+  color:var(--color-text-secondary);
+}
+.best-score__value { font:700 14px/1 var(--font-mono); color:var(--color-text-secondary); }
+.best-score.is-empty .best-score__value { color:var(--color-text-muted); }
+/* 새 기록 갱신 순간 — 색·값 변화가 1차 신호, pop 은 모션 부가 (§5.1·§5.5) */
+.best-score--new { border-color:var(--color-success); animation:best-score-pop 200ms var(--ease-out); }
+.best-score--new .best-score__value { color:var(--color-success); }
+@keyframes best-score-pop {
+  0% { transform:scale(1); }
+  45% { transform:scale(1.08); }
+  100% { transform:scale(1); }
+}
+
 /* 상태 텍스트 (aria-live) */
 .status {
   font:var(--text-status); color:var(--status-info); margin:0; text-align:center;
@@ -77,6 +100,7 @@ body {
 .status--your-turn { color:var(--status-your-turn); }
 .status--success { color:var(--color-success); }
 .status--fail { color:var(--color-danger); }
+.status--paused { color:var(--status-info); }
 
 /* 4색 패드 그리드 (2×2, 중앙 코어) */
 .pad-grid {
@@ -160,4 +184,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pad, .status, .btn { transition:none; }
   .pad.is-lit { transform:none; box-shadow:0 0 0 3px var(--color-text-primary); }
+  /* BF-949 신규 셀렉터만 추가 — 위 기존 규칙은 불변(§5.5 회귀 가드) */
+  .best-score { transition:none; }
+  .best-score--new { animation:none; } /* 값·색만 즉시 갱신, pop 미적용 */
 }
