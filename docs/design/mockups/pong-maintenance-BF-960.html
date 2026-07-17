@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pong 키보드 조작·포커스 UI 시안 — BF-960</title>
+    <style>
+      /* ── 디자인 토큰 (원본 pong-BF-910 :root 값 그대로 승계) ── */
+      :root {
+        --color-bg-canvas: #0b0f17;
+        --color-bg-surface: #141b26;
+        --color-bg-subtle: #1c2431;
+        --color-border-default: #273140;
+        --color-border-strong: #3a4657;
+        --color-text-primary: #e8edf4;
+        --color-text-secondary: #9aa7b8;
+        --color-text-muted: #63708a;
+        --color-accent: #5b82f0;
+        --color-accent-hover: #6e90f5;
+        --color-accent-on: #0b0f17;
+        --color-focus-ring: rgba(91, 130, 240, 0.55);
+        --color-danger: #e55858;
+
+        --court-bg: #05070c;
+        --court-line: rgba(232, 237, 244, 0.28);
+        --court-net: rgba(232, 237, 244, 0.55);
+        --ball-color: #f5f7fa;
+        --paddle-player: #4ade80;
+        --paddle-player-glow: rgba(74, 222, 128, 0.4);
+        --paddle-cpu: #f59e6b;
+        --paddle-cpu-glow: rgba(245, 158, 107, 0.4);
+        --overlay-scrim: rgba(5, 7, 12, 0.72);
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-pill: 999px;
+
+        --shadow-panel: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+        --font-sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo",
+          "Malgun Gothic", sans-serif;
+        --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+
+        --motion-fast: 120ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        font-family: var(--font-sans);
+        line-height: 1.5;
+        padding: var(--space-6) var(--space-5) var(--space-7);
+      }
+
+      /* ── mockup 문서 셸 (실제 게임 UI 아님, 시안 설명용) ── */
+      .doc {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      .doc__head {
+        border-bottom: 1px solid var(--color-border-default);
+        padding-bottom: var(--space-4);
+        margin-bottom: var(--space-6);
+      }
+      .doc__head h1 {
+        font: 700 22px/1.3 var(--font-sans);
+        margin: 0 0 var(--space-2);
+      }
+      .doc__head p {
+        margin: 0;
+        color: var(--color-text-secondary);
+        font-size: 14px;
+      }
+      .doc__badge {
+        display: inline-block;
+        font: 600 12px/1 var(--font-mono);
+        color: var(--color-accent);
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-pill);
+        padding: 6px 12px;
+        margin-bottom: var(--space-3);
+      }
+      .section {
+        margin-bottom: var(--space-7);
+      }
+      .section__title {
+        font: 600 15px/1.3 var(--font-sans);
+        color: var(--color-text-primary);
+        margin: 0 0 var(--space-2);
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+      }
+      .section__title .ac {
+        font: 600 11px/1 var(--font-mono);
+        color: var(--color-accent);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-sm);
+        padding: 4px 6px;
+      }
+      .section__desc {
+        color: var(--color-text-secondary);
+        font-size: 13px;
+        margin: 0 0 var(--space-4);
+      }
+
+      /* ── 실제 컴포넌트 스타일 (styles.css 승계 + 본 시안 신규 규칙) ── */
+      .pong-court-wrap {
+        position: relative;
+        width: 100%;
+        max-width: 560px;
+        margin: 0 auto;
+        aspect-ratio: 2 / 1;
+        border: 2px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        background: var(--court-bg);
+      }
+
+      /* 코트 배경(모의 canvas) — 네트·패들·공 정적 표현 */
+      .court {
+        position: absolute;
+        inset: 0;
+      }
+      .court__net {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        border-left: 3px dashed var(--court-net);
+        transform: translateX(-50%);
+      }
+      .paddle {
+        position: absolute;
+        width: 10px;
+        height: 72px;
+        border-radius: var(--radius-sm);
+        top: 40%;
+      }
+      .paddle--player {
+        left: 14px;
+        background: var(--paddle-player);
+        box-shadow: 0 0 14px var(--paddle-player-glow);
+      }
+      .paddle--cpu {
+        right: 14px;
+        background: var(--paddle-cpu);
+        box-shadow: 0 0 14px var(--paddle-cpu-glow);
+        top: 30%;
+      }
+      .ball {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--ball-color);
+        box-shadow: 0 0 10px rgba(245, 247, 250, 0.5);
+        left: 46%;
+        top: 52%;
+      }
+      /* 일시정지 동결 표시용 라벨 */
+      .ball--frozen::after {
+        content: "정지";
+        position: absolute;
+        left: 50%;
+        top: -20px;
+        transform: translateX(-50%);
+        font: 600 10px/1 var(--font-mono);
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+      }
+
+      /* 오버레이 (styles.css 승계) */
+      .pong-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--overlay-scrim);
+        padding: var(--space-4);
+      }
+      .pong-overlay__card {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-panel);
+        padding: var(--space-5);
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        max-width: 320px;
+      }
+      .pong-overlay__title {
+        margin: 0;
+        font: 700 clamp(22px, 6vw, 30px) / 1.2 var(--font-mono);
+        color: var(--color-text-primary);
+        /* 원본의 outline:none 제거 → 아래 :focus-visible 로 대체 (GAP-1) */
+      }
+      .pong-overlay__title[data-winner="player"] {
+        color: var(--paddle-player);
+      }
+      /* ★ 본 시안 신규 규칙 — 버튼과 동일 토큰 (AC-F1·F3) */
+      .pong-overlay__title:focus-visible,
+      .pong-overlay__title.is-focus-demo {
+        outline: 3px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+      .pong-overlay__body {
+        margin: 0;
+        font: 400 14px/1.5 var(--font-sans);
+        color: var(--color-text-secondary);
+      }
+      .pong-overlay__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--space-3);
+      }
+
+      /* 하단 조작 안내 + 버튼 (styles.css 승계) */
+      .pong-controls {
+        max-width: 560px;
+        margin: var(--space-4) auto 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+      .pong-hint {
+        margin: 0;
+        font: 400 15px/1.5 var(--font-sans);
+        color: var(--color-text-secondary);
+        background: var(--color-bg-subtle);
+        border-radius: var(--radius-md);
+        padding: var(--space-3) var(--space-4);
+        text-align: center;
+      }
+      .pong-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--space-3);
+      }
+
+      /* 버튼 3 variant (styles.css 승계) */
+      .pong-btn {
+        font: 600 14px/1 var(--font-sans);
+        min-height: 44px;
+        padding: var(--space-3) var(--space-5);
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background var(--motion-fast), transform var(--motion-fast),
+          border-color var(--motion-fast);
+      }
+      .pong-btn:focus-visible,
+      .pong-btn.is-focus-demo {
+        outline: 3px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+      .pong-btn--primary {
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+      }
+      .pong-btn--secondary {
+        background: var(--color-bg-subtle);
+        color: var(--color-text-primary);
+        border-color: var(--color-border-default);
+      }
+      .pong-btn--ghost {
+        background: transparent;
+        color: var(--color-text-secondary);
+      }
+
+      /* 포커스 링 비교 섹션 */
+      .focus-compare {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-6);
+        align-items: center;
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+      }
+      .focus-compare__item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        align-items: center;
+      }
+      .focus-compare__label {
+        font: 600 12px/1 var(--font-mono);
+        color: var(--color-text-muted);
+      }
+      .focus-token {
+        font: 400 12px/1.5 var(--font-mono);
+        color: var(--color-text-secondary);
+        background: var(--color-bg-canvas);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-sm);
+        padding: var(--space-2) var(--space-3);
+        margin-top: var(--space-3);
+      }
+      .demo-title {
+        font: 700 24px/1.2 var(--font-mono);
+        color: var(--color-text-primary);
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-sm);
+        padding: 4px 10px;
+      }
+
+      /* 360px 시뮬레이션 프레임 */
+      .frame360 {
+        width: 360px;
+        max-width: 100%;
+        border: 2px dashed var(--color-border-strong);
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+        background: var(--color-bg-canvas);
+        overflow-x: auto;
+      }
+      .frame360__caption {
+        font: 600 11px/1 var(--font-mono);
+        color: var(--color-text-muted);
+        margin: 0 0 var(--space-3);
+      }
+      .frame360 .pong-hint {
+        font-size: 13px; /* ≤360px 규칙 */
+      }
+
+      .kbd {
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+      }
+
+      .legend {
+        font-size: 12px;
+        color: var(--color-text-muted);
+        margin-top: var(--space-3);
+      }
+      .legend strong {
+        color: var(--color-accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc">
+      <header class="doc__head">
+        <span class="doc__badge">BF-960 · designer</span>
+        <h1>Pong 키보드 조작·포커스 UI 시안</h1>
+        <p>
+          유지보수 시안 — 오버레이 타이틀 포커스 링(GAP-1) · 조작 안내 문구
+          보강(GAP-2) · 일시정지 동결 시각 피드백. 원본 pong-BF-910 토큰 값 불변
+          승계, 신규 색/토큰 0건.
+        </p>
+      </header>
+
+      <!-- 1. start 오버레이 -->
+      <section class="section">
+        <h2 class="section__title">
+          1. start 오버레이 — 시작·이동 키 안내 + 포커스 링
+          <span class="ac">AC-F1 · AC-H2</span>
+        </h2>
+        <p class="section__desc">
+          상태 진입 시 <code>overlayTitle.focus()</code>로 프로그램 포커스가 타이틀로
+          이동 → 파란 <span class="kbd">:focus-visible</span> 링이 보인다. 본문에
+          시작 키(Enter/Space)와 이동 키를 안내.
+        </p>
+        <div class="pong-court-wrap">
+          <div class="court">
+            <span class="court__net"></span>
+            <span class="paddle paddle--player"></span>
+            <span class="paddle paddle--cpu"></span>
+            <span class="ball"></span>
+          </div>
+          <div class="pong-overlay" data-state="start">
+            <div class="pong-overlay__card">
+              <h2 class="pong-overlay__title is-focus-demo" tabindex="-1">
+                Pong 아케이드
+              </h2>
+              <p class="pong-overlay__body">
+                11점 먼저 내면 승리 · Enter / Space 또는 시작 버튼으로 시작 · ↑ / ↓·드래그로 조작
+              </p>
+              <div class="pong-overlay__actions">
+                <button type="button" class="pong-btn pong-btn--primary">시작</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="legend">
+          <strong>포커스 링</strong>은 실제 구현에서 <span class="kbd">:focus-visible</span>로만
+          노출됨 — 여기선 시안 표현을 위해 <code>.is-focus-demo</code>로 항상 표시.
+        </p>
+      </section>
+
+      <!-- 2. paused 오버레이 -->
+      <section class="section">
+        <h2 class="section__title">
+          2. paused 오버레이 — 동결된 공·패들 + 재개 키 안내
+          <span class="ac">AC-P2 · AC-P4 · AC-F1</span>
+        </h2>
+        <p class="section__desc">
+          scrim 아래로 코트가 어둡게 비치되, <strong>동결된 공과 패들이 정지 위치
+          그대로 계속 보인다</strong>(사라지지 않음, AC-P2). 타이틀에 포커스 링,
+          본문에 재개 수단(버튼 / P·Esc) 안내.
+        </p>
+        <div class="pong-court-wrap">
+          <div class="court">
+            <span class="court__net"></span>
+            <span class="paddle paddle--player"></span>
+            <span class="paddle paddle--cpu"></span>
+            <span class="ball ball--frozen"></span>
+          </div>
+          <div class="pong-overlay" data-state="paused">
+            <div class="pong-overlay__card">
+              <h2 class="pong-overlay__title is-focus-demo" tabindex="-1">
+                일시정지
+              </h2>
+              <p class="pong-overlay__body">
+                계속하기 버튼 또는 P / Esc 로 재개
+              </p>
+              <div class="pong-overlay__actions">
+                <button type="button" class="pong-btn pong-btn--primary">계속하기</button>
+                <button type="button" class="pong-btn pong-btn--ghost">메뉴로</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="legend">
+          공 위의 <strong>"정지"</strong> 라벨은 시안 설명용 — 실제 화면엔 없음. 핵심은
+          공이 <em>사라지지 않고</em> 정지 위치에 계속 렌더된다는 시각 계약.
+        </p>
+      </section>
+
+      <!-- 3. gameover 오버레이 -->
+      <section class="section">
+        <h2 class="section__title">
+          3. gameover 오버레이 — 승자색 타이틀 + 동일 포커스 링
+          <span class="ac">AC-F1 · AC-F3</span>
+        </h2>
+        <p class="section__desc">
+          타이틀 텍스트색은 승자색(<span style="color: var(--paddle-player)">플레이어</span>)으로
+          바뀌어도 <strong>포커스 링은 동일한 파란 <span class="kbd">--color-focus-ring</span></strong>을
+          유지해 승자색과 대비된다.
+        </p>
+        <div class="pong-court-wrap">
+          <div class="court">
+            <span class="court__net"></span>
+            <span class="paddle paddle--player"></span>
+            <span class="paddle paddle--cpu"></span>
+          </div>
+          <div class="pong-overlay" data-state="gameover">
+            <div class="pong-overlay__card">
+              <h2 class="pong-overlay__title is-focus-demo" data-winner="player" tabindex="-1">
+                플레이어 승리!
+              </h2>
+              <p class="pong-overlay__body">최종 점수 11 : 8</p>
+              <div class="pong-overlay__actions">
+                <button type="button" class="pong-btn pong-btn--primary">다시하기</button>
+                <button type="button" class="pong-btn pong-btn--ghost">메뉴로</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. 하단 조작 안내 -->
+      <section class="section">
+        <h2 class="section__title">
+          4. 하단 조작 안내 <span class="kbd">.pong-hint</span> — 키보드 단축키 전체
+          <span class="ac">AC-H1</span>
+        </h2>
+        <p class="section__desc">
+          플레이 중 상시 노출. 이동(↑/↓·드래그) · 일시정지/재개(P/Esc) ·
+          재시작(R)을 ` · ` 구분 구획으로 안내. 드래그(터치) 안내 유지(기존 요소 보존).
+        </p>
+        <div class="pong-controls">
+          <p class="pong-hint">
+            ↑ / ↓ 또는 드래그로 이동 · P / Esc 일시정지·재개 · R 재시작
+          </p>
+          <div class="pong-buttons">
+            <button type="button" class="pong-btn pong-btn--primary">시작</button>
+            <button type="button" class="pong-btn pong-btn--secondary">일시정지</button>
+            <button type="button" class="pong-btn pong-btn--ghost">재시작</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. 포커스 링 비교 -->
+      <section class="section">
+        <h2 class="section__title">
+          5. 포커스 링 일관성 — 오버레이 타이틀 vs 버튼 (동일 토큰)
+          <span class="ac">AC-F3</span>
+        </h2>
+        <p class="section__desc">
+          두 요소 모두 <span class="kbd">3px solid var(--color-focus-ring)</span> ·
+          <span class="kbd">outline-offset: 2px</span> — 신규 토큰 발명 없이 완전 동일.
+        </p>
+        <div class="focus-compare">
+          <div class="focus-compare__item">
+            <span class="focus-compare__label">오버레이 타이틀</span>
+            <span class="demo-title is-focus-demo pong-overlay__title" tabindex="-1">일시정지</span>
+          </div>
+          <div class="focus-compare__item">
+            <span class="focus-compare__label">버튼 (.pong-btn)</span>
+            <button type="button" class="pong-btn pong-btn--primary is-focus-demo">계속하기</button>
+          </div>
+          <div class="focus-compare__item">
+            <span class="focus-compare__label">토큰</span>
+            <span class="focus-token">outline: 3px solid<br />&nbsp;&nbsp;var(--color-focus-ring);<br />outline-offset: 2px;</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. 360px 시뮬레이션 -->
+      <section class="section">
+        <h2 class="section__title">
+          6. 360px 시뮬레이션 — 줄바꿈 허용 · 가로 스크롤 없음
+          <span class="ac">AC-H3</span>
+        </h2>
+        <p class="section__desc">
+          좁은 폭에서 hint/본문이 ` · ` 구분자 단위로 줄바꿈됨(단어 중간 끊김 없음).
+          가로 스크롤은 발생하지 않음.
+        </p>
+        <div class="frame360">
+          <p class="frame360__caption">viewport ≈ 360px</p>
+          <p class="pong-hint">
+            ↑ / ↓ 또는 드래그로 이동 · P / Esc 일시정지·재개 · R 재시작
+          </p>
+          <div class="pong-overlay" style="position: relative; inset: auto; margin-top: 12px; background: transparent; padding: 0;">
+            <div class="pong-overlay__card" style="max-width: 100%;">
+              <h2 class="pong-overlay__title" tabindex="-1">Pong 아케이드</h2>
+              <p class="pong-overlay__body">
+                11점 먼저 내면 승리 · Enter / Space 또는 시작 버튼으로 시작 · ↑ / ↓·드래그로 조작
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
