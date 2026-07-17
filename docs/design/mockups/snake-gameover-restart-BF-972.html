@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Snake 게임오버·재시작 UX 시안 · BF-972</title>
+    <style>
+      /* ── 토큰 (phase18-games/snake/styles.css :root 복제 — 값 변경 없음) ── */
+      :root {
+        --color-bg-canvas: #0b0f17;
+        --color-bg-surface: #141b26;
+        --color-bg-subtle: #1c2431;
+        --color-border-default: #273140;
+        --color-border-strong: #3a4657;
+        --color-text-primary: #e8edf4;
+        --color-text-secondary: #9aa7b8;
+        --color-text-muted: #63708a;
+        --color-accent: #5b82f0;
+        --color-accent-hover: #6e90f5;
+        --color-accent-on: #0b0f17;
+        --color-focus-ring: rgba(91, 130, 240, 0.55);
+        --color-success: #4ade80;
+        --color-danger: #e55858;
+
+        --board-bg: #070b12;
+        --board-grid: rgba(232, 237, 244, 0.06);
+        --board-border: #273140;
+        --snake-head: #5cf08a;
+        --snake-body: #2fa968;
+        --snake-body-alt: #278c57;
+        --food-fill: #f5c24b;
+        --overlay-scrim: rgba(5, 7, 12, 0.74);
+        --gameover-tint: rgba(229, 88, 88, 0.14);
+
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --radius-pill: 999px;
+        --shadow-panel: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+        --font-sans: system-ui, -apple-system, "Segoe UI",
+          "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        min-height: 100vh;
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        font-family: var(--font-sans);
+        padding: var(--space-6) var(--space-4);
+      }
+
+      .page {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-6);
+      }
+
+      .page__head h1 {
+        margin: 0 0 var(--space-2);
+        font: 700 24px/1.3 var(--font-sans);
+      }
+      .page__head p {
+        margin: 0;
+        color: var(--color-text-secondary);
+        font: 400 14px/1.6 var(--font-sans);
+      }
+      .page__head code {
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+        background: var(--color-bg-subtle);
+        padding: 1px 5px;
+        border-radius: var(--radius-sm);
+      }
+
+      .section__title {
+        margin: 0 0 var(--space-4);
+        font: 600 15px/1.3 var(--font-sans);
+        color: var(--color-text-secondary);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--color-border-default);
+        padding-bottom: var(--space-2);
+      }
+
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-5);
+        align-items: flex-start;
+      }
+
+      .variant { display: flex; flex-direction: column; gap: var(--space-2); }
+      .variant__label {
+        font: 600 12px/1.2 var(--font-mono);
+        color: var(--color-text-muted);
+      }
+      .variant__label b { color: var(--color-text-primary); }
+
+      /* ── 스코어보드 ── */
+      .scoreboard {
+        width: 100%;
+        max-width: 320px;
+        display: flex;
+        gap: var(--space-3);
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        padding: var(--space-3) var(--space-4);
+        box-shadow: var(--shadow-panel);
+        margin-bottom: var(--space-4);
+      }
+      .scoreboard__cell {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-1);
+      }
+      .scoreboard__label {
+        font: 600 12px/1.2 var(--font-sans);
+        color: var(--color-text-secondary);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .scoreboard__value {
+        font: 700 clamp(24px, 7vw, 32px) / 1 var(--font-mono);
+        color: var(--color-text-primary);
+      }
+      .scoreboard__value[data-highlight="true"] { color: var(--color-success); }
+
+      /* ── 보드 + 오버레이 ── */
+      .board-wrap {
+        position: relative;
+        width: 320px;
+        max-width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-panel);
+      }
+      .board {
+        display: block;
+        width: 100%;
+        height: 100%;
+        aspect-ratio: 1 / 1;
+        background: var(--board-bg);
+        border: 1px solid var(--board-border);
+        border-radius: var(--radius-lg);
+        /* 격자 시뮬레이션 */
+        background-image:
+          linear-gradient(var(--board-grid) 1px, transparent 1px),
+          linear-gradient(90deg, var(--board-grid) 1px, transparent 1px);
+        background-size: 16px 16px;
+      }
+      /* 정지된 뱀·먹이 시늉 (게임오버 스냅샷) */
+      .board__snake { position: absolute; border-radius: 3px; }
+      .board__food {
+        position: absolute;
+        width: 12px; height: 12px;
+        border-radius: 50%;
+        background: var(--food-fill);
+        box-shadow: 0 0 8px var(--food-glow, rgba(245,194,75,0.35));
+      }
+
+      .board-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-4);
+        background: var(--overlay-scrim);
+        border-radius: var(--radius-lg);
+        text-align: center;
+      }
+      .board-overlay[data-state="paused"] { background: rgba(5, 7, 12, 0.6); }
+      .board-overlay[data-state="gameover"] {
+        background: var(--overlay-scrim);
+        box-shadow: inset 0 0 0 1000px var(--gameover-tint);
+      }
+      /* 게임오버 캔버스 틴트 시뮬레이션 */
+      .board-wrap.is-gameover .board::after {
+        content: "";
+        position: absolute; inset: 0;
+        background: var(--gameover-tint);
+      }
+
+      .board-overlay__card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-3);
+        max-width: 280px;
+      }
+      .overlay__icon {
+        font-size: 28px;
+        line-height: 1;
+        color: var(--color-danger);
+      }
+      .overlay__title {
+        margin: 0;
+        font: 700 clamp(22px, 7vw, 30px) / 1.2 var(--font-sans);
+        color: var(--color-text-primary);
+      }
+      .board-overlay[data-state="gameover"] .overlay__title { color: var(--color-danger); }
+      .overlay__desc {
+        margin: 0;
+        font: 400 15px/1.5 var(--font-sans);
+        color: var(--color-text-secondary);
+      }
+      .overlay__reason {
+        margin: 0;
+        font: 400 15px/1.5 var(--font-sans);
+        color: var(--color-text-primary);
+      }
+      .overlay__stat {
+        margin: 0;
+        font: 700 clamp(16px, 5vw, 20px) / 1.3 var(--font-mono);
+        color: var(--color-text-primary);
+      }
+      .overlay__actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        width: 100%;
+        align-items: stretch;
+        margin-top: var(--space-1);
+      }
+
+      /* ── 버튼 ── */
+      .btn {
+        font: 600 14px/1 var(--font-sans);
+        padding: 12px 18px;
+        min-height: 44px;
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        cursor: pointer;
+      }
+      .btn--primary {
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+        border-color: var(--color-accent);
+      }
+      .btn--primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
+      .btn--secondary {
+        background: var(--color-bg-subtle);
+        color: var(--color-text-primary);
+        border-color: var(--color-border-strong);
+      }
+      .btn--ghost {
+        background: transparent;
+        color: var(--color-text-secondary);
+        border-color: var(--color-border-default);
+      }
+      .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+      .btn:focus-visible,
+      .btn.is-focus {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--color-focus-ring);
+      }
+
+      /* ── D-pad ── */
+      .dpad {
+        display: grid;
+        grid-template-areas: ". up ." "left . right" ". down .";
+        grid-template-columns: repeat(3, 52px);
+        grid-template-rows: repeat(3, 52px);
+        gap: var(--space-2);
+        justify-content: center;
+      }
+      .dpad__btn {
+        min-width: 52px; min-height: 52px;
+        display: flex; align-items: center; justify-content: center;
+        font: 700 22px/1 var(--font-sans);
+        color: var(--color-text-primary);
+        background: var(--color-bg-subtle);
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+      }
+      .dpad__btn--up { grid-area: up; }
+      .dpad__btn--left { grid-area: left; }
+      .dpad__btn--right { grid-area: right; }
+      .dpad__btn--down { grid-area: down; }
+      .dpad__btn--right.is-active {
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+        transform: scale(0.94);
+      }
+      .dpad__btn.is-focus {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--color-focus-ring);
+      }
+
+      /* ── 조작 안내 + 컨트롤 바 ── */
+      .controls {
+        width: 100%;
+        max-width: 320px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .controls__hint {
+        margin: 0;
+        font: 400 13px/1.4 var(--font-sans);
+        color: var(--color-text-muted);
+        text-align: center;
+      }
+      .controls__buttons {
+        display: flex; flex-direction: column; gap: var(--space-2); width: 100%;
+      }
+
+      .note {
+        font: 400 13px/1.6 var(--font-sans);
+        color: var(--color-text-secondary);
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-left: 3px solid var(--color-accent);
+        border-radius: var(--radius-md);
+        padding: var(--space-3) var(--space-4);
+      }
+      .note b { color: var(--color-text-primary); }
+
+      .legend {
+        display: flex; flex-wrap: wrap; gap: var(--space-2);
+        font: 600 11px/1.2 var(--font-mono);
+      }
+      .chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 8px;
+        border-radius: var(--radius-pill);
+        background: var(--color-bg-subtle);
+        border: 1px solid var(--color-border-default);
+        color: var(--color-text-secondary);
+      }
+      .chip .sw { width: 12px; height: 12px; border-radius: 3px; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="page__head">
+        <h1>Snake 게임오버·재시작 UX 시안 — BF-972</h1>
+        <p>
+          기존 시각 요소 <b>정합화</b> 시안(신규 토큰·게임 규칙 변경 0건). 명세:
+          <code>docs/design/snake-gameover-restart-BF-972.md</code>. 모든 토큰은
+          <code>phase18-games/snake/styles.css :root</code> 복제값.
+        </p>
+        <div class="legend" style="margin-top:12px">
+          <span class="chip"><span class="sw" style="background:#e55858"></span>--color-danger 게임오버</span>
+          <span class="chip"><span class="sw" style="background:#5b82f0"></span>--color-accent primary</span>
+          <span class="chip"><span class="sw" style="background:#5cf08a"></span>--snake-head</span>
+          <span class="chip"><span class="sw" style="background:#f5c24b"></span>--food-fill</span>
+          <span class="chip"><span class="sw" style="background:rgba(91,130,240,0.55)"></span>--color-focus-ring</span>
+        </div>
+      </header>
+
+      <!-- ═══ 1. 게임오버 사유 3종 ═══ -->
+      <section>
+        <h2 class="section__title">1 · 게임오버 사유 3종 — 동일 레이아웃, 문구만 교체</h2>
+        <div class="grid">
+          <!-- wall -->
+          <div class="variant">
+            <span class="variant__label">gameoverReason = <b>"wall"</b> (좌/우/상/하 공통)</span>
+            <div class="board-wrap is-gameover">
+              <div class="board">
+                <div class="board__snake" style="left:60px;top:120px;width:16px;height:16px;background:var(--snake-head)"></div>
+                <div class="board__snake" style="left:44px;top:120px;width:16px;height:16px;background:var(--snake-body)"></div>
+                <div class="board__snake" style="left:28px;top:120px;width:16px;height:16px;background:var(--snake-body-alt)"></div>
+                <div class="board__food" style="left:200px;top:200px"></div>
+              </div>
+              <div class="board-overlay" data-state="gameover">
+                <div class="board-overlay__card">
+                  <div class="overlay__icon">✕</div>
+                  <h2 class="overlay__title">게임 오버</h2>
+                  <p class="overlay__reason">벽에 부딪혔어요</p>
+                  <p class="overlay__stat">점수 30 · 최고 90</p>
+                  <div class="overlay__actions">
+                    <button class="btn btn--primary">다시하기</button>
+                    <button class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- self -->
+          <div class="variant">
+            <span class="variant__label">gameoverReason = <b>"self"</b></span>
+            <div class="board-wrap is-gameover">
+              <div class="board">
+                <div class="board__snake" style="left:140px;top:140px;width:16px;height:16px;background:var(--snake-head)"></div>
+                <div class="board__snake" style="left:140px;top:124px;width:16px;height:16px;background:var(--snake-body)"></div>
+                <div class="board__snake" style="left:124px;top:124px;width:16px;height:16px;background:var(--snake-body-alt)"></div>
+                <div class="board__snake" style="left:124px;top:140px;width:16px;height:16px;background:var(--snake-body)"></div>
+              </div>
+              <div class="board-overlay" data-state="gameover">
+                <div class="board-overlay__card">
+                  <div class="overlay__icon">✕</div>
+                  <h2 class="overlay__title">게임 오버</h2>
+                  <p class="overlay__reason">몸에 부딪혔어요</p>
+                  <p class="overlay__stat">점수 120 · 최고 120</p>
+                  <div class="overlay__actions">
+                    <button class="btn btn--primary">다시하기</button>
+                    <button class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- board-full -->
+          <div class="variant">
+            <span class="variant__label">gameoverReason = <b>"board-full"</b> (성취)</span>
+            <div class="board-wrap is-gameover">
+              <div class="board">
+                <div class="board__snake" style="left:200px;top:200px;width:16px;height:16px;background:var(--snake-head)"></div>
+                <div class="board__snake" style="left:184px;top:200px;width:16px;height:16px;background:var(--snake-body)"></div>
+              </div>
+              <div class="board-overlay" data-state="gameover">
+                <div class="board-overlay__card">
+                  <div class="overlay__icon">✕</div>
+                  <h2 class="overlay__title">게임 오버</h2>
+                  <p class="overlay__reason">보드를 가득 채웠어요! 🎉</p>
+                  <p class="overlay__stat">점수 3990 · 최고 3990</p>
+                  <div class="overlay__actions">
+                    <button class="btn btn--primary">다시하기</button>
+                    <button class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note" style="margin-top:16px">
+          <b>정합 계약:</b> 세 사유는 아이콘(✕)·제목("게임 오버")·색(danger)·레이아웃이
+          동일하며 <b>사유 문구만 교체</b>된다. 4방향 벽 충돌은 모두 "벽에 부딪혔어요"
+          단일 문구. 교차 노출(wall 인데 "몸" 문구 등)은 결함. <code>board-full</code> 은
+          문구 이모지(🎉)로만 성취 톤을 구분 — 전용 색/애니메이션을 신설하지 않는다.
+        </p>
+      </section>
+
+      <!-- ═══ 2. 재시작 흐름 상태 4종 ═══ -->
+      <section>
+        <h2 class="section__title">2 · 재시작 흐름 — 상태별 오버레이 & 진입점</h2>
+        <div class="grid">
+          <!-- start -->
+          <div class="variant">
+            <span class="variant__label">status = <b>"start"</b></span>
+            <div class="board-wrap">
+              <div class="board"></div>
+              <div class="board-overlay" data-state="start">
+                <div class="board-overlay__card">
+                  <h2 class="overlay__title">Snake 아케이드</h2>
+                  <p class="overlay__desc">방향키/버튼으로 뱀을 조종해 먹이를 먹으세요</p>
+                  <div class="overlay__actions">
+                    <button class="btn btn--primary">시작</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- playing -->
+          <div class="variant">
+            <span class="variant__label">status = <b>"playing"</b> (오버레이 hidden)</span>
+            <div class="board-wrap">
+              <div class="board">
+                <div class="board__snake" style="left:180px;top:180px;width:16px;height:16px;background:var(--snake-head)"></div>
+                <div class="board__snake" style="left:164px;top:180px;width:16px;height:16px;background:var(--snake-body)"></div>
+                <div class="board__snake" style="left:148px;top:180px;width:16px;height:16px;background:var(--snake-body-alt)"></div>
+                <div class="board__food" style="left:240px;top:120px"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- paused -->
+          <div class="variant">
+            <span class="variant__label">status = <b>"paused"</b></span>
+            <div class="board-wrap">
+              <div class="board">
+                <div class="board__snake" style="left:180px;top:180px;width:16px;height:16px;background:var(--snake-head)"></div>
+                <div class="board__snake" style="left:164px;top:180px;width:16px;height:16px;background:var(--snake-body)"></div>
+              </div>
+              <div class="board-overlay" data-state="paused">
+                <div class="board-overlay__card">
+                  <h2 class="overlay__title">일시정지</h2>
+                  <p class="overlay__desc">계속하려면 계속하기를 누르세요</p>
+                  <div class="overlay__actions">
+                    <button class="btn btn--primary">계속하기</button>
+                    <button class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- gameover -->
+          <div class="variant">
+            <span class="variant__label">status = <b>"gameover"</b></span>
+            <div class="board-wrap is-gameover">
+              <div class="board">
+                <div class="board__snake" style="left:20px;top:120px;width:16px;height:16px;background:var(--snake-head)"></div>
+                <div class="board__snake" style="left:36px;top:120px;width:16px;height:16px;background:var(--snake-body)"></div>
+              </div>
+              <div class="board-overlay" data-state="gameover">
+                <div class="board-overlay__card">
+                  <div class="overlay__icon">✕</div>
+                  <h2 class="overlay__title">게임 오버</h2>
+                  <p class="overlay__reason">벽에 부딪혔어요</p>
+                  <p class="overlay__stat">점수 30 · 최고 90</p>
+                  <div class="overlay__actions">
+                    <button class="btn btn--primary">다시하기</button>
+                    <button class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note" style="margin-top:16px">
+          <b>재시작 3경로 동일 결과:</b> 오버레이 "다시하기"(primary) · 하단 "재시작"(ghost) ·
+          키보드 <code>Enter</code> 는 모두 <code>createPlayState</code> 로 점수·뱀·먹이·방향·대기입력을
+          완전 리셋한다. "메뉴로"(ghost)는 최고 점수만 승계하는 이탈 경로.
+        </p>
+      </section>
+
+      <!-- ═══ 3. 포커스 표시 ═══ -->
+      <section>
+        <h2 class="section__title">3 · 포커스 표시 — 키보드 접근성</h2>
+        <div class="grid">
+          <div class="variant">
+            <span class="variant__label">게임오버 오버레이 등장 → 제목 포커스 → Tab 시 "다시하기" 링</span>
+            <div class="board-wrap is-gameover">
+              <div class="board"></div>
+              <div class="board-overlay" data-state="gameover">
+                <div class="board-overlay__card">
+                  <div class="overlay__icon">✕</div>
+                  <h2 class="overlay__title">게임 오버</h2>
+                  <p class="overlay__reason">몸에 부딪혔어요</p>
+                  <p class="overlay__stat">점수 120 · 최고 120</p>
+                  <div class="overlay__actions">
+                    <button class="btn btn--primary is-focus">다시하기</button>
+                    <button class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="variant">
+            <span class="variant__label">D-pad <code>:focus-visible</code> / <code>:active</code> 링</span>
+            <nav class="dpad" aria-label="방향 컨트롤 (시안)">
+              <button class="dpad__btn dpad__btn--up">▲</button>
+              <button class="dpad__btn dpad__btn--left is-focus">◀</button>
+              <button class="dpad__btn dpad__btn--right is-active">▶</button>
+              <button class="dpad__btn dpad__btn--down">▼</button>
+            </nav>
+          </div>
+        </div>
+        <p class="note" style="margin-top:16px">
+          오버레이 등장(start/paused/gameover) 시 <code>overlay-title</code>(tabindex="-1")로
+          포커스 이동 → 다음 Tab 이 primary 액션으로 진입. 제목 자체엔 링 없음(outline:none).
+          버튼·D-pad 만 <code>:focus-visible</code> 시 2px accent outline + 4px focus-ring 글로우.
+          재시작 사이클마다 포커스가 오버레이로 복귀.
+        </p>
+      </section>
+
+      <!-- ═══ 4. 조작 안내 + 컨트롤 바 ═══ -->
+      <section>
+        <h2 class="section__title">4 · 조작 안내 & 하단 컨트롤 바 (게임오버 중 상시 노출)</h2>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+          <div class="scoreboard">
+            <div class="scoreboard__cell">
+              <span class="scoreboard__label">점수</span>
+              <span class="scoreboard__value">30</span>
+            </div>
+            <div class="scoreboard__cell">
+              <span class="scoreboard__label">최고</span>
+              <span class="scoreboard__value" data-highlight="true">90</span>
+            </div>
+          </div>
+          <section class="controls">
+            <p class="controls__hint">
+              방향키(↑↓←→) · WASD 또는 아래 버튼으로 이동 · P 일시정지 · Enter 시작/재시작
+            </p>
+            <div class="controls__buttons">
+              <button class="btn btn--secondary" disabled>일시정지</button>
+              <button class="btn btn--ghost">재시작</button>
+            </div>
+          </section>
+        </div>
+        <p class="note" style="margin-top:16px">
+          조작 안내는 키보드(방향키·WASD·P·Enter)와 터치(아래 버튼=D-pad)를 모두 포함하며
+          muted 색으로 시각 위계 최하단. 게임오버 오버레이는 <b>보드 영역만</b> 덮으므로 하단
+          안내·컨트롤 바는 게임오버 중에도 그대로 보여 "Enter 시작/재시작" 발견성을 보장한다.
+          최고 점수 갱신 순간은 success 색(초록)으로 강조.
+        </p>
+      </section>
+    </div>
+  </body>
+</html>
