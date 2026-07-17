@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>메모리 매치 시안 · /phase18-games/memory-match · BF-916</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   §2·§3·§4.2 토큰 SSOT — dev 는 styles.css :root 에 그대로 복제
+   (docs/design/memory-match-BF-916.md 와 동기화)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  /* 표준 토큰 (다크 테마 — 기존 게임 계열 승계) */
+  --color-bg-canvas:#0B0F17; --color-bg-surface:#141B26; --color-bg-subtle:#1C2431;
+  --color-border-default:#273140; --color-border-strong:#3A4657;
+  --color-text-primary:#E8EDF4; --color-text-secondary:#9AA7B8; --color-text-muted:#63708A;
+  --color-accent:#5B82F0; --color-accent-hover:#6E90F5; --color-accent-on:#0B0F17;
+  --color-focus-ring:rgba(91,130,240,.55);
+  --color-success:#4ADE80; --color-danger:#E55858;
+
+  /* 카드 전용 토큰 (memory-match 신규) */
+  --card-back-top:#232E40; --card-back-bottom:#18212F; --card-back-motif:rgba(91,130,240,.22);
+  --card-face-bg:#F4F6FB; --card-face-symbol:#141B26;
+  --card-matched-bg:#12241C; --card-matched-border:#4ADE80; --card-matched-glow:rgba(74,222,128,.28);
+  --card-mismatch-border:#E55858; --card-mismatch-glow:rgba(229,88,88,.30);
+  --card-shadow:0 4px 14px rgba(0,0,0,.38);
+
+  /* 쌍별 accent (색맹 대응 — 색은 보조, 기호가 1차) */
+  --pair-0:#E5484D; --pair-1:#F5C24B; --pair-2:#A06CF0; --pair-3:#4ADE80;
+  --pair-4:#F06595; --pair-5:#E5605E; --pair-6:#F59E6B; --pair-7:#63C88A;
+
+  /* 간격 · 반경 · 모션 */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px; --radius-pill:999px;
+  --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+  --motion-fast:140ms; --motion-flip:260ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* 폰트 */
+  --font-sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-mono:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+
+  /* 타이포 */
+  --text-h1:600 20px/1.3 var(--font-sans);
+  --text-hud-value:700 clamp(20px,6vw,28px)/1 var(--font-mono);
+  --text-hud-label:600 12px/1.2 var(--font-sans);
+  --text-card-symbol:400 clamp(28px,9vw,40px)/1 var(--font-sans);
+  --text-banner-title:700 clamp(22px,7vw,30px)/1.2 var(--font-sans);
+  --text-banner-stat:700 clamp(18px,5vw,22px)/1.3 var(--font-mono);
+  --text-body:400 15px/1.5 var(--font-sans);
+  --text-button:600 14px/1 var(--font-sans);
+  --text-caption:400 13px/1.4 var(--font-sans);
+
+  --flip-back-delay:800ms; /* §6.4 불일치 지연 기본값 */
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; }
+body {
+  background:var(--color-bg-canvas);
+  color:var(--color-text-primary);
+  font:var(--text-body);
+  -webkit-font-smoothing:antialiased;
+  padding:var(--space-5) var(--space-4) var(--space-7);
+}
+
+/* ── mockup 문서 레이아웃(시안 설명용, 실제 산출물 아님) ── */
+.doc { max-width:960px; margin:0 auto; }
+.doc__title { font:700 24px/1.3 var(--font-sans); margin:0 0 var(--space-2); }
+.doc__sub { color:var(--color-text-secondary); margin:0 0 var(--space-6); font-size:14px; }
+.doc__note {
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-left:3px solid var(--color-accent); border-radius:var(--radius-md);
+  padding:var(--space-3) var(--space-4); margin:0 0 var(--space-6);
+  color:var(--color-text-secondary); font-size:13px; line-height:1.6;
+}
+.section-label {
+  font:600 12px/1 var(--font-sans); letter-spacing:.08em; text-transform:uppercase;
+  color:var(--color-text-muted); margin:var(--space-7) 0 var(--space-3);
+  padding-bottom:var(--space-2); border-bottom:1px solid var(--color-border-default);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   실제 게임 화면 컴포넌트 시안 (§4·§5)
+   ══════════════════════════════════════════════════════════════ */
+.wrap {
+  width:100%; max-width:480px; margin:0 auto;
+  background:var(--color-bg-canvas);
+  padding:0;
+}
+
+/* 헤더 */
+.header { padding:var(--space-4) 0; }
+.header h1 { font:var(--text-h1); margin:0; }
+
+/* HUD 바 */
+.hud {
+  display:flex; align-items:center; justify-content:space-between; gap:var(--space-3);
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-3) var(--space-4);
+}
+.hud__stat { display:flex; flex-direction:column; gap:var(--space-1); min-width:0; }
+.hud__label { font:var(--text-hud-label); color:var(--color-text-secondary); }
+.hud__value {
+  font:var(--text-hud-value); color:var(--color-text-primary);
+  font-variant-numeric:tabular-nums;
+}
+
+/* 보드 */
+.board {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-2);
+  margin:var(--space-4) 0; min-width:0;
+}
+
+/* 카드 (네이티브 <button>) */
+.card {
+  position:relative; aspect-ratio:1/1; min-width:0;
+  border:1px solid var(--color-border-default); border-radius:var(--radius-md);
+  padding:0; cursor:pointer; font-family:var(--font-sans);
+  display:grid; place-items:center; overflow:hidden;
+  box-shadow:var(--card-shadow);
+  transition:transform var(--motion-fast) var(--ease-out),
+             box-shadow var(--motion-fast) var(--ease-out),
+             border-color var(--motion-fast) var(--ease-out);
+}
+.card__back, .card__face {
+  grid-area:1/1; width:100%; height:100%;
+  display:grid; place-items:center;
+}
+.card__back { font-size:clamp(22px,7vw,30px); color:var(--card-back-motif); }
+.card__face { font:var(--text-card-symbol); position:relative; }
+/* 앞면 하단 쌍별 accent 바 (보조 인코딩) */
+.card__face::after {
+  content:""; position:absolute; left:18%; right:18%; bottom:10%;
+  height:4px; border-radius:var(--radius-pill); background:var(--pair-color, transparent);
+}
+
+/* 상태: hidden(뒷면) */
+.card[data-state="hidden"] {
+  background:linear-gradient(160deg,var(--card-back-top),var(--card-back-bottom));
+}
+.card[data-state="hidden"] .card__face { display:none; }
+.card[data-state="hidden"]:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.5); }
+
+/* 상태: revealed(앞면 공개) */
+.card[data-state="revealed"] {
+  background:var(--card-face-bg); border:2px solid var(--color-accent);
+  box-shadow:0 0 0 3px rgba(91,130,240,.16), var(--card-shadow);
+}
+.card[data-state="revealed"] .card__back { display:none; }
+.card[data-state="revealed"] .card__face { color:var(--card-face-symbol); }
+
+/* 상태: matched(확정 고정) */
+.card[data-state="matched"] {
+  background:var(--card-matched-bg); border:2px solid var(--card-matched-border);
+  box-shadow:0 0 18px var(--card-matched-glow); cursor:default;
+}
+.card[data-state="matched"] .card__back { display:none; }
+.card[data-state="matched"] .card__face { color:var(--color-text-primary); }
+.card[data-state="matched"]:hover { transform:none; }
+
+/* 상태: mismatch(불일치 순간 — 직후 hidden 복귀) */
+.card[data-state="mismatch"] {
+  background:var(--card-face-bg); border:2px solid var(--card-mismatch-border);
+  box-shadow:0 0 18px var(--card-mismatch-glow);
+  animation:shake .4s var(--ease-out);
+}
+.card[data-state="mismatch"] .card__back { display:none; }
+.card[data-state="mismatch"] .card__face { color:var(--card-face-symbol); }
+@keyframes shake {
+  0%,100%{transform:translateX(0);} 20%{transform:translateX(-4px);}
+  40%{transform:translateX(4px);} 60%{transform:translateX(-3px);} 80%{transform:translateX(3px);}
+}
+
+/* 포커스 링 — outline:none 단독 사용 금지(§5.5) */
+.card:focus-visible, .btn:focus-visible {
+  outline:3px solid var(--color-focus-ring); outline-offset:2px;
+}
+/* 포커스 데모(정적 시안에서 포커스 링 시각화) */
+.card.is-focus-demo { outline:3px solid var(--color-focus-ring); outline-offset:2px; }
+
+/* 조작 안내 */
+.hint {
+  color:var(--color-text-secondary); font:var(--text-caption);
+  text-align:center; margin:var(--space-4) 0 0;
+}
+
+/* 버튼 */
+.btn {
+  display:inline-flex; align-items:center; gap:var(--space-2);
+  min-height:44px; padding:0 var(--space-4); border-radius:var(--radius-md);
+  font:var(--text-button); cursor:pointer; border:1px solid transparent;
+  transition:background var(--motion-fast), border-color var(--motion-fast);
+  white-space:nowrap;
+}
+.btn--primary { background:var(--color-accent); color:var(--color-accent-on); }
+.btn--primary:hover { background:var(--color-accent-hover); }
+.btn--secondary {
+  background:var(--color-bg-subtle); color:var(--color-text-primary);
+  border-color:var(--color-border-default);
+}
+.btn--secondary:hover { border-color:var(--color-border-strong); }
+
+/* 완료 배너 */
+.win-stage { position:relative; }
+.win-banner {
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-panel);
+  padding:var(--space-6) var(--space-5); text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-3);
+}
+.win-banner__title { font:var(--text-banner-title); color:var(--color-text-primary); margin:0; }
+.win-banner__stat { font:var(--text-banner-stat); color:var(--color-text-secondary); margin:0; }
+.win-banner__stat strong { color:var(--color-accent); }
+
+/* 상태 레전드 */
+.legend { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:var(--space-3); }
+.legend__item {
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-3); display:flex; gap:var(--space-3); align-items:center;
+}
+.legend__swatch { width:56px; height:56px; flex:0 0 auto; }
+.legend__swatch .card { width:56px; height:56px; }
+.legend__text h4 { margin:0 0 var(--space-1); font:600 14px/1.2 var(--font-sans); }
+.legend__text p { margin:0; font:var(--text-caption); color:var(--color-text-secondary); }
+
+/* 팔레트 스와치 */
+.swatches { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:var(--space-2); }
+.sw { border:1px solid var(--color-border-default); border-radius:var(--radius-sm); overflow:hidden; font-size:11px; }
+.sw__chip { height:44px; }
+.sw__meta { padding:var(--space-2); background:var(--color-bg-surface); }
+.sw__meta code { color:var(--color-text-primary); font-family:var(--font-mono); }
+.sw__meta span { display:block; color:var(--color-text-muted); }
+
+/* 360px 프레임 미리보기 */
+.frame-360 {
+  width:360px; max-width:100%; border:2px dashed var(--color-border-strong);
+  border-radius:var(--radius-lg); padding:var(--space-4); background:var(--color-bg-canvas);
+  overflow:hidden;
+}
+.frame-360 .wrap { max-width:none; }
+.frame-caption { color:var(--color-text-muted); font:var(--text-caption); margin:var(--space-2) 0 0; }
+
+/* 쌍별 accent 매핑 */
+.card[data-pair="0"] .card__face { --pair-color:var(--pair-0); }
+.card[data-pair="1"] .card__face { --pair-color:var(--pair-1); }
+.card[data-pair="2"] .card__face { --pair-color:var(--pair-2); }
+.card[data-pair="3"] .card__face { --pair-color:var(--pair-3); }
+.card[data-pair="4"] .card__face { --pair-color:var(--pair-4); }
+.card[data-pair="5"] .card__face { --pair-color:var(--pair-5); }
+.card[data-pair="6"] .card__face { --pair-color:var(--pair-6); }
+.card[data-pair="7"] .card__face { --pair-color:var(--pair-7); }
+
+@media (prefers-reduced-motion: reduce) {
+  .card { transition:none; }
+  .card[data-state="mismatch"] { animation:none; }
+}
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1 class="doc__title">메모리 매치 — 디자인 시안 (mockup)</h1>
+  <p class="doc__sub">/phase18-games/memory-match · BF-916 · vanilla-static · 다크 단일 테마 · [이디자인]</p>
+  <div class="doc__note">
+    이 파일은 <strong>정적 시안</strong>입니다 — 실제 게임 로직이 아니라 CSS 로 카드 상태를 시뮬레이션한 시각 기준입니다.
+    dev 는 픽셀 일치 의무 없이 색/타이포/상태 스타일의 참조 가이드로 사용합니다.
+    로직·상태 전이는 <code>docs/plan/memory-match-BF-916.md</code> (planner) 가 SSOT 입니다.
+  </div>
+
+  <!-- ═══════════ 1. 대표 게임 화면 (진행 중) ═══════════ -->
+  <div class="section-label">1. 대표 화면 — 진행 중(playing) · 4가지 카드 상태 동시 노출</div>
+  <main class="wrap">
+    <header class="header"><h1>메모리 매치</h1></header>
+
+    <div class="hud" role="group" aria-label="게임 진행 정보">
+      <div class="hud__stat">
+        <span class="hud__label">이동 횟수</span>
+        <output class="hud__value" id="move-count" aria-live="polite">5회</output>
+      </div>
+      <div class="hud__stat">
+        <span class="hud__label">시간</span>
+        <output class="hud__value" id="timer">00:23</output>
+      </div>
+      <button class="btn btn--secondary" id="restart-btn" type="button">
+        <span aria-hidden="true">↻</span> 재시작
+      </button>
+    </div>
+
+    <div class="board" id="board" role="grid" aria-label="4x4 카드 보드">
+      <!-- 행1: matched 2장(사과 확정), revealed 1장, hidden 1장 -->
+      <button class="card" data-state="matched" data-pair="0" aria-label="카드 1, 사과">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍎</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="4" aria-label="카드 2, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍓</span>
+      </button>
+      <button class="card is-focus-demo" data-state="revealed" data-pair="3" aria-label="카드 3, 수박">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍉</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="6" aria-label="카드 4, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍑</span>
+      </button>
+      <!-- 행2: mismatch 2장(불일치 순간), hidden 2장 -->
+      <button class="card" data-state="mismatch" data-pair="1" aria-label="카드 5, 바나나">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍌</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="2" aria-label="카드 6, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍇</span>
+      </button>
+      <button class="card" data-state="mismatch" data-pair="5" aria-label="카드 7, 체리">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍒</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="7" aria-label="카드 8, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🥝</span>
+      </button>
+      <!-- 행3: matched 2장(수박 확정), hidden 2장 -->
+      <button class="card" data-state="matched" data-pair="0" aria-label="카드 9, 사과">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍎</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="1" aria-label="카드 10, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍌</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="4" aria-label="카드 11, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍓</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="2" aria-label="카드 12, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍇</span>
+      </button>
+      <!-- 행4: hidden 4장 -->
+      <button class="card" data-state="hidden" data-pair="3" aria-label="카드 13, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍉</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="7" aria-label="카드 14, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🥝</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="5" aria-label="카드 15, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍒</span>
+      </button>
+      <button class="card" data-state="hidden" data-pair="6" aria-label="카드 16, 뒤집기 전">
+        <span class="card__back" aria-hidden="true">◆</span><span class="card__face" aria-hidden="true">🍑</span>
+      </button>
+    </div>
+
+    <p class="hint">카드를 두 장 뒤집어 같은 그림의 짝을 맞추세요. 8쌍을 모두 맞추면 완료!</p>
+  </main>
+  <p class="frame-caption">※ 파란 테두리(카드 3)는 <strong>키보드 포커스 링</strong> 데모, 초록 글로우는 <strong>matched</strong>, 빨강 흔들림 테두리는 <strong>mismatch</strong> 순간입니다.</p>
+
+  <!-- ═══════════ 2. 완료 배너 (won) ═══════════ -->
+  <div class="section-label">2. 완료 상태(won) — 완료 배너 오버레이</div>
+  <div class="win-stage" style="max-width:480px;margin:0 auto;">
+    <div class="win-banner" role="dialog" aria-modal="false" aria-labelledby="win-title">
+      <h2 class="win-banner__title" id="win-title">모두 맞췄어요! 🎉</h2>
+      <p class="win-banner__stat">이동 <strong>12</strong>회 · <strong>00:48</strong></p>
+      <button class="btn btn--primary" type="button">다시하기</button>
+    </div>
+  </div>
+  <p class="frame-caption">won 전환 시 타이머 정지, 최종 기록 표시, "다시하기" 버튼에 포커스 이동(planner AC-05). 라이브 리전으로 "모두 맞췄습니다! 이동 12회, 48초" 안내.</p>
+
+  <!-- ═══════════ 3. 카드 상태 레전드 ═══════════ -->
+  <div class="section-label">3. 카드 상태 레전드 (§5.1)</div>
+  <div class="legend">
+    <div class="legend__item">
+      <div class="legend__swatch">
+        <div class="card" data-state="hidden" data-pair="2"><span class="card__back">◆</span><span class="card__face">🍇</span></div>
+      </div>
+      <div class="legend__text"><h4>hidden — 뒷면</h4><p>통일 문양 ◆, 그라디언트. 클릭/키 가능, hover 시 상승. aria: "카드 N, 뒤집기 전"</p></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch">
+        <div class="card" data-state="revealed" data-pair="3"><span class="card__back">◆</span><span class="card__face">🍉</span></div>
+      </div>
+      <div class="legend__text"><h4>revealed — 앞면 공개</h4><p>밝은 면 + accent 테두리. 하단 쌍별 색 바. 재클릭 no-op. aria: "카드 N, 수박"</p></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch">
+        <div class="card" data-state="matched" data-pair="0"><span class="card__back">◆</span><span class="card__face">🍎</span></div>
+      </div>
+      <div class="legend__text"><h4>matched — 짝 확정</h4><p>성공 글로우 + 초록 테두리, 고정. 상호작용 없음(aria-disabled, 포커스 유지)</p></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch">
+        <div class="card" data-state="mismatch" data-pair="5"><span class="card__back">◆</span><span class="card__face">🍒</span></div>
+      </div>
+      <div class="legend__text"><h4>mismatch — 불일치 순간</h4><p>경고 테두리 + shake(~400ms). 직후 hidden 복귀(지연 800ms). 색+모션 이중 표현</p></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 4. 쌍별 기호 · accent (색맹 대응) ═══════════ -->
+  <div class="section-label">4. pairId 0~7 ↔ 기호 · accent 매핑 (§2.3 — 기호가 1차 구분자, 색은 보조)</div>
+  <div class="board" style="max-width:480px;margin:0 auto;grid-template-columns:repeat(8,1fr);">
+    <div class="card" data-state="revealed" data-pair="0" title="pairId 0 · 사과"><span class="card__back">◆</span><span class="card__face">🍎</span></div>
+    <div class="card" data-state="revealed" data-pair="1" title="pairId 1 · 바나나"><span class="card__back">◆</span><span class="card__face">🍌</span></div>
+    <div class="card" data-state="revealed" data-pair="2" title="pairId 2 · 포도"><span class="card__back">◆</span><span class="card__face">🍇</span></div>
+    <div class="card" data-state="revealed" data-pair="3" title="pairId 3 · 수박"><span class="card__back">◆</span><span class="card__face">🍉</span></div>
+    <div class="card" data-state="revealed" data-pair="4" title="pairId 4 · 딸기"><span class="card__back">◆</span><span class="card__face">🍓</span></div>
+    <div class="card" data-state="revealed" data-pair="5" title="pairId 5 · 체리"><span class="card__back">◆</span><span class="card__face">🍒</span></div>
+    <div class="card" data-state="revealed" data-pair="6" title="pairId 6 · 복숭아"><span class="card__back">◆</span><span class="card__face">🍑</span></div>
+    <div class="card" data-state="revealed" data-pair="7" title="pairId 7 · 키위"><span class="card__back">◆</span><span class="card__face">🥝</span></div>
+  </div>
+  <p class="frame-caption">흑백으로 렌더링해도 8종 기호가 구별되므로 색각 이상 환경에서도 플레이 가능. 하단 4px 색 바는 중복 확인용 보조 인코딩입니다.</p>
+
+  <!-- ═══════════ 5. 컬러 팔레트 ═══════════ -->
+  <div class="section-label">5. 핵심 팔레트 (§2)</div>
+  <div class="swatches">
+    <div class="sw"><div class="sw__chip" style="background:#0B0F17"></div><div class="sw__meta"><code>--color-bg-canvas</code><span>#0B0F17</span></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#141B26"></div><div class="sw__meta"><code>--color-bg-surface</code><span>#141B26</span></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#1C2431"></div><div class="sw__meta"><code>--color-bg-subtle</code><span>#1C2431</span></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#5B82F0"></div><div class="sw__meta"><code>--color-accent</code><span>#5B82F0</span></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#4ADE80"></div><div class="sw__meta"><code>--color-success</code><span>#4ADE80</span></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#E55858"></div><div class="sw__meta"><code>--color-danger</code><span>#E55858</span></div></div>
+    <div class="sw"><div class="sw__chip" style="background:#F4F6FB"></div><div class="sw__meta"><code>--card-face-bg</code><span>#F4F6FB</span></div></div>
+    <div class="sw"><div class="sw__chip" style="background:linear-gradient(160deg,#232E40,#18212F)"></div><div class="sw__meta"><code>--card-back(grad)</code><span>#232E40→#18212F</span></div></div>
+  </div>
+
+  <!-- ═══════════ 6. 360px 프레임 미리보기 ═══════════ -->
+  <div class="section-label">6. 360px 뷰포트 미리보기 (§4.3·§4.4 — 가로 스크롤 0, 카드 ≈76px ≫ 44px)</div>
+  <div class="frame-360">
+    <main class="wrap">
+      <header class="header"><h1>메모리 매치</h1></header>
+      <div class="hud" role="group" aria-label="게임 진행 정보">
+        <div class="hud__stat"><span class="hud__label">이동 횟수</span><output class="hud__value">3회</output></div>
+        <div class="hud__stat"><span class="hud__label">시간</span><output class="hud__value">00:11</output></div>
+        <button class="btn btn--secondary" type="button"><span aria-hidden="true">↻</span> 재시작</button>
+      </div>
+      <div class="board">
+        <div class="card" data-state="matched" data-pair="0"><span class="card__back">◆</span><span class="card__face">🍎</span></div>
+        <div class="card" data-state="hidden" data-pair="1"><span class="card__back">◆</span><span class="card__face">🍌</span></div>
+        <div class="card" data-state="revealed" data-pair="2"><span class="card__back">◆</span><span class="card__face">🍇</span></div>
+        <div class="card" data-state="hidden" data-pair="3"><span class="card__back">◆</span><span class="card__face">🍉</span></div>
+        <div class="card" data-state="hidden" data-pair="4"><span class="card__back">◆</span><span class="card__face">🍓</span></div>
+        <div class="card" data-state="hidden" data-pair="5"><span class="card__back">◆</span><span class="card__face">🍒</span></div>
+        <div class="card" data-state="matched" data-pair="0"><span class="card__back">◆</span><span class="card__face">🍎</span></div>
+        <div class="card" data-state="hidden" data-pair="6"><span class="card__back">◆</span><span class="card__face">🍑</span></div>
+        <div class="card" data-state="hidden" data-pair="7"><span class="card__back">◆</span><span class="card__face">🥝</span></div>
+        <div class="card" data-state="hidden" data-pair="1"><span class="card__back">◆</span><span class="card__face">🍌</span></div>
+        <div class="card" data-state="hidden" data-pair="2"><span class="card__back">◆</span><span class="card__face">🍇</span></div>
+        <div class="card" data-state="hidden" data-pair="3"><span class="card__back">◆</span><span class="card__face">🍉</span></div>
+        <div class="card" data-state="hidden" data-pair="4"><span class="card__back">◆</span><span class="card__face">🍓</span></div>
+        <div class="card" data-state="hidden" data-pair="5"><span class="card__back">◆</span><span class="card__face">🍒</span></div>
+        <div class="card" data-state="hidden" data-pair="6"><span class="card__back">◆</span><span class="card__face">🍑</span></div>
+        <div class="card" data-state="hidden" data-pair="7"><span class="card__back">◆</span><span class="card__face">🥝</span></div>
+      </div>
+      <p class="hint">카드를 두 장 뒤집어 짝을 맞추세요.</p>
+    </main>
+  </div>
+  <p class="frame-caption">360px 폭에서 4×4 보드가 가로 스크롤 없이 전부 표시되고, HUD 3요소가 한 줄로 유지됩니다.</p>
+</div>
+</body>
+</html>
