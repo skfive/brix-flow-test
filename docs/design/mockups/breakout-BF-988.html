@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>벽돌깨기 UI 시안 mockup · BF-988</title>
+    <style>
+      /* =========================================================
+         벽돌깨기(Breakout) UI mockup — BF-988 · [이디자인]
+         명세 SSOT: docs/design/breakout-BF-988.md
+         vanilla-static: 외부 CDN/webfont/script 0건 — system font only
+         file:// 로 바로 열람 가능한 단일 self-contained 파일
+         ⚠ 이 파일은 시각 시뮬레이션. dev 산출물이 아니며 픽셀 일치 의무 없음.
+         ========================================================= */
+
+      /* ── 공용 디자인 토큰 (phase18 게임 계열 표준, §2.1) ── */
+      :root {
+        --color-bg-canvas: #0b0f17;
+        --color-bg-surface: #141b26;
+        --color-bg-subtle: #1c2431;
+        --color-border-default: #273140;
+        --color-border-strong: #3a4657;
+        --color-text-primary: #e8edf4;
+        --color-text-secondary: #9aa7b8;
+        --color-text-muted: #63708a;
+        --color-accent: #5b82f0;
+        --color-accent-hover: #6e90f5;
+        --color-accent-on: #0b0f17;
+        --color-focus-ring: rgba(91, 130, 240, 0.55);
+        --color-success: #4ade80;
+        --color-danger: #e55858;
+
+        /* ── Breakout 전용 토큰 (§2.2) ── */
+        --board-bg: #070b12;
+        --board-border: #273140;
+        --paddle-fill: #6e90f5;
+        --paddle-edge: #3d5bc4;
+        --ball-fill: #f5f7fa;
+        --ball-edge: #aeb9cc;
+        --brick-row-1: #e55858;
+        --brick-row-2: #f0883e;
+        --brick-row-3: #f5c24b;
+        --brick-row-4: #4ade80;
+        --brick-row-5: #38bdf8;
+        --brick-top-highlight: rgba(255, 255, 255, 0.22);
+        --brick-bottom-shade: rgba(0, 0, 0, 0.28);
+        --life-heart: #e55858;
+        --life-heart-empty: #3a4657;
+        --overlay-scrim: rgba(5, 7, 12, 0.74);
+        --serve-hint-bg: rgba(11, 15, 23, 0.55);
+        --gameover-tint: rgba(229, 88, 88, 0.14);
+        --win-tint: rgba(74, 222, 128, 0.14);
+
+        /* ── spacing · radius (§4.2) ── */
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+        --space-6: 32px;
+        --space-7: 48px;
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --radius-pill: 999px;
+        --shadow-panel: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+        --font-sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo",
+          "Malgun Gothic", sans-serif;
+        --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+        --motion-fast: 120ms;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100vh;
+        background: var(--color-bg-canvas);
+        color: var(--color-text-primary);
+        font-family: var(--font-sans);
+        padding: var(--space-6) var(--space-4) var(--space-7);
+        line-height: 1.5;
+      }
+
+      /* ── mockup 문서 프레임 (실제 앱 UI 아님, 설명용) ── */
+      .doc {
+        max-width: 1040px;
+        margin: 0 auto;
+      }
+      .doc__head {
+        border-bottom: 1px solid var(--color-border-default);
+        padding-bottom: var(--space-4);
+        margin-bottom: var(--space-6);
+      }
+      .doc__title {
+        margin: 0 0 var(--space-2);
+        font: 700 clamp(24px, 5vw, 32px) / 1.2 var(--font-sans);
+      }
+      .doc__sub {
+        margin: 0;
+        color: var(--color-text-secondary);
+        font-size: 14px;
+      }
+      .doc__note {
+        margin: var(--space-3) 0 0;
+        color: var(--color-text-muted);
+        font-size: 13px;
+      }
+      .section-title {
+        font: 700 18px/1.3 var(--font-sans);
+        margin: var(--space-7) 0 var(--space-4);
+        padding-bottom: var(--space-2);
+        border-bottom: 1px solid var(--color-border-default);
+      }
+
+      /* ── 팔레트 스와치 (§2) ── */
+      .swatches {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--space-3);
+      }
+      .swatch {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .swatch__chip {
+        height: 48px;
+        border-bottom: 1px solid var(--color-border-default);
+      }
+      .swatch__meta {
+        padding: var(--space-2) var(--space-3);
+      }
+      .swatch__name {
+        font: 600 12px/1.3 var(--font-sans);
+        color: var(--color-text-primary);
+      }
+      .swatch__hex {
+        font: 400 11px/1.4 var(--font-mono);
+        color: var(--color-text-secondary);
+      }
+
+      /* ── 상태 갤러리 그리드 ── */
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: var(--space-6) var(--space-5);
+        align-items: start;
+      }
+      .state-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+      .state-card__caption {
+        font: 600 13px/1.3 var(--font-mono);
+        color: var(--color-accent-hover);
+        letter-spacing: 0.02em;
+      }
+      .state-card__desc {
+        font-size: 12px;
+        color: var(--color-text-muted);
+        margin: 0;
+      }
+
+      /* ==========================================================
+         실제 앱 UI 클래스 (dev 권장 클래스명 그대로, §7.2)
+         ========================================================== */
+      .breakout-app {
+        width: 100%;
+        max-width: 340px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+      .breakout-topbar__title {
+        margin: 0;
+        font: 600 20px/1.3 var(--font-sans);
+      }
+
+      /* ── HUD (§5.2) ── */
+      .hud {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-4);
+        background: var(--color-bg-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-panel);
+        padding: var(--space-3) var(--space-4);
+      }
+      .hud__cell {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+      .hud__cell--lives {
+        align-items: flex-end;
+      }
+      .hud__label {
+        font: 600 12px/1.2 var(--font-sans);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-text-secondary);
+      }
+      .hud__value {
+        font: 700 28px/1 var(--font-mono);
+        color: var(--color-text-primary);
+        font-variant-numeric: tabular-nums;
+      }
+      .hud__lives {
+        display: inline-flex;
+        gap: 2px;
+        font-size: 24px;
+        line-height: 1;
+      }
+      .life--full {
+        color: var(--life-heart);
+      }
+      .life--empty {
+        color: var(--life-heart-empty);
+      }
+
+      /* ── 보드 (§4.3·§4.5) — mockup 은 CSS 로 정적 렌더 ── */
+      .board-wrap {
+        position: relative;
+        width: 100%;
+        max-width: 340px;
+        margin: 0 auto;
+        aspect-ratio: 3 / 4;
+        border: 1px solid var(--board-border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-panel);
+        overflow: hidden;
+        background: var(--board-bg);
+      }
+      /* 벽돌 격자 — 논리 360×480 을 % 로 근사 (5행 8열) */
+      .board-bricks {
+        position: absolute;
+        top: 8.3%; /* 40/480 */
+        left: 1.7%; /* 6/360 */
+        right: 1.7%;
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        grid-auto-rows: 1fr;
+        gap: 1.1%;
+      }
+      .brick {
+        border-radius: var(--radius-sm);
+        aspect-ratio: 40 / 16;
+        box-shadow: inset 0 2px 0 var(--brick-top-highlight),
+          inset 0 -3px 0 var(--brick-bottom-shade);
+      }
+      .brick.is-dead {
+        visibility: hidden;
+      }
+      .brick[data-row="0"] {
+        background: var(--brick-row-1);
+      }
+      .brick[data-row="1"] {
+        background: var(--brick-row-2);
+      }
+      .brick[data-row="2"] {
+        background: var(--brick-row-3);
+      }
+      .brick[data-row="3"] {
+        background: var(--brick-row-4);
+      }
+      .brick[data-row="4"] {
+        background: var(--brick-row-5);
+      }
+      /* 패들 — 폭 64/360≈17.8%, Y 440/480≈91.7% */
+      .paddle {
+        position: absolute;
+        bottom: 6.25%; /* (480-440-10)/480 */
+        width: 17.8%;
+        height: 2.1%;
+        background: var(--paddle-fill);
+        border: 1px solid var(--paddle-edge);
+        border-radius: var(--radius-pill);
+        box-shadow: 0 0 12px var(--paddle-fill);
+      }
+      /* 공 — 지름 12/360≈3.3% */
+      .ball {
+        position: absolute;
+        width: 3.3%;
+        aspect-ratio: 1;
+        background: var(--ball-fill);
+        border: 1px solid var(--ball-edge);
+        border-radius: 50%;
+        box-shadow: 0 0 8px rgba(245, 247, 250, 0.3);
+      }
+
+      /* ── serve 힌트 (§5.4) ── */
+      .serve-hint {
+        position: absolute;
+        left: 50%;
+        bottom: var(--space-5);
+        transform: translateX(-50%);
+        background: var(--serve-hint-bg);
+        color: var(--color-text-primary);
+        font: 400 13px/1.4 var(--font-sans);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-pill);
+        white-space: nowrap;
+      }
+
+      /* ── 상태 오버레이 (§5.5·§6) ── */
+      .board-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: var(--overlay-scrim);
+        padding: var(--space-4);
+      }
+      .board-overlay.is-gameover {
+        background: linear-gradient(var(--gameover-tint), var(--gameover-tint)),
+          var(--overlay-scrim);
+      }
+      .board-overlay.is-win {
+        background: linear-gradient(var(--win-tint), var(--win-tint)),
+          var(--overlay-scrim);
+      }
+      .board-overlay__card {
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-panel);
+        padding: var(--space-5);
+        max-width: 90%;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        align-items: center;
+      }
+      .overlay__icon {
+        font-size: 32px;
+        line-height: 1;
+      }
+      .overlay__title {
+        margin: 0;
+        font: 700 26px/1.2 var(--font-sans);
+        color: var(--color-text-primary);
+      }
+      .overlay__title[data-result="win"] {
+        color: var(--color-success);
+      }
+      .overlay__title[data-result="gameover"] {
+        color: var(--color-danger);
+      }
+      .overlay__desc {
+        margin: 0;
+        font: 400 14px/1.5 var(--font-sans);
+        color: var(--color-text-secondary);
+      }
+      .overlay__stat {
+        margin: 0;
+        font: 700 18px/1.3 var(--font-mono);
+        color: var(--color-text-primary);
+        font-variant-numeric: tabular-nums;
+      }
+      .overlay__stat[data-result="win"] {
+        color: var(--color-success);
+      }
+      .overlay__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--space-3);
+      }
+
+      /* ── 컨트롤 (§5.7) ── */
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+      .controls__hint {
+        margin: 0;
+        font: 400 13px/1.4 var(--font-sans);
+        color: var(--color-text-muted);
+        text-align: center;
+      }
+      .controls__buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--space-3);
+      }
+
+      /* ── 버튼 3종 (§5.6) ── */
+      .btn {
+        font: 600 14px/1 var(--font-sans);
+        min-height: 44px;
+        padding: 10px 18px;
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background var(--motion-fast), transform var(--motion-fast),
+          border-color var(--motion-fast);
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--color-focus-ring);
+      }
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .btn--primary {
+        background: var(--color-accent);
+        color: var(--color-accent-on);
+      }
+      .btn--primary:hover:not(:disabled) {
+        background: var(--color-accent-hover);
+      }
+      .btn--secondary {
+        background: var(--color-bg-subtle);
+        color: var(--color-text-primary);
+        border-color: var(--color-border-strong);
+      }
+      .btn--secondary:hover:not(:disabled) {
+        border-color: var(--color-text-secondary);
+      }
+      .btn--ghost {
+        background: transparent;
+        color: var(--color-text-secondary);
+        border-color: var(--color-border-default);
+      }
+      .btn--ghost:hover:not(:disabled) {
+        background: var(--color-bg-subtle);
+        color: var(--color-text-primary);
+      }
+
+      /* ── 버튼 상태 데모 스트립 ── */
+      .btn-demo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        align-items: center;
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+      }
+      .btn--focusdemo {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--color-focus-ring);
+      }
+      .btn-demo__tag {
+        font: 400 11px/1.4 var(--font-mono);
+        color: var(--color-text-muted);
+        display: block;
+        text-align: center;
+        margin-top: var(--space-1);
+      }
+      .btn-demo__item {
+        text-align: center;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .btn {
+          transition: none;
+        }
+        .btn:active {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc">
+      <header class="doc__head">
+        <h1 class="doc__title">벽돌깨기(Breakout) UI 시안 — BF-988</h1>
+        <p class="doc__sub">
+          디자인 SSOT: docs/design/breakout-BF-988.md · tech-stack: vanilla-static ·
+          공용 phase18 토큰 승계 · system font only
+        </p>
+        <p class="doc__note">
+          ⚠ 이 파일은 <strong>시각 시뮬레이션</strong>입니다. 실제 게임 캔버스는 dev(BF-994)가
+          &lt;canvas&gt;로 렌더하며, 여기서는 벽돌·공·패들을 CSS로 정적 근사했습니다. 픽셀 단위
+          일치 의무는 없고 토큰·레이아웃·상태 시각 의도만 전달합니다.
+        </p>
+      </header>
+
+      <!-- ===== 1. 컬러 팔레트 (§2) ===== -->
+      <h2 class="section-title">1. 컬러 팔레트 (공용 토큰 승계)</h2>
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #5b82f0"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">accent (primary)</div>
+            <div class="swatch__hex">#5b82f0</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #0b0f17"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">bg-canvas</div>
+            <div class="swatch__hex">#0b0f17</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #141b26"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">bg-surface</div>
+            <div class="swatch__hex">#141b26</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #e8edf4"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">text-primary</div>
+            <div class="swatch__hex">#e8edf4</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #9aa7b8"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">text-secondary</div>
+            <div class="swatch__hex">#9aa7b8</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #4ade80"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">success (win)</div>
+            <div class="swatch__hex">#4ade80</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #e55858"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">danger (lose)</div>
+            <div class="swatch__hex">#e55858</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="doc__note" style="margin-top: var(--space-5)">
+        벽돌 5행 무지개 색 (내구도·점수 차등 아님 — 순수 시각 구분, §2.2):
+      </p>
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #e55858"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">brick-row-1</div>
+            <div class="swatch__hex">#e55858 · 빨강</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #f0883e"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">brick-row-2</div>
+            <div class="swatch__hex">#f0883e · 주황</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #f5c24b"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">brick-row-3</div>
+            <div class="swatch__hex">#f5c24b · 노랑</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #4ade80"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">brick-row-4</div>
+            <div class="swatch__hex">#4ade80 · 초록</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #38bdf8"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">brick-row-5</div>
+            <div class="swatch__hex">#38bdf8 · 하늘</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #6e90f5"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">paddle-fill</div>
+            <div class="swatch__hex">#6e90f5</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: #f5f7fa"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">ball-fill</div>
+            <div class="swatch__hex">#f5f7fa</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 2. 상태별 시각 표현 (§6) ===== -->
+      <h2 class="section-title">2. 상태별 시각 표현 (6 status)</h2>
+      <div class="gallery">
+        <!-- ── START ── -->
+        <div class="state-card">
+          <div class="state-card__caption">status = start</div>
+          <p class="state-card__desc">진입 화면 · 점수 0 · 생명 3 · 벽돌 40개 미리보기 · [시작]</p>
+          <main class="breakout-app">
+            <header class="breakout-topbar">
+              <h1 class="breakout-topbar__title">벽돌깨기</h1>
+            </header>
+            <section class="hud">
+              <div class="hud__cell">
+                <span class="hud__label">점수</span>
+                <span class="hud__value">0</span>
+              </div>
+              <div class="hud__cell hud__cell--lives">
+                <span class="hud__label">생명</span>
+                <span class="hud__lives" aria-label="생명 3">
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                </span>
+              </div>
+            </section>
+            <div class="board-wrap">
+              <div class="board-bricks" id="bricks-start"></div>
+              <div class="paddle" style="left: 41%"></div>
+              <div class="ball" style="left: 48.3%; bottom: 9.5%"></div>
+              <div class="board-overlay">
+                <div class="board-overlay__card">
+                  <h2 class="overlay__title">벽돌깨기</h2>
+                  <p class="overlay__desc">
+                    ← → 또는 드래그로 패들을 움직이고, 공으로 벽돌 40개를 모두 깨세요
+                  </p>
+                  <div class="overlay__actions">
+                    <button type="button" class="btn btn--primary">시작</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <section class="controls">
+              <p class="controls__hint">
+                ← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지
+              </p>
+              <div class="controls__buttons">
+                <button type="button" class="btn btn--primary">시작</button>
+                <button type="button" class="btn btn--secondary" disabled>일시정지</button>
+                <button type="button" class="btn btn--ghost">다시하기</button>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        <!-- ── SERVE ── -->
+        <div class="state-card">
+          <div class="state-card__caption">status = serve</div>
+          <p class="state-card__desc">발사 대기 · 공이 패들에 부착 · 힌트 배너 노출 · 오버레이 없음</p>
+          <main class="breakout-app">
+            <header class="breakout-topbar">
+              <h1 class="breakout-topbar__title">벽돌깨기</h1>
+            </header>
+            <section class="hud">
+              <div class="hud__cell">
+                <span class="hud__label">점수</span>
+                <span class="hud__value">40</span>
+              </div>
+              <div class="hud__cell hud__cell--lives">
+                <span class="hud__label">생명</span>
+                <span class="hud__lives" aria-label="생명 2">
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--empty" aria-hidden="true">♥</span>
+                </span>
+              </div>
+            </section>
+            <div class="board-wrap">
+              <div class="board-bricks" id="bricks-serve"></div>
+              <div class="paddle" style="left: 55%"></div>
+              <div class="ball" style="left: 62%; bottom: 9.5%"></div>
+              <div class="serve-hint">탭 또는 Enter로 발사</div>
+            </div>
+            <section class="controls">
+              <p class="controls__hint">
+                ← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지
+              </p>
+              <div class="controls__buttons">
+                <button type="button" class="btn btn--primary" disabled>시작</button>
+                <button type="button" class="btn btn--secondary" disabled>일시정지</button>
+                <button type="button" class="btn btn--ghost">다시하기</button>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        <!-- ── PLAYING ── -->
+        <div class="state-card">
+          <div class="state-card__caption">status = playing</div>
+          <p class="state-card__desc">진행 중 · 오버레이·힌트 숨김 · 벽돌 일부 파괴 · 일시정지 enabled</p>
+          <main class="breakout-app">
+            <header class="breakout-topbar">
+              <h1 class="breakout-topbar__title">벽돌깨기</h1>
+            </header>
+            <section class="hud">
+              <div class="hud__cell">
+                <span class="hud__label">점수</span>
+                <span class="hud__value">180</span>
+              </div>
+              <div class="hud__cell hud__cell--lives">
+                <span class="hud__label">생명</span>
+                <span class="hud__lives" aria-label="생명 2">
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--empty" aria-hidden="true">♥</span>
+                </span>
+              </div>
+            </section>
+            <div class="board-wrap">
+              <div class="board-bricks" id="bricks-playing"></div>
+              <div class="paddle" style="left: 30%"></div>
+              <div class="ball" style="left: 38%; bottom: 42%"></div>
+            </div>
+            <section class="controls">
+              <p class="controls__hint">
+                ← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지
+              </p>
+              <div class="controls__buttons">
+                <button type="button" class="btn btn--primary" disabled>시작</button>
+                <button type="button" class="btn btn--secondary">일시정지</button>
+                <button type="button" class="btn btn--ghost">다시하기</button>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        <!-- ── PAUSED ── -->
+        <div class="state-card">
+          <div class="state-card__caption">status = paused</div>
+          <p class="state-card__desc">일시정지 · 보드 정지 · [계속하기][메뉴로]</p>
+          <main class="breakout-app">
+            <header class="breakout-topbar">
+              <h1 class="breakout-topbar__title">벽돌깨기</h1>
+            </header>
+            <section class="hud">
+              <div class="hud__cell">
+                <span class="hud__label">점수</span>
+                <span class="hud__value">180</span>
+              </div>
+              <div class="hud__cell hud__cell--lives">
+                <span class="hud__label">생명</span>
+                <span class="hud__lives" aria-label="생명 2">
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--empty" aria-hidden="true">♥</span>
+                </span>
+              </div>
+            </section>
+            <div class="board-wrap">
+              <div class="board-bricks" id="bricks-paused"></div>
+              <div class="paddle" style="left: 30%"></div>
+              <div class="ball" style="left: 38%; bottom: 42%"></div>
+              <div class="board-overlay">
+                <div class="board-overlay__card">
+                  <h2 class="overlay__title">일시정지</h2>
+                  <p class="overlay__desc">P 또는 계속하기로 재개</p>
+                  <div class="overlay__actions">
+                    <button type="button" class="btn btn--primary">계속하기</button>
+                    <button type="button" class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <section class="controls">
+              <p class="controls__hint">
+                ← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지
+              </p>
+              <div class="controls__buttons">
+                <button type="button" class="btn btn--primary" disabled>시작</button>
+                <button type="button" class="btn btn--secondary">일시정지</button>
+                <button type="button" class="btn btn--ghost">다시하기</button>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        <!-- ── GAMEOVER ── -->
+        <div class="state-card">
+          <div class="state-card__caption">status = gameover</div>
+          <p class="state-card__desc">패배 · 빨강 틴트 · 💥 · 생명 0 · 최종 점수 · [다시하기][메뉴로]</p>
+          <main class="breakout-app">
+            <header class="breakout-topbar">
+              <h1 class="breakout-topbar__title">벽돌깨기</h1>
+            </header>
+            <section class="hud">
+              <div class="hud__cell">
+                <span class="hud__label">점수</span>
+                <span class="hud__value">210</span>
+              </div>
+              <div class="hud__cell hud__cell--lives">
+                <span class="hud__label">생명</span>
+                <span class="hud__lives" aria-label="생명 0">
+                  <span class="life life--empty" aria-hidden="true">♥</span>
+                  <span class="life life--empty" aria-hidden="true">♥</span>
+                  <span class="life life--empty" aria-hidden="true">♥</span>
+                </span>
+              </div>
+            </section>
+            <div class="board-wrap">
+              <div class="board-bricks" id="bricks-gameover"></div>
+              <div class="paddle" style="left: 45%"></div>
+              <div class="board-overlay is-gameover">
+                <div class="board-overlay__card">
+                  <div class="overlay__icon" aria-hidden="true">💥</div>
+                  <h2 class="overlay__title" data-result="gameover">게임 오버</h2>
+                  <p class="overlay__desc">생명을 모두 잃었어요</p>
+                  <p class="overlay__stat">최종 점수 210</p>
+                  <div class="overlay__actions">
+                    <button type="button" class="btn btn--primary">다시하기</button>
+                    <button type="button" class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <section class="controls">
+              <p class="controls__hint">
+                ← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지
+              </p>
+              <div class="controls__buttons">
+                <button type="button" class="btn btn--primary" disabled>시작</button>
+                <button type="button" class="btn btn--secondary" disabled>일시정지</button>
+                <button type="button" class="btn btn--ghost">다시하기</button>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        <!-- ── WIN ── -->
+        <div class="state-card">
+          <div class="state-card__caption">status = win</div>
+          <p class="state-card__desc">승리 · 초록 틴트 · 🎉 · 벽돌 0 · 최종 점수 · [다시하기][메뉴로]</p>
+          <main class="breakout-app">
+            <header class="breakout-topbar">
+              <h1 class="breakout-topbar__title">벽돌깨기</h1>
+            </header>
+            <section class="hud">
+              <div class="hud__cell">
+                <span class="hud__label">점수</span>
+                <span class="hud__value">400</span>
+              </div>
+              <div class="hud__cell hud__cell--lives">
+                <span class="hud__label">생명</span>
+                <span class="hud__lives" aria-label="생명 2">
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--full" aria-hidden="true">♥</span>
+                  <span class="life life--empty" aria-hidden="true">♥</span>
+                </span>
+              </div>
+            </section>
+            <div class="board-wrap">
+              <div class="board-bricks" id="bricks-win"></div>
+              <div class="paddle" style="left: 45%"></div>
+              <div class="board-overlay is-win">
+                <div class="board-overlay__card">
+                  <div class="overlay__icon" aria-hidden="true">🎉</div>
+                  <h2 class="overlay__title" data-result="win">클리어!</h2>
+                  <p class="overlay__desc">벽돌 40개를 모두 깼어요</p>
+                  <p class="overlay__stat" data-result="win">최종 점수 400</p>
+                  <div class="overlay__actions">
+                    <button type="button" class="btn btn--primary">다시하기</button>
+                    <button type="button" class="btn btn--ghost">메뉴로</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <section class="controls">
+              <p class="controls__hint">
+                ← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지
+              </p>
+              <div class="controls__buttons">
+                <button type="button" class="btn btn--primary" disabled>시작</button>
+                <button type="button" class="btn btn--secondary" disabled>일시정지</button>
+                <button type="button" class="btn btn--ghost">다시하기</button>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+
+      <!-- ===== 3. 버튼 상태 (§5.6) ===== -->
+      <h2 class="section-title">3. 버튼 3종 · 상태 (variant × state)</h2>
+      <div class="btn-demo">
+        <div class="btn-demo__item">
+          <button type="button" class="btn btn--primary">Primary</button>
+          <span class="btn-demo__tag">기본</span>
+        </div>
+        <div class="btn-demo__item">
+          <button type="button" class="btn btn--primary" style="background: #6e90f5">
+            Primary
+          </button>
+          <span class="btn-demo__tag">hover</span>
+        </div>
+        <div class="btn-demo__item">
+          <button type="button" class="btn btn--primary btn--focusdemo">Primary</button>
+          <span class="btn-demo__tag">focus-visible</span>
+        </div>
+        <div class="btn-demo__item">
+          <button type="button" class="btn btn--secondary">Secondary</button>
+          <span class="btn-demo__tag">기본</span>
+        </div>
+        <div class="btn-demo__item">
+          <button type="button" class="btn btn--secondary" disabled>Secondary</button>
+          <span class="btn-demo__tag">disabled</span>
+        </div>
+        <div class="btn-demo__item">
+          <button type="button" class="btn btn--ghost">Ghost</button>
+          <span class="btn-demo__tag">기본</span>
+        </div>
+      </div>
+      <p class="doc__note" style="margin-top: var(--space-4)">
+        모든 버튼 <code>min-height: 44px</code> (터치 타깃 ≥44px, WCAG 2.5.5) ·
+        <code>:focus-visible</code> 포커스 링 · <code>prefers-reduced-motion</code> 시 트랜지션 제거.
+        상태 정보는 색뿐 아니라 텍스트(점수·생명·"게임 오버"/"클리어!")로도 표시 (WCAG 1.4.1).
+      </p>
+    </div>
+
+    <!--
+      mockup 벽돌 격자 생성: 5행×8열=40개를 CSS grid 에 채움.
+      정적 시각화 전용 — 실제 게임 렌더는 dev 의 <canvas> 담당.
+      외부 의존성 0건: 인라인 스크립트만 사용, 네트워크 요청 없음 → file:// 안전.
+    -->
+    <script>
+      (function () {
+        // 각 상태별로 살아있는 벽돌 수를 다르게 표현
+        var configs = {
+          "bricks-start": 40, // 전부
+          "bricks-serve": 34,
+          "bricks-playing": 21,
+          "bricks-paused": 21,
+          "bricks-gameover": 15,
+          "bricks-win": 0, // 전부 파괴
+        };
+        Object.keys(configs).forEach(function (id) {
+          var host = document.getElementById(id);
+          if (!host) return;
+          var alive = configs[id];
+          var idx = 0;
+          for (var row = 0; row < 5; row++) {
+            for (var col = 0; col < 8; col++) {
+              var b = document.createElement("div");
+              b.className = "brick";
+              b.setAttribute("data-row", String(row));
+              // 위쪽(작은 idx) 벽돌부터 파괴된 것으로 표현
+              if (idx >= alive) b.className += " is-dead";
+              host.appendChild(b);
+              idx++;
+            }
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
