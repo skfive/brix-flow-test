@@ -18,12 +18,13 @@
 //   머리가 자기 몸 셀로 진입 → logic.js isSelfCollision 이 gameoverReason='self' 를
 //   반환한다(먹이 위치만 결정론화, 충돌 판정 자체는 원본 로직 그대로).
 //
-// 재시작 DOM 동기화 검증 원칙(구현 준수 — main.js 미수정):
-//   main.js syncUi 는 playing 전환 시 overlay.hidden=true 만 설정하고 data-state
-//   속성은 갱신하지 않는다(재시작 후 data-state 는 'gameover' 잔존). 따라서 본
-//   가드는 "오버레이가 실제로 숨겨졌는가(hidden 속성)·스코어보드 0 복귀·btn-pause
-//   재활성·내부 상태 초기화" 라는 실제 시각/상태 계약을 검증한다(data-state 잔존은
-//   overlay 가 hidden 이므로 화면에 노출되지 않음 — 코드 변경은 §4 nonGoals).
+// 코드 보강(main.js syncUi — design §6.6 R3-3 충족):
+//   designer cycle2 §6.6 R3-3 은 "재시작 후 #overlay data-state !== gameover" 를
+//   계약으로 명문화한다. 기존 main.js syncUi 는 playing 전환 시 overlay.hidden=true
+//   만 설정하고 data-state 를 갱신하지 않아 'gameover' 가 잔존했다. 이를 최소 수정해
+//   data-state 가 항상 현재 status 를 반영하도록 보강했다(overlay.hidden 은 playing
+//   일 때만 — styles.css [hidden]{display:none} 이 노출을 최종 제어, 시각 회귀 없음).
+//   본 e2e 는 §6.6 turnkey 체크리스트(S3-1~5, R3-1~4, 입력 경로 동등성)를 그대로 가드한다.
 //
 // 실행: node --test tests/e2e/phase18-snake/restart-selfcollision-BF973.test.js
 // CI:  BRIX_E2E_SKIP=1 node --test tests/e2e/phase18-snake/restart-selfcollision-BF973.test.js
@@ -196,40 +197,46 @@ if (MODULE_SKIP) {
           await page.waitForSelector('#overlay[data-state="start"]', { timeout: 8000 });
           console.log('[step1] 로드 + 시작 오버레이 OK');
 
-          // ── STEP 2: 시작 → 길이 6까지 성장(우측 이동) ──
+          // 재사용 헬퍼: 현재 playing 상태에서 길이 6까지 성장시킨 뒤
+          // down→left→up 입력으로 머리를 자기 몸으로 유도해 gameover/self 를 만든다.
+          async function growAndSelfCollide(tag) {
+            await page.waitForFunction(
+              () => window.__brixSnakeState && window.__brixSnakeState.snake.length >= 6,
+              { timeout: 8000 }
+            );
+            await page.keyboard.press('ArrowDown');
+            await page.waitForFunction(
+              () => window.__brixSnakeState && window.__brixSnakeState.direction === 'down',
+              { timeout: 3000 }
+            );
+            await page.keyboard.press('ArrowLeft');
+            await page.waitForFunction(
+              () => window.__brixSnakeState && window.__brixSnakeState.direction === 'left',
+              { timeout: 3000 }
+            );
+            await page.keyboard.press('ArrowUp');
+            await page.waitForFunction(
+              () => window.__brixSnakeState && window.__brixSnakeState.status === 'gameover',
+              { timeout: 3000 }
+            );
+            console.log('[' + tag + '] 자기충돌 gameover 유도 완료');
+          }
+
+          // ── STEP 2: 시작 → 길이 6 성장 → 자기충돌(down→left→up) ──
           await page.click('#btn-start');
           await page.waitForFunction(
             () => document.getElementById('overlay').hasAttribute('hidden'),
             { timeout: 5000 }
           );
-          await page.waitForFunction(
-            () => window.__brixSnakeState && window.__brixSnakeState.snake.length >= 6,
-            { timeout: 8000 }
-          );
-          console.log('[step2] 길이 6 성장 완료 — 자기충돌 유도 준비');
+          await growAndSelfCollide('step2');
 
-          // ── STEP 3 (AC-SELF-3): down→left→up 으로 자기 몸 진입 → gameover/self ──
-          await page.keyboard.press('ArrowDown');
-          await page.waitForFunction(
-            () => window.__brixSnakeState && window.__brixSnakeState.direction === 'down',
-            { timeout: 3000 }
-          );
-          await page.keyboard.press('ArrowLeft');
-          await page.waitForFunction(
-            () => window.__brixSnakeState && window.__brixSnakeState.direction === 'left',
-            { timeout: 3000 }
-          );
-          await page.keyboard.press('ArrowUp');
-          await page.waitForFunction(
-            () => window.__brixSnakeState && window.__brixSnakeState.status === 'gameover',
-            { timeout: 3000 }
-          );
-
+          // ── STEP 3 (AC-SELF-3/4 · §6.6 S3-1~S3-5): 자기충돌 게임오버 UI 계약 ──
           const selfOver = await page.evaluate(() => ({
             reason: window.__brixSnakeState.gameoverReason,
             overlayHidden: document.getElementById('overlay').hasAttribute('hidden'),
             overlayState: document.getElementById('overlay').getAttribute('data-state'),
             overlayReason: document.getElementById('overlay-reason').textContent,
+            overlayIcon: document.getElementById('overlay-icon').textContent,
             btnPauseDisabled: document.getElementById('btn-pause').disabled,
             btnAgainHidden: document.getElementById('btn-again').hasAttribute('hidden'),
             head: { ...window.__brixSnakeState.snake[0] },
@@ -248,6 +255,10 @@ if (MODULE_SKIP) {
           // AC-SELF-4: wall 문구("벽")가 self 사유에 교차 노출되지 않음
           if (selfOver.overlayReason.indexOf('벽') !== -1) {
             throw new Error('AC-SELF-4 회귀: self 사유인데 wall 문구("벽")가 교차 노출됨: "' + selfOver.overlayReason + '"');
+          }
+          // §6.6 S3-3: 게임오버 아이콘 "✕" (main.js overlayIcon.textContent="✕")
+          if (selfOver.overlayIcon.indexOf('✕') === -1) {
+            throw new Error('AC-SELF-3(§6.6 S3-3) 회귀: 게임오버 아이콘이 "✕" 가 아님: "' + selfOver.overlayIcon + '"');
           }
           if (!selfOver.btnPauseDisabled) {
             throw new Error('AC-SELF-3 회귀: 자기충돌 게임오버 후에도 일시정지 버튼이 활성 — 틱 루프 미정지 의심');
@@ -273,6 +284,7 @@ if (MODULE_SKIP) {
             return {
               domScore: document.querySelector('[data-role="score"]').textContent,
               overlayHidden: document.getElementById('overlay').hasAttribute('hidden'),
+              overlayState: document.getElementById('overlay').getAttribute('data-state'),
               btnPauseDisabled: document.getElementById('btn-pause').disabled,
               status: s.status,
               score: s.score,
@@ -284,12 +296,19 @@ if (MODULE_SKIP) {
             };
           });
           console.log('[step4] 다시하기 직후:', JSON.stringify(afterAgain));
+          // §6.6 R3-1: 스코어 0
           if (afterAgain.domScore !== '0') {
-            throw new Error('AC-RESTART-3 회귀: 다시하기 후 스코어보드가 "0" 으로 복귀하지 않음: "' + afterAgain.domScore + '"');
+            throw new Error('AC-RESTART-3(§6.6 R3-1) 회귀: 다시하기 후 스코어보드가 "0" 으로 복귀하지 않음: "' + afterAgain.domScore + '"');
           }
+          // §6.6 R3-2: 오버레이 hidden 속성 보유
           if (!afterAgain.overlayHidden) {
-            throw new Error('AC-RESTART-3 회귀: 다시하기 후 오버레이가 hidden 되지 않음(게임오버 카드 잔존)');
+            throw new Error('AC-RESTART-3(§6.6 R3-2) 회귀: 다시하기 후 오버레이가 hidden 되지 않음(게임오버 카드 잔존)');
           }
+          // §6.6 R3-3: data-state 가 더 이상 "gameover" 아님
+          if (afterAgain.overlayState === 'gameover') {
+            throw new Error('AC-RESTART-3(§6.6 R3-3) 회귀: 다시하기 후 overlay data-state 가 "gameover" 로 잔존');
+          }
+          // §6.6 R3-4: btn-pause 재활성
           if (afterAgain.btnPauseDisabled) {
             throw new Error('AC-RESTART-3 회귀: 다시하기 후 일시정지 버튼이 비활성 — 재생 재개 실패');
           }
@@ -306,13 +325,15 @@ if (MODULE_SKIP) {
           );
           console.log('[step4] AC-RESTART-3 OK — 스코어 0·오버레이 hidden·pause 재활성·상태 초기화·틱 재개');
 
-          // ── STEP 5 (AC-RESTART-4): 하단 "재시작"(#btn-restart) → playing 중 초기화 ──
+          // ── STEP 5 (AC-RESTART-4 · §6.6 R3-1~R3-4): 하단 "재시작"(#btn-restart) → playing 중 초기화 ──
           const afterRestart = await page.evaluate(() => {
             document.getElementById('btn-restart').click();
             const s = window.__brixSnakeState;
             return {
               domScore: document.querySelector('[data-role="score"]').textContent,
               overlayHidden: document.getElementById('overlay').hasAttribute('hidden'),
+              overlayState: document.getElementById('overlay').getAttribute('data-state'),
+              btnPauseDisabled: document.getElementById('btn-pause').disabled,
               status: s.status,
               score: s.score,
               snakeLength: s.snake.length,
@@ -323,8 +344,15 @@ if (MODULE_SKIP) {
             };
           });
           console.log('[step5] 재시작 버튼 직후:', JSON.stringify(afterRestart));
+          // §6.6 R3-1~R3-4 동일 계약(다시하기와 DOM 결과 동일해야 함)
           if (afterRestart.domScore !== '0' || afterRestart.status !== 'playing' || afterRestart.score !== 0 || afterRestart.snakeLength !== 3) {
             throw new Error('AC-RESTART-4 회귀: 재시작 버튼 후 초기화 실패 — ' + JSON.stringify(afterRestart));
+          }
+          if (afterRestart.overlayState === 'gameover') {
+            throw new Error('AC-RESTART-4(§6.6 R3-3) 회귀: 재시작 버튼 후 overlay data-state 가 "gameover" 로 잔존');
+          }
+          if (afterRestart.btnPauseDisabled) {
+            throw new Error('AC-RESTART-4(§6.6 R3-4) 회귀: 재시작 버튼 후 일시정지 버튼 비활성 — 재생 재개 실패');
           }
           if (afterRestart.head.x !== 10 || afterRestart.head.y !== 10 || afterRestart.direction !== 'right' || afterRestart.pendingDirection !== null || afterRestart.gameoverReason !== null) {
             throw new Error('AC-RESTART-4 회귀: 재시작 버튼 후 뱀/방향/사유 초기화 실패 — ' + JSON.stringify(afterRestart));
@@ -334,15 +362,49 @@ if (MODULE_SKIP) {
             () => window.__brixSnakeState && window.__brixSnakeState.snake[0].x > 10,
             { timeout: 3000 }
           );
-          console.log('[step5] AC-RESTART-4 OK — 재시작 버튼 초기화 + 틱 재개');
+          console.log('[step5] AC-RESTART-4 OK — 재시작 버튼 초기화 + data-state 정리 + 틱 재개');
 
-          // ── STEP 6: 콘솔 에러 없음 ──
-          console.log('[step6] 수집된 콘솔 에러:', JSON.stringify(consoleErrors));
+          // ── STEP 6 (§6.6 입력 경로 동등성): 키보드(Enter) 재시작 경로 ──
+          // 게임오버 상태에서 Enter = #btn-again = #btn-restart → R3-1~R3-4 동일 만족.
+          await growAndSelfCollide('step6');
+          const beforeEnter = await page.evaluate(() => ({
+            status: window.__brixSnakeState.status,
+            reason: window.__brixSnakeState.gameoverReason,
+          }));
+          if (beforeEnter.status !== 'gameover' || beforeEnter.reason !== 'self') {
+            throw new Error('STEP6 전제 붕괴: Enter 재시작 전 자기충돌 게임오버가 아님 — ' + JSON.stringify(beforeEnter));
+          }
+          await page.keyboard.press('Enter');
+          // startGame 은 동기 — Enter 처리 직후 playing 전이. waitForFunction 으로 관측.
+          await page.waitForFunction(
+            () => window.__brixSnakeState && window.__brixSnakeState.status === 'playing' && window.__brixSnakeState.score === 0,
+            { timeout: 3000 }
+          );
+          const afterEnter = await page.evaluate(() => ({
+            domScore: document.querySelector('[data-role="score"]').textContent,
+            overlayHidden: document.getElementById('overlay').hasAttribute('hidden'),
+            overlayState: document.getElementById('overlay').getAttribute('data-state'),
+            btnPauseDisabled: document.getElementById('btn-pause').disabled,
+            snakeLength: window.__brixSnakeState.snake.length,
+            gameoverReason: window.__brixSnakeState.gameoverReason,
+          }));
+          console.log('[step6] Enter 재시작 직후:', JSON.stringify(afterEnter));
+          if (afterEnter.domScore !== '0' || !afterEnter.overlayHidden || afterEnter.overlayState === 'gameover' || afterEnter.btnPauseDisabled || afterEnter.snakeLength !== 3 || afterEnter.gameoverReason !== null) {
+            throw new Error('AC-RESTART(§6.6 입력 경로 동등성) 회귀: Enter 키 재시작이 버튼 경로와 동일 계약(R3-1~R3-4)을 만족하지 않음 — ' + JSON.stringify(afterEnter));
+          }
+          await page.waitForFunction(
+            () => window.__brixSnakeState && window.__brixSnakeState.snake[0].x > 10,
+            { timeout: 3000 }
+          );
+          console.log('[step6] 입력 경로 동등성 OK — 키보드(Enter) 재시작도 R3-1~R3-4 동일 만족 + 틱 재개');
+
+          // ── STEP 7: 콘솔 에러 없음 ──
+          console.log('[step7] 수집된 콘솔 에러:', JSON.stringify(consoleErrors));
           if (consoleErrors.length > 0) {
             throw new Error('콘솔 에러 ' + consoleErrors.length + '건:\\n' + consoleErrors.slice(0, 3).join('\\n'));
           }
 
-          console.log('[OK] BF-973: 자기충돌 UI(AC-SELF-3/4) + 다시하기/재시작 DOM 동기화(AC-RESTART-3/4) 통과');
+          console.log('[OK] BF-973: 자기충돌 UI(AC-SELF-3/4·§6.6 S3) + 다시하기/재시작/Enter DOM 동기화(AC-RESTART-3/4·§6.6 R3) 통과');
         `;
 
         const res = await fetch("http://e2e-runner:3030/run", {
