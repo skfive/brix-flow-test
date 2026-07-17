@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breakout Lite — 디자인 mockup (BF-942)</title>
+<style>
+  :root {
+    /* ── 표준 토큰 (phase18 게임 계열 재사용, 값 불변) ── */
+    --color-bg-canvas: #0B0F17;
+    --color-bg-surface: #141B26;
+    --color-bg-subtle: #1C2431;
+    --color-border-default: #273140;
+    --color-border-strong: #3A4657;
+    --color-text-primary: #E8EDF4;
+    --color-text-secondary: #9AA7B8;
+    --color-text-muted: #63708A;
+    --color-accent: #5B82F0;
+    --color-accent-hover: #6E90F5;
+    --color-accent-on: #0B0F17;
+    --color-focus-ring: rgba(91,130,240,.55);
+    --color-success: #4ADE80;
+    --color-danger: #E55858;
+
+    /* ── Breakout Lite 전용 토큰 ── */
+    --board-bg: #070B12;
+    --board-border: #273140;
+    --board-wall: rgba(232,237,244,.10);
+    --paddle-fill: #6E90F5;
+    --paddle-edge: #3D5BC4;
+    --paddle-glow: rgba(110,144,245,.35);
+    --ball-fill: #F5F7FA;
+    --ball-edge: #AEB9CC;
+    --ball-glow: rgba(245,247,250,.30);
+    --brick-row-1: #E55858; /* 레드 */
+    --brick-row-2: #F0883E; /* 오렌지 */
+    --brick-row-3: #4ADE80; /* 그린 */
+    --brick-row-4: #38BDF8; /* 스카이 */
+    --brick-top-highlight: rgba(255,255,255,.22);
+    --brick-bottom-shade: rgba(0,0,0,.28);
+    --life-heart: #E55858;
+    --life-heart-empty: #3A4657;
+    --overlay-scrim: rgba(5,7,12,.74);
+    --serve-hint-bg: rgba(11,15,23,.55);
+    --lose-tint: rgba(229,88,88,.14);
+    --win-tint: rgba(74,222,128,.14);
+
+    /* ── 타이포 ── */
+    --font-sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+
+    /* ── spacing ── */
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-5:24px; --space-6:32px; --space-7:48px;
+    --radius-sm:6px; --radius-md:10px; --radius-lg:14px; --radius-pill:999px;
+    --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--color-bg-canvas);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    padding: var(--space-6) var(--space-4);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .doc { max-width: 1080px; margin: 0 auto; }
+  .doc-head { text-align: center; margin-bottom: var(--space-6); }
+  .doc-head h1 { font-size: 24px; font-weight: 700; }
+  .doc-head p { color: var(--color-text-secondary); font-size: 14px; margin-top: var(--space-2); }
+
+  .section {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+  .section > h2 {
+    font-size: 15px; font-weight: 600; color: var(--color-accent);
+    text-transform: uppercase; letter-spacing: .08em;
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border-default);
+    padding-bottom: var(--space-2);
+  }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-5); align-items: flex-start; }
+  .caption { color: var(--color-text-muted); font-size: 13px; margin-top: var(--space-2); text-align: center; }
+
+  /* ── 앱 프레임 (대표 화면) ── */
+  .breakout-app {
+    width: 360px; max-width: 100%;
+    display: flex; flex-direction: column; gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-bg-canvas);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+  }
+  .breakout-topbar h1 { font-size: 20px; font-weight: 600; line-height: 1.3; }
+
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
+    box-shadow: var(--shadow-panel);
+  }
+  .hud__cell { display: flex; flex-direction: column; gap: 2px; }
+  .hud__cell--lives { align-items: flex-end; }
+  .hud__label {
+    font-size: 12px; font-weight: 600; color: var(--color-text-secondary);
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .hud__value { font-family: var(--font-mono); font-weight: 700; font-size: 30px; color: var(--color-text-primary); }
+  .hud__lives { display: flex; gap: 3px; font-size: 20px; line-height: 1; }
+  .life--full { color: var(--life-heart); }
+  .life--empty { color: var(--life-heart-empty); }
+  .hud__lives-num { font-size: 12px; color: var(--color-text-muted); margin-left: var(--space-1); align-self: center; }
+
+  /* ── 보드 ── */
+  .board-wrap {
+    position: relative;
+    width: 100%; max-width: 360px;
+    aspect-ratio: 3 / 4;
+    background: var(--board-bg);
+    border: 1px solid var(--board-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-panel);
+  }
+  /* 반사 벽 하이라이트 */
+  .board-wrap::before {
+    content: ""; position: absolute; inset: 0;
+    border-top: 1px solid var(--board-wall);
+    border-left: 1px solid var(--board-wall);
+    border-right: 1px solid var(--board-wall);
+    pointer-events: none; z-index: 3;
+  }
+
+  /* 벽돌 격자: 4행 × 6열 (논리 좌표 360×480 → % 환산) */
+  .bricks {
+    position: absolute;
+    top: 10%;      /* BRICK_TOP_MARGIN 48/480 = 10% */
+    left: 5%; right: 5%;  /* 좌우 마진 18/360 = 5% */
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-auto-rows: 16px;
+    gap: 2.6%;
+  }
+  .brick {
+    border-radius: 3px;
+    position: relative;
+    box-shadow: inset 0 2px 0 var(--brick-top-highlight), inset 0 -2px 0 var(--brick-bottom-shade);
+  }
+  .brick--r1 { background: var(--brick-row-1); }
+  .brick--r2 { background: var(--brick-row-2); }
+  .brick--r3 { background: var(--brick-row-3); }
+  .brick--r4 { background: var(--brick-row-4); }
+  .brick--dead { background: transparent; box-shadow: none; }
+
+  /* 패들 */
+  .paddle {
+    position: absolute;
+    bottom: 8.3%;   /* PADDLE_Y 440 → (480-440-10)/480 ≈ 6% 하단부터, 시각 근사 */
+    left: 50%; transform: translateX(-50%);
+    width: 17.8%;   /* 64/360 */
+    height: 10px;
+    background: var(--paddle-fill);
+    border-radius: 5px;
+    box-shadow: 0 0 12px var(--paddle-glow), inset 0 -3px 0 var(--paddle-edge), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .paddle--left { left: 30%; }
+
+  /* 공 */
+  .ball {
+    position: absolute;
+    width: 12px; height: 12px;   /* 반지름 6 */
+    border-radius: 50%;
+    background: var(--ball-fill);
+    border: 1px solid var(--ball-edge);
+    box-shadow: 0 0 10px var(--ball-glow);
+  }
+  .ball--play { bottom: 30%; left: 46%; }
+  .ball--serve { bottom: calc(8.3% + 12px); left: 50%; transform: translateX(-50%); }
+
+  /* serve 힌트 */
+  .serve-hint {
+    position: absolute; left: 50%; bottom: var(--space-4);
+    transform: translateX(-50%);
+    background: var(--serve-hint-bg);
+    color: var(--color-text-primary);
+    font-size: 13px; padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-pill);
+    white-space: nowrap; z-index: 4;
+    border: 1px solid var(--color-border-default);
+  }
+
+  /* 상태 오버레이 */
+  .board-overlay {
+    position: absolute; inset: 0; z-index: 5;
+    background: var(--overlay-scrim);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: var(--space-3); padding: var(--space-4);
+  }
+  .board-overlay.is-lose { background: linear-gradient(var(--lose-tint), var(--lose-tint)), var(--overlay-scrim); }
+  .board-overlay.is-win { background: linear-gradient(var(--win-tint), var(--win-tint)), var(--overlay-scrim); }
+  .overlay__icon { font-size: 34px; line-height: 1; }
+  .overlay__title { font-size: 26px; font-weight: 700; }
+  .overlay__desc { font-size: 14px; color: var(--color-text-secondary); max-width: 240px; }
+  .overlay__stat { font-family: var(--font-mono); font-weight: 700; font-size: 20px; }
+  .overlay__stat--win { color: var(--color-success); }
+  .overlay__stat--lose { color: var(--color-text-primary); }
+
+  /* ── 컨트롤 ── */
+  .controls { display: flex; flex-direction: column; gap: var(--space-3); }
+  .controls__hint { font-size: 13px; color: var(--color-text-muted); text-align: center; }
+  .controls__btns { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+
+  .btn {
+    font-family: var(--font-sans);
+    font-size: 14px; font-weight: 600;
+    padding: 10px 18px; min-height: 44px;
+    border-radius: var(--radius-md);
+    cursor: pointer; border: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: transform .08s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; box-shadow: 0 0 0 4px var(--color-focus-ring); }
+  .btn--primary { background: var(--color-accent); color: var(--color-accent-on); }
+  .btn--primary:hover { background: var(--color-accent-hover); }
+  .btn--secondary { background: var(--color-bg-subtle); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
+  .btn--secondary:hover { border-color: var(--color-text-secondary); }
+  .btn--ghost { background: transparent; color: var(--color-text-secondary); border: 1px solid var(--color-border-default); }
+  .btn--ghost:hover { border-color: var(--color-border-strong); color: var(--color-text-primary); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ── 미니 보드 (상태별 오버레이 갤러리) ── */
+  .mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-4); }
+  .mini {
+    width: 100%; aspect-ratio: 3/4;
+    position: relative; overflow: hidden;
+    background: var(--board-bg);
+    border: 1px solid var(--board-border);
+    border-radius: var(--radius-md);
+  }
+  .mini .bricks { top: 8%; gap: 3%; grid-auto-rows: 9px; }
+  .mini .paddle { height: 6px; }
+  .mini .ball { width: 8px; height: 8px; }
+  .mini .board-overlay { gap: var(--space-1); padding: var(--space-2); }
+  .mini .overlay__icon { font-size: 22px; }
+  .mini .overlay__title { font-size: 15px; }
+  .mini .overlay__desc { font-size: 11px; }
+  .mini .overlay__stat { font-size: 13px; }
+  .mini .serve-hint { font-size: 10px; padding: 3px 8px; bottom: var(--space-2); }
+  .mini-label { font-size: 12px; color: var(--color-text-secondary); text-align: center; margin-top: var(--space-2); font-family: var(--font-mono); }
+
+  /* ── 스와치 ── */
+  .swatches { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+  .swatch { display: flex; flex-direction: column; gap: var(--space-1); align-items: center; width: 120px; }
+  .swatch__chip { width: 100%; height: 44px; border-radius: var(--radius-sm); border: 1px solid var(--color-border-default); }
+  .swatch__name { font-size: 11px; font-family: var(--font-mono); color: var(--color-text-secondary); text-align: center; }
+  .swatch__hex { font-size: 10px; color: var(--color-text-muted); font-family: var(--font-mono); }
+
+  /* 오브젝트 규칙 데모 */
+  .obj-demo { display: flex; gap: var(--space-5); flex-wrap: wrap; align-items: center; }
+  .obj-item { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+  .obj-stage { width: 120px; height: 60px; background: var(--board-bg); border: 1px solid var(--board-border); border-radius: var(--radius-sm); position: relative; display: flex; align-items: center; justify-content: center; }
+  .obj-paddle { width: 64px; height: 10px; background: var(--paddle-fill); border-radius: 5px; box-shadow: inset 0 -3px 0 var(--paddle-edge), inset 0 1px 0 rgba(255,255,255,.35), 0 0 12px var(--paddle-glow); }
+  .obj-ball { width: 12px; height: 12px; border-radius: 50%; background: var(--ball-fill); border: 1px solid var(--ball-edge); box-shadow: 0 0 10px var(--ball-glow); }
+  .obj-brick { width: 50px; height: 16px; border-radius: 3px; box-shadow: inset 0 2px 0 var(--brick-top-highlight), inset 0 -2px 0 var(--brick-bottom-shade); }
+  .obj-label { font-size: 12px; color: var(--color-text-secondary); }
+
+  /* 생명 하트 단계 */
+  .lives-stages { display: flex; gap: var(--space-5); flex-wrap: wrap; }
+  .lives-stage { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+  .lives-stage .hearts { font-size: 24px; letter-spacing: 3px; }
+  .lives-stage .lbl { font-size: 12px; color: var(--color-text-muted); font-family: var(--font-mono); }
+
+  /* 입력 매핑 표 */
+  table.io { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.io th, table.io td { text-align: left; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-border-default); }
+  table.io th { color: var(--color-text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; font-size: 11px; }
+  table.io td:first-child { font-family: var(--font-mono); color: var(--color-accent-hover); white-space: nowrap; }
+
+  .desktop-frame { display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--color-bg-canvas); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); }
+  .frame-tag { font-size: 11px; color: var(--color-text-muted); font-family: var(--font-mono); text-align: center; margin-bottom: var(--space-2); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="doc-head">
+    <h1>Breakout Lite — 디자인 mockup</h1>
+    <p>BF-942 · 시각 시뮬레이션 (dev 는 canvas 구현 · 픽셀 일치 의무 없음, 토큰·형태·상태 규칙만 준수)</p>
+  </div>
+
+  <!-- ①②: 대표 화면 + 데스크톱/모바일 -->
+  <div class="section">
+    <h2>① 대표 화면 (playing) · ② 데스크톱 / 모바일 레이아웃</h2>
+    <div class="row" style="justify-content: space-around;">
+      <div>
+        <div class="frame-tag">모바일 360px — playing</div>
+        <div class="breakout-app">
+          <header class="breakout-topbar"><h1>브레이크아웃 라이트</h1></header>
+          <section class="hud">
+            <div class="hud__cell">
+              <span class="hud__label">점수</span>
+              <span class="hud__value">120</span>
+            </div>
+            <div class="hud__cell hud__cell--lives">
+              <span class="hud__label">생명</span>
+              <span class="hud__lives">
+                <span class="life--full">♥</span><span class="life--full">♥</span><span class="life--empty">♡</span>
+                <span class="hud__lives-num">2</span>
+              </span>
+            </div>
+          </section>
+          <div class="board-wrap">
+            <div class="bricks" id="bricks-main"></div>
+            <div class="paddle paddle--left"></div>
+            <div class="ball ball--play"></div>
+          </div>
+          <section class="controls">
+            <p class="controls__hint">← → 또는 A/D · 드래그로 패들 · Space/탭 발사·일시정지 · R 재시작</p>
+            <div class="controls__btns">
+              <button class="btn btn--secondary">일시정지</button>
+              <button class="btn btn--primary">다시하기</button>
+              <button class="btn btn--ghost">메뉴로</button>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div>
+        <div class="frame-tag">데스크톱 — 동일 컬럼 중앙 정렬 (max-width 360px)</div>
+        <div class="desktop-frame">
+          <div class="breakout-app" style="border-color: var(--color-border-strong);">
+            <header class="breakout-topbar"><h1>브레이크아웃 라이트</h1></header>
+            <section class="hud">
+              <div class="hud__cell"><span class="hud__label">점수</span><span class="hud__value">120</span></div>
+              <div class="hud__cell hud__cell--lives"><span class="hud__label">생명</span>
+                <span class="hud__lives"><span class="life--full">♥</span><span class="life--full">♥</span><span class="life--empty">♡</span><span class="hud__lives-num">2</span></span>
+              </div>
+            </section>
+            <div class="board-wrap">
+              <div class="bricks" id="bricks-desktop"></div>
+              <div class="paddle"></div>
+              <div class="ball ball--play"></div>
+            </div>
+            <section class="controls">
+              <p class="controls__hint">← → 또는 A/D · 드래그로 패들 · Space/탭 발사·일시정지 · R 재시작</p>
+              <div class="controls__btns">
+                <button class="btn btn--secondary">일시정지</button>
+                <button class="btn btn--primary">다시하기</button>
+                <button class="btn btn--ghost">메뉴로</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">보드 4행×6열=24개(일부 파괴됨) · 패들(파랑 막대) · 공(근백색 원) — 형태·색상·명도로 3오브젝트 즉시 구분. 좁은 뷰포트에서 보드만 축소, 가로 스크롤 0.</p>
+  </div>
+
+  <!-- ③: 상태별 오버레이 -->
+  <div class="section">
+    <h2>③ 상태별 오버레이 (6상태 · 입력 흐름 화면 반영)</h2>
+    <div class="mini-grid">
+      <div>
+        <div class="mini">
+          <div class="board-overlay">
+            <div class="overlay__title">브레이크아웃<br>라이트</div>
+            <div class="overlay__desc">공으로 벽돌 24개를<br>모두 깨세요</div>
+            <button class="btn btn--primary" style="min-height:34px; padding:6px 14px;">시작</button>
+          </div>
+        </div>
+        <div class="mini-label">idle</div>
+      </div>
+      <div>
+        <div class="mini">
+          <div class="bricks" id="bricks-serve"></div>
+          <div class="paddle"></div>
+          <div class="ball ball--serve"></div>
+          <div class="serve-hint">탭/Space로 발사</div>
+        </div>
+        <div class="mini-label">serve</div>
+      </div>
+      <div>
+        <div class="mini">
+          <div class="bricks" id="bricks-playing"></div>
+          <div class="paddle paddle--left"></div>
+          <div class="ball ball--play"></div>
+        </div>
+        <div class="mini-label">playing (오버레이 없음)</div>
+      </div>
+      <div>
+        <div class="mini">
+          <div class="bricks" id="bricks-paused"></div>
+          <div class="paddle"></div>
+          <div class="board-overlay">
+            <div class="overlay__title">일시정지</div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn--primary" style="min-height:34px; padding:6px 12px;">계속</button>
+              <button class="btn btn--ghost" style="min-height:34px; padding:6px 12px;">메뉴</button>
+            </div>
+          </div>
+        </div>
+        <div class="mini-label">paused</div>
+      </div>
+      <div>
+        <div class="mini">
+          <div class="bricks" id="bricks-lose"></div>
+          <div class="board-overlay is-lose">
+            <div class="overlay__icon">✕</div>
+            <div class="overlay__title">게임 오버</div>
+            <div class="overlay__desc">생명을 모두 소진했어요</div>
+            <div class="overlay__stat overlay__stat--lose">점수 90</div>
+          </div>
+        </div>
+        <div class="mini-label">lose</div>
+      </div>
+      <div>
+        <div class="mini">
+          <div class="board-overlay is-win">
+            <div class="overlay__icon">🎉</div>
+            <div class="overlay__title">클리어!</div>
+            <div class="overlay__desc">모든 벽돌을 깼어요</div>
+            <div class="overlay__stat overlay__stat--win">점수 240</div>
+          </div>
+        </div>
+        <div class="mini-label">win</div>
+      </div>
+    </div>
+    <p class="caption">idle→serve→playing↔paused, playing→win/lose, 임의 상태→재시작(R/탭)→idle→serve. serve 는 강한 scrim 없이 힌트 배너만(발사 준비는 게임 화면 연장).</p>
+  </div>
+
+  <!-- ④: 오브젝트 시각 규칙 -->
+  <div class="section">
+    <h2>④ 보드 오브젝트 시각 규칙</h2>
+    <div class="obj-demo">
+      <div class="obj-item">
+        <div class="obj-stage"><div class="obj-paddle"></div></div>
+        <span class="obj-label">패들 64×10 (accent 파랑·베벨·광)</span>
+      </div>
+      <div class="obj-item">
+        <div class="obj-stage"><div class="obj-ball"></div></div>
+        <span class="obj-label">공 r=6 (근백색 원·외곽 링·halo)</span>
+      </div>
+      <div class="obj-item">
+        <div class="obj-stage" style="gap:4px; flex-direction:column; padding:6px;">
+          <div class="obj-brick brick--r1" style="height:9px;"></div>
+          <div class="obj-brick brick--r2" style="height:9px;"></div>
+          <div class="obj-brick brick--r3" style="height:9px;"></div>
+          <div class="obj-brick brick--r4" style="height:9px;"></div>
+        </div>
+        <span class="obj-label">벽돌 50×16 · 4행 색상(레드/오렌지/그린/스카이)</span>
+      </div>
+    </div>
+    <p class="caption">공(원)·패들(가로 막대)·벽돌(사각 격자) 형태가 근본적으로 달라 색 인지 없이도 구분. 벽돌 4행은 위치+명도 이중 구분(§2.3).</p>
+  </div>
+
+  <!-- ⑤: 생명 하트 단계 -->
+  <div class="section">
+    <h2>⑤ 생명 하트 단계</h2>
+    <div class="lives-stages">
+      <div class="lives-stage"><span class="hearts"><span class="life--full">♥♥♥</span></span><span class="lbl">생명 3 (시작)</span></div>
+      <div class="lives-stage"><span class="hearts"><span class="life--full">♥♥</span><span class="life--empty">♡</span></span><span class="lbl">생명 2</span></div>
+      <div class="lives-stage"><span class="hearts"><span class="life--full">♥</span><span class="life--empty">♡♡</span></span><span class="lbl">생명 1</span></div>
+      <div class="lives-stage"><span class="hearts"><span class="life--empty">♡♡♡</span></span><span class="lbl">생명 0 → lose</span></div>
+    </div>
+    <p class="caption">채움(♥)/비움(♡) 형태 + 숫자 병기로 이중 표현 — 색맹 안전. 생명 손실 후 공만 서브 위치 재배치(패들 위치 유지, 기획 §7-7).</p>
+  </div>
+
+  <!-- ⑥: 컨트롤 버튼 3종 -->
+  <div class="section">
+    <h2>⑥ 컨트롤 버튼 3종 (phase18 계열 표준)</h2>
+    <div class="row" style="align-items:center; gap:var(--space-4);">
+      <div class="obj-item"><button class="btn btn--primary">시작 / 계속 / 다시하기</button><span class="obj-label">primary</span></div>
+      <div class="obj-item"><button class="btn btn--secondary">일시정지</button><span class="obj-label">secondary</span></div>
+      <div class="obj-item"><button class="btn btn--ghost">메뉴로</button><span class="obj-label">ghost</span></div>
+      <div class="obj-item"><button class="btn btn--secondary" disabled>일시정지</button><span class="obj-label">disabled (serve/idle)</span></div>
+    </div>
+    <p class="caption">min-height 44px(WCAG 2.5.5) · focus-visible 포커스 링 · active scale(.97). 주 버튼 라벨은 phase 에 따라 전환.</p>
+  </div>
+
+  <!-- ⑦: 입력 매핑 표 -->
+  <div class="section">
+    <h2>⑦ 입력 매핑 (키보드 + 터치 → 화면 흐름)</h2>
+    <table class="io">
+      <thead><tr><th>입력</th><th>동작</th><th>화면 반응</th></tr></thead>
+      <tbody>
+        <tr><td>← / A</td><td>패들 좌 이동</td><td>패들 X 좌측 이동, 좌벽 클램프</td></tr>
+        <tr><td>→ / D</td><td>패들 우 이동</td><td>패들 X 우측 이동, 우벽 클램프</td></tr>
+        <tr><td>← + →</td><td>동시 입력</td><td>순 이동 0, 패들 정지(상쇄)</td></tr>
+        <tr><td>Space</td><td>serve→발사 / playing→일시정지 토글</td><td>공 발사(힌트 사라짐) / paused 오버레이 ↔ 재개</td></tr>
+        <tr><td>R</td><td>재시작(임의 phase)</td><td>score=0·lives=3·bricks=24 리셋 → idle → 자동 serve</td></tr>
+        <tr><td>드래그</td><td>터치 x 추종</td><td>패들 중심이 터치 x 로 즉시 이동, 이탈 시 마지막 x 유지</td></tr>
+        <tr><td>탭</td><td>serve→발사 / win·lose→재시작</td><td>공 발사 / idle 복귀 후 재시작</td></tr>
+        <tr><td>멀티터치</td><td>첫 포인터만 유효</td><td>추가 포인터 무시</td></tr>
+      </tbody>
+    </table>
+    <p class="caption">기획 §5 입력 모델 전 케이스를 화면 전이로 매핑 (AC "키보드/터치 인터랙션이 화면 흐름에 반영").</p>
+  </div>
+
+  <!-- ⑧: 컬러 토큰 팔레트 -->
+  <div class="section">
+    <h2>⑧ 컬러 토큰 팔레트</h2>
+    <h3 style="font-size:13px; color:var(--color-text-secondary); margin-bottom:var(--space-3);">표준 토큰 (phase18 재사용)</h3>
+    <div class="swatches" id="sw-standard"></div>
+    <h3 style="font-size:13px; color:var(--color-text-secondary); margin:var(--space-5) 0 var(--space-3);">Breakout Lite 전용 토큰</h3>
+    <div class="swatches" id="sw-lite"></div>
+  </div>
+
+  <div class="doc-head" style="margin-top:var(--space-6);">
+    <p style="color:var(--color-text-muted);">— [이디자인] · BF-942 · 시각 시뮬레이션용 mockup (실제 dev 산출물 아님) —</p>
+  </div>
+</div>
+
+<script>
+  // 벽돌 격자 렌더 (4행×6열=24, 일부 alive/dead)
+  function renderBricks(id, deadPattern) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var rows = ['brick--r1','brick--r2','brick--r3','brick--r4'];
+    var html = '';
+    for (var r = 0; r < 4; r++) {
+      for (var c = 0; c < 6; c++) {
+        var idx = r * 6 + c;
+        var dead = deadPattern && deadPattern.indexOf(idx) !== -1;
+        html += '<div class="brick ' + (dead ? 'brick--dead' : rows[r]) + '"></div>';
+      }
+    }
+    el.innerHTML = html;
+  }
+  // 대표/데스크톱: 상단 2행 일부 파괴된 진행 중 화면
+  var mainDead = [0,1,5,6,11];
+  renderBricks('bricks-main', mainDead);
+  renderBricks('bricks-desktop', mainDead);
+  // 미니 보드들
+  renderBricks('bricks-serve', []);        // serve: 전량 온전
+  renderBricks('bricks-playing', [0,2,7,12,13]);
+  renderBricks('bricks-paused', [3,4,8,9,14]);
+  renderBricks('bricks-lose', [0,1,2,3,4,5,6,7,8]); // 진행 중 패배
+
+  // 컬러 스와치 렌더
+  var standard = [
+    ['--color-bg-canvas','#0B0F17'],['--color-bg-surface','#141B26'],['--color-bg-subtle','#1C2431'],
+    ['--color-border-default','#273140'],['--color-border-strong','#3A4657'],
+    ['--color-text-primary','#E8EDF4'],['--color-text-secondary','#9AA7B8'],['--color-text-muted','#63708A'],
+    ['--color-accent','#5B82F0'],['--color-accent-hover','#6E90F5'],
+    ['--color-success','#4ADE80'],['--color-danger','#E55858']
+  ];
+  var lite = [
+    ['--board-bg','#070B12'],['--paddle-fill','#6E90F5'],['--paddle-edge','#3D5BC4'],
+    ['--ball-fill','#F5F7FA'],['--ball-edge','#AEB9CC'],
+    ['--brick-row-1','#E55858'],['--brick-row-2','#F0883E'],['--brick-row-3','#4ADE80'],['--brick-row-4','#38BDF8'],
+    ['--life-heart','#E55858'],['--life-heart-empty','#3A4657'],
+    ['--lose-tint','rgba(229,88,88,.14)'],['--win-tint','rgba(74,222,128,.14)']
+  ];
+  function renderSwatches(id, list) {
+    var el = document.getElementById(id);
+    var html = '';
+    for (var i = 0; i < list.length; i++) {
+      html += '<div class="swatch">' +
+        '<div class="swatch__chip" style="background:' + list[i][1] + '"></div>' +
+        '<div class="swatch__name">' + list[i][0] + '</div>' +
+        '<div class="swatch__hex">' + list[i][1] + '</div>' +
+        '</div>';
+    }
+    el.innerHTML = html;
+  }
+  renderSwatches('sw-standard', standard);
+  renderSwatches('sw-lite', lite);
+</script>
+</body>
+</html>
