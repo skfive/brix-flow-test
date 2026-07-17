@@ -135,12 +135,11 @@
   function syncUi() {
     var s = state.status;
 
-    if (s === "playing") {
-      overlay.hidden = true;
-    } else {
-      overlay.hidden = false;
-      overlay.setAttribute("data-state", s);
-    }
+    // data-state 는 항상 현재 status 를 반영(재시작 시 gameover 잔존 제거,
+    // design §6.6 R3-3: 재시작 후 data-state !== "gameover"). hidden 은
+    // playing 일 때만 — [hidden]{display:none} 이 노출을 최종 제어(styles.css).
+    overlay.setAttribute("data-state", s);
+    overlay.hidden = s === "playing";
 
     // 오버레이 내용
     overlayIcon.textContent = "";
