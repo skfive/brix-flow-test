@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>벽돌깨기(Breakout) — 디자인 시안 (mockup) · BF-928</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   §2 토큰 SSOT — dev 는 styles.css :root 에 그대로 복제
+   (docs/design/breakout-BF-928.md 와 동기화)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  /* 표준 토큰 (다크 테마 — 기존 phase18 게임 계열 승계, 값 불변) */
+  --color-bg-canvas:#0B0F17; --color-bg-surface:#141B26; --color-bg-subtle:#1C2431;
+  --color-border-default:#273140; --color-border-strong:#3A4657;
+  --color-text-primary:#E8EDF4; --color-text-secondary:#9AA7B8; --color-text-muted:#63708A;
+  --color-accent:#5B82F0; --color-accent-hover:#6E90F5; --color-accent-on:#0B0F17;
+  --color-focus-ring:rgba(91,130,240,.55);
+  --color-success:#4ADE80; --color-danger:#E55858;
+
+  /* Breakout 전용 토큰 (신규) */
+  --board-bg:#070B12; --board-border:#273140; --board-wall:rgba(232,237,244,.10);
+  --paddle-fill:#6E90F5; --paddle-edge:#3D5BC4; --paddle-glow:rgba(110,144,245,.35);
+  --ball-fill:#F5F7FA; --ball-edge:#AEB9CC; --ball-glow:rgba(245,247,250,.30);
+  --brick-row-1:#E55858; --brick-row-2:#F0883E; --brick-row-3:#F5C24B;
+  --brick-row-4:#4ADE80; --brick-row-5:#38BDF8;
+  --brick-top-highlight:rgba(255,255,255,.22); --brick-bottom-shade:rgba(0,0,0,.28);
+  --life-heart:#E55858; --life-heart-empty:#3A4657;
+  --overlay-scrim:rgba(5,7,12,.74); --serve-hint-bg:rgba(11,15,23,.55);
+  --gameover-tint:rgba(229,88,88,.14); --win-tint:rgba(74,222,128,.14);
+
+  /* 간격 · 반경 · 그림자 */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px; --radius-pill:999px;
+  --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+  --motion-fast:130ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* 폰트 (system stack — 외부 웹폰트 금지) */
+  --font-sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-mono:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+
+  /* 타이포 */
+  --text-h1:600 20px/1.3 var(--font-sans);
+  --text-score-value:700 clamp(22px,6vw,30px)/1 var(--font-mono);
+  --text-score-label:600 12px/1.2 var(--font-sans);
+  --text-overlay-title:700 clamp(22px,7vw,30px)/1.2 var(--font-sans);
+  --text-overlay-stat:700 clamp(16px,5vw,20px)/1.3 var(--font-mono);
+  --text-body:400 15px/1.5 var(--font-sans);
+  --text-button:600 14px/1 var(--font-sans);
+  --text-caption:400 13px/1.4 var(--font-sans);
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; }
+body {
+  background:var(--color-bg-canvas); color:var(--color-text-primary);
+  font:var(--text-body); padding:var(--space-5) var(--space-4) var(--space-7);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── mockup 문서 프레임(스크린샷용 설명 껍데기) ── */
+.doc { max-width:1000px; margin:0 auto; }
+.doc__title { font:700 26px/1.25 var(--font-sans); margin:0 0 var(--space-2); }
+.doc__sub { color:var(--color-text-secondary); margin:0 0 var(--space-4); font-size:14px; }
+.doc__note {
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-left:3px solid var(--color-accent); border-radius:var(--radius-md);
+  padding:var(--space-3) var(--space-4); color:var(--color-text-secondary);
+  font-size:13.5px; line-height:1.6; margin-bottom:var(--space-6);
+}
+.section-label {
+  font:600 13px/1.3 var(--font-sans); letter-spacing:.04em; text-transform:uppercase;
+  color:var(--color-accent); margin:var(--space-7) 0 var(--space-4);
+  padding-bottom:var(--space-2); border-bottom:1px solid var(--color-border-default);
+}
+.frame-caption { color:var(--color-text-muted); font-size:12.5px; margin-top:var(--space-3); line-height:1.6; }
+
+/* ══════════════ Breakout 앱 (§4.1 실제 페이지 골격) ══════════════ */
+.breakout-app {
+  max-width:360px; margin:0 auto; padding:var(--space-4);
+  background:var(--color-bg-canvas);
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-4);
+}
+.breakout-topbar { width:100%; text-align:center; }
+.breakout-topbar h1 { font:var(--text-h1); margin:0; letter-spacing:.01em; }
+
+/* HUD (점수 · 생명) */
+.hud {
+  width:100%; display:flex; gap:var(--space-3); align-items:center;
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-lg); padding:var(--space-3) var(--space-4);
+  box-shadow:var(--shadow-panel);
+}
+.hud__cell { flex:1; display:flex; flex-direction:column; gap:3px; }
+.hud__cell--lives { align-items:flex-end; text-align:right; }
+.hud__label {
+  font:var(--text-score-label); color:var(--color-text-secondary);
+  letter-spacing:.08em; text-transform:uppercase;
+}
+.hud__value { font:var(--text-score-value); color:var(--color-text-primary); }
+.hud__lives { display:flex; align-items:center; gap:6px; }
+.hud__lives-count { font:700 15px/1 var(--font-mono); color:var(--color-text-secondary); margin-left:2px; }
+.life { font-size:20px; line-height:1; }
+.life--full { color:var(--life-heart); }
+.life--empty { color:var(--life-heart-empty); }
+
+/* 보드 래퍼 + 오버레이 */
+.board-wrap {
+  position:relative; width:100%; max-width:360px; aspect-ratio:3/4;
+  border:1px solid var(--board-border); border-radius:var(--radius-md);
+  overflow:hidden; box-shadow:var(--shadow-panel); background:var(--board-bg);
+}
+/* 상/좌/우 반사 벽 하이라이트 */
+.board-wrap::before {
+  content:''; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+  box-shadow:
+    inset 0 2px 0 var(--board-wall),
+    inset 2px 0 0 var(--board-wall),
+    inset -2px 0 0 var(--board-wall);
+}
+.board-wrap.is-gameover::after { content:''; position:absolute; inset:0; background:var(--gameover-tint); pointer-events:none; }
+.board-wrap.is-win::after { content:''; position:absolute; inset:0; background:var(--win-tint); pointer-events:none; }
+
+/* 벽돌 격자 (5행×8열) — top margin 40/480≈8.3%, 높이 5행 ≈20% */
+.bricks {
+  position:absolute; top:8.3%; left:1.7%; right:1.7%; height:20%;
+  display:flex; flex-direction:column; gap:.83%;
+}
+.brick-row { flex:1; display:flex; gap:1.1%; }
+.brick {
+  flex:1; border-radius:3px;
+  box-shadow: inset 0 2px 0 var(--brick-top-highlight), inset 0 -2px 0 var(--brick-bottom-shade);
+}
+.brick.r1 { background:var(--brick-row-1); }
+.brick.r2 { background:var(--brick-row-2); }
+.brick.r3 { background:var(--brick-row-3); }
+.brick.r4 { background:var(--brick-row-4); }
+.brick.r5 { background:var(--brick-row-5); }
+.brick.is-gone { visibility:hidden; }  /* 파괴된 벽돌 = 빈 공간 */
+
+/* 패들 (PADDLE_Y=440/480≈91.7%, 폭 64/360≈17.8%) */
+.paddle {
+  position:absolute; top:91.7%; height:2.1%; width:17.8%;
+  background:var(--paddle-fill); border-radius:var(--radius-pill);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -2px 0 var(--paddle-edge), 0 0 10px var(--paddle-glow);
+}
+/* 공 (반지름 6 → 지름 12/360≈3.3%) */
+.ball {
+  position:absolute; width:3.3%; aspect-ratio:1; border-radius:50%;
+  background:var(--ball-fill); border:1px solid var(--ball-edge);
+  box-shadow:0 0 8px var(--ball-glow);
+}
+
+/* serve 힌트 배너 */
+.serve-hint {
+  position:absolute; left:0; right:0; bottom:0; text-align:center;
+  background:var(--serve-hint-bg); color:var(--color-text-primary);
+  font:var(--text-caption); padding:var(--space-2) var(--space-3);
+  backdrop-filter:blur(1px);
+}
+
+/* 상태 오버레이 */
+.board-overlay {
+  position:absolute; inset:0; background:var(--overlay-scrim);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:var(--space-3); padding:var(--space-4); text-align:center;
+}
+.board-overlay[hidden] { display:none; }
+.overlay__icon { font-size:34px; line-height:1; }
+.overlay__title { font:var(--text-overlay-title); margin:0; }
+.overlay__desc { font:var(--text-body); color:var(--color-text-secondary); margin:0; max-width:24ch; }
+.overlay__stat { font:var(--text-overlay-stat); color:var(--color-text-primary); margin:2px 0; }
+.overlay__stat.is-win { color:var(--color-success); }
+.overlay__actions { display:flex; gap:var(--space-2); flex-wrap:wrap; justify-content:center; margin-top:var(--space-1); }
+
+/* 컨트롤 */
+.controls { width:100%; display:flex; flex-direction:column; align-items:center; gap:var(--space-3); }
+.controls__hint { font:var(--text-caption); color:var(--color-text-muted); text-align:center; }
+.controls__buttons { display:flex; gap:var(--space-2); flex-wrap:wrap; justify-content:center; }
+
+/* 버튼 3종 */
+.btn {
+  font:var(--text-button); border-radius:var(--radius-md); padding:10px 18px;
+  min-height:44px; cursor:pointer; border:1px solid transparent;
+  transition:transform var(--motion-fast) var(--ease-out), background var(--motion-fast), border-color var(--motion-fast);
+}
+.btn:active { transform:scale(.97); }
+.btn--primary { background:var(--color-accent); color:var(--color-accent-on); }
+.btn--primary:hover { background:var(--color-accent-hover); }
+.btn--secondary { background:var(--color-bg-subtle); color:var(--color-text-primary); border-color:var(--color-border-strong); }
+.btn--secondary:hover { border-color:var(--color-accent); }
+.btn--ghost { background:transparent; color:var(--color-text-secondary); border-color:var(--color-border-default); }
+.btn--ghost:hover { color:var(--color-text-primary); border-color:var(--color-border-strong); }
+.btn:focus-visible { outline:2px solid var(--color-accent); outline-offset:2px; box-shadow:0 0 0 4px var(--color-focus-ring); }
+.btn.is-disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── 데스크톱/모바일 비교 뷰포트 ── */
+.viewports { display:flex; gap:var(--space-5); flex-wrap:wrap; align-items:flex-start; }
+.viewport { border:1px solid var(--color-border-default); border-radius:var(--radius-md); overflow:hidden; }
+.viewport__bar {
+  font:600 12px/1 var(--font-sans); letter-spacing:.04em; text-transform:uppercase;
+  color:var(--color-text-secondary); background:var(--color-bg-subtle);
+  padding:var(--space-2) var(--space-3); border-bottom:1px solid var(--color-border-default);
+}
+.viewport--desktop { flex:1; min-width:420px; }
+.viewport--desktop .stage { background:#05070C; padding:var(--space-5) 0; }
+.viewport--mobile { width:360px; }
+.viewport--mobile .stage { background:#05070C; }
+/* 축소 미니 앱(상태 오버레이 갤러리용) */
+.mini-grid { display:flex; gap:var(--space-4); flex-wrap:wrap; }
+.mini { width:200px; }
+.mini .board-wrap { max-width:200px; }
+.mini .overlay__title { font-size:18px; }
+.mini .overlay__desc { font-size:12px; }
+.mini .overlay__stat { font-size:14px; }
+.mini .overlay__icon { font-size:26px; }
+.mini .btn { padding:7px 12px; min-height:34px; font-size:12px; }
+.mini__cap { text-align:center; color:var(--color-text-muted); font-size:12px; margin-top:var(--space-2); }
+
+/* ── 스와치/팔레트 ── */
+.swatches { display:flex; gap:var(--space-3); flex-wrap:wrap; }
+.swatch {
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-3); width:150px;
+}
+.swatch__chip { height:44px; border-radius:var(--radius-sm); margin-bottom:var(--space-2); border:1px solid rgba(255,255,255,.06); }
+.swatch__name { font:600 12.5px/1.3 var(--font-sans); color:var(--color-text-primary); }
+.swatch__val { font:12px/1.4 var(--font-mono); color:var(--color-text-muted); }
+
+/* 오브젝트 데모 보드 */
+.demoboard {
+  position:relative; width:220px; height:120px; background:var(--board-bg);
+  border:1px solid var(--board-border); border-radius:var(--radius-md); overflow:hidden;
+}
+.demoboard .bricks { position:static; height:auto; padding:10px 10px 0; }
+.demoboard .paddle { width:64px; height:12px; top:auto; bottom:12px; left:78px; }
+.demoboard .ball { width:14px; left:120px; bottom:32px; top:auto; }
+
+/* 생명 하트 단계 */
+.life-steps { display:flex; gap:var(--space-4); flex-wrap:wrap; }
+.life-step { background:var(--color-bg-surface); border:1px solid var(--color-border-default); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); }
+.life-step__cap { color:var(--color-text-muted); font-size:12px; margin-top:var(--space-1); }
+
+.btn-row { display:flex; gap:var(--space-3); flex-wrap:wrap; align-items:center; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1 class="doc__title">벽돌깨기(Breakout) — 디자인 시안 (mockup)</h1>
+  <p class="doc__sub">BF-928 · vanilla-static · 다크 단일 테마 · phase18 게임 계열 토큰 승계 · <code>docs/design/breakout-BF-928.md</code> 시각 동기화</p>
+  <div class="doc__note">
+    이 파일은 <strong>시안 시각화용 mockup</strong>입니다(dev 의 실제 산출물 아님). 실제 게임은 <code>&lt;canvas 360×480&gt;</code> 2D 로 렌더링되며,
+    본 mockup 은 색상 토큰·형태·상태 규칙을 CSS(absolute 배치 + flex)로 시뮬레이션합니다. dev 는 픽셀 단위 일치 의무 없이 <strong>색상 토큰·형태·상태 규칙만</strong> 준수합니다.
+    콘텐츠(점수 120·생명 등)는 placeholder 입니다. 물리·상수·상태 전이는 기획 <code>docs/plan/breakout-BF-928.md</code> 가 SSOT.
+  </div>
+
+  <!-- ══════════ 1. 대표 화면 (모바일 360px, playing) ══════════ -->
+  <div class="section-label">1 · 대표 화면 — 모바일 360px (playing)</div>
+  <div class="viewport viewport--mobile">
+    <div class="viewport__bar">모바일 · 360 × …</div>
+    <div class="stage">
+      <main class="breakout-app">
+        <header class="breakout-topbar"><h1>벽돌깨기</h1></header>
+        <section class="hud">
+          <div class="hud__cell">
+            <span class="hud__label">점수</span>
+            <span class="hud__value">120</span>
+          </div>
+          <div class="hud__cell hud__cell--lives">
+            <span class="hud__label">생명</span>
+            <span class="hud__lives">
+              <span class="life life--full">♥</span>
+              <span class="life life--full">♥</span>
+              <span class="life life--empty">♡</span>
+              <span class="hud__lives-count">2</span>
+            </span>
+          </div>
+        </section>
+        <div class="board-wrap">
+          <div class="bricks">
+            <div class="brick-row"><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1 is-gone"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1 is-gone"></div><div class="brick r1"></div><div class="brick r1"></div></div>
+            <div class="brick-row"><div class="brick r2"></div><div class="brick r2 is-gone"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2 is-gone"></div><div class="brick r2"></div></div>
+            <div class="brick-row"><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3 is-gone"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div></div>
+            <div class="brick-row"><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4 is-gone"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div></div>
+            <div class="brick-row"><div class="brick r5"></div><div class="brick r5 is-gone"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5 is-gone"></div></div>
+          </div>
+          <div class="ball" style="left:52%; top:60%;"></div>
+          <div class="paddle" style="left:44%;"></div>
+          <div class="board-overlay" hidden></div>
+        </div>
+        <section class="controls">
+          <p class="controls__hint">← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지</p>
+          <div class="controls__buttons">
+            <button class="btn btn--secondary" type="button">일시정지</button>
+            <button class="btn btn--ghost is-disabled" type="button">메뉴로</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <p class="frame-caption">§4.1 세로 스택: 타이틀바 → HUD(점수/생명 하트) → 360×480 보드(벽돌 5행 색상 코딩·일부 파괴·패들·공) → 조작 힌트 → 버튼. 캔버스 전체가 드래그 히트 영역(온스크린 방향 버튼 없음).</p>
+
+  <!-- ══════════ 2. 데스크톱 레이아웃 ══════════ -->
+  <div class="section-label">2 · 데스크톱 레이아웃 (동일 단일 컬럼, 중앙 정렬)</div>
+  <div class="viewport viewport--desktop">
+    <div class="viewport__bar">데스크톱 · 넓은 뷰포트 → breakout-app max-width 360px 중앙 정렬</div>
+    <div class="stage">
+      <main class="breakout-app">
+        <header class="breakout-topbar"><h1>벽돌깨기</h1></header>
+        <section class="hud">
+          <div class="hud__cell"><span class="hud__label">점수</span><span class="hud__value">120</span></div>
+          <div class="hud__cell hud__cell--lives"><span class="hud__label">생명</span>
+            <span class="hud__lives">
+              <span class="life life--full">♥</span><span class="life life--full">♥</span><span class="life life--empty">♡</span>
+              <span class="hud__lives-count">2</span>
+            </span>
+          </div>
+        </section>
+        <div class="board-wrap">
+          <div class="bricks">
+            <div class="brick-row"><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1 is-gone"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1 is-gone"></div><div class="brick r1"></div><div class="brick r1"></div></div>
+            <div class="brick-row"><div class="brick r2"></div><div class="brick r2 is-gone"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2 is-gone"></div><div class="brick r2"></div></div>
+            <div class="brick-row"><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3 is-gone"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div></div>
+            <div class="brick-row"><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4 is-gone"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div></div>
+            <div class="brick-row"><div class="brick r5"></div><div class="brick r5 is-gone"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5 is-gone"></div></div>
+          </div>
+          <div class="ball" style="left:52%; top:60%;"></div>
+          <div class="paddle" style="left:44%;"></div>
+          <div class="board-overlay" hidden></div>
+        </div>
+        <section class="controls">
+          <p class="controls__hint">← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지</p>
+          <div class="controls__buttons">
+            <button class="btn btn--secondary" type="button">일시정지</button>
+            <button class="btn btn--ghost is-disabled" type="button">메뉴로</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <p class="frame-caption">§4.4 단일 브레이크포인트 420px. 데스크톱에서도 좁은 세로 컬럼(max-width 360px)을 중앙 정렬 — pong·snake 관례. 논리 좌표계(360×480) 불변, CSS 표시 크기만 축소.</p>
+
+  <!-- ══════════ 3. 상태별 오버레이 ══════════ -->
+  <div class="section-label">3 · 상태별 오버레이 (6종: start / serve / playing / paused / gameover / win)</div>
+  <div class="mini-grid">
+
+    <!-- start -->
+    <div class="mini">
+      <div class="board-wrap">
+        <div class="bricks">
+          <div class="brick-row"><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div></div>
+          <div class="brick-row"><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div></div>
+          <div class="brick-row"><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div></div>
+          <div class="brick-row"><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div></div>
+          <div class="brick-row"><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div></div>
+        </div>
+        <div class="paddle" style="left:41%;"></div>
+        <div class="ball" style="left:48%; top:88%;"></div>
+        <div class="board-overlay">
+          <p class="overlay__title">벽돌깨기</p>
+          <p class="overlay__desc">←→ 또는 드래그로 패들을 움직여 벽돌 40개를 모두 깨세요</p>
+          <div class="overlay__actions"><button class="btn btn--primary" type="button">시작</button></div>
+        </div>
+      </div>
+      <p class="mini__cap">start — 시작 화면(벽돌 40개 미리보기 + [시작])</p>
+    </div>
+
+    <!-- serve -->
+    <div class="mini">
+      <div class="board-wrap">
+        <div class="bricks">
+          <div class="brick-row"><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div></div>
+          <div class="brick-row"><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div></div>
+          <div class="brick-row"><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div></div>
+          <div class="brick-row"><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div></div>
+          <div class="brick-row"><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div></div>
+        </div>
+        <div class="paddle" style="left:41%;"></div>
+        <div class="ball" style="left:48%; top:88%;"></div>
+        <div class="serve-hint">탭 또는 Enter로 발사</div>
+        <div class="board-overlay" hidden></div>
+      </div>
+      <p class="mini__cap">serve — 공 패들 부착 + 하단 발사 힌트(강한 딤 없음)</p>
+    </div>
+
+    <!-- playing -->
+    <div class="mini">
+      <div class="board-wrap">
+        <div class="bricks">
+          <div class="brick-row"><div class="brick r1"></div><div class="brick r1 is-gone"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1 is-gone"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div></div>
+          <div class="brick-row"><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2 is-gone"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div></div>
+          <div class="brick-row"><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3 is-gone"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div></div>
+          <div class="brick-row"><div class="brick r4 is-gone"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4 is-gone"></div><div class="brick r4"></div></div>
+          <div class="brick-row"><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5 is-gone"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div></div>
+        </div>
+        <div class="ball" style="left:60%; top:55%;"></div>
+        <div class="paddle" style="left:52%;"></div>
+        <div class="board-overlay" hidden></div>
+      </div>
+      <p class="mini__cap">playing — 오버레이 숨김, 공 이동/벽돌 파괴 진행</p>
+    </div>
+
+    <!-- paused -->
+    <div class="mini">
+      <div class="board-wrap">
+        <div class="bricks">
+          <div class="brick-row"><div class="brick r1"></div><div class="brick r1 is-gone"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div></div>
+          <div class="brick-row"><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2 is-gone"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div></div>
+          <div class="brick-row"><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div></div>
+          <div class="brick-row"><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div></div>
+          <div class="brick-row"><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div></div>
+        </div>
+        <div class="paddle" style="left:44%;"></div>
+        <div class="board-overlay">
+          <p class="overlay__icon">⏸</p>
+          <p class="overlay__title">일시정지</p>
+          <div class="overlay__actions">
+            <button class="btn btn--primary" type="button">계속하기</button>
+            <button class="btn btn--ghost" type="button">메뉴로</button>
+          </div>
+        </div>
+      </div>
+      <p class="mini__cap">paused — P/Esc, 보드 상태 보존</p>
+    </div>
+
+    <!-- gameover -->
+    <div class="mini">
+      <div class="board-wrap is-gameover">
+        <div class="bricks">
+          <div class="brick-row"><div class="brick r1"></div><div class="brick r1 is-gone"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div><div class="brick r1"></div></div>
+          <div class="brick-row"><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2 is-gone"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div><div class="brick r2"></div></div>
+          <div class="brick-row"><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div><div class="brick r3"></div></div>
+          <div class="brick-row"><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div><div class="brick r4"></div></div>
+          <div class="brick-row"><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div><div class="brick r5"></div></div>
+        </div>
+        <div class="paddle" style="left:20%;"></div>
+        <div class="board-overlay">
+          <p class="overlay__icon" style="color:var(--color-danger)">✕</p>
+          <p class="overlay__title">게임 오버</p>
+          <p class="overlay__desc">생명을 모두 소진했어요</p>
+          <p class="overlay__stat">점수 120</p>
+          <div class="overlay__actions">
+            <button class="btn btn--primary" type="button">다시하기</button>
+            <button class="btn btn--ghost" type="button">메뉴로</button>
+          </div>
+        </div>
+      </div>
+      <p class="mini__cap">gameover — 붉은 틴트 + ✕ + 사유 + 최종 점수</p>
+    </div>
+
+    <!-- win -->
+    <div class="mini">
+      <div class="board-wrap is-win">
+        <div class="bricks">
+          <div class="brick-row"><div class="brick r1 is-gone"></div><div class="brick r1 is-gone"></div><div class="brick r1 is-gone"></div><div class="brick r1 is-gone"></div><div class="brick r1 is-gone"></div><div class="brick r1 is-gone"></div><div class="brick r1 is-gone"></div><div class="brick r1 is-gone"></div></div>
+          <div class="brick-row"><div class="brick r2 is-gone"></div><div class="brick r2 is-gone"></div><div class="brick r2 is-gone"></div><div class="brick r2 is-gone"></div><div class="brick r2 is-gone"></div><div class="brick r2 is-gone"></div><div class="brick r2 is-gone"></div><div class="brick r2 is-gone"></div></div>
+          <div class="brick-row"><div class="brick r3 is-gone"></div><div class="brick r3 is-gone"></div><div class="brick r3 is-gone"></div><div class="brick r3 is-gone"></div><div class="brick r3 is-gone"></div><div class="brick r3 is-gone"></div><div class="brick r3 is-gone"></div><div class="brick r3 is-gone"></div></div>
+          <div class="brick-row"><div class="brick r4 is-gone"></div><div class="brick r4 is-gone"></div><div class="brick r4 is-gone"></div><div class="brick r4 is-gone"></div><div class="brick r4 is-gone"></div><div class="brick r4 is-gone"></div><div class="brick r4 is-gone"></div><div class="brick r4 is-gone"></div></div>
+          <div class="brick-row"><div class="brick r5 is-gone"></div><div class="brick r5 is-gone"></div><div class="brick r5 is-gone"></div><div class="brick r5 is-gone"></div><div class="brick r5 is-gone"></div><div class="brick r5 is-gone"></div><div class="brick r5 is-gone"></div><div class="brick r5 is-gone"></div></div>
+        </div>
+        <div class="paddle" style="left:44%;"></div>
+        <div class="board-overlay">
+          <p class="overlay__icon">🎉</p>
+          <p class="overlay__title">클리어!</p>
+          <p class="overlay__desc">모든 벽돌을 깼어요</p>
+          <p class="overlay__stat is-win">점수 400</p>
+          <div class="overlay__actions">
+            <button class="btn btn--primary" type="button">다시하기</button>
+            <button class="btn btn--ghost" type="button">메뉴로</button>
+          </div>
+        </div>
+      </div>
+      <p class="mini__cap">win — 초록 틴트 + 🎉 + 만점 400 success 강조</p>
+    </div>
+
+  </div>
+
+  <!-- ══════════ 4. 오브젝트 시각 규칙 ══════════ -->
+  <div class="section-label">4 · 오브젝트 시각 규칙 (패들 · 공 · 벽돌 5행)</div>
+  <div class="swatches" style="align-items:flex-start;">
+    <div class="demoboard">
+      <div class="bricks">
+        <div class="brick-row"><div class="brick r1"></div><div class="brick r2"></div><div class="brick r3"></div><div class="brick r4"></div><div class="brick r5"></div></div>
+      </div>
+      <div class="paddle"></div>
+      <div class="ball"></div>
+    </div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--paddle-fill); box-shadow:inset 0 -3px 0 var(--paddle-edge);"></div><div class="swatch__name">패들 (paddle)</div><div class="swatch__val">--paddle-fill #6E90F5<br>64×10 · pill · 하단 베벨</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--board-bg); display:flex; align-items:center; justify-content:center;"><span style="width:22px;height:22px;border-radius:50%;background:var(--ball-fill);border:1px solid var(--ball-edge);box-shadow:0 0 8px var(--ball-glow);"></span></div><div class="swatch__name">공 (ball)</div><div class="swatch__val">--ball-fill #F5F7FA<br>반지름 6 · 원형 · halo</div></div>
+  </div>
+  <div class="swatches" style="margin-top:var(--space-4);">
+    <div class="swatch"><div class="swatch__chip r1 brick" style="background:var(--brick-row-1);"></div><div class="swatch__name">벽돌 1행 (레드)</div><div class="swatch__val">--brick-row-1 #E55858</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--brick-row-2);"></div><div class="swatch__name">벽돌 2행 (오렌지)</div><div class="swatch__val">--brick-row-2 #F0883E</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--brick-row-3);"></div><div class="swatch__name">벽돌 3행 (앰버)</div><div class="swatch__val">--brick-row-3 #F5C24B</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--brick-row-4);"></div><div class="swatch__name">벽돌 4행 (그린)</div><div class="swatch__val">--brick-row-4 #4ADE80</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--brick-row-5);"></div><div class="swatch__name">벽돌 5행 (스카이)</div><div class="swatch__val">--brick-row-5 #38BDF8</div></div>
+  </div>
+  <p class="frame-caption">§2.3 형태(원/막대/사각)가 근본적으로 달라 색 인지 없이도 구분. 벽돌 5색은 행 위치가 고정(1~5행)이라 색맹에도 위치로 구분되고, 파괴는 색 제거가 아니라 셀 소멸(빈 공간)로 표현. 모든 벽돌 상단 하이라이트 + 하단 그림자 베벨 통일.</p>
+
+  <!-- ══════════ 5. 생명 하트 단계 ══════════ -->
+  <div class="section-label">5 · 생명 하트 단계 (3 → 0)</div>
+  <div class="life-steps">
+    <div class="life-step"><span class="life life--full">♥</span><span class="life life--full">♥</span><span class="life life--full">♥</span> <span class="hud__lives-count">3</span><div class="life-step__cap">초기 (LIVES_INITIAL)</div></div>
+    <div class="life-step"><span class="life life--full">♥</span><span class="life life--full">♥</span><span class="life life--empty">♡</span> <span class="hud__lives-count">2</span><div class="life-step__cap">1회 손실</div></div>
+    <div class="life-step"><span class="life life--full">♥</span><span class="life life--empty">♡</span><span class="life life--empty">♡</span> <span class="hud__lives-count">1</span><div class="life-step__cap">2회 손실</div></div>
+    <div class="life-step"><span class="life life--empty">♡</span><span class="life life--empty">♡</span><span class="life life--empty">♡</span> <span class="hud__lives-count">0</span><div class="life-step__cap">소진 → gameover</div></div>
+  </div>
+  <p class="frame-caption">§5.2 채움 하트(♥ --life-heart) vs 빈 하트(♡ --life-heart-empty) + 숫자 병기(이중 표현, 색맹 안전). 기획 §7.3 "생명 {lives}" 최소 계약을 designer 재량으로 하트+숫자로 확정.</p>
+
+  <!-- ══════════ 6. 컨트롤 버튼 3종 ══════════ -->
+  <div class="section-label">6 · 컨트롤 버튼 3종 (primary / secondary / ghost)</div>
+  <div class="btn-row">
+    <button class="btn btn--primary" type="button">시작 / 계속하기 / 다시하기</button>
+    <button class="btn btn--secondary" type="button">일시정지</button>
+    <button class="btn btn--ghost" type="button">메뉴로</button>
+    <button class="btn btn--secondary is-disabled" type="button">일시정지 (disabled)</button>
+  </div>
+  <p class="frame-caption">§5.5 phase18 표준 버튼 승계. min-height 44px(WCAG 2.5.5), focus-visible 포커스 링, active scale(.97). 주 버튼 라벨은 status 에 따라 전환.</p>
+
+  <!-- ══════════ 7. 컬러 토큰 팔레트 ══════════ -->
+  <div class="section-label">7 · 컬러 토큰 팔레트 (§2)</div>
+  <div class="swatches">
+    <div class="swatch"><div class="swatch__chip" style="background:var(--color-bg-canvas);"></div><div class="swatch__name">bg-canvas</div><div class="swatch__val">#0B0F17</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--color-bg-surface);"></div><div class="swatch__name">bg-surface</div><div class="swatch__val">#141B26</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--color-bg-subtle);"></div><div class="swatch__name">bg-subtle</div><div class="swatch__val">#1C2431</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--board-bg);"></div><div class="swatch__name">board-bg</div><div class="swatch__val">#070B12</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--color-accent);"></div><div class="swatch__name">accent</div><div class="swatch__val">#5B82F0</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--color-text-primary);"></div><div class="swatch__name">text-primary</div><div class="swatch__val">#E8EDF4</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--color-text-secondary);"></div><div class="swatch__name">text-secondary</div><div class="swatch__val">#9AA7B8</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--color-success);"></div><div class="swatch__name">success (win)</div><div class="swatch__val">#4ADE80</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--color-danger);"></div><div class="swatch__name">danger (gameover)</div><div class="swatch__val">#E55858</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--paddle-fill);"></div><div class="swatch__name">paddle-fill</div><div class="swatch__val">#6E90F5</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--ball-fill);"></div><div class="swatch__name">ball-fill</div><div class="swatch__val">#F5F7FA</div></div>
+    <div class="swatch"><div class="swatch__chip" style="background:var(--life-heart);"></div><div class="swatch__name">life-heart</div><div class="swatch__val">#E55858</div></div>
+  </div>
+  <p class="frame-caption">§2.1 표준 토큰은 pong·memory-match·snake 와 동일 값(공용 UI 토큰 정합성). §2.2 Breakout 전용 토큰(보드/패들/공/5행 벽돌/생명/틴트)만 신규. dev 는 styles.css :root 에 그대로 복제.</p>
+
+</div>
+</body>
+</html>
