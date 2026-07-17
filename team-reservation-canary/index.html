@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>팀 회의실 예약 · 승인 — team-reservation-canary</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="tr-wrap">
+
+    <!-- ===== App Header ===== -->
+    <header class="tr-header">
+      <h1>팀 회의실 예약 · 승인</h1>
+      <span class="sub">team-reservation-canary</span>
+    </header>
+
+    <!-- 임시 세션(저장 안 됨) 안내 — storage 비활성 시 app.js 가 노출 (§7.3) -->
+    <div class="tr-toast" id="tr-storage-notice" role="status" hidden>
+      <span aria-hidden="true">ℹ</span> 임시 세션 — 변경 사항이 저장되지 않습니다.
+    </div>
+
+    <!-- ===== Filter Bar (§5.3) ===== -->
+    <div class="tr-filterbar">
+      <div class="tr-datenav">
+        <button class="tr-iconbtn" id="tr-date-prev" aria-label="이전 날짜">◀</button>
+        <span class="date" id="tr-date-label" data-role="date">2026-07-20</span>
+        <button class="tr-iconbtn" id="tr-date-next" aria-label="다음 날짜">▶</button>
+      </div>
+      <span class="tr-field-label" id="tr-reslabel">자원</span>
+      <select class="tr-select" id="tr-resource-select" aria-labelledby="tr-reslabel">
+        <option value="all">전체</option>
+      </select>
+      <span class="tr-spacer"></span>
+      <button class="tr-btn tr-btn--primary" id="tr-new-reservation">
+        <span class="ic" aria-hidden="true">＋</span> 예약
+      </button>
+    </div>
+
+    <!-- ===== §A 예약 목록 ===== -->
+    <section class="tr-section" aria-label="예약 목록">
+      <h2>예약 목록 <span class="count" id="tr-list-count" data-role="list-count">0건</span></h2>
+      <div class="tr-cards" id="tr-cards" data-role="cards"></div>
+      <div class="tr-empty" id="tr-cards-empty" data-role="cards-empty" hidden>
+        선택한 날짜/자원에 해당하는 예약이 없습니다.
+      </div>
+    </section>
+
+    <!-- ===== §B 일간 타임라인 ===== -->
+    <section class="tr-section" aria-label="일간 타임라인">
+      <h2>일간 타임라인 <span class="count" id="tr-timeline-date" data-role="timeline-date">2026-07-20</span></h2>
+      <div class="tr-timeline-scroll">
+        <div class="tr-timeline" id="tr-timeline" data-role="timeline" role="table" aria-label="자원별 시간대 점유 현황"></div>
+      </div>
+      <div class="tr-legend">
+        <span class="item"><span class="sw approved"></span> <span aria-hidden="true">✓</span> 승인 (solid)</span>
+        <span class="item"><span class="sw pending"></span> <span aria-hidden="true">⏳</span> 대기 (사선 패턴)</span>
+        <span class="item">겹친 블록 = 동일 자원 충돌 소지 (승인 시 CONFLICT)</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 비-module script — file:// CORS 안전 (planner §11) -->
+  <script src="./reservation.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
