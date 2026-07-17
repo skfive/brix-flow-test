@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pong 아케이드 · /phase18-games/pong</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="pong-app">
+      <!-- 상단바 (design §5.1) -->
+      <header class="pong-topbar">
+        <h1 class="pong-topbar__title">Pong 아케이드</h1>
+      </header>
+
+      <!-- 스코어보드 (design §5.2) — 라이브 리전 -->
+      <div
+        class="pong-scoreboard"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-label="플레이어 0점, CPU 0점"
+      >
+        <div class="pong-score pong-score--player">
+          <span class="pong-score__label">플레이어</span>
+          <span class="pong-score__value" data-role="player-score">0</span>
+        </div>
+        <span class="pong-score__sep" aria-hidden="true">:</span>
+        <div class="pong-score pong-score--cpu">
+          <span class="pong-score__value" data-role="cpu-score">0</span>
+          <span class="pong-score__label">CPU</span>
+        </div>
+      </div>
+
+      <!-- 코트 + 오버레이 레이어 (design §5.3·§5.4) -->
+      <div class="pong-court-wrap">
+        <canvas
+          id="court"
+          class="pong-court"
+          width="800"
+          height="400"
+          role="img"
+          aria-label="Pong 코트, 플레이어 0점 CPU 0점"
+        ></canvas>
+
+        <!-- 상태 오버레이 (data-state 로 내용 전환) -->
+        <div class="pong-overlay" data-state="start" id="overlay">
+          <div class="pong-overlay__card">
+            <h2 class="pong-overlay__title" id="overlay-title" tabindex="-1">
+              Pong 아케이드
+            </h2>
+            <p class="pong-overlay__body" id="overlay-body">
+              11점 먼저 내면 승리 · ↑ / ↓ 또는 코트를 드래그해 조작
+            </p>
+            <div class="pong-overlay__actions">
+              <button type="button" class="pong-btn pong-btn--primary" id="btn-start">
+                시작
+              </button>
+              <button type="button" class="pong-btn pong-btn--primary" id="btn-resume" hidden>
+                계속하기
+              </button>
+              <button type="button" class="pong-btn pong-btn--primary" id="btn-again" hidden>
+                다시하기
+              </button>
+              <button type="button" class="pong-btn pong-btn--ghost" id="btn-menu" hidden>
+                메뉴로
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 조작 안내 + 컨트롤 버튼 (design §5.5·§5.6) -->
+      <div class="pong-controls">
+        <p class="pong-hint">
+          ↑ / ↓ 또는 코트를 드래그해 패들을 움직이세요
+        </p>
+        <div class="pong-buttons">
+          <button type="button" class="pong-btn pong-btn--primary" id="btn-start-bar" disabled>
+            시작
+          </button>
+          <button type="button" class="pong-btn pong-btn--secondary" id="btn-pause" disabled>
+            일시정지
+          </button>
+          <button type="button" class="pong-btn pong-btn--ghost" id="btn-restart">
+            재시작
+          </button>
+        </div>
+      </div>
+
+      <!-- JS 비활성 폴백 (design §5.7 · planner §7.4) -->
+      <noscript>
+        <div class="pong-noscript">
+          이 게임은 JavaScript가 필요합니다. 브라우저에서 JavaScript를 활성화해
+          주세요.
+        </div>
+      </noscript>
+    </div>
+
+    <!-- 비-module script — file:// CORS 안전 (planner §12) -->
+    <script src="./logic.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
