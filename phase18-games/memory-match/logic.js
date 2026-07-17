@@ -175,12 +175,49 @@
     return next;
   }
 
+  var GRID_COLS = 4; // 4x4 보드 (design §4.2)
+
+  /**
+   * 방향키 이동 목표 인덱스 계산 (그리드 경계 클램프) — BF-956 / design §4.2
+   * DOM 순서 = 시각 격자 순서 = 인덱스 순서 전제. 카드 상태는 건드리지 않음(포커스만).
+   * 가장자리에서 바깥 방향은 원 인덱스 유지(래핑 없음, planner AC-K02).
+   * @param {number} index 현재 활성 인덱스 (0 ~ total-1)
+   * @param {'up'|'down'|'left'|'right'} direction 이동 방향
+   * @param {number} [cols] 열 수 (기본 4)
+   * @param {number} [total] 카드 수 (기본 16)
+   * @returns {number} 이동 후 인덱스 (경계/무효 입력이면 원 인덱스)
+   */
+  function nextIndex(index, direction, cols, total) {
+    var columns = typeof cols === "number" && cols > 0 ? cols : GRID_COLS;
+    var count = typeof total === "number" && total > 0 ? total : PAIR_COUNT * 2;
+    var rows = Math.ceil(count / columns);
+    // 범위 밖 인덱스는 안전하게 원값 유지
+    if (typeof index !== "number" || index < 0 || index >= count) return index;
+
+    var row = Math.floor(index / columns);
+    var col = index % columns;
+
+    switch (direction) {
+      case "right": col = Math.min(col + 1, columns - 1); break;
+      case "left": col = Math.max(col - 1, 0); break;
+      case "down": row = Math.min(row + 1, rows - 1); break;
+      case "up": row = Math.max(row - 1, 0); break;
+      default: return index; // 알 수 없는 방향 = no-op
+    }
+
+    var target = row * columns + col;
+    // 마지막 행이 꽉 차지 않은 경우(본 게임은 4x4 로 항상 꽉 참) 범위 밖이면 클램프
+    return target < count ? target : index;
+  }
+
   return {
     PAIR_COUNT: PAIR_COUNT,
+    GRID_COLS: GRID_COLS,
     shuffle: shuffle,
     createDeck: createDeck,
     createInitialState: createInitialState,
     flipCard: flipCard,
     evaluateCheck: evaluateCheck,
+    nextIndex: nextIndex,
   };
 });

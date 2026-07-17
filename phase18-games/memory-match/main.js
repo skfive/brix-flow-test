@@ -31,6 +31,7 @@
   var cardEls = []; // deck 순서와 1:1 (index === card.id)
   var flipBackTimer = null; // 불일치 복귀 대기 타이머
   var timerInterval = null; // 타이머 tick
+  var activeIndex = 0; // roving tabindex 활성 카드 인덱스 (design §5.3 재시작 시 0)
 
   // ── 시간 포맷 (mm:ss) ───────────────────────────────────
   function formatTime(ms) {
@@ -84,11 +85,47 @@
 
       btn.appendChild(back);
       btn.appendChild(face);
+      btn.tabIndex = -1; // roving tabindex — setActiveCard 가 활성 카드만 0 으로
       btn.addEventListener("click", onCardClick.bind(null, card.id));
 
       boardEl.appendChild(btn);
       cardEls[card.id] = btn;
     });
+    // 재시작·초기 진입 모두 활성 인덱스 원점(0) — DOM 포커스 강제 이동은 안 함
+    // (design §5.3 focus stealing 방지)
+    setActiveCard(0, false);
+  }
+
+  // ── roving tabindex — 활성 카드만 tabindex=0, 나머지 -1 (design §5.1) ────
+  function setActiveCard(index, focusEl) {
+    if (index < 0 || index >= cardEls.length) return;
+    activeIndex = index;
+    for (var i = 0; i < cardEls.length; i++) {
+      if (cardEls[i]) cardEls[i].tabIndex = i === activeIndex ? 0 : -1;
+    }
+    if (focusEl && cardEls[activeIndex]) {
+      cardEls[activeIndex].focus();
+    }
+  }
+
+  // ── 방향키 그리드 이동 (포커스만 이동, 카드 상태 불변 — design §6.1) ────
+  var ARROW_DIRS = {
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right",
+  };
+
+  function onBoardKeydown(event) {
+    var dir = ARROW_DIRS[event.key];
+    if (!dir) return; // 방향키 4종 외에는 네이티브 동작 보존(Enter/Space=뒤집기 등)
+    // 실제 포커스된 카드를 기준으로 이동(activeIndex 아닌 event.target — 견고)
+    var currentIndex = cardEls.indexOf(event.target);
+    if (currentIndex === -1) return; // 포커스가 카드가 아니면 무시
+    event.preventDefault(); // 페이지 스크롤 억제(§6.1-4)
+    var target = L.nextIndex(currentIndex, dir);
+    if (target === currentIndex) return; // 경계 클램프 — 링 위치 불변
+    setActiveCard(target, true); // 목표 카드에 .focus() → :focus-visible 링 이동
   }
 
   // ── 카드 1장 DOM 동기화 ─────────────────────────────────
@@ -136,6 +173,8 @@
 
   // ── 카드 클릭 처리 ──────────────────────────────────────
   function onCardClick(cardId) {
+    // 포인터로 누른 카드를 활성 인덱스로 동기화(roving tabindex 일관성 유지)
+    setActiveCard(cardId, false);
     // checking / 불일치 대기 중이면 로직이 no-op 처리(입력 잠금, EC-02)
     var prev = state;
     state = L.flipCard(state, cardId, Date.now());
@@ -203,6 +242,7 @@
   // ── 초기화 ──────────────────────────────────────────────
   restartBtn.addEventListener("click", restart);
   winRestartBtn.addEventListener("click", restart);
+  boardEl.addEventListener("keydown", onBoardKeydown); // 방향키 위임(§6.2)
 
   state = L.createInitialState(L.createDeck(L.PAIR_COUNT));
   buildBoard();
