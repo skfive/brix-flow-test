@@ -203,7 +203,12 @@ body {
   margin: 0;
   font: 700 clamp(24px, 7vw, 34px) / 1.2 var(--font-mono);
   color: var(--color-text-primary);
-  outline: none;
+}
+
+/* 프로그램 포커스 시 포커스 링 (GAP-1 / AC-F1·F3) — 버튼과 동일 토큰·값 */
+.pong-overlay__title:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .pong-overlay__title[data-winner="player"] {
