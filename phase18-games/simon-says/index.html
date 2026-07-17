@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simon Says · /phase18-games/simon-says</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="simon-app">
+      <!-- 타이틀 (design §4.1) -->
+      <h1 class="app__title">Simon Says</h1>
+
+      <!-- 상태 텍스트 (design §5.2) — 라이브 리전 -->
+      <p class="status" role="status" aria-live="polite">시작을 눌러 주세요</p>
+
+      <!-- 4색 패드 그리드 + 중앙 라운드 배지 (design §5.1·§5.3) -->
+      <div class="pad-grid">
+        <button class="pad pad--green" type="button" data-pad="green" data-key="1" aria-label="초록 패드 (숫자 1)"><span class="pad__label">초록<span class="pad__key">1</span></span></button>
+        <button class="pad pad--red" type="button" data-pad="red" data-key="2" aria-label="빨강 패드 (숫자 2)"><span class="pad__label">빨강<span class="pad__key">2</span></span></button>
+        <button class="pad pad--yellow" type="button" data-pad="yellow" data-key="3" aria-label="노랑 패드 (숫자 3)"><span class="pad__label">노랑<span class="pad__key">3</span></span></button>
+        <button class="pad pad--blue" type="button" data-pad="blue" data-key="4" aria-label="파랑 패드 (숫자 4)"><span class="pad__label">파랑<span class="pad__key">4</span></span></button>
+        <div class="round-badge" role="img" aria-label="현재 라운드 0">
+          <span class="round-badge__label">Round</span>
+          <span class="round-badge__value" data-role="round">0</span>
+        </div>
+      </div>
+
+      <!-- 컨트롤 버튼 (design §5.4) -->
+      <div class="controls">
+        <button class="btn btn--primary" type="button" id="btn-start">시작</button>
+        <button class="btn btn--secondary" type="button" id="btn-restart" disabled>다시하기</button>
+      </div>
+
+      <!-- 조작 안내 (design §5.5) -->
+      <p class="hint">각 패드는 <strong>색·위치·숫자</strong>로 구분됩니다.<br>패드 클릭 · 숫자키 <strong>1 2 3 4</strong> · Enter/Space 로 선택</p>
+
+      <!-- JS 비활성 폴백 -->
+      <noscript>
+        이 게임은 JavaScript가 필요합니다. 브라우저에서 JavaScript를 활성화해 주세요.
+      </noscript>
+    </main>
+
+    <!-- 비-module script — file:// CORS 안전 -->
+    <script src="./logic.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
