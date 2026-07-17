@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake 아케이드 — 디자인 시안 (mockup) · BF-922</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   §2 토큰 SSOT — dev 는 styles.css :root 에 그대로 복제
+   (docs/design/snake-BF-922.md 와 동기화)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  /* 표준 토큰 (다크 테마 — 기존 phase18 게임 계열 승계) */
+  --color-bg-canvas:#0B0F17; --color-bg-surface:#141B26; --color-bg-subtle:#1C2431;
+  --color-border-default:#273140; --color-border-strong:#3A4657;
+  --color-text-primary:#E8EDF4; --color-text-secondary:#9AA7B8; --color-text-muted:#63708A;
+  --color-accent:#5B82F0; --color-accent-hover:#6E90F5; --color-accent-on:#0B0F17;
+  --color-focus-ring:rgba(91,130,240,.55);
+  --color-success:#4ADE80; --color-danger:#E55858;
+
+  /* Snake 전용 토큰 (신규) */
+  --board-bg:#070B12; --board-grid:rgba(232,237,244,.06); --board-border:#273140;
+  --snake-head:#5CF08A; --snake-head-eye:#07130B;
+  --snake-body:#2FA968; --snake-body-alt:#278C57; --snake-body-border:rgba(7,19,11,.55);
+  --food-fill:#F5C24B; --food-glow:rgba(245,194,75,.35); --food-stem:#7CC86A;
+  --overlay-scrim:rgba(5,7,12,.74); --gameover-tint:rgba(229,88,88,.14);
+
+  /* 간격 · 반경 · 그림자 */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px; --radius-pill:999px;
+  --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+  --motion-fast:130ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* 폰트 (system stack — 외부 웹폰트 금지) */
+  --font-sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-mono:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+
+  /* 타이포 */
+  --text-h1:600 20px/1.3 var(--font-sans);
+  --text-score-value:700 clamp(24px,7vw,32px)/1 var(--font-mono);
+  --text-score-label:600 12px/1.2 var(--font-sans);
+  --text-overlay-title:700 clamp(22px,7vw,30px)/1.2 var(--font-sans);
+  --text-overlay-stat:700 clamp(16px,5vw,20px)/1.3 var(--font-mono);
+  --text-body:400 15px/1.5 var(--font-sans);
+  --text-button:600 14px/1 var(--font-sans);
+  --text-caption:400 13px/1.4 var(--font-sans);
+  --text-dpad:700 22px/1 var(--font-sans);
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; }
+body {
+  background:var(--color-bg-canvas); color:var(--color-text-primary);
+  font:var(--text-body); padding:var(--space-5) var(--space-4) var(--space-7);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── mockup 문서 프레임(스크린샷용 설명 껍데기) ── */
+.doc { max-width:960px; margin:0 auto; }
+.doc__title { font:700 26px/1.25 var(--font-sans); margin:0 0 var(--space-2); }
+.doc__sub { color:var(--color-text-secondary); margin:0 0 var(--space-4); font-size:14px; }
+.doc__note {
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-left:3px solid var(--color-accent); border-radius:var(--radius-md);
+  padding:var(--space-3) var(--space-4); color:var(--color-text-secondary);
+  font-size:13.5px; line-height:1.6; margin-bottom:var(--space-6);
+}
+.section-label {
+  font:600 13px/1.3 var(--font-sans); letter-spacing:.04em; text-transform:uppercase;
+  color:var(--color-accent); margin:var(--space-7) 0 var(--space-4);
+  padding-bottom:var(--space-2); border-bottom:1px solid var(--color-border-default);
+}
+.frame-caption { color:var(--color-text-muted); font-size:12.5px; margin-top:var(--space-3); line-height:1.6; }
+
+/* ══════════════ Snake 앱 (§4.1 실제 페이지 골격) ══════════════ */
+.snake-app {
+  max-width:360px; margin:0 auto; padding:var(--space-4);
+  background:var(--color-bg-canvas);
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-4);
+}
+.snake-topbar { width:100%; text-align:center; }
+.snake-topbar h1 { font:var(--text-h1); margin:0; letter-spacing:.01em; }
+
+/* 스코어보드 */
+.scoreboard {
+  width:100%; max-width:320px; display:flex; gap:var(--space-3);
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-lg); padding:var(--space-3) var(--space-4);
+  box-shadow:var(--shadow-panel);
+}
+.scoreboard__cell { flex:1; display:flex; flex-direction:column; gap:2px; }
+.scoreboard__cell + .scoreboard__cell { text-align:right; align-items:flex-end; }
+.scoreboard__label {
+  font:var(--text-score-label); color:var(--color-text-secondary);
+  letter-spacing:.08em; text-transform:uppercase;
+}
+.scoreboard__value { font:var(--text-score-value); color:var(--color-text-primary); }
+.scoreboard__value.is-newhigh { color:var(--color-success); }
+
+/* 보드 래퍼 + 오버레이 */
+.board-wrap {
+  position:relative; width:100%; max-width:320px; aspect-ratio:1/1;
+  border:1px solid var(--board-border); border-radius:var(--radius-md);
+  overflow:hidden; box-shadow:var(--shadow-panel);
+}
+.board {
+  width:100%; height:100%;
+  display:grid; grid-template-columns:repeat(20,1fr); grid-template-rows:repeat(20,1fr);
+  background-color:var(--board-bg);
+  background-image:
+    linear-gradient(var(--board-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--board-grid) 1px, transparent 1px);
+  background-size:5% 5%;
+}
+.board.is-gameover::after {
+  content:''; position:absolute; inset:0; background:var(--gameover-tint); pointer-events:none;
+}
+
+/* 셀 (grid-column/row 절대 배치) */
+.cell { grid-column:var(--c); grid-row:var(--r); margin:1px; }
+.cell--body {
+  background:linear-gradient(180deg, var(--snake-body), var(--snake-body-alt));
+  border-radius:3px; box-shadow:inset 0 0 0 1px var(--snake-body-border);
+}
+.cell--tail { transform:scale(.86); border-radius:4px; }
+.cell--head {
+  position:relative; background:var(--snake-head); border-radius:4px;
+  box-shadow:0 0 6px rgba(92,240,138,.35);
+}
+/* 머리 눈 — 진행 방향별 위치 (§5.1) */
+.cell--head::before, .cell--head::after {
+  content:''; position:absolute; width:24%; height:24%; border-radius:50%;
+  background:var(--snake-head-eye);
+}
+.cell--head.dir-right::before { top:18%; right:14%; }
+.cell--head.dir-right::after  { bottom:18%; right:14%; }
+.cell--head.dir-left::before  { top:18%; left:14%; }
+.cell--head.dir-left::after   { bottom:18%; left:14%; }
+.cell--head.dir-up::before    { top:14%; left:18%; }
+.cell--head.dir-up::after     { top:14%; right:18%; }
+.cell--head.dir-down::before  { bottom:14%; left:18%; }
+.cell--head.dir-down::after   { bottom:14%; right:18%; }
+/* 먹이 — 원형 + 꼭지 + 글로우 (§5.1) */
+.cell--food {
+  position:relative; background:var(--food-fill); border-radius:50%;
+  box-shadow:0 0 8px 2px var(--food-glow);
+}
+.cell--food::before {
+  content:''; position:absolute; top:-14%; left:50%; transform:translateX(-50%) rotate(20deg);
+  width:16%; height:34%; background:var(--food-stem); border-radius:2px;
+}
+
+/* 오버레이 (start/paused/gameover) */
+.board-overlay {
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:var(--space-3);
+  background:var(--overlay-scrim); text-align:center; padding:var(--space-4);
+}
+.board-overlay[hidden] { display:none; }
+.board-overlay--paused { background:rgba(5,7,12,.55); }
+.overlay__icon { font-size:34px; line-height:1; }
+.overlay__icon--over { color:var(--color-danger); }
+.overlay__title { font:var(--text-overlay-title); margin:0; }
+.overlay__desc { font:var(--text-caption); color:var(--color-text-secondary); margin:0; max-width:220px; }
+.overlay__reason { font:var(--text-body); color:var(--color-text-primary); margin:0; }
+.overlay__stat { font:var(--text-overlay-stat); color:var(--color-text-secondary); margin:0; }
+.overlay__stat b { color:var(--color-text-primary); }
+.overlay__actions { display:flex; flex-direction:column; gap:var(--space-2); width:100%; max-width:200px; margin-top:var(--space-2); }
+
+/* D-pad (§5.4) */
+.dpad {
+  display:grid; gap:var(--space-2); width:100%; max-width:160px;
+  grid-template-areas:". up ." "left . right" ". down .";
+  grid-template-columns:repeat(3,1fr);
+}
+.dpad__btn {
+  min-width:52px; min-height:52px; display:flex; align-items:center; justify-content:center;
+  font:var(--text-dpad); color:var(--color-text-primary);
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-strong);
+  border-radius:var(--radius-md); cursor:pointer; touch-action:manipulation;
+  transition:background var(--motion-fast) var(--ease-out),
+             border-color var(--motion-fast) var(--ease-out),
+             transform var(--motion-fast) var(--ease-out);
+}
+.dpad__btn--up { grid-area:up; } .dpad__btn--down { grid-area:down; }
+.dpad__btn--left { grid-area:left; } .dpad__btn--right { grid-area:right; }
+.dpad__btn:hover, .dpad__btn.is-hover { background:var(--color-bg-surface); border-color:var(--color-accent); }
+.dpad__btn:active, .dpad__btn.is-active {
+  background:var(--color-accent); color:var(--color-accent-on); transform:scale(.94);
+}
+.dpad__btn:focus-visible, .dpad__btn.is-focus {
+  outline:2px solid var(--color-accent); outline-offset:2px;
+  box-shadow:0 0 0 4px var(--color-focus-ring);
+}
+.dpad__btn[disabled], .dpad__btn.is-disabled { opacity:.4; cursor:not-allowed; }
+
+/* 컨트롤 버튼 (§5.5) */
+.controls { width:100%; max-width:320px; display:flex; flex-direction:column; gap:var(--space-3); align-items:center; }
+.controls__hint { font:var(--text-caption); color:var(--color-text-muted); text-align:center; margin:0; }
+.controls__row { display:flex; flex-direction:column; gap:var(--space-2); width:100%; }
+.btn {
+  min-height:44px; padding:10px 18px; font:var(--text-button);
+  border-radius:var(--radius-md); border:1px solid transparent; cursor:pointer;
+  transition:background var(--motion-fast) var(--ease-out),
+             border-color var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out);
+}
+.btn:active, .btn.is-active { transform:scale(.97); }
+.btn:focus-visible, .btn.is-focus { outline:2px solid var(--color-accent); outline-offset:2px; box-shadow:0 0 0 4px var(--color-focus-ring); }
+.btn--primary { background:var(--color-accent); color:var(--color-accent-on); }
+.btn--primary:hover, .btn--primary.is-hover { background:var(--color-accent-hover); }
+.btn--secondary { background:var(--color-bg-subtle); color:var(--color-text-primary); border-color:var(--color-border-strong); }
+.btn--secondary:hover, .btn--secondary.is-hover { border-color:var(--color-accent); }
+.btn--ghost { background:transparent; color:var(--color-text-secondary); border-color:var(--color-border-default); }
+.btn--ghost:hover, .btn--ghost.is-hover { color:var(--color-text-primary); border-color:var(--color-border-strong); }
+.btn[disabled], .btn.is-disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── 360px 실측 프레임 ── */
+.viewport-frame {
+  border:1px dashed var(--color-border-strong); border-radius:var(--radius-lg);
+  padding:var(--space-4); background:var(--color-bg-canvas); width:360px; max-width:100%; margin:0 auto;
+}
+.viewport-frame__label { font:600 12px/1.3 var(--font-sans); color:var(--color-text-muted); text-align:center; margin-bottom:var(--space-3); }
+
+/* ── 미니 보드(상태 오버레이 데모) ── */
+.mini-grid { display:flex; flex-wrap:wrap; gap:var(--space-5); justify-content:center; }
+.mini { width:200px; }
+.mini > .board-wrap { max-width:200px; }
+.mini__cap { text-align:center; font:600 12.5px/1.3 var(--font-sans); color:var(--color-text-secondary); margin-top:var(--space-2); }
+
+/* ── 스와치 그리드 ── */
+.swatch-grid { display:flex; flex-wrap:wrap; gap:var(--space-4); }
+.swatch {
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-3); width:132px; text-align:center;
+}
+.swatch__demo {
+  width:100%; height:64px; border-radius:var(--radius-sm); margin-bottom:var(--space-2);
+  display:grid; place-items:center; background:var(--board-bg);
+  background-image:
+    linear-gradient(var(--board-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--board-grid) 1px, transparent 1px);
+  background-size:25% 25%;
+}
+.swatch__cell { position:relative; width:34px; height:34px; }
+.swatch__name { font:600 12.5px/1.3 var(--font-sans); }
+.swatch__desc { font-size:11px; color:var(--color-text-muted); margin-top:2px; }
+
+.token-grid { display:flex; flex-wrap:wrap; gap:var(--space-3); }
+.token { display:flex; align-items:center; gap:var(--space-2); background:var(--color-bg-surface);
+  border:1px solid var(--color-border-default); border-radius:var(--radius-md); padding:var(--space-2) var(--space-3); }
+.token__chip { width:26px; height:26px; border-radius:6px; border:1px solid rgba(255,255,255,.12); }
+.token__meta { font-size:11.5px; }
+.token__meta b { display:block; font-weight:600; font-size:12px; }
+.token__meta span { color:var(--color-text-muted); font-family:var(--font-mono); }
+
+.state-row { display:flex; flex-wrap:wrap; gap:var(--space-4); align-items:flex-end; }
+.state-cell { display:flex; flex-direction:column; align-items:center; gap:var(--space-2); font-size:11.5px; color:var(--color-text-secondary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dpad__btn, .btn { transition:none; }
+}
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1 class="doc__title">Snake 아케이드 — 디자인 시안 (mockup)</h1>
+  <p class="doc__sub">/phase18-games/snake · BF-922 · vanilla-static · 다크 단일 테마 · [이디자인]</p>
+  <div class="doc__note">
+    기획 SSOT <code>docs/planning/phase18-snake-BF-923.md</code> · 명세 <code>docs/design/snake-BF-922.md</code> 와 동기화한 시각 시뮬레이션입니다.
+    실제 dev 구현은 <code>&lt;canvas 400×400&gt;</code> 2D 렌더이며, 본 mockup 은 시각화를 위해 CSS grid 로 20×20 보드를 표현합니다.
+    dev 는 <b>색상 토큰·형태·상태 규칙</b>만 일치시키면 되고 픽셀 단위 일치 의무는 없습니다.
+  </div>
+
+  <!-- ═══════════ 1. 대표 화면 (playing) · 360px 프레임 ═══════════ -->
+  <div class="section-label">1. 대표 화면 — 진행 중(playing) · 360px 뷰포트</div>
+  <div class="viewport-frame">
+    <div class="viewport-frame__label">viewport: 360px · state: playing</div>
+    <main class="snake-app">
+      <header class="snake-topbar"><h1>Snake 아케이드</h1></header>
+
+      <section class="scoreboard" role="group" aria-label="게임 점수">
+        <div class="scoreboard__cell">
+          <span class="scoreboard__label">점수</span>
+          <output class="scoreboard__value" aria-live="polite">70</output>
+        </div>
+        <div class="scoreboard__cell">
+          <span class="scoreboard__label">최고</span>
+          <output class="scoreboard__value">120</output>
+        </div>
+      </section>
+
+      <div class="board-wrap">
+        <div class="board" role="img" aria-label="Snake 보드, 점수 70">
+          <!-- 먹이 (15,4) -->
+          <div class="cell cell--food" style="--c:16;--r:5" aria-hidden="true"></div>
+          <!-- 뱀 몸 (꼬리→머리 근접 순) -->
+          <div class="cell cell--body cell--tail" style="--c:12;--r:9"></div>
+          <div class="cell cell--body" style="--c:12;--r:10"></div>
+          <div class="cell cell--body" style="--c:11;--r:10"></div>
+          <div class="cell cell--body" style="--c:10;--r:10"></div>
+          <div class="cell cell--body" style="--c:10;--r:9"></div>
+          <div class="cell cell--body" style="--c:10;--r:8"></div>
+          <div class="cell cell--body" style="--c:11;--r:8"></div>
+          <!-- 뱀 머리 (11,7) 방향 right -->
+          <div class="cell cell--head dir-right" style="--c:12;--r:8"></div>
+        </div>
+        <div class="board-overlay" hidden></div>
+      </div>
+
+      <nav class="dpad" aria-label="방향 컨트롤">
+        <button class="dpad__btn dpad__btn--up" type="button" aria-label="위로">▲</button>
+        <button class="dpad__btn dpad__btn--left" type="button" aria-label="왼쪽">◀</button>
+        <button class="dpad__btn dpad__btn--right is-active" type="button" aria-label="오른쪽">▶</button>
+        <button class="dpad__btn dpad__btn--down" type="button" aria-label="아래로">▼</button>
+      </nav>
+
+      <section class="controls">
+        <p class="controls__hint">방향키(↑↓←→) · WASD 또는 아래 버튼으로 이동 · P 일시정지 · Enter 재시작</p>
+        <div class="controls__row">
+          <button class="btn btn--secondary" type="button">일시정지</button>
+          <button class="btn btn--ghost" type="button">재시작</button>
+        </div>
+      </section>
+    </main>
+  </div>
+  <p class="frame-caption">
+    ▶ 버튼은 <strong>active(눌림)</strong> 데모입니다. 머리(밝은 초록 + 오른쪽 눈 2개)는 진행 방향을,
+    몸(어두운 초록 그라데이션·마디선)은 궤적을, 먹이(앰버 원형 + 꼭지)는 목표를 형태·명도·색상으로 구분합니다.
+    360px 폭에서 스코어보드·보드·D-pad·컨트롤이 세로 스택으로 가로 스크롤 없이 표시됩니다.
+  </p>
+
+  <!-- ═══════════ 2. 상태별 오버레이 ═══════════ -->
+  <div class="section-label">2. 상태별 오버레이 — start · paused · gameover</div>
+  <div class="mini-grid">
+    <!-- start -->
+    <div class="mini">
+      <div class="board-wrap">
+        <div class="board"></div>
+        <div class="board-overlay">
+          <p class="overlay__icon" aria-hidden="true">🐍</p>
+          <h2 class="overlay__title">Snake 아케이드</h2>
+          <p class="overlay__desc">방향키나 버튼으로 뱀을 조종해 먹이를 먹으세요. 벽과 몸에 부딪히면 끝!</p>
+          <div class="overlay__actions"><button class="btn btn--primary" type="button">시작</button></div>
+        </div>
+      </div>
+      <p class="mini__cap">status: start</p>
+    </div>
+
+    <!-- paused -->
+    <div class="mini">
+      <div class="board-wrap">
+        <div class="board">
+          <div class="cell cell--food" style="--c:15;--r:6"></div>
+          <div class="cell cell--body cell--tail" style="--c:8;--r:11"></div>
+          <div class="cell cell--body" style="--c:9;--r:11"></div>
+          <div class="cell cell--body" style="--c:10;--r:11"></div>
+          <div class="cell cell--head dir-right" style="--c:11;--r:11"></div>
+        </div>
+        <div class="board-overlay board-overlay--paused">
+          <p class="overlay__icon" aria-hidden="true">⏸</p>
+          <h2 class="overlay__title">일시정지</h2>
+          <div class="overlay__actions">
+            <button class="btn btn--primary" type="button">계속하기</button>
+            <button class="btn btn--ghost" type="button">메뉴로</button>
+          </div>
+        </div>
+      </div>
+      <p class="mini__cap">status: paused</p>
+    </div>
+
+    <!-- gameover -->
+    <div class="mini">
+      <div class="board-wrap">
+        <div class="board is-gameover">
+          <div class="cell cell--food" style="--c:5;--r:4"></div>
+          <div class="cell cell--body cell--tail" style="--c:2;--r:1"></div>
+          <div class="cell cell--body" style="--c:1;--r:1"></div>
+          <div class="cell cell--head dir-left" style="--c:1;--r:2" title="벽 충돌"></div>
+        </div>
+        <div class="board-overlay">
+          <p class="overlay__icon overlay__icon--over" aria-hidden="true">✕</p>
+          <h2 class="overlay__title">게임 오버</h2>
+          <p class="overlay__reason">벽에 부딪혔어요</p>
+          <p class="overlay__stat">점수 <b>70</b> · 최고 <b>120</b></p>
+          <div class="overlay__actions">
+            <button class="btn btn--primary" type="button">다시하기</button>
+            <button class="btn btn--ghost" type="button">메뉴로</button>
+          </div>
+        </div>
+      </div>
+      <p class="mini__cap">status: gameover</p>
+    </div>
+  </div>
+  <p class="frame-caption">
+    게임오버 사유는 <code>gameoverReason</code> 에 매핑됩니다 — <strong>wall</strong> "벽에 부딪혔어요" ·
+    <strong>self</strong> "몸에 부딪혔어요" · <strong>board-full</strong> "보드를 가득 채웠어요! 🎉"(퍼펙트).
+    보드에는 danger 계열 <code>--gameover-tint</code> 가 은은히 감돕니다.
+  </p>
+
+  <!-- ═══════════ 3. 셀 시각 규칙 ═══════════ -->
+  <div class="section-label">3. 셀 시각 규칙 — 머리 4방향 · 몸 · 꼬리 · 먹이 · 빈 셀</div>
+  <div class="swatch-grid">
+    <div class="swatch">
+      <div class="swatch__demo"><div class="swatch__cell cell--head dir-up"></div></div>
+      <div class="swatch__name">머리 · up</div><div class="swatch__desc">눈이 위쪽</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__demo"><div class="swatch__cell cell--head dir-down"></div></div>
+      <div class="swatch__name">머리 · down</div><div class="swatch__desc">눈이 아래쪽</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__demo"><div class="swatch__cell cell--head dir-left"></div></div>
+      <div class="swatch__name">머리 · left</div><div class="swatch__desc">눈이 왼쪽</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__demo"><div class="swatch__cell cell--head dir-right"></div></div>
+      <div class="swatch__name">머리 · right</div><div class="swatch__desc">눈이 오른쪽</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__demo"><div class="swatch__cell cell--body"></div></div>
+      <div class="swatch__name">몸(body)</div><div class="swatch__desc">초록 그라데이션 + 마디선</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__demo"><div class="swatch__cell cell--body cell--tail"></div></div>
+      <div class="swatch__name">꼬리(tail)</div><div class="swatch__desc">몸보다 살짝 작게</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__demo"><div class="swatch__cell cell--food"></div></div>
+      <div class="swatch__name">먹이(food)</div><div class="swatch__desc">앰버 원형 + 꼭지 + 글로우</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__demo"><div class="swatch__cell" style="background:var(--board-bg);border:1px solid var(--board-grid)"></div></div>
+      <div class="swatch__name">빈 셀(empty)</div><div class="swatch__desc">보드 배경 + 격자선만</div>
+    </div>
+  </div>
+  <p class="frame-caption">색맹 대응: 머리 vs 몸은 <strong>명도 차 + 눈 형태</strong>, 먹이 vs 뱀은 <strong>색상 대비 + 원형(꼭지)</strong> 으로 색 인지 없이도 구분됩니다.</p>
+
+  <!-- ═══════════ 4. D-pad 버튼 상태 ═══════════ -->
+  <div class="section-label">4. D-pad 버튼 상태 — default · hover · active · focus · disabled</div>
+  <div class="state-row">
+    <div class="state-cell"><button class="dpad__btn" type="button">▲</button><span>default</span></div>
+    <div class="state-cell"><button class="dpad__btn is-hover" type="button">▲</button><span>hover</span></div>
+    <div class="state-cell"><button class="dpad__btn is-active" type="button">▲</button><span>active(누름)</span></div>
+    <div class="state-cell"><button class="dpad__btn is-focus" type="button">▲</button><span>focus(키보드)</span></div>
+    <div class="state-cell"><button class="dpad__btn is-disabled" type="button" disabled>▲</button><span>disabled</span></div>
+  </div>
+  <p class="frame-caption">각 버튼 ≥52×52px(WCAG 2.5.5 권장 44px 초과). <code>touch-action:manipulation</code> · <code>pointerdown</code> 으로 방향 확정(기획 §5.3).</p>
+
+  <!-- ═══════════ 5. 컨트롤 버튼 3종 ═══════════ -->
+  <div class="section-label">5. 컨트롤 버튼 3종 — primary · secondary · ghost</div>
+  <div class="state-row">
+    <div class="state-cell"><button class="btn btn--primary" type="button">시작</button><span>primary · 기본</span></div>
+    <div class="state-cell"><button class="btn btn--primary is-hover" type="button">시작</button><span>primary · hover</span></div>
+    <div class="state-cell"><button class="btn btn--primary is-focus" type="button">시작</button><span>primary · focus</span></div>
+    <div class="state-cell"><button class="btn btn--secondary" type="button">일시정지</button><span>secondary · 기본</span></div>
+    <div class="state-cell"><button class="btn btn--secondary is-hover" type="button">일시정지</button><span>secondary · hover</span></div>
+    <div class="state-cell"><button class="btn btn--secondary is-disabled" type="button" disabled>일시정지</button><span>secondary · disabled</span></div>
+    <div class="state-cell"><button class="btn btn--ghost" type="button">메뉴로</button><span>ghost · 기본</span></div>
+    <div class="state-cell"><button class="btn btn--ghost is-hover" type="button">메뉴로</button><span>ghost · hover</span></div>
+  </div>
+
+  <!-- ═══════════ 6. 컬러 토큰 팔레트 ═══════════ -->
+  <div class="section-label">6. 컬러 토큰 팔레트 (§2)</div>
+  <div class="token-grid">
+    <div class="token"><div class="token__chip" style="background:#0B0F17"></div><div class="token__meta"><b>bg-canvas</b><span>#0B0F17</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#141B26"></div><div class="token__meta"><b>bg-surface</b><span>#141B26</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#1C2431"></div><div class="token__meta"><b>bg-subtle</b><span>#1C2431</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#5B82F0"></div><div class="token__meta"><b>accent</b><span>#5B82F0</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#E8EDF4"></div><div class="token__meta"><b>text-primary</b><span>#E8EDF4</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#9AA7B8"></div><div class="token__meta"><b>text-secondary</b><span>#9AA7B8</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#070B12"></div><div class="token__meta"><b>board-bg</b><span>#070B12</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#5CF08A"></div><div class="token__meta"><b>snake-head</b><span>#5CF08A</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#2FA968"></div><div class="token__meta"><b>snake-body</b><span>#2FA968</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#278C57"></div><div class="token__meta"><b>snake-body-alt</b><span>#278C57</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#F5C24B"></div><div class="token__meta"><b>food-fill</b><span>#F5C24B</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#7CC86A"></div><div class="token__meta"><b>food-stem</b><span>#7CC86A</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#4ADE80"></div><div class="token__meta"><b>success</b><span>#4ADE80</span></div></div>
+    <div class="token"><div class="token__chip" style="background:#E55858"></div><div class="token__meta"><b>danger</b><span>#E55858</span></div></div>
+  </div>
+
+  <p class="frame-caption" style="margin-top:var(--space-6)">
+    본 mockup 은 외부 의존성 0건 · system font · CSS 변수 자체 정의(vanilla-static). <code>file://</code> 로 열어 전 섹션이 정적 렌더로 확인됩니다.
+  </p>
+</div>
+</body>
+</html>
