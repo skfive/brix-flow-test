@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>메모리 매치 — 키보드·재시작 UI/UX 시안 (mockup) · BF-955</title>
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       토큰 SSOT — docs/design/memory-match-BF-916.md §2·§3 / styles.css :root 복제
+       (본 mockup 은 신규 토큰 0개 — 기존 값 그대로)
+       ══════════════════════════════════════════════════════════════ */
+    :root {
+      --color-bg-canvas:#0B0F17; --color-bg-surface:#141B26; --color-bg-subtle:#1C2431;
+      --color-border-default:#273140; --color-border-strong:#3A4657;
+      --color-text-primary:#E8EDF4; --color-text-secondary:#9AA7B8; --color-text-muted:#63708A;
+      --color-accent:#5B82F0; --color-accent-hover:#6E90F5; --color-accent-on:#0B0F17;
+      --color-focus-ring:rgba(91,130,240,.55);
+      --color-success:#4ADE80; --color-danger:#E55858;
+
+      --card-back-top:#232E40; --card-back-bottom:#18212F; --card-back-motif:rgba(91,130,240,.22);
+      --card-face-bg:#F4F6FB; --card-face-symbol:#141B26;
+      --card-matched-bg:#12241C; --card-matched-border:#4ADE80; --card-matched-glow:rgba(74,222,128,.28);
+      --card-mismatch-border:#E55858; --card-mismatch-glow:rgba(229,88,88,.30);
+      --card-shadow:0 4px 14px rgba(0,0,0,.38);
+
+      --pair-0:#E5484D; --pair-1:#F5C24B; --pair-2:#A06CF0; --pair-3:#4ADE80;
+      --pair-4:#F06595; --pair-5:#E5605E; --pair-6:#F59E6B; --pair-7:#63C88A;
+
+      --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+      --space-5:24px; --space-6:32px; --space-7:48px;
+      --radius-sm:6px; --radius-md:10px; --radius-lg:14px; --radius-pill:999px;
+      --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+      --motion-fast:140ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+      --font-sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+      --font-mono:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+
+      --text-h1:600 20px/1.3 var(--font-sans);
+      --text-hud-value:700 clamp(20px,6vw,28px)/1 var(--font-mono);
+      --text-hud-label:600 12px/1.2 var(--font-sans);
+      --text-card-symbol:400 clamp(28px,9vw,40px)/1 var(--font-sans);
+      --text-banner-title:700 clamp(22px,7vw,30px)/1.2 var(--font-sans);
+      --text-banner-stat:700 clamp(18px,5vw,22px)/1.3 var(--font-mono);
+      --text-body:400 15px/1.5 var(--font-sans);
+      --text-button:600 14px/1 var(--font-sans);
+      --text-caption:400 13px/1.4 var(--font-sans);
+    }
+
+    * { box-sizing:border-box; }
+    html,body { margin:0; }
+    body {
+      background:var(--color-bg-canvas); color:var(--color-text-primary);
+      font:var(--text-body); -webkit-font-smoothing:antialiased;
+      padding:var(--space-6) var(--space-4) var(--space-7);
+    }
+
+    /* ── 문서 프레임(설명용, 실제 게임 UI 아님) ── */
+    .doc { max-width:960px; margin:0 auto; }
+    .doc__title { font:700 26px/1.3 var(--font-sans); margin:0 0 var(--space-2); }
+    .doc__sub { color:var(--color-text-secondary); font:var(--text-caption); margin:0 0 var(--space-5); }
+    .doc__note {
+      background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+      border-left:3px solid var(--color-accent); border-radius:var(--radius-md);
+      padding:var(--space-3) var(--space-4); margin:0 0 var(--space-6);
+      color:var(--color-text-secondary); font:var(--text-caption);
+    }
+    .section-label {
+      font:600 15px/1.3 var(--font-sans); color:var(--color-accent);
+      margin:var(--space-7) 0 var(--space-3); padding-bottom:var(--space-2);
+      border-bottom:1px solid var(--color-border-default);
+    }
+    .frame-caption {
+      color:var(--color-text-secondary); font:var(--text-caption);
+      margin:var(--space-3) 0 0; text-align:center;
+    }
+    .cols { display:flex; flex-wrap:wrap; gap:var(--space-6); align-items:flex-start; }
+    .cols > * { flex:1 1 300px; min-width:280px; }
+    .col-title { font:600 13px/1.3 var(--font-sans); color:var(--color-text-secondary); text-align:center; margin:0 0 var(--space-2); text-transform:uppercase; letter-spacing:.04em; }
+
+    /* ══════════════════════════════════════════════════════════════
+       실제 게임 화면 컴포넌트 (styles.css 복제 — 변경 없음)
+       ══════════════════════════════════════════════════════════════ */
+    .wrap { width:100%; max-width:480px; margin:0 auto; background:var(--color-bg-canvas); padding:0; }
+    .header { padding:var(--space-4) 0; }
+    .header h1 { font:var(--text-h1); margin:0; }
+
+    .hud {
+      display:flex; align-items:center; justify-content:space-between; gap:var(--space-3);
+      background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+      border-radius:var(--radius-md); padding:var(--space-3) var(--space-4);
+    }
+    .hud__stat { display:flex; flex-direction:column; gap:var(--space-1); min-width:0; }
+    .hud__label { font:var(--text-hud-label); color:var(--color-text-secondary); }
+    .hud__value { font:var(--text-hud-value); color:var(--color-text-primary); font-variant-numeric:tabular-nums; }
+
+    .win-stage { position:relative; }
+    .board { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-2); margin:var(--space-4) 0; min-width:0; }
+
+    .card {
+      position:relative; aspect-ratio:1/1; min-width:0;
+      border:1px solid var(--color-border-default); border-radius:var(--radius-md);
+      padding:0; cursor:pointer; font-family:var(--font-sans);
+      display:grid; place-items:center; overflow:hidden; box-shadow:var(--card-shadow);
+      transition:transform var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out);
+    }
+    .card__back, .card__face { grid-area:1/1; width:100%; height:100%; display:grid; place-items:center; }
+    .card__back { font-size:clamp(22px,7vw,30px); color:var(--card-back-motif); }
+    .card__face { font:var(--text-card-symbol); position:relative; }
+    .card__face::after {
+      content:""; position:absolute; left:18%; right:18%; bottom:10%;
+      height:4px; border-radius:var(--radius-pill); background:var(--pair-color, transparent);
+    }
+
+    .card[data-state="hidden"] { background:linear-gradient(160deg,var(--card-back-top),var(--card-back-bottom)); }
+    .card[data-state="hidden"] .card__face { display:none; }
+
+    .card[data-state="revealed"] {
+      background:var(--card-face-bg); border:2px solid var(--color-accent);
+      box-shadow:0 0 0 3px rgba(91,130,240,.16), var(--card-shadow);
+    }
+    .card[data-state="revealed"] .card__back { display:none; }
+    .card[data-state="revealed"] .card__face { color:var(--card-face-symbol); }
+
+    .card[data-state="matched"] {
+      background:var(--card-matched-bg); border:2px solid var(--card-matched-border);
+      box-shadow:0 0 18px var(--card-matched-glow); cursor:default;
+    }
+    .card[data-state="matched"] .card__back { display:none; }
+    .card[data-state="matched"] .card__face { color:var(--color-text-primary); }
+
+    .card[data-state="mismatch"] {
+      background:var(--card-face-bg); border:2px solid var(--card-mismatch-border);
+      box-shadow:0 0 18px var(--card-mismatch-glow);
+    }
+    .card[data-state="mismatch"] .card__back { display:none; }
+    .card[data-state="mismatch"] .card__face { color:var(--card-face-symbol); }
+
+    .card[data-pair="0"] .card__face { --pair-color:var(--pair-0); }
+    .card[data-pair="1"] .card__face { --pair-color:var(--pair-1); }
+    .card[data-pair="2"] .card__face { --pair-color:var(--pair-2); }
+    .card[data-pair="3"] .card__face { --pair-color:var(--pair-3); }
+    .card[data-pair="4"] .card__face { --pair-color:var(--pair-4); }
+    .card[data-pair="5"] .card__face { --pair-color:var(--pair-5); }
+    .card[data-pair="6"] .card__face { --pair-color:var(--pair-6); }
+    .card[data-pair="7"] .card__face { --pair-color:var(--pair-7); }
+
+    /* 포커스 링 — styles.css §5.5 그대로. mockup 에서는 정적 클래스로 시뮬레이션 */
+    .card:focus-visible, .btn:focus-visible { outline:3px solid var(--color-focus-ring); outline-offset:2px; }
+    /* 정적 시각화용: 실제 :focus-visible 과 동일한 링을 강제 표시 */
+    .card.is-focus, .btn.is-focus { outline:3px solid var(--color-focus-ring); outline-offset:2px; }
+
+    .hint { color:var(--color-text-secondary); font:var(--text-caption); text-align:center; margin:var(--space-4) 0 0; }
+    .hint strong { color:var(--color-text-primary); }
+
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2);
+      min-height:44px; padding:0 var(--space-4); border-radius:var(--radius-md);
+      font:var(--text-button); cursor:pointer; border:1px solid transparent;
+      transition:background var(--motion-fast), border-color var(--motion-fast); white-space:nowrap;
+    }
+    .btn--primary { background:var(--color-accent); color:var(--color-accent-on); }
+    .btn--secondary { background:var(--color-bg-subtle); color:var(--color-text-primary); border-color:var(--color-border-default); }
+
+    .win-banner {
+      position:absolute; inset:0; z-index:2; margin:auto; height:max-content;
+      background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+      border-radius:var(--radius-lg); box-shadow:var(--shadow-panel);
+      padding:var(--space-6) var(--space-5); text-align:center;
+      display:flex; flex-direction:column; align-items:center; gap:var(--space-3);
+    }
+    .win-banner__title { font:var(--text-banner-title); color:var(--color-text-primary); margin:0; }
+    .win-banner__stat { font:var(--text-banner-stat); color:var(--color-text-secondary); margin:0; }
+    .win-banner__stat strong { color:var(--color-accent); }
+
+    /* ── 방향키 오버레이 주석(설명용) ── */
+    .keycap {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:30px; height:30px; padding:0 var(--space-2);
+      background:var(--color-bg-subtle); border:1px solid var(--color-border-strong);
+      border-bottom-width:2px; border-radius:var(--radius-sm);
+      font:600 14px/1 var(--font-mono); color:var(--color-text-primary);
+    }
+    .arrows { display:grid; grid-template-columns:repeat(3,30px); grid-template-rows:repeat(2,30px); gap:var(--space-1); justify-content:center; margin:var(--space-3) auto 0; }
+    .arrows .keycap:nth-child(1){ grid-column:2; }
+    .arrows .keycap.right{ grid-column:3; grid-row:2; }
+    .arrows .keycap.down{ grid-column:2; grid-row:2; }
+    .arrows .keycap.left{ grid-column:1; grid-row:2; }
+
+    /* ── 키보드 조작 레전드 ── */
+    .legend { display:grid; grid-template-columns:1fr; gap:var(--space-2); max-width:520px; margin:0 auto; }
+    .legend__row {
+      display:flex; align-items:center; gap:var(--space-4);
+      background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+      border-radius:var(--radius-md); padding:var(--space-3) var(--space-4);
+    }
+    .legend__keys { display:flex; gap:var(--space-1); flex:0 0 auto; min-width:132px; }
+    .legend__desc { font:var(--text-caption); color:var(--color-text-secondary); }
+    .legend__desc strong { color:var(--color-text-primary); }
+
+    /* ── 재시작 전/후 비교 배지 ── */
+    .badge {
+      display:inline-block; font:600 12px/1 var(--font-sans);
+      padding:var(--space-1) var(--space-2); border-radius:var(--radius-pill);
+      margin-bottom:var(--space-2);
+    }
+    .badge--before { background:rgba(229,88,88,.14); color:#F0A3A3; border:1px solid rgba(229,88,88,.4); }
+    .badge--after { background:rgba(74,222,128,.14); color:#8CE7AE; border:1px solid rgba(74,222,128,.4); }
+    .badge--focus { background:rgba(91,130,240,.16); color:#A9C0FA; border:1px solid rgba(91,130,240,.5); }
+
+    @media (prefers-reduced-motion: reduce) { .card { transition:none; } }
+  </style>
+</head>
+<body>
+<div class="doc">
+  <h1 class="doc__title">메모리 매치 — 키보드·재시작 UI/UX 시안 (mockup)</h1>
+  <p class="doc__sub">/phase18-games/memory-match · BF-955 · vanilla-static · 다크 단일 테마 · [이디자인]</p>
+  <div class="doc__note">
+    본 시안은 <strong>BF-916 시각 명세의 addendum</strong> 으로, BF-954 기획이 도입한 <strong>방향키 그리드 이동 · 뒤집힌 카드에서 포커스 유지 · 재시작 초기화 UX</strong> 만 시각화합니다.
+    신규 컬러 토큰 0개 — 기존 <code>--color-focus-ring</code> / <code>:focus-visible</code> 를 그대로 재사용합니다.
+    카드 보드는 CSS 로 시뮬레이션한 정적 시안이며 실제 게임 로직이 아닙니다. 파란 링은 키보드 포커스(<code>outline:3px + offset 2px</code>)입니다.
+  </div>
+
+  <!-- ══════════ §1 방향키 내비게이션 ══════════ -->
+  <div class="section-label">1. 방향키 그리드 이동 — 포커스 링이 인접 카드로 이동 (planner AC-K01)</div>
+  <main class="wrap">
+    <header class="header"><h1>메모리 매치</h1></header>
+    <div class="hud" role="group" aria-label="게임 진행 정보">
+      <div class="hud__stat"><span class="hud__label">이동 횟수</span><span class="hud__value">3회</span></div>
+      <div class="hud__stat"><span class="hud__label">시간</span><span class="hud__value">00:18</span></div>
+      <button class="btn btn--secondary" type="button"><span aria-hidden="true">↻</span> 재시작</button>
+    </div>
+    <div class="board" role="grid" aria-label="4x4 카드 보드">
+      <button class="card" data-state="hidden" data-pair="4" aria-label="카드 1, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍓</span></button>
+      <button class="card" data-state="matched" data-pair="0" aria-label="카드 2, 사과"><span class="card__back">◆</span><span class="card__face">🍎</span></button>
+      <button class="card" data-state="hidden" data-pair="6" aria-label="카드 3, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍑</span></button>
+      <button class="card" data-state="hidden" data-pair="2" aria-label="카드 4, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍇</span></button>
+
+      <button class="card" data-state="hidden" data-pair="1" aria-label="카드 5, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍌</span></button>
+      <button class="card is-focus" data-state="hidden" data-pair="3" tabindex="0" aria-label="카드 6, 뒤집기 전 (활성)"><span class="card__back">◆</span><span class="card__face">🍉</span></button>
+      <button class="card" data-state="hidden" data-pair="7" aria-label="카드 7, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🥝</span></button>
+      <button class="card" data-state="matched" data-pair="0" aria-label="카드 8, 사과"><span class="card__back">◆</span><span class="card__face">🍎</span></button>
+
+      <button class="card" data-state="hidden" data-pair="5" aria-label="카드 9, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍒</span></button>
+      <button class="card" data-state="hidden" data-pair="2" aria-label="카드 10, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍇</span></button>
+      <button class="card" data-state="hidden" data-pair="4" aria-label="카드 11, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍓</span></button>
+      <button class="card" data-state="hidden" data-pair="1" aria-label="카드 12, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍌</span></button>
+
+      <button class="card" data-state="hidden" data-pair="7" aria-label="카드 13, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🥝</span></button>
+      <button class="card" data-state="hidden" data-pair="6" aria-label="카드 14, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍑</span></button>
+      <button class="card" data-state="hidden" data-pair="3" aria-label="카드 15, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍉</span></button>
+      <button class="card" data-state="hidden" data-pair="5" aria-label="카드 16, 뒤집기 전"><span class="card__back">◆</span><span class="card__face">🍒</span></button>
+    </div>
+    <div class="arrows" aria-hidden="true">
+      <span class="keycap">↑</span>
+      <span class="keycap left">←</span>
+      <span class="keycap down">↓</span>
+      <span class="keycap right">→</span>
+    </div>
+  </main>
+  <p class="frame-caption">활성 카드(인덱스 5, 2행 2열)에 파란 포커스 링. <strong>→</strong> 오른쪽 카드(6)로, <strong>↓</strong> 아래 카드(9)로 링만 이동하고 카드 상태(hidden)는 바뀌지 않습니다. matched 카드(2·8) 위로도 포커스 이동 가능(AC-K04).</p>
+
+  <!-- ══════════ §2 경계 클램프 ══════════ -->
+  <div class="section-label">2. 그리드 경계 클램프 — 가장자리에서 바깥 방향키 시 링 불변 (planner AC-K02)</div>
+  <div class="cols">
+    <div>
+      <p class="col-title">1행 1열(인덱스 0) — <span class="keycap" style="height:24px">↑</span> / <span class="keycap" style="height:24px">←</span></p>
+      <div class="board" style="max-width:320px;margin:0 auto;" role="grid" aria-label="클램프 데모 좌상단">
+        <button class="card is-focus" data-state="hidden" data-pair="0" tabindex="0" aria-label="카드 1, 활성"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="1" aria-label="카드 2"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="2" aria-label="카드 3"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="3" aria-label="카드 4"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="4" aria-label="카드 5"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="5" aria-label="카드 6"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="6" aria-label="카드 7"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="7" aria-label="카드 8"><span class="card__back">◆</span></button>
+      </div>
+      <p class="frame-caption">위·왼쪽 경계 → 링 제자리 유지(순환 이동 없음)</p>
+    </div>
+    <div>
+      <p class="col-title">4행 4열(인덱스 15) — <span class="keycap" style="height:24px">↓</span> / <span class="keycap" style="height:24px">→</span></p>
+      <div class="board" style="max-width:320px;margin:0 auto;" role="grid" aria-label="클램프 데모 우하단">
+        <button class="card" data-state="hidden" data-pair="0" aria-label="카드 9"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="1" aria-label="카드 10"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="2" aria-label="카드 11"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="3" aria-label="카드 12"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="4" aria-label="카드 13"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="5" aria-label="카드 14"><span class="card__back">◆</span></button>
+        <button class="card" data-state="hidden" data-pair="6" aria-label="카드 15"><span class="card__back">◆</span></button>
+        <button class="card is-focus" data-state="hidden" data-pair="7" tabindex="0" aria-label="카드 16, 활성"><span class="card__back">◆</span></button>
+      </div>
+      <p class="frame-caption">아래·오른쪽 경계 → 링 제자리 유지</p>
+    </div>
+  </div>
+
+  <!-- ══════════ §3 포커스 + 카드 상태 조합 ══════════ -->
+  <div class="section-label">3. 포커스 링 × 카드 상태 조합 — 어떤 상태 위에서도 링이 또렷 (§2.2 대비 검증)</div>
+  <div class="cols">
+    <div>
+      <p class="col-title"><span class="badge badge--focus">A</span> 포커스 + hidden</p>
+      <div class="board" style="grid-template-columns:1fr;max-width:120px;margin:0 auto;">
+        <button class="card is-focus" data-state="hidden" data-pair="2" tabindex="0" aria-label="카드, 뒤집기 전 (활성)"><span class="card__back">◆</span><span class="card__face">🍇</span></button>
+      </div>
+      <p class="frame-caption">어두운 뒷면 + 파란 링. 방향키 진입 지점.</p>
+    </div>
+    <div>
+      <p class="col-title"><span class="badge badge--focus">B</span> 포커스 + revealed = 뒤집기 후 유지</p>
+      <div class="board" style="grid-template-columns:1fr;max-width:120px;margin:0 auto;">
+        <button class="card is-focus" data-state="revealed" data-pair="3" tabindex="0" aria-label="카드, 수박"><span class="card__back">◆</span><span class="card__face">🍉</span></button>
+      </div>
+      <p class="frame-caption"><strong>핵심</strong>: Enter/Space 로 뒤집어도 링이 그 카드에 그대로 남습니다(AC-E01).</p>
+    </div>
+    <div>
+      <p class="col-title"><span class="badge badge--focus">C</span> 포커스 + matched</p>
+      <div class="board" style="grid-template-columns:1fr;max-width:120px;margin:0 auto;">
+        <button class="card is-focus" data-state="matched" data-pair="0" tabindex="0" aria-label="카드, 사과, 짝 맞춤"><span class="card__back">◆</span><span class="card__face">🍎</span></button>
+      </div>
+      <p class="frame-caption">초록 글로우 + 파란 링(색상 대비). matched 위 이동 가능, 활성화만 no-op(AC-K04).</p>
+    </div>
+  </div>
+
+  <!-- ══════════ §4 재시작 초기화 전/후 ══════════ -->
+  <div class="section-label">4. 재시작 초기화 UX — 진행 중 → idle 로 리셋 (planner §4, AC-R01·R02·R03)</div>
+  <div class="cols">
+    <!-- before -->
+    <div>
+      <span class="badge badge--before">BEFORE — 진행 중(playing)</span>
+      <main class="wrap">
+        <div class="hud" role="group" aria-label="게임 진행 정보">
+          <div class="hud__stat"><span class="hud__label">이동 횟수</span><span class="hud__value">8회</span></div>
+          <div class="hud__stat"><span class="hud__label">시간</span><span class="hud__value">00:32</span></div>
+          <button class="btn btn--secondary is-focus" type="button"><span aria-hidden="true">↻</span> 재시작</button>
+        </div>
+        <div class="board" role="grid" aria-label="4x4 카드 보드">
+          <button class="card" data-state="matched" data-pair="0"><span class="card__back">◆</span><span class="card__face">🍎</span></button>
+          <button class="card" data-state="revealed" data-pair="3"><span class="card__back">◆</span><span class="card__face">🍉</span></button>
+          <button class="card" data-state="hidden" data-pair="6"><span class="card__back">◆</span></button>
+          <button class="card" data-state="matched" data-pair="0"><span class="card__back">◆</span><span class="card__face">🍎</span></button>
+          <button class="card" data-state="hidden" data-pair="1"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="2"><span class="card__back">◆</span></button>
+          <button class="card" data-state="matched" data-pair="3"><span class="card__back">◆</span><span class="card__face">🍉</span></button>
+          <button class="card" data-state="hidden" data-pair="7"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="5"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="1"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="4"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="2"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="6"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="7"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="5"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="4"><span class="card__back">◆</span></button>
+        </div>
+      </main>
+      <p class="frame-caption">이동 8회 · 00:32, 일부 matched/revealed. 포커스는 재시작 버튼(링).</p>
+    </div>
+    <!-- after -->
+    <div>
+      <span class="badge badge--after">AFTER — 재시작 직후(idle)</span>
+      <main class="wrap">
+        <div class="hud" role="group" aria-label="게임 진행 정보">
+          <div class="hud__stat"><span class="hud__label">이동 횟수</span><span class="hud__value">0회</span></div>
+          <div class="hud__stat"><span class="hud__label">시간</span><span class="hud__value">00:00</span></div>
+          <button class="btn btn--secondary is-focus" type="button"><span aria-hidden="true">↻</span> 재시작</button>
+        </div>
+        <div class="board" role="grid" aria-label="4x4 카드 보드">
+          <button class="card" data-state="hidden" data-pair="0" tabindex="0" aria-label="카드 1, 뒤집기 전 (활성 인덱스 0)"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="1"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="2"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="3"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="4"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="5"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="6"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="7"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="0"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="1"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="2"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="3"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="4"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="5"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="6"><span class="card__back">◆</span></button>
+          <button class="card" data-state="hidden" data-pair="7"><span class="card__back">◆</span></button>
+        </div>
+      </main>
+      <p class="frame-caption">16장 전부 hidden(새 셔플) · 0회 · 00:00 · 배너 숨김. 활성 인덱스=0(1번 카드, <code>tabindex="0"</code>). <strong>포커스는 재시작 버튼에 유지</strong> — 보드에 링 없음(focus stealing 방지, AC-R03). 보드에는 다음 Tab 진입 시 링 표시.</p>
+    </div>
+  </div>
+
+  <!-- ══════════ §5 키보드 조작 레전드 ══════════ -->
+  <div class="section-label">5. 키보드 조작 레전드 (planner §2~§4)</div>
+  <div class="legend">
+    <div class="legend__row">
+      <div class="legend__keys"><span class="keycap">←</span><span class="keycap">↑</span><span class="keycap">→</span><span class="keycap">↓</span></div>
+      <div class="legend__desc"><strong>포커스 이동</strong> — 4×4 격자에서 인접 카드로 링 이동. 가장자리는 클램프(순환 없음). 카드 상태는 바뀌지 않음.</div>
+    </div>
+    <div class="legend__row">
+      <div class="legend__keys"><span class="keycap" style="min-width:56px">Enter</span><span class="keycap" style="min-width:64px">Space</span></div>
+      <div class="legend__desc"><strong>카드 뒤집기</strong> — 포커스한 hidden 카드를 뒤집음(클릭과 동일). 뒤집은 뒤에도 <strong>포커스 링 유지</strong>. revealed/matched/checking 중에는 no-op.</div>
+    </div>
+    <div class="legend__row">
+      <div class="legend__keys"><span class="keycap" style="min-width:44px">Tab</span><span class="keycap" style="min-width:80px">Shift+Tab</span></div>
+      <div class="legend__desc"><strong>영역 이동</strong> — 보드(활성 카드 1개) ↔ 재시작 버튼. 보드 내부 카드 간 이동은 방향키 전담(roving tabindex).</div>
+    </div>
+    <div class="legend__row">
+      <div class="legend__keys"><span class="keycap" style="min-width:64px">↻ 재시작</span></div>
+      <div class="legend__desc"><strong>재시작</strong> — 16장 hidden 재셔플 · 이동/시간 0 리셋 · 배너 숨김 · 활성 인덱스 0 리셋. 포커스는 재시작 버튼에 유지.</div>
+    </div>
+  </div>
+
+  <!-- ══════════ §6 조작 안내 문구(권장 추가) ══════════ -->
+  <div class="section-label">6. 조작 안내(hint) 문구 — 방향키 안내 1줄 추가 권장 (§5.4, dev 재량)</div>
+  <main class="wrap">
+    <p class="hint">
+      카드를 두 장 뒤집어 같은 그림의 짝을 맞추세요. 8쌍을 모두 맞추면 완료!<br>
+      <strong>방향키로 카드 사이를 이동하고 Enter 또는 Space 로 뒤집을 수 있어요.</strong>
+    </p>
+  </main>
+  <p class="frame-caption">기존 hint 컴포넌트(<code>--text-caption</code>)에 키보드 discoverability 문구 1줄 추가. 필수 아님(신규 토큰 없음).</p>
+
+</div>
+</body>
+</html>
+</content>
