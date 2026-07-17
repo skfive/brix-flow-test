@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>벽돌깨기 · /demo/breakout-canary</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="breakout-app">
+      <!-- 상단 타이틀바 (design §4.1) -->
+      <header class="breakout-topbar">
+        <h1 class="breakout-topbar__title">벽돌깨기</h1>
+      </header>
+
+      <!-- HUD: 점수 · 생명 (design §5.2) -->
+      <section class="hud">
+        <div class="hud__cell">
+          <span class="hud__label">점수</span>
+          <span class="hud__value" data-role="score" aria-live="polite">0</span>
+        </div>
+        <div class="hud__cell hud__cell--lives">
+          <span class="hud__label">생명</span>
+          <span
+            class="hud__lives"
+            data-role="lives"
+            aria-live="polite"
+            aria-label="생명 3"
+          >
+            <span class="life life--full" aria-hidden="true">♥</span>
+            <span class="life life--full" aria-hidden="true">♥</span>
+            <span class="life life--full" aria-hidden="true">♥</span>
+          </span>
+        </div>
+      </section>
+
+      <!-- 보드 래퍼 + 오버레이 (design §5.3·§5.4) -->
+      <div class="board-wrap">
+        <canvas
+          id="board"
+          class="board"
+          width="360"
+          height="480"
+          role="img"
+          aria-label="벽돌깨기 보드, 점수 0, 생명 3"
+        ></canvas>
+
+        <!-- serve 대기 힌트 배너 (design §5.3) -->
+        <div class="serve-hint" id="serve-hint" hidden>탭 또는 Enter로 발사</div>
+
+        <!-- 상태 오버레이 (data-state 로 내용 전환, design §5.4) -->
+        <div class="board-overlay" data-state="start" id="overlay">
+          <div class="board-overlay__card">
+            <div class="overlay__icon" id="overlay-icon" aria-hidden="true"></div>
+            <h2 class="overlay__title" id="overlay-title" tabindex="-1">벽돌깨기</h2>
+            <p class="overlay__desc" id="overlay-desc">
+              ← → 또는 드래그로 패들을 움직이고, 공으로 벽돌 40개를 모두 깨세요
+            </p>
+            <p class="overlay__stat" id="overlay-stat" hidden></p>
+            <div class="overlay__actions">
+              <button type="button" class="btn btn--primary" id="btn-start">시작</button>
+              <button type="button" class="btn btn--primary" id="btn-resume" hidden>
+                계속하기
+              </button>
+              <button type="button" class="btn btn--primary" id="btn-again" hidden>
+                다시하기
+              </button>
+              <button type="button" class="btn btn--ghost" id="btn-menu" hidden>메뉴로</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 조작 안내 + 컨트롤 버튼 (design §5.5·§5.6) -->
+      <section class="controls">
+        <p class="controls__hint">
+          ← → 또는 A/D · 화면 드래그로 패들 이동 · Enter/Space/탭 발사 · P 일시정지
+        </p>
+        <div class="controls__buttons">
+          <button type="button" class="btn btn--primary" id="btn-start-bar">시작</button>
+          <button type="button" class="btn btn--secondary" id="btn-pause" disabled>
+            일시정지
+          </button>
+          <button type="button" class="btn btn--ghost" id="btn-restart">다시하기</button>
+        </div>
+      </section>
+
+      <!-- JS 비활성 폴백 (planner §7.5) -->
+      <noscript>
+        <div class="breakout-noscript">
+          이 게임은 JavaScript가 필요합니다. 브라우저에서 JavaScript를 활성화해 주세요.
+        </div>
+      </noscript>
+    </main>
+
+    <!-- 비-module script — file:// CORS 안전 (planner §12) -->
+    <script src="./logic.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
