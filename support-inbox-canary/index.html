@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>고객지원 인박스 — support-inbox-canary</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="sib-app">
+    <!-- App header (banner) -->
+    <header class="sib-header" role="banner">
+      <h1 class="sib-header__title">고객지원 인박스</h1>
+      <div class="sib-header__summary" id="sib-summary" aria-label="문의 집계 요약"></div>
+    </header>
+
+    <div class="sib-panes">
+      <!-- Pane 1: 목록 (listbox) -->
+      <nav class="sib-pane sib-pane--list" aria-label="문의 목록">
+        <div class="sib-pane__head">문의 목록</div>
+        <ul class="sib-list" id="sib-list" role="listbox" aria-label="고객 문의"></ul>
+      </nav>
+
+      <!-- Pane 2: 상세 (main) -->
+      <main class="sib-pane sib-pane--detail" aria-label="문의 상세">
+        <div class="sib-pane__head">문의 상세</div>
+        <div class="sib-detail" id="sib-detail"></div>
+        <div class="sib-live" id="sib-live" role="status" aria-live="polite"></div>
+      </main>
+
+      <!-- Pane 3: 이력 (complementary) -->
+      <aside class="sib-pane sib-pane--history" role="complementary" aria-label="변경 이력">
+        <div class="sib-pane__head">변경 이력 · 오래된 순</div>
+        <div class="sib-history" id="sib-history"></div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- vanilla-static: type=module / fetch / import 금지 · IIFE UMD 전역 · 로드 순서 = 의존 순서 -->
+  <script src="./fixtures.js"></script>
+  <script src="./storage.js"></script>
+  <script src="./inbox.js"></script>
+</body>
+</html>
