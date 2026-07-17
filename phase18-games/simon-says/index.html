@@ -11,6 +11,12 @@
       <!-- 타이틀 (design §4.1) -->
       <h1 class="app__title">Simon Says</h1>
 
+      <!-- 최고기록 chip (design BF-948 §4.1·§5.1) — 초기 렌더부터 표시 -->
+      <div class="best-score is-empty" data-role="best-score">
+        <span class="best-score__label">최고 기록</span>
+        <span class="best-score__value" data-role="best-round">기록 없음</span>
+      </div>
+
       <!-- 상태 텍스트 (design §5.2) — 라이브 리전 -->
       <p class="status" role="status" aria-live="polite">시작을 눌러 주세요</p>
 
@@ -43,6 +49,7 @@
 
     <!-- 비-module script — file:// CORS 안전 -->
     <script src="./logic.js"></script>
+    <script src="./storage.js"></script>
     <script src="./main.js"></script>
   </body>
 </html>
