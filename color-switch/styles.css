@@ -1,0 +1,220 @@
+/* BF-983 · 컬러 스위치 반응 게임 스타일
+ * 디자인 SSOT: docs/design/color-switch-BF-979.md §2 토큰 · §3 타이포 · §4 레이아웃 · §5 컴포넌트
+ * mockup(docs/design/mockups/color-switch-BF-979.html) :root 토큰을 그대로 복제.
+ * file:// 안전 — 외부 CDN/웹폰트 0건, system font stack.
+ * module: color-switch
+ * ══════════════════════════════════════════════════════════════ */
+:root {
+  /* 표준 토큰 (다크 테마 — 기존 phase18 게임 계열 승계, 값 불변) */
+  --color-bg-canvas:#0B0F17; --color-bg-surface:#141B26; --color-bg-subtle:#1C2431;
+  --color-border-default:#273140; --color-border-strong:#3A4657;
+  --color-text-primary:#E8EDF4; --color-text-secondary:#9AA7B8; --color-text-muted:#63708A;
+  --color-accent:#5B82F0; --color-accent-hover:#6E90F5; --color-accent-on:#0B0F17;
+  --color-focus-ring:rgba(91,130,240,.55);
+  --color-success:#4ADE80; --color-danger:#E55858;
+
+  /* 4색 자극/응답 토큰 (simon-says §2.2 재사용 — dim/lit) */
+  --sw-red-dim:#8E2B2B;    --sw-red-lit:#FF6B6B;
+  --sw-green-dim:#1B6E3C;  --sw-green-lit:#38F58A;
+  --sw-yellow-dim:#8A6A16; --sw-yellow-lit:#FFDA47;
+  --sw-blue-dim:#1E4E8E;   --sw-blue-lit:#4DA6FF;
+  --sw-ink-glow:rgba(255,255,255,.28);
+  --feedback-ok-tint:rgba(74,222,128,.14);
+  --feedback-ng-tint:rgba(229,88,88,.14);
+  --rule-ink-bg:rgba(91,130,240,.16);
+
+  /* 간격 · 반경 · 모션 */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-pill:999px;
+  --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+  --motion-fast:130ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* 폰트 (system stack — 외부 웹폰트 금지) */
+  --font-sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-mono:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+
+  /* 타이포 */
+  --text-h1:600 20px/1.3 var(--font-sans);
+  --text-stimulus:800 clamp(40px,13vw,72px)/1 var(--font-sans);
+  --text-rule:700 clamp(18px,5vw,24px)/1.2 var(--font-sans);
+  --text-hud-value:700 clamp(20px,6vw,28px)/1 var(--font-mono);
+  --text-hud-label:600 11px/1.2 var(--font-sans);
+  --text-feedback:700 clamp(16px,5vw,20px)/1.2 var(--font-sans);
+  --text-btn-label:600 15px/1 var(--font-sans);
+  --text-btn-key:600 11px/1 var(--font-mono);
+  --text-body:400 15px/1.5 var(--font-sans);
+  --text-caption:400 13px/1.4 var(--font-sans);
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; }
+body {
+  background:var(--color-bg-canvas); color:var(--color-text-primary);
+  font:var(--text-body); min-height:100vh;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:var(--space-5) var(--space-4) var(--space-7);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ══════════════ 컬러 스위치 앱 (§4.1 페이지 골격) ══════════════ */
+.cs-app {
+  width:min(92vw,460px); background:var(--color-bg-surface);
+  border:1px solid var(--color-border-default); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-panel); padding:var(--space-5);
+  display:flex; flex-direction:column; gap:var(--space-4);
+}
+.app-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); }
+.app__title { font:var(--text-h1); margin:0; letter-spacing:.01em; }
+.a11y-badge {
+  font:600 11px/1 var(--font-sans); color:var(--color-text-secondary);
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-pill); padding:6px 10px; white-space:nowrap;
+}
+
+/* HUD */
+.hud { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-2); }
+.hud__item {
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-3) var(--space-2);
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+}
+.hud__label { font:var(--text-hud-label); letter-spacing:.05em; text-transform:uppercase; color:var(--color-text-muted); }
+.hud__value { font:var(--text-hud-value); color:var(--color-text-primary); }
+.hud__item--streak .hud__value { color:var(--color-accent); }
+.hud__reset { font:600 10px/1 var(--font-sans); color:var(--color-danger); }
+/* 정답 시 값 pop (§5.1) */
+.hud__value.is-pop { animation:pop var(--motion-fast) var(--ease-out); }
+@keyframes pop { 0%{transform:scale(1)} 45%{transform:scale(1.16)} 100%{transform:scale(1)} }
+
+/* 규칙 배너 */
+.rule-banner {
+  display:flex; align-items:center; justify-content:center; gap:var(--space-2);
+  background:var(--rule-ink-bg); border:1px solid var(--color-border-strong);
+  border-radius:var(--radius-md); padding:var(--space-3) var(--space-4);
+  font:var(--text-rule); color:var(--color-text-primary); text-align:center;
+}
+.rule-banner__icon { font-size:1.15em; line-height:1; }
+.rule-banner__key { color:var(--color-accent); font-weight:800; }
+/* 규칙 전환 플래시 (§5.2, 120ms) */
+.rule-banner.is-switch { animation:rule-flash 320ms var(--ease-out); }
+@keyframes rule-flash {
+  0%{transform:translateX(-10px); background:rgba(91,130,240,.34)}
+  100%{transform:translateX(0); background:var(--rule-ink-bg)}
+}
+
+/* 자극 존 */
+.stimulus {
+  background:var(--color-bg-canvas); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-6) var(--space-4) var(--space-4);
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-3);
+  min-height:150px; justify-content:center; position:relative; overflow:hidden;
+}
+.stimulus.is-correct { background:var(--feedback-ok-tint); border-color:var(--color-success); }
+.stimulus.is-wrong   { background:var(--feedback-ng-tint); border-color:var(--color-danger); }
+.stimulus.is-correct { animation:pop var(--motion-fast) var(--ease-out); }
+.stimulus.is-wrong   { animation:shake 320ms var(--ease-out); }
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+}
+.stimulus__word { display:flex; align-items:center; gap:var(--space-3); font:var(--text-stimulus); }
+.stimulus__mark { width:.72em; height:.72em; flex:none; }
+
+/* 색 · 도형 마커 (CSS 순수 도형 — 외부 아이콘 금지, §6-4) */
+.mark { display:inline-block; }
+.mark--red    { background:var(--sw-red-lit);    border-radius:50%; }                                   /* ● 원 */
+.mark--green  { background:var(--sw-green-lit);  clip-path:polygon(50% 0,100% 100%,0 100%); }           /* ▲ 삼각형 */
+.mark--yellow { background:var(--sw-yellow-lit); border-radius:2px; }                                   /* ■ 사각형 */
+.mark--blue   { background:var(--sw-blue-lit);   clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); }    /* ◆ 마름모 */
+.ink-red    { color:var(--sw-red-lit); }
+.ink-green  { color:var(--sw-green-lit); }
+.ink-yellow { color:var(--sw-yellow-lit); }
+.ink-blue   { color:var(--sw-blue-lit); }
+
+/* 반응 피드백 */
+.feedback {
+  display:flex; align-items:center; gap:var(--space-2); font:var(--text-feedback);
+  min-height:1.4em; margin:0; text-align:center; flex-wrap:wrap; justify-content:center;
+}
+.feedback--ok { color:var(--color-success); }
+.feedback--ng { color:var(--color-danger); }
+.feedback__icon {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:1.5em; height:1.5em; border-radius:50%; font-size:.82em; font-weight:800;
+  border:2px solid currentColor;
+}
+.feedback__gain { color:var(--color-text-secondary); font:600 14px/1 var(--font-mono); }
+.feedback__hint { color:var(--color-text-secondary); font:400 14px/1.3 var(--font-sans); }
+.feedback--idle { color:var(--color-text-muted); font:var(--text-caption); }
+
+/* 응답 버튼 그리드 */
+.answer-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
+.answer-btn {
+  position:relative; display:flex; align-items:center; gap:var(--space-2);
+  min-height:64px; padding:0 var(--space-3);
+  border:1px solid var(--color-border-strong); border-radius:var(--radius-md);
+  color:var(--color-text-primary); cursor:pointer; text-align:left;
+  font:var(--text-btn-label); transition:transform var(--motion-fast) var(--ease-out), filter var(--motion-fast);
+}
+.answer-btn--red    { background:var(--sw-red-dim); }
+.answer-btn--green  { background:var(--sw-green-dim); }
+.answer-btn--yellow { background:var(--sw-yellow-dim); }
+.answer-btn--blue   { background:var(--sw-blue-dim); }
+.answer-btn:hover:not([aria-disabled="true"]) { filter:brightness(1.12); }
+.answer-btn:active:not([aria-disabled="true"]) { transform:scale(.96); }
+.answer-btn:focus-visible { outline:2px solid var(--color-focus-ring); outline-offset:2px; }
+.answer-btn[aria-disabled="true"] { cursor:not-allowed; opacity:.9; }
+.answer-btn__mark { width:20px; height:20px; flex:none; }
+.answer-btn__label { flex:1; }
+.answer-btn__key {
+  font:var(--text-btn-key); color:var(--color-text-primary);
+  background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14);
+  border-radius:var(--radius-sm); padding:3px 7px;
+}
+/* 응답 결과 오버레이 */
+.answer-btn.is-correct {
+  filter:brightness(1.25); box-shadow:0 0 0 2px var(--color-success), 0 0 20px var(--sw-ink-glow);
+}
+.answer-btn.is-wrong { box-shadow:0 0 0 2px var(--color-danger); animation:shake 320ms var(--ease-out); }
+.answer-btn__badge {
+  position:absolute; top:-8px; right:-8px; width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font:800 13px/1 var(--font-sans);
+  color:var(--color-bg-canvas);
+}
+.answer-btn__badge--ok { background:var(--color-success); }
+.answer-btn__badge--ng { background:var(--color-danger); color:#fff; }
+
+/* 컨트롤 */
+.controls { display:flex; gap:var(--space-3); }
+.btn {
+  flex:1; min-height:44px; border-radius:var(--radius-md); border:1px solid transparent;
+  font:600 14px/1 var(--font-sans); cursor:pointer;
+}
+.btn--primary { background:var(--color-accent); color:var(--color-accent-on); }
+.btn--primary:hover:not(:disabled) { background:var(--color-accent-hover); }
+.btn--secondary { background:transparent; color:var(--color-text-secondary); border-color:var(--color-border-strong); }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+.btn--cta { background:var(--color-accent); color:var(--color-accent-on); }
+
+/* hint */
+.hint { color:var(--color-text-muted); font:var(--text-caption); text-align:center; margin:0; }
+.hint strong { color:var(--color-text-secondary); }
+
+/* 게임오버 배너 (§5.7) */
+.gameover {
+  background:var(--color-bg-canvas); border:1px solid var(--color-border-strong);
+  border-radius:var(--radius-md); padding:var(--space-5) var(--space-4);
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-3); text-align:center;
+}
+.gameover__title { font:700 18px/1.2 var(--font-sans); margin:0; }
+.gameover__stats { display:flex; gap:var(--space-5); }
+.gameover__stat { display:flex; flex-direction:column; gap:2px; }
+.gameover__stat b { font:700 22px/1 var(--font-mono); color:var(--color-accent); }
+.gameover__stat span { font:var(--text-hud-label); color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.05em; }
+
+/* 저모션 선호 시 모션 제거 (§5.4 · §6-6) */
+@media (prefers-reduced-motion: reduce) {
+  .answer-btn { transition:none; }
+  .hud__value.is-pop, .stimulus.is-correct, .stimulus.is-wrong,
+  .answer-btn.is-wrong, .rule-banner.is-switch { animation:none; }
+}

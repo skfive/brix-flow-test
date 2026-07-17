@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>컬러 스위치 반응 게임 · /demo/color-switch</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="cs-app">
+      <!-- 타이틀 + 색맹 안내 배지 (design §4.1 · §5.8) -->
+      <div class="app-head">
+        <h1 class="app__title">컬러 스위치</h1>
+        <span class="a11y-badge">ⓘ 색·도형·숫자</span>
+      </div>
+
+      <!-- HUD (점수 / 연속 / 시간) — design §5.1 -->
+      <div class="hud">
+        <div class="hud__item">
+          <span class="hud__label">점수</span>
+          <span class="hud__value" data-role="score">0</span>
+        </div>
+        <div class="hud__item hud__item--streak">
+          <span class="hud__label">연속<span class="hud__reset" data-role="streak-reset" aria-hidden="true" hidden> ↺</span></span>
+          <span class="hud__value" data-role="streak">0</span>
+        </div>
+        <div class="hud__item">
+          <span class="hud__label">시간</span>
+          <span class="hud__value" data-role="time">0:30</span>
+        </div>
+      </div>
+
+      <!-- 규칙 배너 (design §5.2) — aria-live 로 규칙 전환 공지 -->
+      <div class="rule-banner" data-rule="idle" role="status" aria-live="polite">
+        <span class="rule-banner__icon" data-role="rule-icon" aria-hidden="true">🎮</span>
+        <span data-role="rule-text">시작을 눌러 주세요</span>
+      </div>
+
+      <!-- 자극 존 (design §5.3) + 반응 피드백 (design §5.4) -->
+      <div class="stimulus" data-role="stimulus">
+        <div class="stimulus__word" data-role="stimulus-word" style="color:var(--color-text-muted)">준비</div>
+        <p class="feedback feedback--idle" data-role="feedback" role="status" aria-live="assertive">
+          규칙에 맞는 색을 빠르게 고르세요
+        </p>
+      </div>
+
+      <!-- 응답 버튼 4색 (2×2) — design §5.5. 각 색 = 도형 + 라벨 + 숫자키 + 위치 4중 식별 -->
+      <div class="answer-grid" data-role="answer-grid" aria-disabled="true">
+        <button class="answer-btn answer-btn--red" type="button" data-color="red" data-key="1" aria-label="빨강 (도형 원, 숫자 1)" aria-disabled="true"><span class="answer-btn__mark mark mark--red" aria-hidden="true"></span><span class="answer-btn__label">빨강</span><span class="answer-btn__key">1</span></button>
+        <button class="answer-btn answer-btn--green" type="button" data-color="green" data-key="2" aria-label="초록 (도형 삼각형, 숫자 2)" aria-disabled="true"><span class="answer-btn__mark mark mark--green" aria-hidden="true"></span><span class="answer-btn__label">초록</span><span class="answer-btn__key">2</span></button>
+        <button class="answer-btn answer-btn--yellow" type="button" data-color="yellow" data-key="3" aria-label="노랑 (도형 사각형, 숫자 3)" aria-disabled="true"><span class="answer-btn__mark mark mark--yellow" aria-hidden="true"></span><span class="answer-btn__label">노랑</span><span class="answer-btn__key">3</span></button>
+        <button class="answer-btn answer-btn--blue" type="button" data-color="blue" data-key="4" aria-label="파랑 (도형 마름모, 숫자 4)" aria-disabled="true"><span class="answer-btn__mark mark mark--blue" aria-hidden="true"></span><span class="answer-btn__label">파랑</span><span class="answer-btn__key">4</span></button>
+      </div>
+
+      <!-- 컨트롤 (design §5.6) -->
+      <div class="controls">
+        <button class="btn btn--primary" type="button" id="btn-start">시작</button>
+        <button class="btn btn--secondary" type="button" id="btn-restart" disabled>다시하기</button>
+      </div>
+
+      <!-- 조작 안내 (design §4.1 hint) -->
+      <p class="hint">숫자키 <strong>1 2 3 4</strong> · Enter/Space 로 선택 · 각 색은 <strong>색·도형·숫자</strong>로 구분</p>
+
+      <!-- JS 비활성 폴백 -->
+      <noscript>
+        이 게임은 JavaScript가 필요합니다. 브라우저에서 JavaScript를 활성화해 주세요.
+      </noscript>
+    </main>
+
+    <!-- 비-module script — file:// CORS 안전 -->
+    <script src="./logic.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
