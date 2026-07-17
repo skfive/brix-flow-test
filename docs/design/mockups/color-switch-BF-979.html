@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>컬러 스위치 반응 게임 — 디자인 시안 (mockup) · BF-979</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   §2 토큰 SSOT — dev 는 styles.css :root 에 그대로 복제
+   (docs/design/color-switch-BF-979.md 와 동기화)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  /* 표준 토큰 (다크 테마 — 기존 phase18 게임 계열 승계, 값 불변) */
+  --color-bg-canvas:#0B0F17; --color-bg-surface:#141B26; --color-bg-subtle:#1C2431;
+  --color-border-default:#273140; --color-border-strong:#3A4657;
+  --color-text-primary:#E8EDF4; --color-text-secondary:#9AA7B8; --color-text-muted:#63708A;
+  --color-accent:#5B82F0; --color-accent-hover:#6E90F5; --color-accent-on:#0B0F17;
+  --color-focus-ring:rgba(91,130,240,.55);
+  --color-success:#4ADE80; --color-danger:#E55858;
+
+  /* 4색 자극/응답 토큰 (simon-says §2.2 재사용 — dim/lit) */
+  --sw-red-dim:#8E2B2B;    --sw-red-lit:#FF6B6B;
+  --sw-green-dim:#1B6E3C;  --sw-green-lit:#38F58A;
+  --sw-yellow-dim:#8A6A16; --sw-yellow-lit:#FFDA47;
+  --sw-blue-dim:#1E4E8E;   --sw-blue-lit:#4DA6FF;
+  --sw-ink-glow:rgba(255,255,255,.28);
+  --feedback-ok-tint:rgba(74,222,128,.14);
+  --feedback-ng-tint:rgba(229,88,88,.14);
+  --rule-ink-bg:rgba(91,130,240,.16);
+
+  /* 간격 · 반경 · 모션 */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-pill:999px;
+  --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+  --motion-fast:130ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* 폰트 (system stack — 외부 웹폰트 금지) */
+  --font-sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-mono:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+
+  /* 타이포 */
+  --text-h1:600 20px/1.3 var(--font-sans);
+  --text-stimulus:800 clamp(40px,13vw,72px)/1 var(--font-sans);
+  --text-rule:700 clamp(18px,5vw,24px)/1.2 var(--font-sans);
+  --text-hud-value:700 clamp(20px,6vw,28px)/1 var(--font-mono);
+  --text-hud-label:600 11px/1.2 var(--font-sans);
+  --text-feedback:700 clamp(16px,5vw,20px)/1.2 var(--font-sans);
+  --text-btn-label:600 15px/1 var(--font-sans);
+  --text-btn-key:600 11px/1 var(--font-mono);
+  --text-body:400 15px/1.5 var(--font-sans);
+  --text-caption:400 13px/1.4 var(--font-sans);
+}
+
+* { box-sizing:border-box; }
+html,body { margin:0; }
+body {
+  background:var(--color-bg-canvas); color:var(--color-text-primary);
+  font:var(--text-body); padding:var(--space-5) var(--space-4) var(--space-7);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── mockup 문서 프레임(스크린샷용 설명 껍데기) ── */
+.doc { max-width:1080px; margin:0 auto; }
+.doc__title { font:700 26px/1.25 var(--font-sans); margin:0 0 var(--space-2); }
+.doc__sub { color:var(--color-text-secondary); margin:0 0 var(--space-4); font-size:14px; }
+.doc__note {
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-left:3px solid var(--color-accent); border-radius:var(--radius-md);
+  padding:var(--space-3) var(--space-4); color:var(--color-text-secondary);
+  font-size:13.5px; line-height:1.6; margin-bottom:var(--space-6);
+}
+.doc__note code { color:var(--color-text-primary); font-family:var(--font-mono); font-size:12.5px; }
+.section-label {
+  font:600 13px/1.3 var(--font-sans); letter-spacing:.04em; text-transform:uppercase;
+  color:var(--color-accent); margin:var(--space-7) 0 var(--space-4);
+  padding-bottom:var(--space-2); border-bottom:1px solid var(--color-border-default);
+}
+.frame-caption { color:var(--color-text-muted); font-size:12.5px; margin-top:var(--space-3); line-height:1.6; }
+.snap-grid { display:flex; flex-wrap:wrap; gap:var(--space-6); align-items:flex-start; }
+
+/* ══════════════ 컬러 스위치 앱 (§4.1 페이지 골격) ══════════════ */
+.cs-app {
+  width:min(88vw,440px); background:var(--color-bg-surface);
+  border:1px solid var(--color-border-default); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-panel); padding:var(--space-5);
+  display:flex; flex-direction:column; gap:var(--space-4);
+}
+.app-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); }
+.app__title { font:var(--text-h1); margin:0; letter-spacing:.01em; }
+.a11y-badge {
+  font:600 11px/1 var(--font-sans); color:var(--color-text-secondary);
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-pill); padding:6px 10px; white-space:nowrap;
+}
+
+/* HUD */
+.hud { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-2); }
+.hud__item {
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-3) var(--space-2);
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+}
+.hud__label { font:var(--text-hud-label); letter-spacing:.05em; text-transform:uppercase; color:var(--color-text-muted); }
+.hud__value { font:var(--text-hud-value); color:var(--color-text-primary); }
+.hud__item--streak .hud__value { color:var(--color-accent); }
+.hud__reset { font:600 10px/1 var(--font-sans); color:var(--color-danger); }
+
+/* 규칙 배너 */
+.rule-banner {
+  display:flex; align-items:center; justify-content:center; gap:var(--space-2);
+  background:var(--rule-ink-bg); border:1px solid var(--color-border-strong);
+  border-radius:var(--radius-md); padding:var(--space-3) var(--space-4);
+  font:var(--text-rule); color:var(--color-text-primary); text-align:center;
+}
+.rule-banner__icon { font-size:1.15em; line-height:1; }
+.rule-banner__key {
+  color:var(--color-accent); font-weight:800;
+}
+
+/* 자극 존 */
+.stimulus {
+  background:var(--color-bg-canvas); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-6) var(--space-4) var(--space-4);
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-3);
+  min-height:150px; justify-content:center; position:relative; overflow:hidden;
+}
+.stimulus.is-correct { background:var(--feedback-ok-tint); border-color:var(--color-success); }
+.stimulus.is-wrong   { background:var(--feedback-ng-tint); border-color:var(--color-danger); }
+.stimulus__word { display:flex; align-items:center; gap:var(--space-3); font:var(--text-stimulus); }
+.stimulus__mark { width:.72em; height:.72em; flex:none; }
+
+/* 색 · 도형 마커 (CSS 순수 도형) */
+.mark { display:inline-block; }
+.mark--red    { background:var(--sw-red-lit);    border-radius:50%; }                                   /* ● 원 */
+.mark--green  { background:var(--sw-green-lit);  clip-path:polygon(50% 0,100% 100%,0 100%); }           /* ▲ 삼각형 */
+.mark--yellow { background:var(--sw-yellow-lit); border-radius:2px; }                                   /* ■ 사각형 */
+.mark--blue   { background:var(--sw-blue-lit);   clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); }    /* ◆ 마름모 */
+.ink-red    { color:var(--sw-red-lit); }
+.ink-green  { color:var(--sw-green-lit); }
+.ink-yellow { color:var(--sw-yellow-lit); }
+.ink-blue   { color:var(--sw-blue-lit); }
+
+/* 반응 피드백 */
+.feedback {
+  display:flex; align-items:center; gap:var(--space-2); font:var(--text-feedback);
+  min-height:1.4em;
+}
+.feedback--ok { color:var(--color-success); }
+.feedback--ng { color:var(--color-danger); }
+.feedback__icon {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:1.5em; height:1.5em; border-radius:50%; font-size:.82em; font-weight:800;
+  border:2px solid currentColor;
+}
+.feedback__gain { color:var(--color-text-secondary); font:600 14px/1 var(--font-mono); }
+.feedback__hint { color:var(--color-text-secondary); font:400 14px/1.3 var(--font-sans); }
+.feedback--idle { color:var(--color-text-muted); font:var(--text-caption); }
+
+/* 응답 버튼 그리드 */
+.answer-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
+.answer-btn {
+  position:relative; display:flex; align-items:center; gap:var(--space-2);
+  min-height:64px; padding:0 var(--space-3);
+  border:1px solid var(--color-border-strong); border-radius:var(--radius-md);
+  color:var(--color-text-primary); cursor:pointer; text-align:left;
+  font:var(--text-btn-label); transition:transform var(--motion-fast) var(--ease-out), filter var(--motion-fast);
+}
+.answer-btn--red    { background:var(--sw-red-dim); }
+.answer-btn--green  { background:var(--sw-green-dim); }
+.answer-btn--yellow { background:var(--sw-yellow-dim); }
+.answer-btn--blue   { background:var(--sw-blue-dim); }
+.answer-btn:hover:not([aria-disabled="true"]) { filter:brightness(1.12); }
+.answer-btn:focus-visible { outline:2px solid var(--color-focus-ring); outline-offset:2px; }
+.answer-btn[aria-disabled="true"] { cursor:not-allowed; opacity:.9; }
+.answer-btn__mark { width:20px; height:20px; flex:none; }
+.answer-btn__label { flex:1; }
+.answer-btn__key {
+  font:var(--text-btn-key); color:var(--color-text-primary);
+  background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14);
+  border-radius:var(--radius-sm); padding:3px 7px;
+}
+/* 응답 결과 오버레이 */
+.answer-btn.is-correct {
+  filter:brightness(1.25); box-shadow:0 0 0 2px var(--color-success), 0 0 20px var(--sw-ink-glow);
+}
+.answer-btn.is-wrong { box-shadow:0 0 0 2px var(--color-danger); }
+.answer-btn__badge {
+  position:absolute; top:-8px; right:-8px; width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font:800 13px/1 var(--font-sans);
+  color:var(--color-bg-canvas);
+}
+.answer-btn__badge--ok { background:var(--color-success); }
+.answer-btn__badge--ng { background:var(--color-danger); color:#fff; }
+
+/* 컨트롤 */
+.controls { display:flex; gap:var(--space-3); }
+.btn {
+  flex:1; min-height:44px; border-radius:var(--radius-md); border:1px solid transparent;
+  font:600 14px/1 var(--font-sans); cursor:pointer;
+}
+.btn--primary { background:var(--color-accent); color:var(--color-accent-on); }
+.btn--primary:hover { background:var(--color-accent-hover); }
+.btn--secondary { background:transparent; color:var(--color-text-secondary); border-color:var(--color-border-strong); }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+.btn--cta { background:var(--color-accent); color:var(--color-accent-on); }
+
+/* hint */
+.hint { color:var(--color-text-muted); font:var(--text-caption); text-align:center; margin:0; }
+.hint strong { color:var(--color-text-secondary); }
+
+/* 게임오버 배너 */
+.gameover {
+  background:var(--color-bg-canvas); border:1px solid var(--color-border-strong);
+  border-radius:var(--radius-md); padding:var(--space-5) var(--space-4);
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-3); text-align:center;
+}
+.gameover__title { font:700 18px/1.2 var(--font-sans); margin:0; }
+.gameover__stats { display:flex; gap:var(--space-5); }
+.gameover__stat { display:flex; flex-direction:column; gap:2px; }
+.gameover__stat b { font:700 22px/1 var(--font-mono); color:var(--color-accent); }
+.gameover__stat span { font:var(--text-hud-label); color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.05em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .answer-btn { transition:none; }
+}
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1 class="doc__title">컬러 스위치 반응 게임 — 디자인 시안 (mockup)</h1>
+  <p class="doc__sub">BF-979 · designer [이디자인] · vanilla-static · 명세: docs/design/color-switch-BF-979.md</p>
+  <p class="doc__note">
+    색·문자 <strong>간섭(Stroop)</strong> 반응 게임입니다. 중앙 색 단어의 <strong>뜻</strong>과 <strong>잉크 색</strong>이 다를 수 있고,
+    상단 규칙 배너(<code>🎨 글자 색</code> / <code>💬 글자 뜻</code>)가 매 라운드 전환되어 무엇을 골라야 하는지 지정합니다.
+    모든 색 신호는 <strong>도형(●▲■◆) · 텍스트 · 숫자키 · 위치</strong> 등 비색상 채널을 병행해 색맹·저시력 사용자도 색에 의존하지 않고 플레이할 수 있습니다.
+    실제 <code>&lt;button aria-label&gt;</code> 마크업 + <code>:focus-visible</code> 링 + <code>aria-live</code> 피드백을 포함합니다. (예시 점수·시간은 시각화용 placeholder)
+  </p>
+
+  <div class="snap-grid">
+
+    <!-- ① 대기 -->
+    <div>
+      <div class="section-label" style="margin-top:0">① 대기 (시작 전)</div>
+      <div class="cs-app">
+        <div class="app-head">
+          <h2 class="app__title">컬러 스위치</h2>
+          <span class="a11y-badge">ⓘ 색·도형·숫자</span>
+        </div>
+        <div class="hud">
+          <div class="hud__item"><span class="hud__label">점수</span><span class="hud__value">0</span></div>
+          <div class="hud__item hud__item--streak"><span class="hud__label">연속</span><span class="hud__value">0</span></div>
+          <div class="hud__item"><span class="hud__label">시간</span><span class="hud__value">0:30</span></div>
+        </div>
+        <div class="rule-banner" role="status" aria-live="polite">
+          <span class="rule-banner__icon" aria-hidden="true">🎮</span>
+          <span>시작을 눌러 주세요</span>
+        </div>
+        <div class="stimulus">
+          <div class="stimulus__word" style="color:var(--color-text-muted)">준비</div>
+          <p class="feedback feedback--idle">규칙에 맞는 색을 빠르게 고르세요</p>
+        </div>
+        <div class="answer-grid" aria-disabled="true">
+          <button class="answer-btn answer-btn--red" type="button" data-color="red" aria-label="빨강 (도형 원, 숫자 1)" aria-disabled="true"><span class="answer-btn__mark mark mark--red" aria-hidden="true"></span><span class="answer-btn__label">빨강</span><span class="answer-btn__key">1</span></button>
+          <button class="answer-btn answer-btn--green" type="button" data-color="green" aria-label="초록 (도형 삼각형, 숫자 2)" aria-disabled="true"><span class="answer-btn__mark mark mark--green" aria-hidden="true"></span><span class="answer-btn__label">초록</span><span class="answer-btn__key">2</span></button>
+          <button class="answer-btn answer-btn--yellow" type="button" data-color="yellow" aria-label="노랑 (도형 사각형, 숫자 3)" aria-disabled="true"><span class="answer-btn__mark mark mark--yellow" aria-hidden="true"></span><span class="answer-btn__label">노랑</span><span class="answer-btn__key">3</span></button>
+          <button class="answer-btn answer-btn--blue" type="button" data-color="blue" aria-label="파랑 (도형 마름모, 숫자 4)" aria-disabled="true"><span class="answer-btn__mark mark mark--blue" aria-hidden="true"></span><span class="answer-btn__label">파랑</span><span class="answer-btn__key">4</span></button>
+        </div>
+        <div class="controls">
+          <button class="btn btn--primary" type="button">시작</button>
+          <button class="btn btn--secondary" type="button" disabled>다시하기</button>
+        </div>
+        <p class="hint">숫자키 <strong>1 2 3 4</strong> · Enter/Space 로 선택 · 각 색은 <strong>색·도형·숫자</strong>로 구분</p>
+      </div>
+      <p class="frame-caption">자극·피드백 없음. 응답 버튼·다시하기 비활성(대기 상태).</p>
+    </div>
+
+    <!-- ② 진행 · 규칙=글자 색 -->
+    <div>
+      <div class="section-label" style="margin-top:0">② 진행 · 규칙 = 🎨 글자 색 (간섭 자극)</div>
+      <div class="cs-app">
+        <div class="app-head">
+          <h2 class="app__title">컬러 스위치</h2>
+          <span class="a11y-badge">ⓘ 색·도형·숫자</span>
+        </div>
+        <div class="hud">
+          <div class="hud__item"><span class="hud__label">점수</span><span class="hud__value">120</span></div>
+          <div class="hud__item hud__item--streak"><span class="hud__label">연속</span><span class="hud__value">4</span></div>
+          <div class="hud__item"><span class="hud__label">시간</span><span class="hud__value">0:18</span></div>
+        </div>
+        <div class="rule-banner" role="status" aria-live="polite">
+          <span class="rule-banner__icon" aria-hidden="true">🎨</span>
+          <span>이번엔 <span class="rule-banner__key">글자 색</span> 을 고르세요</span>
+        </div>
+        <div class="stimulus">
+          <!-- 뜻=빨강, 잉크=파랑(◆) → 정답은 파랑 -->
+          <div class="stimulus__word ink-blue">
+            <span class="stimulus__mark mark mark--blue" aria-hidden="true"></span>빨강
+          </div>
+          <p class="feedback feedback--idle">글자의 <strong>색</strong>(◆ 파랑)을 고르세요 — 뜻(빨강)에 속지 마세요</p>
+        </div>
+        <div class="answer-grid">
+          <button class="answer-btn answer-btn--red" type="button" data-color="red" aria-label="빨강 (도형 원, 숫자 1)"><span class="answer-btn__mark mark mark--red" aria-hidden="true"></span><span class="answer-btn__label">빨강</span><span class="answer-btn__key">1</span></button>
+          <button class="answer-btn answer-btn--green" type="button" data-color="green" aria-label="초록 (도형 삼각형, 숫자 2)"><span class="answer-btn__mark mark mark--green" aria-hidden="true"></span><span class="answer-btn__label">초록</span><span class="answer-btn__key">2</span></button>
+          <button class="answer-btn answer-btn--yellow" type="button" data-color="yellow" aria-label="노랑 (도형 사각형, 숫자 3)"><span class="answer-btn__mark mark mark--yellow" aria-hidden="true"></span><span class="answer-btn__label">노랑</span><span class="answer-btn__key">3</span></button>
+          <button class="answer-btn answer-btn--blue" type="button" data-color="blue" aria-label="파랑 (도형 마름모, 숫자 4)"><span class="answer-btn__mark mark mark--blue" aria-hidden="true"></span><span class="answer-btn__label">파랑</span><span class="answer-btn__key">4</span></button>
+        </div>
+        <div class="controls">
+          <button class="btn btn--primary" type="button" disabled>시작</button>
+          <button class="btn btn--secondary" type="button">다시하기</button>
+        </div>
+        <p class="hint">숫자키 <strong>1 2 3 4</strong> · Enter/Space 로 선택</p>
+      </div>
+      <p class="frame-caption">단어 뜻="빨강"인데 잉크=파랑(◆). 규칙이 "글자 색"이므로 정답은 <strong>파랑(4)</strong>. 잉크 색은 도형(◆)으로도 표시돼 색맹도 식별 가능.</p>
+    </div>
+
+    <!-- ③ 진행 · 규칙=글자 뜻 -->
+    <div>
+      <div class="section-label" style="margin-top:0">③ 진행 · 규칙 = 💬 글자 뜻 (규칙 전환)</div>
+      <div class="cs-app">
+        <div class="app-head">
+          <h2 class="app__title">컬러 스위치</h2>
+          <span class="a11y-badge">ⓘ 색·도형·숫자</span>
+        </div>
+        <div class="hud">
+          <div class="hud__item"><span class="hud__label">점수</span><span class="hud__value">200</span></div>
+          <div class="hud__item hud__item--streak"><span class="hud__label">연속</span><span class="hud__value">6</span></div>
+          <div class="hud__item"><span class="hud__label">시간</span><span class="hud__value">0:12</span></div>
+        </div>
+        <div class="rule-banner" role="status" aria-live="polite">
+          <span class="rule-banner__icon" aria-hidden="true">💬</span>
+          <span>규칙 전환! <span class="rule-banner__key">글자 뜻</span> 을 고르세요</span>
+        </div>
+        <div class="stimulus">
+          <!-- 뜻=초록, 잉크=노랑(■) → 정답은 초록 -->
+          <div class="stimulus__word ink-yellow">
+            <span class="stimulus__mark mark mark--yellow" aria-hidden="true"></span>초록
+          </div>
+          <p class="feedback feedback--idle">글자의 <strong>뜻</strong>(초록)을 고르세요 — 잉크(노랑)에 속지 마세요</p>
+        </div>
+        <div class="answer-grid">
+          <button class="answer-btn answer-btn--red" type="button" data-color="red" aria-label="빨강 (도형 원, 숫자 1)"><span class="answer-btn__mark mark mark--red" aria-hidden="true"></span><span class="answer-btn__label">빨강</span><span class="answer-btn__key">1</span></button>
+          <button class="answer-btn answer-btn--green" type="button" data-color="green" aria-label="초록 (도형 삼각형, 숫자 2)"><span class="answer-btn__mark mark mark--green" aria-hidden="true"></span><span class="answer-btn__label">초록</span><span class="answer-btn__key">2</span></button>
+          <button class="answer-btn answer-btn--yellow" type="button" data-color="yellow" aria-label="노랑 (도형 사각형, 숫자 3)"><span class="answer-btn__mark mark mark--yellow" aria-hidden="true"></span><span class="answer-btn__label">노랑</span><span class="answer-btn__key">3</span></button>
+          <button class="answer-btn answer-btn--blue" type="button" data-color="blue" aria-label="파랑 (도형 마름모, 숫자 4)"><span class="answer-btn__mark mark mark--blue" aria-hidden="true"></span><span class="answer-btn__label">파랑</span><span class="answer-btn__key">4</span></button>
+        </div>
+        <div class="controls">
+          <button class="btn btn--primary" type="button" disabled>시작</button>
+          <button class="btn btn--secondary" type="button">다시하기</button>
+        </div>
+        <p class="hint">규칙 전환 시 배너가 강조·슬라이드로 알림 (<em>aria-live</em> 공지)</p>
+      </div>
+      <p class="frame-caption">규칙이 "글자 색"→"글자 뜻"으로 전환됨. 단어 뜻="초록", 잉크=노랑(■). 정답은 <strong>초록(2)</strong>.</p>
+    </div>
+
+    <!-- ④ 정답 피드백 -->
+    <div>
+      <div class="section-label" style="margin-top:0">④ 정답 피드백 (✓ + 점수 증가)</div>
+      <div class="cs-app">
+        <div class="app-head">
+          <h2 class="app__title">컬러 스위치</h2>
+          <span class="a11y-badge">ⓘ 색·도형·숫자</span>
+        </div>
+        <div class="hud">
+          <div class="hud__item"><span class="hud__label">점수</span><span class="hud__value" style="color:var(--color-success)">280</span></div>
+          <div class="hud__item hud__item--streak"><span class="hud__label">연속</span><span class="hud__value">7</span></div>
+          <div class="hud__item"><span class="hud__label">시간</span><span class="hud__value">0:16</span></div>
+        </div>
+        <div class="rule-banner" role="status" aria-live="polite">
+          <span class="rule-banner__icon" aria-hidden="true">🎨</span>
+          <span>이번엔 <span class="rule-banner__key">글자 색</span> 을 고르세요</span>
+        </div>
+        <div class="stimulus is-correct">
+          <div class="stimulus__word ink-green">
+            <span class="stimulus__mark mark mark--green" aria-hidden="true"></span>노랑
+          </div>
+          <p class="feedback feedback--ok" role="status" aria-live="assertive">
+            <span class="feedback__icon" aria-hidden="true">✓</span>정답 <span class="feedback__gain">+80</span>
+          </p>
+        </div>
+        <div class="answer-grid" aria-disabled="true">
+          <button class="answer-btn answer-btn--red" type="button" data-color="red" aria-label="빨강 (도형 원, 숫자 1)" aria-disabled="true"><span class="answer-btn__mark mark mark--red" aria-hidden="true"></span><span class="answer-btn__label">빨강</span><span class="answer-btn__key">1</span></button>
+          <button class="answer-btn answer-btn--green is-correct" type="button" data-color="green" aria-label="초록 (도형 삼각형, 숫자 2) — 정답" aria-disabled="true"><span class="answer-btn__mark mark mark--green" aria-hidden="true"></span><span class="answer-btn__label">초록</span><span class="answer-btn__key">2</span><span class="answer-btn__badge answer-btn__badge--ok" aria-hidden="true">✓</span></button>
+          <button class="answer-btn answer-btn--yellow" type="button" data-color="yellow" aria-label="노랑 (도형 사각형, 숫자 3)" aria-disabled="true"><span class="answer-btn__mark mark mark--yellow" aria-hidden="true"></span><span class="answer-btn__label">노랑</span><span class="answer-btn__key">3</span></button>
+          <button class="answer-btn answer-btn--blue" type="button" data-color="blue" aria-label="파랑 (도형 마름모, 숫자 4)" aria-disabled="true"><span class="answer-btn__mark mark mark--blue" aria-hidden="true"></span><span class="answer-btn__label">파랑</span><span class="answer-btn__key">4</span></button>
+        </div>
+        <div class="controls">
+          <button class="btn btn--primary" type="button" disabled>시작</button>
+          <button class="btn btn--secondary" type="button">다시하기</button>
+        </div>
+        <p class="hint">정답: <strong>✓ 아이콘 + "정답" 텍스트</strong> + 초록 틴트 + 팝 모션 (색 단독 아님)</p>
+      </div>
+      <p class="frame-caption">규칙="글자 색", 뜻="노랑"·잉크=초록(▲) → 정답은 초록(2). 정답 버튼 lit + ✓ 배지, 자극 존 초록 틴트, 점수 +80.</p>
+    </div>
+
+    <!-- ⑤ 오답 피드백 -->
+    <div>
+      <div class="section-label" style="margin-top:0">⑤ 오답 피드백 (✗ + 정답 안내)</div>
+      <div class="cs-app">
+        <div class="app-head">
+          <h2 class="app__title">컬러 스위치</h2>
+          <span class="a11y-badge">ⓘ 색·도형·숫자</span>
+        </div>
+        <div class="hud">
+          <div class="hud__item"><span class="hud__label">점수</span><span class="hud__value">280</span></div>
+          <div class="hud__item hud__item--streak"><span class="hud__label">연속</span><span class="hud__value">0 <span class="hud__reset">↺</span></span></div>
+          <div class="hud__item"><span class="hud__label">시간</span><span class="hud__value">0:15</span></div>
+        </div>
+        <div class="rule-banner" role="status" aria-live="polite">
+          <span class="rule-banner__icon" aria-hidden="true">💬</span>
+          <span>이번엔 <span class="rule-banner__key">글자 뜻</span> 을 고르세요</span>
+        </div>
+        <div class="stimulus is-wrong">
+          <div class="stimulus__word ink-red">
+            <span class="stimulus__mark mark mark--red" aria-hidden="true"></span>파랑
+          </div>
+          <p class="feedback feedback--ng" role="status" aria-live="assertive">
+            <span class="feedback__icon" aria-hidden="true">✗</span>오답
+            <span class="feedback__hint">정답: <span class="mark mark--blue" style="display:inline-block;width:.8em;height:.8em;vertical-align:-1px"></span> 파랑</span>
+          </p>
+        </div>
+        <div class="answer-grid" aria-disabled="true">
+          <button class="answer-btn answer-btn--red is-wrong" type="button" data-color="red" aria-label="빨강 (도형 원, 숫자 1) — 선택함, 오답" aria-disabled="true"><span class="answer-btn__mark mark mark--red" aria-hidden="true"></span><span class="answer-btn__label">빨강</span><span class="answer-btn__key">1</span><span class="answer-btn__badge answer-btn__badge--ng" aria-hidden="true">✗</span></button>
+          <button class="answer-btn answer-btn--green" type="button" data-color="green" aria-label="초록 (도형 삼각형, 숫자 2)" aria-disabled="true"><span class="answer-btn__mark mark mark--green" aria-hidden="true"></span><span class="answer-btn__label">초록</span><span class="answer-btn__key">2</span></button>
+          <button class="answer-btn answer-btn--yellow" type="button" data-color="yellow" aria-label="노랑 (도형 사각형, 숫자 3)" aria-disabled="true"><span class="answer-btn__mark mark mark--yellow" aria-hidden="true"></span><span class="answer-btn__label">노랑</span><span class="answer-btn__key">3</span></button>
+          <button class="answer-btn answer-btn--blue is-correct" type="button" data-color="blue" aria-label="파랑 (도형 마름모, 숫자 4) — 정답" aria-disabled="true"><span class="answer-btn__mark mark mark--blue" aria-hidden="true"></span><span class="answer-btn__label">파랑</span><span class="answer-btn__key">4</span><span class="answer-btn__badge answer-btn__badge--ok" aria-hidden="true">✓</span></button>
+        </div>
+        <div class="controls">
+          <button class="btn btn--primary" type="button" disabled>시작</button>
+          <button class="btn btn--secondary" type="button">다시하기</button>
+        </div>
+        <p class="hint">오답: <strong>✗ 아이콘 + "오답" 텍스트</strong> + 정답 버튼에 ✓ 안내 + 연속 0 리셋(↺). 색 없이도 ✓/✗ 로 구분.</p>
+      </div>
+      <p class="frame-caption">규칙="글자 뜻", 뜻="파랑"·잉크=빨강(●). 정답은 파랑(4)인데 빨강(1) 선택 → ✗. 정답 버튼(파랑)에 ✓ 하이라이트, 연속 리셋.</p>
+    </div>
+
+    <!-- ⑥ 게임오버 -->
+    <div>
+      <div class="section-label" style="margin-top:0">⑥ 게임오버 (시간 종료 · 결과 요약)</div>
+      <div class="cs-app">
+        <div class="app-head">
+          <h2 class="app__title">컬러 스위치</h2>
+          <span class="a11y-badge">ⓘ 색·도형·숫자</span>
+        </div>
+        <div class="hud">
+          <div class="hud__item"><span class="hud__label">점수</span><span class="hud__value">340</span></div>
+          <div class="hud__item hud__item--streak"><span class="hud__label">최고 연속</span><span class="hud__value">9</span></div>
+          <div class="hud__item"><span class="hud__label">시간</span><span class="hud__value">0:00</span></div>
+        </div>
+        <div class="gameover" role="status" aria-live="polite">
+          <p class="gameover__title">⏱ 시간 종료!</p>
+          <div class="gameover__stats">
+            <div class="gameover__stat"><b>340</b><span>최종 점수</span></div>
+            <div class="gameover__stat"><b>9</b><span>최고 연속</span></div>
+            <div class="gameover__stat"><b>86%</b><span>정답률</span></div>
+          </div>
+          <button class="btn btn--cta" type="button" style="max-width:200px">다시하기</button>
+        </div>
+        <p class="hint">결과 요약은 텍스트·숫자로 전달 (색 무관). 다시하기로 즉시 재시작.</p>
+      </div>
+      <p class="frame-caption">시간 종료 시 자극 존을 덮는 결과 요약(점수·최고 연속·정답률) + 다시하기 CTA.</p>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
