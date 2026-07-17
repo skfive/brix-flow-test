@@ -243,6 +243,35 @@ D-pad 버튼은 min 52px 터치 타깃, active 시 accent 배경 + `scale(0.94)`
 - `@media (prefers-reduced-motion:reduce)` 에서 transition/active transform 제거 규칙 유지.
 - 버튼 최소 타깃 44px(`.btn min-height`), D-pad 52px 유지(터치 접근성).
 
+### 6.6 e2e 검증 대상 DOM 계약 (turnkey 체크리스트 — developer/tester 가 구현)
+
+> **범위 주의:** 아래는 **화면에서 참이어야 하는 것(디자인 계약)** 을 selector·assertion 단위로 고정한 것이다. **테스트 파일 작성은 designer 산출물이 아니다** — developer(BF-973, `phase18-games/snake/**` 유지) / tester(BF-975, `tests/e2e/phase18-snake/**`)가 이 계약을 e2e 로 구현한다. 본 표는 planner §2 AC(`snake-boundary-restart-BF-970.md`)의 UI 항목을 디자인 관점에서 selector 로 번역해, 구현자가 "무엇을 assert 할지" 헷갈리지 않도록 제공하는 것이다.
+
+**AC-SELF-3 — 자기 충돌 게임오버 UI 계약 (GAP-2, 신규 e2e):** 자기 충돌로 게임오버 전이 후 오버레이가 표시되면 아래가 모두 참이어야 한다. wall 케이스와 **동일한 UI 계약**(문구만 상이).
+
+| # | selector | 기대 assertion |
+|---|---|---|
+| S3-1 | `#overlay` | `data-state === "gameover"` (오버레이 노출) |
+| S3-2 | `#overlay-reason` | 텍스트에 `"몸"` 포함(`REASON_TEXT.self = "몸에 부딪혔어요"`) — `"벽"` 문구 미노출 |
+| S3-3 | `#overlay-icon` | 텍스트 `"✕"`, 색 `--color-danger` |
+| S3-4 | `#btn-pause` | `disabled` 속성 보유(틱 루프 정지) |
+| S3-5 | `#board` (캔버스) | 연속 두 시점 사이 `snake[0]` 좌표 불변(틱 정지, 결정론 훅 `window.__brixSnakeState` 활용) |
+
+**AC-SELF-4 — 사유 문구 교차 노출 금지:** 같은 오버레이 레이아웃에서 `#overlay-reason` 은 사유당 **정확히 1개 고유 문구**만 노출(§5.1 매핑표). `wall`↔`self` 교차(벽 사유에 "몸" 등) 시 결함.
+
+**AC-RESTART-3 — "다시하기"(`#btn-again`) 클릭 후 DOM 동기화 (GAP-4, 신규 e2e):**
+
+| # | 트리거 | selector | 기대 assertion |
+|---|---|---|---|
+| R3-1 | `#btn-again` 클릭 | `[data-role="score"]` | 텍스트 `"0"` (점수 리셋) |
+| R3-2 | 〃 | `#overlay` | `hidden` 속성 보유 |
+| R3-3 | 〃 | `#overlay` | `data-state !== "gameover"` |
+| R3-4 | 〃 | `#btn-pause` | `disabled` 아님(재생 재개) |
+
+**AC-RESTART-4 — 하단 "재시작"(`#btn-restart`) 클릭:** `status` 가 `playing`/`paused`/`gameover` 중 무엇이든 클릭 시 R3-1~R3-4 와 **동일 계약** 성립 + 틱 루프 재개(`status==="start"` 일 때만 no-op). 즉 오버레이 "다시하기"와 하단 "재시작"의 **DOM 결과가 동일**해야 한다(§5.2 재시작 흐름 정합 원칙 2).
+
+**입력 경로 동등성(키보드/터치):** 게임오버 상태에서 `Enter`/`Space` 키 입력 = `#btn-again` 클릭 = `#btn-restart` 클릭 → 세 경로 모두 R3-1~R3-4 를 동일하게 만족(§5.2). e2e 는 최소 1개 키보드 경로 + 1개 버튼 경로를 각각 exercise 하는 것을 권장.
+
 ---
 
 ## 7. mockup 참조
@@ -262,7 +291,7 @@ D-pad 버튼은 min 52px 터치 타깃, active 시 accent 배경 + `scale(0.94)`
 
 | # | 체크 항목 | 결과 |
 |---|---|---|
-| 1 | **AC 매핑** — 수용 기준이 명세에 반영됐는가 | ✅ AC-1(키보드·터치 게임오버 표시·재시작 흐름 일관): §5.1(사유 3종 동일 레이아웃)·§5.2(재시작 3경로 + 키보드/터치 동일 결과). AC-2(포커스·조작 안내 유지 + 게임 규칙 불변): §5.4·§5.5 + §0 전제 2. |
+| 1 | **AC 매핑** — 수용 기준이 명세에 반영됐는가 | ✅ AC-1(키보드·터치 게임오버 표시·재시작 흐름 일관): §5.1(사유 3종 동일 레이아웃)·§5.2(재시작 3경로 + 키보드/터치 동일 결과). AC-2(포커스·조작 안내 유지 + 게임 규칙 불변): §5.4·§5.5 + §0 전제 2. **§6.6 신설** — planner AC-SELF-3/4·AC-RESTART-3/4(e2e UI 계약)를 selector·assertion turnkey 체크리스트로 번역해 dev/tester 가 바로 구현하도록 고정(리뷰 재시도 2/3 대응 — 단, 테스트 코드 작성은 dev/tester 담당). |
 | 2 | **dev 구현 가이드** — dev 가 그대로 따를 수 있는가 | ✅ §6 을 실측 DOM id/클래스/토큰 이름으로 명시, "유지·검증 포인트" 체크리스트 제공. 신규 토큰 금지 명문화. |
 | 3 | **기존 요소 보존** — 기존 시각 요소를 유지하는가 | ✅ §0 전제 1·3, §2·§3 토큰 재사용(값 변경 0), §4.2/§4.3 기존 레이아웃·미디어쿼리 유지. 신규 색/클래스/모션 도입 없음. |
 | 4 | **컴포넌트 매핑** — 명세 컴포넌트가 실제 DOM 에 대응하는가 | ✅ 모든 컴포넌트를 실측 id(`#overlay`, `#btn-again`, `#btn-restart`, `#overlay-reason` 등)·클래스로 지목. mockup 이 동일 구조 재현. |
@@ -283,6 +312,8 @@ D-pad 버튼은 min 52px 터치 타깃, active 시 accent 배경 + `scale(0.94)`
 - 게임오버 사유 3종(`wall`/`self`/`board-full`)은 **동일 레이아웃·텍스트만 교체**, 교차 노출 금지. 4방향 벽 충돌은 모두 동일 `wall` 문구.
 - 재시작 3경로(다시하기/재시작/메뉴로) — 키보드 Enter = 터치 버튼 **동일 결과**(`createPlayState` 완전 리셋).
 - 오버레이 등장 시 `overlay-title` 포커스 이동, `:focus-visible` 링 유지. 조작 안내는 게임오버 중에도 상시 노출.
+
+**리뷰 재시도 2/3 대응(§6.6 신설):** 리뷰가 지적한 미검증 e2e UI 계약(AC-SELF-3/4 자기충돌 오버레이, AC-RESTART-3/4 재시작 DOM 동기화)을 selector·assertion **turnkey 체크리스트**로 디자인 명세에 고정. **테스트 파일 구현은 designer 범위 밖** — developer(BF-973)/tester(BF-975) 산출물이며, 본 명세는 "무엇을 assert 할지"의 화면 계약만 제공.
 
 **토큰 매핑(기존 재사용 — 값 변경 없음)**
 
