@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>메모리 매치 · /phase18-games/memory-match</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <!-- 헤더 (design §4.1) -->
+      <header class="header"><h1>메모리 매치</h1></header>
+
+      <!-- HUD 바 (design §5.2) -->
+      <div class="hud" role="group" aria-label="게임 진행 정보">
+        <div class="hud__stat">
+          <span class="hud__label">이동 횟수</span>
+          <output class="hud__value" id="move-count" aria-live="polite">0회</output>
+        </div>
+        <div class="hud__stat">
+          <span class="hud__label">시간</span>
+          <output class="hud__value" id="timer">00:00</output>
+        </div>
+        <button class="btn btn--secondary" id="restart-btn" type="button">
+          <span aria-hidden="true">↻</span> 재시작
+        </button>
+      </div>
+
+      <!-- 보드 + 완료 배너 오버레이 스테이지 (design §4.1·§5.3) -->
+      <div class="win-stage">
+        <div class="board" id="board" role="grid" aria-label="4x4 카드 보드">
+          <!-- 카드 16개는 main.js 가 셔플 후 네이티브 <button> 으로 생성 -->
+        </div>
+
+        <!-- 완료 배너 (won 오버레이, design §5.3) -->
+        <div
+          class="win-banner"
+          id="win-banner"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="win-title"
+          hidden
+        >
+          <h2 class="win-banner__title" id="win-title">모두 맞췄어요! 🎉</h2>
+          <p class="win-banner__stat">
+            이동 <strong id="win-moves">0</strong>회 ·
+            <strong id="win-time">00:00</strong>
+          </p>
+          <button class="btn btn--primary" id="win-restart-btn" type="button">
+            다시하기
+          </button>
+        </div>
+      </div>
+
+      <!-- 조작 안내 (design §5) -->
+      <p class="hint">
+        카드를 두 장 뒤집어 같은 그림의 짝을 맞추세요. 8쌍을 모두 맞추면 완료!
+      </p>
+
+      <!-- 스크린리더 라이브 리전 (매치/완료 안내, design §5.3) -->
+      <div class="sr-live" id="announce" aria-live="polite"></div>
+
+      <!-- JS 비활성 폴백 (design §1.3) -->
+      <noscript>
+        <div class="noscript">
+          이 게임은 JavaScript가 필요합니다. 브라우저에서 JavaScript를 활성화해
+          주세요.
+        </div>
+      </noscript>
+    </main>
+
+    <!-- 비-module script — file:// CORS 안전 (planner §1.5·§5.2) -->
+    <script src="./logic.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
