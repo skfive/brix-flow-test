@@ -101,10 +101,10 @@
     if (s === "start") {
       overlayTitle.textContent = "Pong 아케이드";
       overlayBody.textContent =
-        "11점 먼저 내면 승리 · ↑ / ↓ 또는 코트를 드래그해 조작";
+        "11점 먼저 내면 승리 · Enter / Space 또는 시작 버튼으로 시작 · ↑ / ↓·드래그로 조작";
     } else if (s === "paused") {
       overlayTitle.textContent = "일시정지";
-      overlayBody.textContent = "계속하려면 계속하기를 누르세요";
+      overlayBody.textContent = "계속하기 버튼 또는 P / Esc 로 재개";
     } else if (s === "gameover") {
       var win = state.winner === "player";
       overlayTitle.textContent = win ? "플레이어 승리!" : "CPU 승리";
