@@ -34,8 +34,8 @@
         </div>
       </section>
 
-      <!-- 보드 래퍼 + 오버레이 (design §5.3·§5.4) -->
-      <div class="board-wrap">
+      <!-- 보드 래퍼 + 오버레이 (design §5.3·§5.4) — tabindex: 재개/시작/재시작 시 포커스 목적지(BF-967 §5.2 권장안 ①) -->
+      <div class="board-wrap" tabindex="-1">
         <canvas
           id="board"
           class="board"

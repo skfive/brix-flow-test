@@ -14,6 +14,7 @@
   if (!canvas) return;
   var ctx = canvas.getContext("2d");
 
+  var boardWrap = document.querySelector(".board-wrap");
   var overlay = document.getElementById("overlay");
   var overlayIcon = document.getElementById("overlay-icon");
   var overlayTitle = document.getElementById("overlay-title");
@@ -119,6 +120,11 @@
     overlay.classList.remove("is-lose", "is-win");
     if (p === "playing" || p === "serve") {
       overlay.hidden = true;
+      // 결함 A(design §5.2): 오버레이가 숨겨지는 전이(재개/시작/재시작)에서
+      // 포커스를 hidden 오버레이 내부에 남기지 않고 보드 컨테이너로 이동
+      if (boardWrap && document.activeElement !== boardWrap) {
+        boardWrap.focus();
+      }
     } else {
       overlay.hidden = false;
       overlay.setAttribute("data-state", p);
@@ -138,7 +144,8 @@
         "← → 또는 드래그로 패들을 움직이고, 공으로 벽돌 24개를 모두 깨세요";
     } else if (p === "paused") {
       overlayTitle.textContent = "일시정지";
-      overlayDesc.textContent = "계속하려면 계속하기를 누르세요";
+      overlayDesc.textContent =
+        "계속하려면 Space 또는 계속하기, 다시 시작하려면 R 또는 다시하기를 누르세요";
     } else if (p === "lose") {
       overlay.classList.add("is-lose");
       overlayIcon.textContent = "✕";
