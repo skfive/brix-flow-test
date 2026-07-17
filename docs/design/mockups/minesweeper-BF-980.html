@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지뢰찾기 시안 · /phase18-games/minesweeper · BF-980</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   토큰 SSOT — docs/design/minesweeper-BF-980.md §2·§3·§4.1 미러
+   dev(BF-982)는 styles.css :root 에 이 블록을 그대로 복제.
+   (표준 토큰 = 기존 phase18-games 다크 테마 승계 · 신규 발명 0건,
+    지뢰찾기 고유 토큰 + 숫자 1~8 색만 신규)
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  /* ── 표준 토큰(승계) ── */
+  --color-bg-canvas:#0B0F17; --color-bg-surface:#141B26; --color-bg-subtle:#1C2431;
+  --color-border-default:#273140; --color-border-strong:#3A4657;
+  --color-text-primary:#E8EDF4; --color-text-secondary:#9AA7B8; --color-text-muted:#63708A;
+  --color-accent:#5B82F0; --color-accent-hover:#6E90F5; --color-accent-on:#0B0F17;
+  --color-focus-ring:rgba(91,130,240,.55);
+  --color-success:#4ADE80; --color-danger:#E55858;
+
+  /* ── 지뢰찾기 고유 토큰(신규) ── */
+  --board-bg:#070B12; --board-border:#273140;
+  --cell-hidden-face:#232E40; --cell-hidden-face-hover:#2B3A52;
+  --cell-bevel-light:rgba(232,237,244,.12); --cell-bevel-dark:rgba(5,7,12,.50);
+  --cell-revealed-bg:#141B26; --cell-revealed-border:rgba(39,49,64,.9);
+  --flag-glyph:#E55858; --flag-face:#26120F; --flag-ring:rgba(229,88,88,.45);
+  --mine-glyph:#0B0F17; --mine-face:#20293A;
+  --cell-exploded-face:#E55858; --cell-exploded-glyph:#0B0F17;
+  --flag-wrong:#63708A;
+  --overlay-scrim:rgba(5,7,12,.74);
+  --win-tint:rgba(74,222,128,.14); --lose-tint:rgba(229,88,88,.14);
+
+  /* ── 숫자 1~8 색(§2.3 · 색맹 대응: 글리프가 1차 구분, 색은 보조) ── */
+  --num-1:#6E90F5; --num-2:#4ADE80; --num-3:#F87171; --num-4:#A78BFA;
+  --num-5:#F0883E; --num-6:#38BDF8; --num-7:#E8EDF4; --num-8:#9AA7B8;
+
+  /* ── 간격·반경·모션(승계) ── */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px; --radius-pill:999px;
+  --shadow-panel:0 8px 32px rgba(0,0,0,.45);
+  --cell-gap:2px;
+  --motion-fast:130ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* ── 폰트(system stack · 웹폰트 금지) ── */
+  --font-sans:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-mono:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+
+  /* ── 타이포 ── */
+  --text-h1:600 20px/1.3 var(--font-sans);
+  --text-hud-value:700 clamp(20px,6vw,28px)/1 var(--font-mono);
+  --text-hud-label:600 12px/1.2 var(--font-sans);
+  --text-cell:700 clamp(13px,3.2vw,20px)/1 var(--font-mono);
+  --text-glyph:400 clamp(14px,3.4vw,22px)/1 var(--font-sans);
+  --text-banner-title:700 clamp(22px,7vw,30px)/1.2 var(--font-sans);
+  --text-button:600 14px/1 var(--font-sans);
+  --text-body:400 15px/1.5 var(--font-sans);
+  --text-caption:400 13px/1.4 var(--font-sans);
+}
+
+*{ box-sizing:border-box; }
+body{
+  margin:0; background:var(--color-bg-canvas); color:var(--color-text-primary);
+  font:var(--text-body); -webkit-font-smoothing:antialiased;
+  padding:var(--space-6) var(--space-4) var(--space-7);
+  display:flex; flex-direction:column; align-items:center; gap:var(--space-6);
+}
+
+/* ── 데모 프레임(시안 시각화 전용 — 실제 앱엔 없음) ── */
+.demo-note{
+  max-width:720px; width:100%; background:var(--color-bg-subtle);
+  border:1px dashed var(--color-border-strong); border-radius:var(--radius-md);
+  padding:var(--space-3) var(--space-4); color:var(--color-text-secondary);
+  font:var(--text-caption);
+}
+.demo-note b{ color:var(--color-text-primary); }
+.demo-section-title{
+  width:100%; max-width:720px; font:var(--text-hud-label); letter-spacing:.08em;
+  text-transform:uppercase; color:var(--color-text-muted);
+  border-bottom:1px solid var(--color-border-default); padding-bottom:var(--space-2);
+}
+
+/* ══ 실제 화면 컴포넌트 ══ */
+.ms-app{ display:flex; flex-direction:column; align-items:center; gap:var(--space-4); width:100%; }
+.ms-title{ font:var(--text-h1); margin:0; letter-spacing:.01em; }
+
+/* 상태바 */
+.ms-statusbar{
+  width:100%; max-width:360px;
+  display:flex; align-items:center; justify-content:space-between; gap:var(--space-3);
+  flex-wrap:wrap;
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-lg); padding:var(--space-3) var(--space-4);
+  box-shadow:var(--shadow-panel);
+}
+.ms-difficulty{
+  display:inline-flex; gap:var(--space-1); background:var(--color-bg-canvas);
+  padding:var(--space-1); border-radius:var(--radius-md); border:1px solid var(--color-border-default);
+}
+.ms-difficulty button{
+  font:var(--text-button); border:1px solid transparent; border-radius:var(--radius-sm);
+  padding:var(--space-2) var(--space-3); cursor:pointer;
+  background:var(--color-bg-subtle); color:var(--color-text-secondary);
+}
+.ms-difficulty button:hover{ background:var(--color-border-default); color:var(--color-text-primary); }
+.ms-difficulty button[aria-checked="true"]{
+  background:var(--color-accent); color:var(--color-accent-on); border-color:var(--color-accent);
+  box-shadow:0 1px 6px rgba(91,130,240,.35);
+}
+.ms-counter{
+  display:inline-flex; align-items:center; gap:var(--space-2);
+}
+.ms-counter__icon{ font:var(--text-glyph); }
+.ms-counter__value{ font:var(--text-hud-value); color:var(--color-text-primary); font-variant-numeric:tabular-nums; }
+.ms-counter__value.is-negative{ color:var(--color-danger); }
+.ms-restart{
+  font:var(--text-button); cursor:pointer; border-radius:var(--radius-sm);
+  padding:var(--space-2) var(--space-3);
+  background:var(--color-bg-subtle); color:var(--color-text-primary);
+  border:1px solid var(--color-border-strong);
+}
+.ms-restart:hover{ background:var(--color-border-default); }
+
+/* 보드 */
+.board-scroll{ max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:var(--space-1); }
+.ms-board{
+  display:grid;
+  grid-template-columns:repeat(var(--cols), var(--cell-size));
+  grid-auto-rows:var(--cell-size);
+  gap:var(--cell-gap); background:var(--board-bg);
+  border:1px solid var(--board-border); border-radius:var(--radius-md);
+  padding:var(--cell-gap);
+}
+
+/* 셀 공통 */
+.cell{
+  font:var(--text-cell); color:var(--color-text-primary);
+  border:0; border-radius:2px; padding:0; margin:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; user-select:none;
+  transition:background var(--motion-fast) var(--ease-out);
+}
+/* 미오픈(볼록 bevel) */
+.cell[data-state="hidden"]{
+  background:var(--cell-hidden-face);
+  box-shadow: inset 2px 2px 0 var(--cell-bevel-light),
+              inset -2px -2px 0 var(--cell-bevel-dark);
+}
+.cell[data-state="hidden"]:hover,
+.cell[data-state="hidden"]:focus-visible{ background:var(--cell-hidden-face-hover); }
+/* 오픈(꺼진 평면) */
+.cell[data-state="revealed"]{
+  background:var(--cell-revealed-bg); cursor:default;
+  box-shadow: inset 0 0 0 1px var(--cell-revealed-border);
+}
+.cell[data-num="1"]{ color:var(--num-1); }
+.cell[data-num="2"]{ color:var(--num-2); }
+.cell[data-num="3"]{ color:var(--num-3); }
+.cell[data-num="4"]{ color:var(--num-4); }
+.cell[data-num="5"]{ color:var(--num-5); }
+.cell[data-num="6"]{ color:var(--num-6); }
+.cell[data-num="7"]{ color:var(--num-7); }
+.cell[data-num="8"]{ color:var(--num-8); }
+/* 플래그 */
+.cell[data-state="flagged"]{
+  background:var(--flag-face); color:var(--flag-glyph); font:var(--text-glyph);
+  box-shadow: inset 0 0 0 1px var(--flag-ring),
+              inset 2px 2px 0 var(--cell-bevel-light),
+              inset -2px -2px 0 var(--cell-bevel-dark);
+}
+/* 지뢰 공개(안전/승리) */
+.cell[data-mine="revealed"]{
+  background:var(--mine-face); color:var(--mine-glyph); font:var(--text-glyph);
+  box-shadow: inset 0 0 0 1px var(--cell-revealed-border);
+}
+/* 폭발(밟은 지뢰) */
+.cell[data-mine="exploded"]{
+  background:var(--cell-exploded-face); color:var(--cell-exploded-glyph); font:var(--text-glyph);
+}
+/* 오답 flag(선택 — 패배 시 비지뢰에 걸린 flag) */
+.cell[data-state="wrong-flag"]{
+  background:var(--cell-revealed-bg); color:var(--flag-wrong); font:var(--text-glyph);
+  position:relative; box-shadow: inset 0 0 0 1px var(--cell-revealed-border);
+}
+.cell[data-state="wrong-flag"]::after{
+  content:"✖"; position:absolute; font:700 60% var(--font-sans); color:var(--color-danger);
+}
+
+/* 포커스 링(모든 상호작용 요소 · planner §7.1) */
+.cell:focus-visible,
+.ms-difficulty button:focus-visible,
+.ms-restart:focus-visible,
+.ms-banner__btn:focus-visible{
+  outline:2px solid var(--color-focus-ring); outline-offset:2px; z-index:1;
+}
+/* 데모: 포커스 링 강제 노출 셀(정적 시각화) */
+.cell.demo-focus{ outline:2px solid var(--color-focus-ring); outline-offset:2px; z-index:1; }
+
+/* 조작 안내 */
+.ms-hint{ font:var(--text-caption); color:var(--color-text-muted); text-align:center; margin:0; max-width:360px; }
+
+/* 보드 오버레이 배너 컨테이너(데모: 보드+배너 겹침) */
+.board-wrap{ position:relative; display:inline-block; }
+.ms-banner{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:var(--space-3);
+  background:var(--overlay-scrim); border-radius:var(--radius-md); backdrop-filter:blur(1px);
+}
+.ms-banner__title{ font:var(--text-banner-title); margin:0; text-align:center; }
+.ms-banner[data-result="won"]{ box-shadow:inset 0 0 0 2px var(--color-success); background:
+    linear-gradient(var(--win-tint),var(--win-tint)), var(--overlay-scrim); }
+.ms-banner[data-result="won"] .ms-banner__title{ color:var(--color-success); }
+.ms-banner[data-result="lost"]{ box-shadow:inset 0 0 0 2px var(--color-danger); background:
+    linear-gradient(var(--lose-tint),var(--lose-tint)), var(--overlay-scrim); }
+.ms-banner[data-result="lost"] .ms-banner__title{ color:var(--color-danger); }
+.ms-banner__btn{
+  font:var(--text-button); cursor:pointer; border-radius:var(--radius-sm);
+  padding:var(--space-2) var(--space-4);
+  background:var(--color-bg-subtle); color:var(--color-text-primary);
+  border:1px solid var(--color-border-strong);
+}
+
+/* 범례 · 스와치 */
+.legend{
+  max-width:720px; width:100%; display:grid; gap:var(--space-3);
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-lg); padding:var(--space-4); box-shadow:var(--shadow-panel);
+}
+.legend__item{ display:flex; align-items:center; gap:var(--space-3); }
+.legend__swatch{
+  width:34px; height:34px; flex:0 0 34px; border-radius:2px;
+  display:flex; align-items:center; justify-content:center; font:var(--text-cell);
+}
+.legend__label b{ display:block; color:var(--color-text-primary); font:var(--text-button); }
+.legend__label span{ color:var(--color-text-muted); font:var(--text-caption); }
+
+.numrow{
+  max-width:720px; width:100%; display:flex; flex-wrap:wrap; gap:var(--space-2);
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-lg); padding:var(--space-4); box-shadow:var(--shadow-panel);
+}
+.numrow__cell{
+  width:40px; height:40px; border-radius:2px; background:var(--cell-revealed-bg);
+  box-shadow:inset 0 0 0 1px var(--cell-revealed-border);
+  display:flex; align-items:center; justify-content:center; font:var(--text-cell);
+}
+
+.banners{ display:flex; gap:var(--space-5); flex-wrap:wrap; justify-content:center; }
+.mini-board{ --cols:5; --cell-size:34px; }
+</style>
+</head>
+<body>
+
+  <div class="demo-note">
+    <b>[이디자인] 시안 시각화 · BF-980 · /phase18-games/minesweeper</b><br>
+    이 파일은 <b>dev 산출물이 아니라 시안 시각 시뮬레이션</b>입니다(픽셀 일치 의무 없음). 명세 SSOT: <b>docs/design/minesweeper-BF-980.md</b> · 규칙 SSOT: docs/plan/minesweeper-BF-978.md. placeholder 콘텐츠 포함.
+  </div>
+
+  <!-- ══════════ ① 메인 화면(초급 9×9 진행 중) ══════════ -->
+  <div class="demo-section-title">① 메인 화면 — 초급 9×9 진행 중(셀 4상태 + 파생 전부 노출)</div>
+  <main class="ms-app" aria-label="지뢰찾기 화면 시안">
+    <h1 class="ms-title">지뢰찾기</h1>
+
+    <div class="ms-statusbar">
+      <div class="ms-difficulty" role="radiogroup" aria-label="난이도">
+        <button type="button" role="radio" aria-checked="true">초급</button>
+        <button type="button" role="radio" aria-checked="false">중급</button>
+        <button type="button" role="radio" aria-checked="false">고급</button>
+      </div>
+      <output class="ms-counter" id="mine-counter" aria-live="polite" aria-label="남은 지뢰">
+        <span class="ms-counter__icon" aria-hidden="true">🚩</span>
+        <span class="ms-counter__value">007</span>
+      </output>
+      <button type="button" class="ms-restart">↻ 재시작</button>
+    </div>
+
+    <div class="board-scroll">
+      <div class="ms-board" role="grid" aria-label="지뢰찾기 보드"
+           style="--cols:9; --cell-size:34px;">
+        <!-- 1행 -->
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="1행 1열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="1행 2열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="1행 3열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="flagged" aria-label="1행 4열, 깃발">🚩</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="1행 5열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="2" aria-label="1행 6열, 인접 지뢰 2개">2</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="1행 7열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="1행 8열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="1행 9열, 미확인"></button>
+        <!-- 2행 -->
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="2행 1열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="2행 2열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="3" aria-label="2행 3열, 인접 지뢰 3개">3</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="2" aria-label="2행 4열, 인접 지뢰 2개">2</button>
+        <button class="cell demo-focus" role="gridcell" data-state="hidden" tabindex="0" aria-label="2행 5열, 미확인 (현재 포커스)"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="3" aria-label="2행 6열, 인접 지뢰 3개">3</button>
+        <button class="cell" role="gridcell" data-state="flagged" aria-label="2행 7열, 깃발">🚩</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="2" aria-label="2행 8열, 인접 지뢰 2개">2</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="2행 9열, 미확인"></button>
+        <!-- 3행 -->
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="3행 1열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="3행 2열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="2" aria-label="3행 3열, 인접 지뢰 2개">2</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="3행 4열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="3행 5열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="4" aria-label="3행 6열, 인접 지뢰 4개">4</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="3행 7열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="5" aria-label="3행 8열, 인접 지뢰 5개">5</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="3행 9열, 미확인"></button>
+        <!-- 4행 -->
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="4행 1열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="4행 2열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="4행 3열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="4행 4열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="2" aria-label="4행 5열, 인접 지뢰 2개">2</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="6" aria-label="4행 6열, 인접 지뢰 6개">6</button>
+        <button class="cell" role="gridcell" data-state="flagged" aria-label="4행 7열, 깃발">🚩</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="7" aria-label="4행 8열, 인접 지뢰 7개">7</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="4행 9열, 미확인"></button>
+        <!-- 5행 -->
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="5행 1열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="5행 2열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="5행 3열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="5행 4열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="5행 5열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="8" aria-label="5행 6열, 인접 지뢰 8개">8</button>
+        <button class="cell" role="gridcell" data-mine="exploded" aria-label="5행 7열, 폭발한 지뢰">💣</button>
+        <button class="cell" role="gridcell" data-mine="revealed" aria-label="5행 8열, 지뢰">💣</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="5행 9열, 미확인"></button>
+        <!-- 6행 -->
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="6행 1열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="6행 2열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="6행 3열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="6행 4열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="6행 5열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="2" aria-label="6행 6열, 인접 지뢰 2개">2</button>
+        <button class="cell" role="gridcell" data-mine="revealed" aria-label="6행 7열, 지뢰">💣</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="6행 8열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="6행 9열, 미확인"></button>
+        <!-- 7행 -->
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="7행 1열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="flagged" aria-label="7행 2열, 깃발">🚩</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="7행 3열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="7행 4열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="7행 5열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="7행 6열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="7행 7열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="wrong-flag" aria-label="7행 8열, 잘못된 깃발">🚩</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="7행 9열, 미확인"></button>
+        <!-- 8행 -->
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="8행 1열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="8행 2열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="8행 3열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="8행 4열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="8행 5열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="8행 6열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="8행 7열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="8행 8열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="8행 9열, 미확인"></button>
+        <!-- 9행 -->
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="9행 1열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="9행 2열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="9행 3열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="9행 4열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="9행 5열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="0" aria-label="9행 6열, 빈칸"></button>
+        <button class="cell" role="gridcell" data-state="revealed" data-num="1" aria-label="9행 7열, 인접 지뢰 1개">1</button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="9행 8열, 미확인"></button>
+        <button class="cell" role="gridcell" data-state="hidden" aria-label="9행 9열, 미확인"></button>
+      </div>
+    </div>
+
+    <p class="ms-hint">
+      좌클릭 · Enter/Space: 열기 &nbsp;·&nbsp; 우클릭 · F: 깃발<br>
+      방향키: 셀 이동 &nbsp;·&nbsp; Tab: 보드 진입/이탈
+    </p>
+  </main>
+
+  <!-- ══════════ ② 셀 상태 범례 ══════════ -->
+  <div class="demo-section-title">② 셀 상태 범례(6종 + 오답 flag) — §5.3</div>
+  <div class="legend" aria-label="셀 상태 범례">
+    <div class="legend__item">
+      <div class="legend__swatch cell" data-state="hidden"></div>
+      <div class="legend__label"><b>미오픈 hidden</b><span>볼록 bevel · 클릭 대상</span></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch cell" data-state="revealed" data-num="0"></div>
+      <div class="legend__label"><b>오픈-빈칸</b><span>꺼진 평면 · adjacent 0</span></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch cell" data-state="revealed" data-num="3">3</div>
+      <div class="legend__label"><b>오픈-숫자</b><span>숫자 1~8 색 구분</span></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch cell" data-state="flagged">🚩</div>
+      <div class="legend__label"><b>플래그 flagged</b><span>적색 틴트 + 강조 테두리</span></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch cell" data-mine="revealed">💣</div>
+      <div class="legend__label"><b>지뢰 공개</b><span>중립 배경 · 안전/승리 시</span></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch cell" data-mine="exploded">💣</div>
+      <div class="legend__label"><b>폭발(밟은 지뢰)</b><span>적색 배경 · 패배 지목</span></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch cell" data-state="wrong-flag">🚩</div>
+      <div class="legend__label"><b>오답 flag(선택)</b><span>패배 시 비지뢰 flag · dev 재량</span></div>
+    </div>
+    <div class="legend__item">
+      <div class="legend__swatch cell demo-focus" data-state="hidden"></div>
+      <div class="legend__label"><b>포커스 링</b><span>:focus-visible · 방향키 이동</span></div>
+    </div>
+  </div>
+
+  <!-- ══════════ ③ 숫자 1~8 색상 스와치 ══════════ -->
+  <div class="demo-section-title">③ 숫자 1~8 색상(오픈 셀 배경 대비 AA · 색맹 대응: 글리프 1차 구분) — §2.3</div>
+  <div class="numrow" aria-label="숫자 색상 스와치">
+    <div class="numrow__cell" data-num="1">1</div>
+    <div class="numrow__cell" data-num="2">2</div>
+    <div class="numrow__cell" data-num="3">3</div>
+    <div class="numrow__cell" data-num="4">4</div>
+    <div class="numrow__cell" data-num="5">5</div>
+    <div class="numrow__cell" data-num="6">6</div>
+    <div class="numrow__cell" data-num="7">7</div>
+    <div class="numrow__cell" data-num="8">8</div>
+  </div>
+
+  <!-- ══════════ ④ 결과 배너(승/패) ══════════ -->
+  <div class="demo-section-title">④ 결과 배너 — 승리 / 패배(보드 오버레이) — §5.5</div>
+  <div class="banners">
+    <div class="board-wrap">
+      <div class="ms-board mini-board" role="grid" aria-hidden="true">
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="flagged">🚩</div>
+        <div class="cell" data-state="revealed" data-num="2">2</div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="flagged">🚩</div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="flagged">🚩</div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+      </div>
+      <div class="ms-banner" data-result="won">
+        <p class="ms-banner__title">🎉 모든 안전한<br>칸을 찾았습니다</p>
+        <button type="button" class="ms-banner__btn">↻ 다시 하기</button>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="ms-board mini-board" role="grid" aria-hidden="true">
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-mine="revealed">💣</div>
+        <div class="cell" data-state="revealed" data-num="2">2</div>
+        <div class="cell" data-state="hidden"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-mine="exploded">💣</div>
+        <div class="cell" data-state="revealed" data-num="2">2</div>
+        <div class="cell" data-state="wrong-flag">🚩</div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="revealed" data-num="2">2</div>
+        <div class="cell" data-mine="revealed">💣</div>
+        <div class="cell" data-state="hidden"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="hidden"></div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-mine="revealed">💣</div>
+        <div class="cell" data-state="hidden"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+        <div class="cell" data-state="revealed" data-num="1">1</div>
+        <div class="cell" data-state="hidden"></div>
+        <div class="cell" data-state="revealed" data-num="0"></div>
+      </div>
+      <div class="ms-banner" data-result="lost">
+        <p class="ms-banner__title">💥 지뢰를<br>밟았습니다</p>
+        <button type="button" class="ms-banner__btn">↻ 다시 하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ ⑤ 반응형 스케일 규칙 ══════════ -->
+  <div class="demo-section-title">⑤ 반응형 보드 스케일 규칙 — §4.4</div>
+  <div class="demo-note">
+    <b>난이도별 셀 크기(--cell-size) & 좁은 뷰포트 대응:</b><br>
+    · <b>초급 9×9</b> — 기본 34px / <code>clamp(30px,9.5vw,34px)</code> → ~324px, 대부분 화면 스크롤 없이 수용<br>
+    · <b>중급 16×16</b> — 기본 30px / <code>clamp(22px,5.6vw,30px)</code> → ~496px, 태블릿까지 수용, 소형은 셀 축소<br>
+    · <b>고급 30×16</b> — 기본 26px / <code>clamp(20px,3vw,26px)</code> → ~810px → 뷰포트 초과 시 <b>.board-scroll 가로 스크롤</b>(셀 하한 20px 유지, 판독성/터치 타깃 우선)<br>
+    · breakpoint — <b>≥768px</b>: 기본 셀 / <b>480–767px</b>: clamp 중간값 / <b>&lt;480px</b>: 상태바 2줄 wrap + 고급 가로 스크롤 활성<br>
+    셀 내부 숫자·글리프 폰트는 셀 크기에 비례(em/clamp) 축소. 셀을 20px 미만으로 무리하게 줄이지 않음.
+  </div>
+
+  <div class="demo-note" style="border-style:solid;">
+    <b>접근성 시각 규칙 요약</b> — 포커스 링 <code>2px var(--color-focus-ring)</code>(outline:none 단독 금지) · roving tabindex(활성 셀 1개만 tabindex=0) · 종료 시 <code>disabled</code> 미부여(포커스 유지) · <code>prefers-reduced-motion</code>에서 전환 애니메이션 무효 · 숫자 1~8 AA 대비 + 글리프 병행(색맹 대응).
+  </div>
+
+</body>
+</html>
