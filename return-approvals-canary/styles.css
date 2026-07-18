@@ -142,6 +142,9 @@ table.rw-table { width: 100%; border-collapse: collapse; }
   display: flex; align-items: center; justify-content: center; text-align: center;
   color: var(--muted-foreground); font-size: 14px; padding: 48px 16px;
 }
+/* display:flex 가 native `hidden` 을 덮으므로 hidden 토글 시 명시적으로 숨김
+   (.hold-form/.field-error/.dialog-backdrop 와 동일 패턴 — BF-1039 리뷰 회귀 가드) */
+.placeholder[hidden], .empty-state[hidden], .load-error[hidden] { display: none; }
 .load-error { color: var(--destructive); }
 
 /* 처리 피드백 토스트 (aria-live polite) */
