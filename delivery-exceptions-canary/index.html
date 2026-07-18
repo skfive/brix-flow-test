@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>배송 예외 처리 — delivery-exceptions-canary</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="dxc-app">
+    <!-- App header (banner): 제목 + 집계 요약 + 상태 필터 탭 -->
+    <header class="dxc-header" role="banner">
+      <div class="dxc-header__top">
+        <h1 class="dxc-header__title">배송 예외 처리</h1>
+        <div class="dxc-header__summary" id="dxc-summary" aria-label="예외 집계 요약"></div>
+      </div>
+      <div class="dxc-filter-tabs" id="dxc-filter-tabs" role="tablist" aria-label="상태 필터"></div>
+    </header>
+
+    <div class="dxc-panes">
+      <!-- Pane 1: 예외 목록 (listbox) -->
+      <nav class="dxc-pane dxc-pane--list" aria-label="배송 예외 목록">
+        <ul class="dxc-list" id="dxc-list" role="listbox" aria-label="배송 예외"></ul>
+      </nav>
+
+      <!-- Pane 2: 상세 패널 (main · aria-live 앵커) -->
+      <main class="dxc-pane dxc-pane--detail" id="dxc-detail" aria-label="예외 상세" aria-live="polite"></main>
+    </div>
+  </div>
+
+  <!-- vanilla-static: type=module / fetch / import 금지 · UMD 전역 · 로드 순서 = 의존 순서 -->
+  <script src="./fixtures.js"></script>
+  <script src="./domain.js"></script>
+  <script src="./notes-storage.js"></script>
+  <script src="./main.js"></script>
+</body>
+</html>

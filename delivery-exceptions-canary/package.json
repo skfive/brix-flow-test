@@ -1,0 +1,6 @@
+{
+  "name": "delivery-exceptions-canary",
+  "private": true,
+  "type": "commonjs",
+  "description": "BF-1033 · 배송 예외 처리 SPA (/delivery-exceptions-canary). fixtures/domain/notes-storage/main 은 비-module UMD 패턴 (file:// CORS 안전 · 외부 CDN/fetch/import 0건). Node 단위 테스트는 require 로 로드."
+}
