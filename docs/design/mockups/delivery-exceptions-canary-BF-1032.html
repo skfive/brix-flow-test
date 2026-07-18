@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>배송 예외 처리 — 2-pane 예외 처리 콘솔 시안 (BF-1032 · delivery-exceptions-canary)</title>
+  <style>
+    :root {
+      /* base — src/app/demo/*(status/clock) :root 값 그대로 계승. prefix 만 --dxc-*. 신규 base 색 0 (명세 §2.1) */
+      --dxc-color-bg:             #fafaf9;
+      --dxc-color-surface:        #ffffff;
+      --dxc-color-surface-muted:  #f1f1ef;
+      --dxc-color-border:         #e5e5e2;
+      --dxc-color-border-strong:  #d0d0cc;
+      --dxc-color-text:           #1a1a19;
+      --dxc-color-text-secondary: #6b6b66;
+      --dxc-color-text-muted:     #9a9a93;
+      --dxc-color-accent:         #3563e9;
+      --dxc-color-accent-hover:   #2a4fc0;
+      --dxc-color-focus-ring:     rgba(53, 99, 233, 0.45);
+
+      /* status 4종 — 시맨틱 색 파생, 대비 검증 완료(명세 §7.2). 임의 변경 금지 */
+      --dxc-color-open:           #5b636e;  --dxc-color-open-tint:          #f1f3f5;
+      --dxc-color-investigating:  #2a4fc0;  --dxc-color-investigating-tint: #eaf0fe;
+      --dxc-color-hold:           #8a5a00;  --dxc-color-hold-tint:          #fbf3d9;
+      --dxc-color-resolved:       #1a7f37;  --dxc-color-resolved-tint:      #e4f4e9;
+
+      /* semantic 보조 */
+      --dxc-color-danger:         #cf222e;  --dxc-color-danger-tint:        #fdecec;
+      --dxc-color-success-strong: #1a7f37;
+
+      /* spacing / radius / shadow (demo 셸 계승) */
+      --dxc-space-1: 4px;  --dxc-space-2: 8px;  --dxc-space-3: 12px;
+      --dxc-space-4: 16px; --dxc-space-5: 24px; --dxc-space-6: 32px; --dxc-space-7: 48px;
+      --dxc-radius-sm: 4px; --dxc-radius-md: 8px; --dxc-radius-lg: 12px; --dxc-radius-pill: 999px;
+      --dxc-shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+      /* type — system font stack only (CDN 금지) */
+      --dxc-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+                       Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      --dxc-font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--dxc-font-sans);
+      color: var(--dxc-color-text);
+      background: var(--dxc-color-bg);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .mono { font-family: var(--dxc-font-mono); }
+
+    /* ─── 시안 캡션(mockup 전용, 실제 UI 아님) ─── */
+    .spec-note {
+      max-width: 1200px;
+      margin: var(--dxc-space-5) auto var(--dxc-space-2);
+      padding: 0 var(--dxc-space-5);
+      color: var(--dxc-color-text-secondary);
+      font-size: 12px;
+    }
+    .spec-note h1 { font-size: 20px; line-height: 1.3; color: var(--dxc-color-text); margin: 0 0 var(--dxc-space-1); }
+    .spec-note code { font-family: var(--dxc-font-mono); font-size: 11px; background: var(--dxc-color-surface-muted); padding: 1px 5px; border-radius: var(--dxc-radius-sm); }
+    .section-label {
+      max-width: 1200px;
+      margin: var(--dxc-space-6) auto var(--dxc-space-3);
+      padding: 0 var(--dxc-space-5);
+      font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      color: var(--dxc-color-text-muted);
+    }
+
+    /* ─── App shell ─── */
+    .dxc-app {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: var(--dxc-color-surface);
+      border: 1px solid var(--dxc-color-border);
+      border-radius: var(--dxc-radius-lg);
+      box-shadow: var(--dxc-shadow-card);
+      overflow: hidden;
+    }
+
+    /* ─── Header ─── */
+    .dxc-header {
+      background: var(--dxc-color-surface);
+      border-bottom: 1px solid var(--dxc-color-border);
+      padding: var(--dxc-space-4) var(--dxc-space-5) 0;
+    }
+    .dxc-header__top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--dxc-space-4);
+      flex-wrap: wrap;
+      margin-bottom: var(--dxc-space-3);
+    }
+    .dxc-header__title { font-size: 20px; font-weight: 700; line-height: 1.3; margin: 0; }
+    .dxc-header__summary { font-size: 13px; color: var(--dxc-color-text-secondary); }
+    .dxc-header__summary strong { color: var(--dxc-color-text); font-weight: 700; }
+
+    /* Filter tabs */
+    .dxc-filter-tabs {
+      display: flex;
+      gap: var(--dxc-space-1);
+      overflow-x: auto;
+    }
+    .dxc-filter-tab {
+      appearance: none;
+      border: none;
+      background: transparent;
+      font: inherit;
+      color: var(--dxc-color-text-secondary);
+      padding: var(--dxc-space-2) var(--dxc-space-3);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--dxc-space-2);
+      white-space: nowrap;
+      border-radius: var(--dxc-radius-sm) var(--dxc-radius-sm) 0 0;
+    }
+    .dxc-filter-tab:hover { background: var(--dxc-color-surface-muted); }
+    .dxc-filter-tab[aria-selected="true"] {
+      color: var(--dxc-color-accent);
+      border-bottom-color: var(--dxc-color-accent);
+      background: var(--dxc-color-investigating-tint);
+      font-weight: 600;
+    }
+    .dxc-filter-tab:focus-visible { outline: 2px solid var(--dxc-color-accent); outline-offset: 2px; }
+    .dxc-filter-tab__count {
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--dxc-color-surface-muted);
+      color: var(--dxc-color-text-secondary);
+      padding: 0 var(--dxc-space-2);
+      border-radius: var(--dxc-radius-pill);
+      min-width: 20px;
+      text-align: center;
+    }
+    .dxc-filter-tab[aria-selected="true"] .dxc-filter-tab__count {
+      background: var(--dxc-color-accent);
+      color: #fff;
+    }
+
+    /* ─── Body: 2-pane ─── */
+    .dxc-body {
+      display: grid;
+      grid-template-columns: 360px minmax(420px, 1fr);
+      min-height: 560px;
+    }
+    .dxc-list { border-right: 1px solid var(--dxc-color-border); overflow-y: auto; padding: var(--dxc-space-3); }
+    .dxc-detail { overflow-y: auto; padding: var(--dxc-space-5); background: var(--dxc-color-surface); }
+
+    /* List items */
+    .dxc-list-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      appearance: none;
+      background: var(--dxc-color-surface);
+      border: 1px solid transparent;
+      border-radius: var(--dxc-radius-md);
+      padding: var(--dxc-space-3) var(--dxc-space-3) var(--dxc-space-3) calc(var(--dxc-space-3) + 3px);
+      margin-bottom: var(--dxc-space-2);
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+      position: relative;
+    }
+    .dxc-list-item:hover { background: var(--dxc-color-surface-muted); }
+    .dxc-list-item[aria-selected="true"] {
+      background: var(--dxc-color-surface-muted);
+      border-color: var(--dxc-color-border);
+    }
+    .dxc-list-item[aria-selected="true"]::before {
+      content: "";
+      position: absolute;
+      left: 0; top: var(--dxc-space-2); bottom: var(--dxc-space-2);
+      width: 3px;
+      background: var(--dxc-color-accent);
+      border-radius: var(--dxc-radius-pill);
+    }
+    .dxc-list-item:focus-visible { outline: 2px solid var(--dxc-color-accent); outline-offset: 2px; }
+    .dxc-list-item__row1 {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--dxc-space-2);
+      margin-bottom: 2px;
+    }
+    .dxc-list-item__id { font-size: 13px; color: var(--dxc-color-text-muted); }
+    .dxc-list-item__name { font-size: 14px; font-weight: 600; color: var(--dxc-color-text); }
+    .dxc-list-item__row2 { display: flex; align-items: center; justify-content: space-between; gap: var(--dxc-space-2); }
+    .dxc-list-item__cause { font-size: 12px; font-weight: 500; color: var(--dxc-color-text-secondary); }
+
+    /* Status badge */
+    .dxc-badge {
+      display: inline-flex; align-items: center; gap: var(--dxc-space-1);
+      font-size: 12px; font-weight: 500; line-height: 1.4;
+      padding: 2px var(--dxc-space-2) 2px var(--dxc-space-1);
+      border-radius: var(--dxc-radius-pill);
+      white-space: nowrap;
+    }
+    .dxc-badge__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .dxc-badge[data-status="open"]          { color: var(--dxc-color-open);          background: var(--dxc-color-open-tint); }
+    .dxc-badge[data-status="investigating"] { color: var(--dxc-color-investigating); background: var(--dxc-color-investigating-tint); }
+    .dxc-badge[data-status="on_hold"]       { color: var(--dxc-color-hold);          background: var(--dxc-color-hold-tint); }
+    .dxc-badge[data-status="resolved"]      { color: var(--dxc-color-resolved);      background: var(--dxc-color-resolved-tint); }
+
+    /* Detail panel */
+    .dxc-detail__header {
+      display: flex; align-items: center; gap: var(--dxc-space-3);
+      padding-bottom: var(--dxc-space-4);
+      border-bottom: 1px solid var(--dxc-color-border);
+      margin-bottom: var(--dxc-space-4);
+    }
+    .dxc-detail__name { font-size: 16px; font-weight: 600; margin: 0; }
+    .dxc-back-btn {
+      display: none;
+      appearance: none; border: 1px solid var(--dxc-color-border-strong);
+      background: var(--dxc-color-surface); border-radius: var(--dxc-radius-md);
+      font: inherit; font-size: 13px; color: var(--dxc-color-text-secondary);
+      padding: var(--dxc-space-1) var(--dxc-space-3); cursor: pointer;
+    }
+
+    .dxc-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--dxc-space-3); margin-bottom: var(--dxc-space-5); }
+    .dxc-field { min-width: 0; }
+    .dxc-field--full { grid-column: 1 / -1; }
+    .dxc-field__label { font-size: 12px; font-weight: 600; color: var(--dxc-color-text-secondary); margin-bottom: var(--dxc-space-1); }
+    .dxc-field__value {
+      font-size: 14px; color: var(--dxc-color-text);
+      background: var(--dxc-color-surface-muted);
+      border-left: 2px solid var(--dxc-color-border-strong);
+      border-radius: 0 var(--dxc-radius-sm) var(--dxc-radius-sm) 0;
+      padding: var(--dxc-space-2) var(--dxc-space-3);
+      word-break: break-word;
+    }
+    .dxc-field__value[data-variant="mono"] { font-family: var(--dxc-font-mono); font-size: 13px; }
+    .dxc-field__value[data-variant="multiline"] { line-height: 1.55; }
+
+    /* Resolution memo (편집 가능한 유일 영역) */
+    .dxc-memo {
+      border: 1px solid var(--dxc-color-border);
+      border-radius: var(--dxc-radius-md);
+      padding: var(--dxc-space-4);
+      background: var(--dxc-color-surface);
+    }
+    .dxc-memo__title { font-size: 16px; font-weight: 600; margin: 0 0 var(--dxc-space-1); }
+    .dxc-memo__hint { font-size: 12px; color: var(--dxc-color-text-muted); margin: 0 0 var(--dxc-space-3); }
+    .dxc-memo__textarea {
+      width: 100%; min-height: 96px; resize: vertical;
+      font: inherit; font-size: 14px; line-height: 1.55;
+      color: var(--dxc-color-text);
+      background: var(--dxc-color-surface);
+      border: 1px solid var(--dxc-color-border-strong);
+      border-radius: var(--dxc-radius-md);
+      padding: var(--dxc-space-3);
+    }
+    .dxc-memo__textarea:focus-visible { outline: none; border-color: var(--dxc-color-accent); box-shadow: 0 0 0 3px var(--dxc-color-focus-ring); }
+    .dxc-memo__textarea[data-error="true"] { border-color: var(--dxc-color-danger); }
+    .dxc-memo__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--dxc-space-3); margin-top: var(--dxc-space-3); }
+    .dxc-memo__counter { font-size: 12px; color: var(--dxc-color-text-muted); }
+    .dxc-memo__counter[data-over="true"] { color: var(--dxc-color-danger); font-weight: 600; }
+    .dxc-memo__meta { font-size: 12px; color: var(--dxc-color-text-secondary); }
+    .dxc-memo__save {
+      appearance: none; border: none; font: inherit; font-size: 14px; font-weight: 600;
+      color: #fff; background: var(--dxc-color-accent);
+      padding: var(--dxc-space-2) var(--dxc-space-4);
+      border-radius: var(--dxc-radius-md); cursor: pointer;
+    }
+    .dxc-memo__save:hover { background: var(--dxc-color-accent-hover); }
+    .dxc-memo__save:disabled { background: var(--dxc-color-border-strong); color: var(--dxc-color-surface); cursor: not-allowed; }
+    .dxc-memo__save:focus-visible { outline: 2px solid var(--dxc-color-accent); outline-offset: 2px; }
+    .dxc-memo__error {
+      margin-top: var(--dxc-space-2);
+      font-size: 13px; color: var(--dxc-color-danger);
+      background: var(--dxc-color-danger-tint);
+      border-radius: var(--dxc-radius-sm);
+      padding: var(--dxc-space-2) var(--dxc-space-3);
+    }
+    .dxc-memo__saved {
+      margin-top: var(--dxc-space-2);
+      font-size: 12px; color: var(--dxc-color-success-strong);
+    }
+
+    /* Empty states */
+    .dxc-empty-detail, .dxc-empty-list {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; gap: var(--dxc-space-2);
+      color: var(--dxc-color-text-muted);
+      min-height: 320px; padding: var(--dxc-space-6);
+    }
+    .dxc-empty-detail__icon { font-size: 40px; opacity: .5; }
+    .dxc-empty-detail__title { font-size: 16px; font-weight: 600; color: var(--dxc-color-text-secondary); }
+    .dxc-empty-detail__desc, .dxc-empty-list__desc { font-size: 13px; max-width: 320px; }
+
+    /* Responsive preview note */
+    @media (max-width: 900px) {
+      .dxc-body { grid-template-columns: 1fr; }
+      .dxc-list { border-right: none; border-bottom: 1px solid var(--dxc-color-border); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════ 시안 헤더(mockup 전용 설명) ══════════════ -->
+  <div class="spec-note">
+    <h1>배송 예외 처리 — 2-pane 예외 처리 콘솔 시안</h1>
+    <p>
+      BF-1032 · <code>delivery-exceptions-canary</code> · 명세: <code>docs/design/delivery-exceptions-canary-BF-1032.md</code><br>
+      토큰: <code>src/app/demo/*</code> <code>:root</code> 계승(prefix <code>--dxc-*</code>, 신규 base 색 0). status 4종 · cause 5종 · fixture 7건(EXC-5001~5007) 시각화.<br>
+      ※ 이 회색 캡션 블록은 시안 설명용이며 실제 화면 UI 가 아닙니다. 인터랙션은 정적 표현(선택/오류/빈 상태를 아래 섹션으로 분리).
+    </p>
+  </div>
+
+  <!-- ══════════════ [A] 기본 화면: 예외 선택 상태 ══════════════ -->
+  <div class="section-label">A. 기본 화면 — 목록 + 상태 필터 탭 + 상세 패널(예외 선택됨)</div>
+  <main class="dxc-app">
+    <header class="dxc-header">
+      <div class="dxc-header__top">
+        <h2 class="dxc-header__title">배송 예외 처리</h2>
+        <div class="dxc-header__summary">총 <strong>7</strong> · 미해결 <strong>5</strong> · 해결 <strong>2</strong></div>
+      </div>
+      <div class="dxc-filter-tabs" role="tablist" aria-label="상태 필터">
+        <button class="dxc-filter-tab" role="tab" aria-selected="true">전체 <span class="dxc-filter-tab__count">7</span></button>
+        <button class="dxc-filter-tab" role="tab" aria-selected="false">접수 <span class="dxc-filter-tab__count">2</span></button>
+        <button class="dxc-filter-tab" role="tab" aria-selected="false">조사중 <span class="dxc-filter-tab__count">2</span></button>
+        <button class="dxc-filter-tab" role="tab" aria-selected="false">보류 <span class="dxc-filter-tab__count">1</span></button>
+        <button class="dxc-filter-tab" role="tab" aria-selected="false">해결 <span class="dxc-filter-tab__count">2</span></button>
+      </div>
+    </header>
+
+    <div class="dxc-body">
+      <!-- Pane 1: 목록 -->
+      <nav class="dxc-list" role="listbox" aria-label="배송 예외 목록">
+        <button class="dxc-list-item" role="option" aria-selected="false">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5001</span><span class="dxc-list-item__name">김도윤</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">배송지 접근 불가</span><span class="dxc-badge" data-status="open"><span class="dxc-badge__dot"></span>접수</span></span>
+        </button>
+        <button class="dxc-list-item" role="option" aria-selected="true">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5002</span><span class="dxc-list-item__name">이하윤</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">수취인 부재</span><span class="dxc-badge" data-status="investigating"><span class="dxc-badge__dot"></span>조사중</span></span>
+        </button>
+        <button class="dxc-list-item" role="option" aria-selected="false">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5003</span><span class="dxc-list-item__name">박서준</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">상품 파손</span><span class="dxc-badge" data-status="on_hold"><span class="dxc-badge__dot"></span>보류</span></span>
+        </button>
+        <button class="dxc-list-item" role="option" aria-selected="false">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5004</span><span class="dxc-list-item__name">최지아</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">통관 보류</span><span class="dxc-badge" data-status="resolved"><span class="dxc-badge__dot"></span>해결</span></span>
+        </button>
+        <button class="dxc-list-item" role="option" aria-selected="false">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5005</span><span class="dxc-list-item__name">정우진</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">기상 지연</span><span class="dxc-badge" data-status="open"><span class="dxc-badge__dot"></span>접수</span></span>
+        </button>
+        <button class="dxc-list-item" role="option" aria-selected="false">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5006</span><span class="dxc-list-item__name">한소율</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">수취인 부재</span><span class="dxc-badge" data-status="resolved"><span class="dxc-badge__dot"></span>해결</span></span>
+        </button>
+        <button class="dxc-list-item" role="option" aria-selected="false">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5007</span><span class="dxc-list-item__name">오하준</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">배송지 접근 불가</span><span class="dxc-badge" data-status="investigating"><span class="dxc-badge__dot"></span>조사중</span></span>
+        </button>
+      </nav>
+
+      <!-- Pane 2: 상세 패널 (EXC-5002 선택) -->
+      <main class="dxc-detail" aria-label="예외 상세" aria-live="polite">
+        <div class="dxc-detail__header">
+          <button class="dxc-back-btn" type="button">← 목록</button>
+          <h3 class="dxc-detail__name">이하윤</h3>
+          <span class="dxc-badge" data-status="investigating"><span class="dxc-badge__dot"></span>조사중</span>
+        </div>
+
+        <div class="dxc-field-grid">
+          <div class="dxc-field"><div class="dxc-field__label">예외 ID</div><div class="dxc-field__value" data-variant="mono">EXC-5002</div></div>
+          <div class="dxc-field"><div class="dxc-field__label">주문 참조</div><div class="dxc-field__value" data-variant="mono">ORD-880132</div></div>
+          <div class="dxc-field"><div class="dxc-field__label">수취인</div><div class="dxc-field__value">이하윤</div></div>
+          <div class="dxc-field"><div class="dxc-field__label">예외 원인</div><div class="dxc-field__value">수취인 부재</div></div>
+          <div class="dxc-field dxc-field--full"><div class="dxc-field__label">배송지</div><div class="dxc-field__value">부산시 해운대구 센텀중앙로 55</div></div>
+          <div class="dxc-field"><div class="dxc-field__label">발생 시각</div><div class="dxc-field__value" data-variant="datetime">2026-07-11 11:00 (KST)</div></div>
+          <div class="dxc-field"><div class="dxc-field__label">최종 갱신</div><div class="dxc-field__value" data-variant="datetime">2026-07-11 14:30 (KST)</div></div>
+          <div class="dxc-field dxc-field--full"><div class="dxc-field__label">설명</div><div class="dxc-field__value" data-variant="multiline">2회 방문 시도, 수취인 부재로 조사 중</div></div>
+        </div>
+
+        <!-- 해결 메모 (편집 가능한 유일 영역) -->
+        <section class="dxc-memo" aria-label="해결 메모">
+          <h4 class="dxc-memo__title">해결 메모</h4>
+          <p class="dxc-memo__hint">이 예외에 대한 처리 메모를 남기세요. 저장 버튼을 눌러야 저장됩니다 · 빈 메모를 저장하면 삭제됩니다.</p>
+          <textarea class="dxc-memo__textarea" placeholder="예: 수취인에게 재방문 일정 문자 발송, 내일 오전 재시도 예정">수취인 연락 완료, 내일 오전 재방문 예정</textarea>
+          <div class="dxc-memo__bar">
+            <span class="dxc-memo__counter" aria-live="polite">21/300</span>
+            <button class="dxc-memo__save" type="button">저장</button>
+          </div>
+          <p class="dxc-memo__saved">2026-07-18 10:00 저장됨</p>
+        </section>
+      </main>
+    </div>
+  </main>
+
+  <!-- ══════════════ [B] 상태 변형: 필터 적용(조사중) + 미선택 placeholder ══════════════ -->
+  <div class="section-label">B. 상태 변형 — 필터 "조사중" 적용 + 상세 미선택(placeholder, EC-01)</div>
+  <main class="dxc-app">
+    <header class="dxc-header">
+      <div class="dxc-header__top">
+        <h2 class="dxc-header__title">배송 예외 처리</h2>
+        <div class="dxc-header__summary">총 <strong>7</strong> · 미해결 <strong>5</strong> · 해결 <strong>2</strong></div>
+      </div>
+      <div class="dxc-filter-tabs" role="tablist" aria-label="상태 필터">
+        <button class="dxc-filter-tab" role="tab" aria-selected="false">전체 <span class="dxc-filter-tab__count">7</span></button>
+        <button class="dxc-filter-tab" role="tab" aria-selected="false">접수 <span class="dxc-filter-tab__count">2</span></button>
+        <button class="dxc-filter-tab" role="tab" aria-selected="true">조사중 <span class="dxc-filter-tab__count">2</span></button>
+        <button class="dxc-filter-tab" role="tab" aria-selected="false">보류 <span class="dxc-filter-tab__count">1</span></button>
+        <button class="dxc-filter-tab" role="tab" aria-selected="false">해결 <span class="dxc-filter-tab__count">2</span></button>
+      </div>
+    </header>
+
+    <div class="dxc-body">
+      <nav class="dxc-list" role="listbox" aria-label="배송 예외 목록(조사중 필터)">
+        <button class="dxc-list-item" role="option" aria-selected="false">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5002</span><span class="dxc-list-item__name">이하윤</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">수취인 부재</span><span class="dxc-badge" data-status="investigating"><span class="dxc-badge__dot"></span>조사중</span></span>
+        </button>
+        <button class="dxc-list-item" role="option" aria-selected="false">
+          <span class="dxc-list-item__row1"><span class="dxc-list-item__id mono">EXC-5007</span><span class="dxc-list-item__name">오하준</span></span>
+          <span class="dxc-list-item__row2"><span class="dxc-list-item__cause">배송지 접근 불가</span><span class="dxc-badge" data-status="investigating"><span class="dxc-badge__dot"></span>조사중</span></span>
+        </button>
+      </nav>
+
+      <main class="dxc-detail" aria-label="예외 상세">
+        <div class="dxc-empty-detail">
+          <div class="dxc-empty-detail__icon" aria-hidden="true">📦</div>
+          <div class="dxc-empty-detail__title">예외를 선택하세요</div>
+          <div class="dxc-empty-detail__desc">왼쪽 목록에서 배송 예외를 선택하면 상세 정보와 해결 메모를 볼 수 있습니다.</div>
+        </div>
+      </main>
+    </div>
+  </main>
+
+  <!-- ══════════════ [C] 상태 변형: 메모 300자 초과 검증 오류(EC-05) ══════════════ -->
+  <div class="section-label">C. 상태 변형 — 해결 메모 300자 초과 검증 오류(EC-05, 입력값 유지)</div>
+  <main class="dxc-app" style="min-height:auto">
+    <div class="dxc-body" style="grid-template-columns:1fr; min-height:auto">
+      <main class="dxc-detail" aria-label="예외 상세(검증 오류)">
+        <div class="dxc-detail__header">
+          <h3 class="dxc-detail__name">박서준</h3>
+          <span class="dxc-badge" data-status="on_hold"><span class="dxc-badge__dot"></span>보류</span>
+        </div>
+        <section class="dxc-memo" aria-label="해결 메모">
+          <h4 class="dxc-memo__title">해결 메모</h4>
+          <p class="dxc-memo__hint">이 예외에 대한 처리 메모를 남기세요. 저장 버튼을 눌러야 저장됩니다 · 빈 메모를 저장하면 삭제됩니다.</p>
+          <textarea class="dxc-memo__textarea" data-error="true">상품 파손 확인 후 고객 회신 대기 중이며, 재발송 여부에 대한 내부 승인 절차를 병행하고 있고 물류센터 재고 확인과 배송사 협의를 동시에 진행하는 중으로 예상 처리 기한과 대체 배송 옵션을 정리해 고객에게 안내할 예정이며 추가로 파손 원인 분석 리포트를 작성하여 재발 방지 대책까지 문서화하려다 보니 메모가 길어져 허용 길이를 초과하였습니다…</textarea>
+          <div class="dxc-memo__bar">
+            <span class="dxc-memo__counter" data-over="true" aria-live="polite">324/300</span>
+            <button class="dxc-memo__save" type="button" disabled>저장</button>
+          </div>
+          <p class="dxc-memo__error" role="alert">메모는 300자 이하여야 합니다 (현재 324자). 입력한 내용은 유지되며, 길이를 줄인 뒤 다시 저장하세요.</p>
+        </section>
+      </main>
+    </div>
+  </main>
+
+  <!-- ══════════════ [D] 상태 변형: 필터 결과 0건 방어(EC-02) + 상태 뱃지 4종 팔레트 ══════════════ -->
+  <div class="section-label">D. 참조 — 상태 뱃지 4종 팔레트 + 필터 0건 빈 상태(EC-02, 방어적)</div>
+  <main class="dxc-app" style="min-height:auto">
+    <div class="dxc-body" style="min-height:auto">
+      <nav class="dxc-list" role="listbox" aria-label="상태 뱃지 팔레트">
+        <div style="display:flex; flex-direction:column; gap:12px; padding:8px">
+          <span class="dxc-badge" data-status="open"><span class="dxc-badge__dot"></span>접수 · open</span>
+          <span class="dxc-badge" data-status="investigating"><span class="dxc-badge__dot"></span>조사중 · investigating</span>
+          <span class="dxc-badge" data-status="on_hold"><span class="dxc-badge__dot"></span>보류 · on_hold</span>
+          <span class="dxc-badge" data-status="resolved"><span class="dxc-badge__dot"></span>해결 · resolved</span>
+        </div>
+      </nav>
+      <main class="dxc-detail" aria-label="필터 0건 예시">
+        <div class="dxc-empty-list">
+          <div class="dxc-empty-detail__icon" aria-hidden="true">🔍</div>
+          <div class="dxc-empty-detail__title">해당 상태의 예외 없음</div>
+          <div class="dxc-empty-list__desc">다른 상태 탭을 선택해 보세요. (현재 fixture 구성에서는 실제로 발생하지 않는 방어적 상태입니다.)</div>
+        </div>
+      </main>
+    </div>
+  </main>
+
+  <div class="spec-note" style="margin-top:32px; margin-bottom:48px">
+    <p>
+      breakpoint: ≥1024px 2-pane · 768–1023px 목록 축소 유지 · &lt;768px 1-pane 스택(상세 상단 "← 목록"). 위 mockup 은 데스크톱 기준 정적 시안입니다.<br>
+      상태는 fixture 고정 읽기 전용(전이 버튼 없음) · 메모는 명시적 저장만 · 자세한 규칙은 명세 §5·§8 참조.
+    </p>
+  </div>
+
+</body>
+</html>
