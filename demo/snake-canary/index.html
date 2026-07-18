@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>스네이크 캐너리 · /demo/snake-canary</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- 디자인 §4.1 페이지 골격 · 기획 §10.1 마크업 계약 -->
+    <main class="sc-page">
+      <h1 class="sc-title">스네이크 캐너리</h1>
+
+      <!-- HUD: 점수 칩 + 상태 텍스트 (디자인 §5.2) -->
+      <div class="sc-hud">
+        <div class="sc-hud__score">
+          <span class="sc-hud__label">점수</span>
+          <span id="score">0</span>
+        </div>
+        <p id="game-status" aria-live="polite">대기 중</p>
+      </div>
+
+      <!-- 보드 프레임: canvas + 게임오버 오버레이 (디자인 §5.1·§5.4) -->
+      <div class="sc-board-frame">
+        <canvas id="board" width="400" height="400" aria-hidden="true"></canvas>
+        <div class="sc-overlay" data-role="overlay" hidden>
+          <p class="sc-overlay__title">게임 오버</p>
+          <p class="sc-overlay__result" data-role="overlay-result">점수 0</p>
+          <button class="sc-btn" type="button" id="btn-restart-overlay">다시 하기</button>
+        </div>
+      </div>
+
+      <!-- 주 컨트롤: 상태별 버튼 1개 (디자인 §5.3) -->
+      <div class="sc-controls">
+        <button class="sc-btn" type="button" id="btn-start">시작</button>
+        <button class="sc-btn" type="button" id="btn-restart" hidden>다시 하기</button>
+      </div>
+
+      <!-- 조작 안내 (디자인 §5.5) -->
+      <p class="sc-hint">키보드: 방향키 / WASD · 시작·재시작: Enter / Space</p>
+
+      <!-- 온스크린 D-pad (디자인 §5.3, 기획 §6.3) — DOM 순서 ▲◀▶▼ = Tab 순서 -->
+      <nav class="sc-dpad" aria-label="방향 조작">
+        <button class="sc-dpad__btn sc-dpad__btn--up" type="button" id="dpad-up" aria-label="위로 이동 (↑ 또는 W)">▲</button>
+        <button class="sc-dpad__btn sc-dpad__btn--left" type="button" id="dpad-left" aria-label="왼쪽으로 이동 (← 또는 A)">◀</button>
+        <button class="sc-dpad__btn sc-dpad__btn--right" type="button" id="dpad-right" aria-label="오른쪽으로 이동 (→ 또는 D)">▶</button>
+        <button class="sc-dpad__btn sc-dpad__btn--down" type="button" id="dpad-down" aria-label="아래로 이동 (↓ 또는 S)">▼</button>
+      </nav>
+
+      <!-- JS 비활성 폴백 (기획 §7.1) -->
+      <noscript>이 게임은 JavaScript가 필요합니다. 브라우저에서 JavaScript를 활성화해 주세요.</noscript>
+    </main>
+
+    <!-- 비-module script — file:// CORS 안전 (vanilla-static: type=module/import 금지) -->
+    <script src="./logic.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
