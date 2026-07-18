@@ -1,0 +1,10 @@
+{
+  "name": "handoff-gap-canary",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "교대 인수인계 누락 점검 canary (vanilla ESM, 빌드 스텝 없음)",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}
