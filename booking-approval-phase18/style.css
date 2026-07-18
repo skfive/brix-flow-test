@@ -1,0 +1,267 @@
+/* booking-approval-phase18/style.css — 팀 예약·승인 화면 스타일
+ * BF-1016 · 시안 docs/design/booking-approval-phase18-BF-1015.md §2~§5 (mockup :root/스타일 블록 그대로 계승)
+ * 색상 하드코딩 금지 — 모든 색은 --bk-* 변수 경유 (§6.1). vanilla-static: 외부 CDN 0건, system font.
+ */
+:root {
+  /* ── Base 팔레트 (§2.1) ── */
+  --bk-color-bg: #F1F3F5;
+  --bk-color-surface: #FFFFFF;
+  --bk-color-surface-muted: #F8F9FA;
+  --bk-color-border: #DDE1E6;
+  --bk-color-border-strong: #B9C0C8;
+  --bk-color-text: #1A1D21;
+  --bk-color-text-muted: #5F6B76;
+  --bk-color-accent: #3563E9;
+  --bk-color-accent-hover: #2A50C4;
+  --bk-color-accent-tint: #EEF3FF;
+
+  /* ── Status 팔레트 (§2.2) ── */
+  --bk-status-requested: #B45309;
+  --bk-status-requested-tint: #FFF7ED;
+  --bk-status-approved: #0F7B4F;
+  --bk-status-approved-tint: #ECFDF5;
+  --bk-status-rejected: #475569;
+  --bk-status-rejected-tint: #F1F5F9;
+
+  /* ── Feedback 팔레트 (§2.3) ── */
+  --bk-color-conflict: #B91C1C;
+  --bk-color-conflict-tint: #FEF2F2;
+  --bk-color-error: #B91C1C;
+  --bk-color-info: #1D4ED8;
+
+  /* ── Typography (§3) ── */
+  --bk-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+  --bk-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ── Spacing / radius / shadow (§4.2) ── */
+  --bk-space-1: 4px;  --bk-space-2: 8px;  --bk-space-3: 12px;
+  --bk-space-4: 16px; --bk-space-6: 24px; --bk-space-8: 32px; --bk-space-12: 48px;
+  --bk-radius-sm: 6px;
+  --bk-radius-md: 10px;
+  --bk-shadow-sm: 0 1px 2px rgba(16,24,40,.06);
+  --bk-container-max: 840px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bk-color-bg);
+  color: var(--bk-color-text);
+  font-family: var(--bk-font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.bk-page {
+  max-width: var(--bk-container-max);
+  margin: 0 auto;
+  padding: var(--bk-space-8) var(--bk-space-6) var(--bk-space-12);
+}
+
+/* ── 헤더 ── */
+.bk-header { margin-bottom: var(--bk-space-6); }
+.bk-header h1 { margin: 0; font-size: 24px; font-weight: 700; line-height: 1.3; }
+.bk-subtitle { margin: var(--bk-space-1) 0 0; font-size: 14px; color: var(--bk-color-text-muted); }
+
+h2.bk-region-title {
+  margin: 0 0 var(--bk-space-3);
+  font-size: 16px; font-weight: 600; line-height: 1.4;
+}
+
+/* ── 공용 패널 ── */
+.bk-panel {
+  background: var(--bk-color-surface-muted);
+  border: 1px solid var(--bk-color-border);
+  border-radius: var(--bk-radius-md);
+  padding: var(--bk-space-4);
+  margin-bottom: var(--bk-space-6);
+}
+
+/* ── 필터 바 (§5.1) ── */
+.bk-filters__row { display: flex; gap: var(--bk-space-4); flex-wrap: wrap; }
+.bk-field { display: flex; flex-direction: column; gap: var(--bk-space-1); min-width: 200px; flex: 1; }
+.bk-field label { font-size: 13px; font-weight: 500; color: var(--bk-color-text); }
+select, input[type="text"], input[type="datetime-local"] {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--bk-color-text);
+  background: var(--bk-color-surface);
+  border: 1px solid var(--bk-color-border);
+  border-radius: var(--bk-radius-sm);
+  padding: 8px 10px;
+  width: 100%;
+}
+select:focus, input:focus {
+  outline: none;
+  border-color: var(--bk-color-accent);
+  box-shadow: 0 0 0 3px rgba(53,99,233,.15);
+}
+:focus-visible {
+  outline: 2px solid var(--bk-color-accent);
+  outline-offset: 2px;
+}
+/* 선택 활성 pill 표현 */
+select.is-active {
+  border-color: var(--bk-color-accent);
+  background: var(--bk-color-accent-tint);
+}
+
+/* ── 신규 예약 요청 폼 (§5.2) ── */
+.bk-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--bk-space-4);
+}
+.bk-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bk-space-3);
+  margin-top: var(--bk-space-4);
+}
+.bk-form-error {
+  margin: 0;
+  font-size: 13px; font-weight: 500; line-height: 1.5;
+  color: var(--bk-color-error);
+}
+.bk-form-error:empty { display: none; }
+
+/* ── 버튼 공용 ── */
+.bk-btn {
+  font-family: inherit;
+  font-size: 14px; font-weight: 600; line-height: 1;
+  border-radius: var(--bk-radius-sm);
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 40px;
+}
+.bk-btn--submit, .bk-btn--accent {
+  background: var(--bk-color-accent);
+  color: #fff;
+  border-color: var(--bk-color-accent);
+}
+.bk-btn--submit:hover, .bk-btn--accent:hover { background: var(--bk-color-accent-hover); border-color: var(--bk-color-accent-hover); }
+.bk-btn--approve {
+  background: var(--bk-status-approved);
+  color: #fff;
+  border-color: var(--bk-status-approved);
+}
+.bk-btn--approve:hover { background: #0C6640; border-color: #0C6640; }
+.bk-btn--reject {
+  background: transparent;
+  color: var(--bk-status-rejected);
+  border-color: var(--bk-status-rejected);
+}
+.bk-btn--reject:hover { background: var(--bk-status-rejected-tint); }
+
+/* ── 충돌 배너 (§5.4) ── */
+.bk-banner {
+  display: flex; align-items: flex-start; gap: var(--bk-space-3);
+  background: var(--bk-color-conflict-tint);
+  border: 1px solid var(--bk-color-conflict);
+  border-left-width: 4px;
+  border-radius: var(--bk-radius-md);
+  padding: var(--bk-space-3) var(--bk-space-4);
+  margin-bottom: var(--bk-space-6);
+  color: var(--bk-color-conflict);
+}
+.bk-banner[hidden] { display: none; }
+.bk-banner__icon { font-size: 18px; line-height: 1.4; }
+.bk-banner__body { flex: 1; }
+.bk-banner__text { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.bk-banner__detail { margin: 4px 0 0; font-size: 12px; font-weight: 400; color: var(--bk-color-conflict); opacity: .85; }
+.bk-banner__close {
+  background: none; border: none; color: var(--bk-color-conflict);
+  font-size: 18px; cursor: pointer; line-height: 1; padding: 0 4px;
+}
+
+/* ── 예약 목록 / 카드 (§5.5) ── */
+.bk-list { display: flex; flex-direction: column; gap: var(--bk-space-3); }
+.bk-empty {
+  padding: var(--bk-space-6);
+  text-align: center;
+  color: var(--bk-color-text-muted);
+  font-size: 14px;
+}
+.bk-card {
+  position: relative;
+  background: var(--bk-color-surface);
+  border: 1px solid var(--bk-color-border);
+  border-left: 3px solid var(--bk-color-border-strong);
+  border-radius: var(--bk-radius-md);
+  padding: var(--bk-space-4);
+  box-shadow: var(--bk-shadow-sm);
+}
+.bk-card[data-status="requested"] { border-left-color: var(--bk-status-requested); }
+.bk-card[data-status="approved"]  { border-left-color: var(--bk-status-approved); }
+.bk-card[data-status="rejected"]  { border-left-color: var(--bk-status-rejected); }
+.bk-card[data-status="rejected"] .bk-card__main { opacity: .72; }
+
+.bk-card__top {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--bk-space-3); flex-wrap: wrap;
+}
+.bk-card__headline { display: flex; align-items: center; gap: var(--bk-space-2); flex-wrap: wrap; }
+.bk-card__resource { font-size: 16px; font-weight: 600; line-height: 1.4; }
+.bk-card__time {
+  font-family: var(--bk-font-mono);
+  font-size: 14px; font-weight: 500;
+  color: var(--bk-color-text);
+  white-space: nowrap;
+}
+.bk-card__meta {
+  margin: var(--bk-space-1) 0 0;
+  font-size: 14px; color: var(--bk-color-text-muted);
+}
+
+/* 상태 배지 (§5.3) */
+.bk-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; line-height: 1;
+  padding: 4px 8px;
+  border-radius: var(--bk-radius-sm);
+}
+.bk-badge[data-status="requested"] { color: var(--bk-status-requested); background: var(--bk-status-requested-tint); }
+.bk-badge[data-status="approved"]  { color: var(--bk-status-approved); background: var(--bk-status-approved-tint); }
+.bk-badge[data-status="rejected"]  { color: var(--bk-status-rejected); background: var(--bk-status-rejected-tint); }
+
+/* 액션 행 (requested 전용) */
+.bk-card__actions {
+  display: flex; justify-content: flex-end; gap: var(--bk-space-2);
+  margin-top: var(--bk-space-4);
+}
+
+/* 반려 사유 (rejected 전용) */
+.bk-card__reason {
+  margin: var(--bk-space-3) 0 0;
+  padding-top: var(--bk-space-3);
+  border-top: 1px dashed var(--bk-color-border);
+  font-size: 13px; color: var(--bk-color-text-muted); line-height: 1.5;
+}
+.bk-card__reason b { color: var(--bk-color-text); font-weight: 600; }
+
+/* ── 저장 안내(§8.3 임시 세션) ── */
+.bk-storage-note {
+  margin: 0 0 var(--bk-space-4);
+  padding: var(--bk-space-2) var(--bk-space-3);
+  font-size: 13px; line-height: 1.5;
+  color: var(--bk-color-info);
+  background: var(--bk-color-accent-tint);
+  border: 1px solid var(--bk-color-border);
+  border-radius: var(--bk-radius-sm);
+}
+.bk-storage-note[hidden] { display: none; }
+
+/* ── 반응형 (§4.4) ── */
+@media (max-width: 719px) {
+  .bk-page { padding: var(--bk-space-6) var(--bk-space-4) var(--bk-space-8); }
+  .bk-filters__row { flex-direction: column; }
+  .bk-form__grid { grid-template-columns: 1fr; }
+  .bk-form__footer { flex-direction: column-reverse; align-items: stretch; }
+  .bk-form__footer .bk-btn--submit { width: 100%; justify-content: center; }
+  .bk-card__top { flex-direction: column; }
+  .bk-card__actions .bk-btn { flex: 1; justify-content: center; }
+}
