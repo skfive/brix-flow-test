@@ -1,0 +1,520 @@
+/* delivery-exceptions-canary/styles.css — 배송 예외 처리 2-pane 콘솔
+ * BF-1033 · 디자인 docs/design/delivery-exceptions-canary-BF-1032.md §2·§3·§4·§8 (그대로 채택)
+ * 토큰: src/app/demo/{status,clock} :root 값 그대로 계승(신규 base 색 0건), prefix 만 --dxc-*.
+ * 색상 리터럴은 아래 :root 토큰 정의 블록에만 존재하며, 컴포넌트 규칙은 var(--dxc-…) 만 참조(디자인 §0).
+ */
+
+:root {
+  /* 타이포 (디자인 §3 — demo --font-sans/--font-mono 계승) */
+  --dxc-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --dxc-font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Base (디자인 §2.1 — demo 셸 값 복제) */
+  --dxc-color-bg: #fafaf9;
+  --dxc-color-surface: #ffffff;
+  --dxc-color-surface-muted: #f1f1ef;
+  --dxc-color-border: #e5e5e2;
+  --dxc-color-border-strong: #d0d0cc;
+  --dxc-color-text: #1a1a19;
+  --dxc-color-text-secondary: #6b6b66;
+  --dxc-color-text-muted: #9a9a93;
+  --dxc-color-accent: #3563e9;
+  --dxc-color-accent-hover: #2a4fc0;
+  --dxc-color-focus-ring: rgba(53, 99, 233, 0.45);
+
+  /* Status 4종 fg + tint (디자인 §2.2 — 대비 검증 완료 §7.2) */
+  --dxc-color-open: #5b636e;
+  --dxc-color-open-tint: #f1f3f5;
+  --dxc-color-investigating: #2a4fc0;
+  --dxc-color-investigating-tint: #eaf0fe;
+  --dxc-color-hold: #8a5a00;
+  --dxc-color-hold-tint: #fbf3d9;
+  --dxc-color-resolved: #1a7f37;
+  --dxc-color-resolved-tint: #e4f4e9;
+
+  /* Semantic 보조 (디자인 §2.3) */
+  --dxc-color-danger: #cf222e;
+  --dxc-color-danger-tint: #fdecec;
+  --dxc-color-success-strong: #1a7f37;
+
+  /* spacing / radius / shadow (디자인 §4.1 — demo 셸 계승) */
+  --dxc-space-1: 4px;
+  --dxc-space-2: 8px;
+  --dxc-space-3: 12px;
+  --dxc-space-4: 16px;
+  --dxc-space-5: 24px;
+  --dxc-space-6: 32px;
+  --dxc-space-7: 48px;
+  --dxc-radius-sm: 4px;
+  --dxc-radius-md: 8px;
+  --dxc-radius-lg: 12px;
+  --dxc-radius-pill: 999px;
+  --dxc-shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--dxc-font-sans);
+  color: var(--dxc-color-text);
+  background: var(--dxc-color-bg);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* ─── App 골격 (디자인 §4.2) ─── */
+.dxc-app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+
+/* ─── Header (banner) ─── */
+.dxc-header {
+  background: var(--dxc-color-surface);
+  border-bottom: 1px solid var(--dxc-color-border);
+  padding: var(--dxc-space-4) var(--dxc-space-5);
+}
+
+.dxc-header__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--dxc-space-4);
+  flex-wrap: wrap;
+}
+
+.dxc-header__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.dxc-header__summary {
+  font-size: 14px;
+  color: var(--dxc-color-text-secondary);
+}
+
+.dxc-header__summary strong {
+  color: var(--dxc-color-text);
+  font-weight: 600;
+}
+
+/* ─── 상태 필터 탭 (디자인 §5.1) ─── */
+.dxc-filter-tabs {
+  display: flex;
+  gap: var(--dxc-space-1);
+  margin-top: var(--dxc-space-3);
+  overflow-x: auto;
+}
+
+.dxc-filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dxc-space-2);
+  padding: var(--dxc-space-2) var(--dxc-space-3);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--dxc-color-text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: var(--dxc-radius-sm) var(--dxc-radius-sm) 0 0;
+}
+
+.dxc-filter-tab:hover {
+  background: var(--dxc-color-surface-muted);
+}
+
+.dxc-filter-tab[aria-selected="true"] {
+  color: var(--dxc-color-accent);
+  border-bottom-color: var(--dxc-color-accent);
+  background: var(--dxc-color-investigating-tint);
+}
+
+.dxc-filter-tab__count {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px var(--dxc-space-2);
+  border-radius: var(--dxc-radius-pill);
+  background: var(--dxc-color-surface-muted);
+  color: var(--dxc-color-text-secondary);
+}
+
+.dxc-filter-tab[aria-selected="true"] .dxc-filter-tab__count {
+  background: var(--dxc-color-surface);
+  color: var(--dxc-color-accent);
+}
+
+/* ─── 2-pane 컨테이너 (디자인 §4.3) ─── */
+.dxc-panes {
+  display: grid;
+  grid-template-columns: 360px minmax(420px, 1fr);
+  min-height: 0;
+}
+
+.dxc-pane {
+  overflow-y: auto;
+  padding: var(--dxc-space-5);
+}
+
+.dxc-pane--list {
+  border-right: 1px solid var(--dxc-color-border);
+  background: var(--dxc-color-surface);
+}
+
+.dxc-pane--detail {
+  background: var(--dxc-color-bg);
+}
+
+/* ─── 목록 (listbox) ─── */
+.dxc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dxc-space-2);
+}
+
+.dxc-list-item {
+  position: relative;
+  padding: var(--dxc-space-3) var(--dxc-space-3) var(--dxc-space-3) var(--dxc-space-4);
+  border: 1px solid var(--dxc-color-border);
+  border-radius: var(--dxc-radius-md);
+  background: var(--dxc-color-surface);
+  cursor: pointer;
+}
+
+.dxc-list-item:hover {
+  background: var(--dxc-color-surface-muted);
+}
+
+.dxc-list-item[aria-selected="true"] {
+  background: var(--dxc-color-surface-muted);
+  border-color: var(--dxc-color-border-strong);
+}
+
+.dxc-list-item[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--dxc-radius-sm) 0 0 var(--dxc-radius-sm);
+  background: var(--dxc-color-accent);
+}
+
+.dxc-list-item__row1 {
+  display: flex;
+  align-items: center;
+  gap: var(--dxc-space-2);
+  margin-bottom: var(--dxc-space-1);
+}
+
+.dxc-list-item__id {
+  font-family: var(--dxc-font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dxc-color-text-muted);
+}
+
+.dxc-list-item__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dxc-color-text);
+}
+
+.dxc-list-item__row2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dxc-space-2);
+}
+
+.dxc-list-item__cause {
+  font-size: 12px;
+  color: var(--dxc-color-text-secondary);
+}
+
+/* ─── 상태 뱃지 (디자인 §6.1) ─── */
+.dxc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dxc-space-1);
+  padding: 2px var(--dxc-space-2);
+  border-radius: var(--dxc-radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.dxc-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dxc-badge[data-status="open"] {
+  color: var(--dxc-color-open);
+  background: var(--dxc-color-open-tint);
+}
+.dxc-badge[data-status="investigating"] {
+  color: var(--dxc-color-investigating);
+  background: var(--dxc-color-investigating-tint);
+}
+.dxc-badge[data-status="on_hold"] {
+  color: var(--dxc-color-hold);
+  background: var(--dxc-color-hold-tint);
+}
+.dxc-badge[data-status="resolved"] {
+  color: var(--dxc-color-resolved);
+  background: var(--dxc-color-resolved-tint);
+}
+
+/* ─── 상세 패널 (디자인 §5.3·§5.4·§5.5) ─── */
+.dxc-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dxc-space-3);
+  margin-bottom: var(--dxc-space-5);
+  flex-wrap: wrap;
+}
+
+.dxc-detail__name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.dxc-detail__name:focus-visible {
+  outline: 2px solid var(--dxc-color-accent);
+  outline-offset: 2px;
+}
+
+.dxc-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--dxc-space-3);
+  margin-bottom: var(--dxc-space-5);
+}
+
+.dxc-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dxc-space-1);
+}
+
+.dxc-field--full {
+  grid-column: 1 / -1;
+}
+
+.dxc-field__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dxc-color-text-secondary);
+}
+
+.dxc-field__value {
+  font-size: 14px;
+  color: var(--dxc-color-text);
+  background: var(--dxc-color-surface-muted);
+  border-left: 2px solid var(--dxc-color-border);
+  padding: var(--dxc-space-2) var(--dxc-space-3);
+  border-radius: 0 var(--dxc-radius-sm) var(--dxc-radius-sm) 0;
+  word-break: break-word;
+}
+
+.dxc-field__value[data-variant="mono"] {
+  font-family: var(--dxc-font-mono);
+  font-size: 13px;
+}
+
+.dxc-field__value[data-variant="multiline"] {
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+/* ─── 해결 메모 에디터 (디자인 §5.4) ─── */
+.dxc-memo {
+  border-top: 1px solid var(--dxc-color-border);
+  padding-top: var(--dxc-space-4);
+}
+
+.dxc-memo__title {
+  margin: 0 0 var(--dxc-space-3);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dxc-memo__textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  padding: var(--dxc-space-3);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--dxc-color-text);
+  background: var(--dxc-color-surface);
+  border: 1px solid var(--dxc-color-border-strong);
+  border-radius: var(--dxc-radius-md);
+}
+
+.dxc-memo__textarea:focus-visible {
+  outline: 2px solid var(--dxc-color-accent);
+  outline-offset: 1px;
+  border-color: var(--dxc-color-accent);
+}
+
+.dxc-memo--over .dxc-memo__textarea {
+  border-color: var(--dxc-color-danger);
+}
+
+.dxc-memo__hint {
+  margin-top: var(--dxc-space-1);
+  font-size: 12px;
+  color: var(--dxc-color-text-muted);
+}
+
+.dxc-memo__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dxc-space-3);
+  margin-top: var(--dxc-space-3);
+}
+
+.dxc-memo__counter {
+  font-size: 12px;
+  color: var(--dxc-color-text-muted);
+}
+
+.dxc-memo--over .dxc-memo__counter {
+  color: var(--dxc-color-danger);
+  font-weight: 600;
+}
+
+.dxc-memo__save {
+  padding: var(--dxc-space-2) var(--dxc-space-4);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--dxc-color-accent);
+  border: none;
+  border-radius: var(--dxc-radius-md);
+  cursor: pointer;
+}
+
+.dxc-memo__save:hover:not(:disabled) {
+  background: var(--dxc-color-accent-hover);
+}
+
+.dxc-memo__save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dxc-memo__save:focus-visible {
+  outline: 2px solid var(--dxc-color-accent);
+  outline-offset: 2px;
+}
+
+.dxc-memo__saved-at {
+  margin-top: var(--dxc-space-2);
+  font-size: 12px;
+  color: var(--dxc-color-text-secondary);
+}
+
+.dxc-memo__unsaved {
+  color: var(--dxc-color-hold);
+}
+
+.dxc-memo__error {
+  margin-top: var(--dxc-space-2);
+  padding: var(--dxc-space-2) var(--dxc-space-3);
+  font-size: 12px;
+  color: var(--dxc-color-danger);
+  background: var(--dxc-color-danger-tint);
+  border-radius: var(--dxc-radius-sm);
+}
+
+/* ─── Empty 상태 (디자인 §5.5·§5.6) ─── */
+.dxc-empty-detail,
+.dxc-empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  min-height: 200px;
+  gap: var(--dxc-space-2);
+  color: var(--dxc-color-text-muted);
+}
+
+.dxc-empty-detail__icon {
+  font-size: 40px;
+  opacity: 0.5;
+}
+
+.dxc-empty-detail__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dxc-color-text-secondary);
+}
+
+.dxc-empty-detail__desc,
+.dxc-empty-list__desc {
+  font-size: 14px;
+  max-width: 320px;
+}
+
+/* ─── 공통 focus-visible (디자인 §7.1) ─── */
+.dxc-filter-tab:focus-visible,
+.dxc-list-item:focus-visible {
+  outline: 2px solid var(--dxc-color-accent);
+  outline-offset: 2px;
+}
+
+/* ─── Breakpoint (디자인 §4.4) ─── */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .dxc-panes {
+    grid-template-columns: 300px minmax(360px, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .dxc-panes {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+  .dxc-pane--list {
+    border-right: none;
+    border-bottom: 1px solid var(--dxc-color-border);
+    max-height: 40vh;
+  }
+  .dxc-field-grid {
+    grid-template-columns: 1fr;
+  }
+}
