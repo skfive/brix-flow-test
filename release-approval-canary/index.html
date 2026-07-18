@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>릴리스 변경 승인 큐</title>
+  <style>
+    /* =========================================================
+       brix-Flow 공용 토큰 (단일 소스 · AC1) — 디자인 명세 §2~§4
+       모든 색/타이포/간격은 아래 변수만 참조. HEX 직접 사용 금지.
+       ========================================================= */
+    :root {
+      /* 기반 · 텍스트 */
+      --bf-color-bg: #ffffff;
+      --bf-color-surface: #f6f7f9;
+      --bf-color-surface-raised: #ffffff;
+      --bf-color-border: #d5dae1;
+      --bf-color-text: #1a1d21;
+      --bf-color-text-muted: #5b6270;
+      --bf-color-primary: #1f5fd6;
+      --bf-color-primary-contrast: #ffffff;
+      --bf-color-focus-ring: #1f5fd6;
+
+      /* 상태 배지 */
+      --bf-status-pending-bg: #e7effb;
+      --bf-status-pending-text: #1a4a99;
+      --bf-status-pending-border: #b9d0f0;
+      --bf-status-held-bg: #fbf0dd;
+      --bf-status-held-text: #8a4b00;
+      --bf-status-held-border: #f0d59a;
+      --bf-status-approved-bg: #e2f4ea;
+      --bf-status-approved-text: #14663c;
+      --bf-status-approved-border: #b6e0c7;
+
+      /* 위험도 밴드 */
+      --bf-risk-high-bg: #fbe4e2;
+      --bf-risk-high-text: #8f1d17;
+      --bf-risk-mid-bg: #fbf0dd;
+      --bf-risk-mid-text: #8a4b00;
+      --bf-risk-low-bg: #eef1f5;
+      --bf-risk-low-text: #454b56;
+
+      /* 타이포 (system font stack — 외부 의존성 0건) */
+      --bf-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+
+      /* 간격 (4px 스케일) */
+      --bf-space-1: 4px;
+      --bf-space-2: 8px;
+      --bf-space-3: 12px;
+      --bf-space-4: 16px;
+      --bf-space-6: 24px;
+      --bf-space-8: 32px;
+
+      --bf-radius: 8px;
+      --bf-radius-sm: 6px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bf-color-surface);
+      color: var(--bf-color-text);
+      font-family: var(--bf-font-family);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .page { max-width: 1120px; margin: 0 auto; padding: var(--bf-space-6) var(--bf-space-4); }
+
+    /* 포커스 링 — 전 인터랙티브 요소 (AC2) */
+    a:focus-visible, button:focus-visible, [tabindex]:focus-visible, [role="tab"]:focus-visible {
+      outline: 2px solid var(--bf-color-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ---------- 큐 헤더 ---------- */
+    .queue-header h1 { font-size: 20px; line-height: 28px; font-weight: 600; margin: 0 0 var(--bf-space-1); }
+    .queue-header p { margin: 0 0 var(--bf-space-4); color: var(--bf-color-text-muted); }
+
+    .filter-tabs { display: flex; flex-wrap: wrap; gap: var(--bf-space-1); border-bottom: 1px solid var(--bf-color-border); margin-bottom: var(--bf-space-6); }
+    .filter-tab {
+      appearance: none; background: none; border: none; cursor: pointer;
+      font-family: inherit; font-size: 14px; color: var(--bf-color-text-muted);
+      padding: var(--bf-space-2) var(--bf-space-3); border-bottom: 2px solid transparent;
+      display: inline-flex; align-items: center; gap: var(--bf-space-2);
+    }
+    .filter-tab[aria-selected="true"] { color: var(--bf-color-text); font-weight: 600; border-bottom-color: var(--bf-color-primary); }
+    .filter-tab .count { font-size: 12px; color: var(--bf-color-text-muted); font-variant-numeric: tabular-nums; }
+
+    /* ---------- 레이아웃: 큐 + 상세 ---------- */
+    .layout { display: grid; grid-template-columns: 3fr 2fr; gap: var(--bf-space-6); align-items: start; }
+    .queue-list { display: flex; flex-direction: column; gap: var(--bf-space-3); }
+    .detail-panel { position: sticky; top: var(--bf-space-4); }
+
+    /* ---------- 후보 카드 ---------- */
+    .candidate-card {
+      position: relative; background: var(--bf-color-surface-raised);
+      border: 1px solid var(--bf-color-border); border-radius: var(--bf-radius);
+      padding: var(--bf-space-4); padding-left: calc(var(--bf-space-4) + 4px);
+      cursor: pointer; text-align: left; width: 100%; font-family: inherit;
+    }
+    .candidate-card:hover { border-color: var(--bf-color-text-muted); }
+    .candidate-card--selected { border-color: var(--bf-color-primary); box-shadow: 0 0 0 1px var(--bf-color-primary); }
+    /* 좌측 accent 스트립 — 고위험 스캔성 */
+    .candidate-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: var(--bf-radius) 0 0 var(--bf-radius); background: transparent; }
+    .candidate-card--high-risk::before { background: var(--bf-risk-high-text); }
+
+    .card-row { display: flex; align-items: center; gap: var(--bf-space-2); flex-wrap: wrap; }
+    .card-row + .card-row { margin-top: var(--bf-space-2); }
+    .card-title { font-size: 16px; line-height: 24px; font-weight: 600; margin: 0; }
+    .card-version { color: var(--bf-color-text-muted); font-variant-numeric: tabular-nums; }
+    .card-meta { color: var(--bf-color-text-muted); font-size: 12px; line-height: 18px; }
+    .card-actions { margin-left: auto; display: flex; gap: var(--bf-space-2); }
+
+    /* ---------- 배지 공통 ---------- */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; line-height: 18px; font-weight: 600;
+      padding: 2px var(--bf-space-2); border-radius: 999px; border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge .glyph { font-weight: 700; }
+
+    .status-badge--pending { background: var(--bf-status-pending-bg); color: var(--bf-status-pending-text); border-color: var(--bf-status-pending-border); }
+    .status-badge--held { background: var(--bf-status-held-bg); color: var(--bf-status-held-text); border-color: var(--bf-status-held-border); }
+    .status-badge--approved { background: var(--bf-status-approved-bg); color: var(--bf-status-approved-text); border-color: var(--bf-status-approved-border); }
+
+    .risk-badge--high { background: var(--bf-risk-high-bg); color: var(--bf-risk-high-text); }
+    .risk-badge--mid { background: var(--bf-risk-mid-bg); color: var(--bf-risk-mid-text); }
+    .risk-badge--low { background: var(--bf-risk-low-bg); color: var(--bf-risk-low-text); }
+
+    .env-badge { background: var(--bf-color-surface); color: var(--bf-color-text-muted); border-color: var(--bf-color-border); }
+    .env-badge--production { color: var(--bf-color-text); border-color: var(--bf-color-text-muted); }
+
+    .risk-factors { display: flex; flex-wrap: wrap; gap: var(--bf-space-1); }
+    .chip { font-size: 12px; line-height: 18px; padding: 2px var(--bf-space-2); border-radius: var(--bf-radius-sm); background: var(--bf-color-surface); border: 1px solid var(--bf-color-border); color: var(--bf-color-text-muted); }
+    .risk-factors--empty { color: var(--bf-color-text-muted); font-size: 12px; font-style: italic; }
+
+    /* ---------- 버튼 ---------- */
+    .btn { font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: var(--bf-space-2) var(--bf-space-3); border-radius: var(--bf-radius-sm); border: 1px solid transparent; }
+    .btn--primary { background: var(--bf-color-primary); color: var(--bf-color-primary-contrast); }
+    .btn--secondary { background: transparent; color: var(--bf-status-held-text); border-color: var(--bf-status-held-border); }
+    .btn--tertiary { background: transparent; color: var(--bf-color-primary); border-color: transparent; }
+    .btn:disabled, .btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+
+    /* ---------- 상세 패널 ---------- */
+    .detail-panel .panel {
+      background: var(--bf-color-surface-raised); border: 1px solid var(--bf-color-border);
+      border-radius: var(--bf-radius); padding: var(--bf-space-4);
+    }
+    .panel h2 { font-size: 16px; line-height: 24px; font-weight: 600; margin: 0 0 var(--bf-space-2); }
+    .panel .section-label { font-size: 12px; font-weight: 600; color: var(--bf-color-text-muted); text-transform: uppercase; letter-spacing: .02em; margin: var(--bf-space-4) 0 var(--bf-space-2); }
+
+    .decision-actions { display: flex; gap: var(--bf-space-2); margin-top: var(--bf-space-2); }
+    .terminal-note { margin-top: var(--bf-space-2); font-size: 12px; color: var(--bf-color-text-muted); }
+
+    /* 이력 타임라인 */
+    .decision-history { list-style: none; margin: 0; padding: 0; }
+    .decision-history__item { position: relative; padding: 0 0 var(--bf-space-3) var(--bf-space-4); border-left: 2px solid var(--bf-color-border); }
+    .decision-history__item:last-child { border-left-color: transparent; }
+    .decision-history__item::before { content: ""; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--bf-color-primary); }
+    .decision-history__transition { font-weight: 600; }
+    .decision-history__meta { font-size: 12px; color: var(--bf-color-text-muted); }
+    .decision-history__empty { color: var(--bf-color-text-muted); font-size: 12px; }
+
+    /* 빈 상태 */
+    .empty-queue { text-align: center; padding: var(--bf-space-8); background: var(--bf-color-surface-raised); border: 1px dashed var(--bf-color-border); border-radius: var(--bf-radius); color: var(--bf-color-text-muted); }
+    .empty-queue strong { display: block; color: var(--bf-color-text); font-size: 16px; margin-bottom: var(--bf-space-1); }
+
+    /* 반응형 */
+    @media (max-width: 959px) { .layout { grid-template-columns: 1fr; } .detail-panel { position: static; } }
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
