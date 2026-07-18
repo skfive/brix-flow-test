@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>회의실 예약 충돌 검사 — booking-canary (BF-1045)</title>
+  <!--
+    /demo/booking-canary 검증 전용 데모 (self-contained, 외부 의존성 0 — 디자인 명세 §9).
+    브라우저용 순수 로직은 아래 <script> 에 인라인 포팅되어 있으며,
+    canonical(단위 테스트 대상) 구현은 src/features/booking-canary/*.ts 이다(명세 §8).
+    data-* 계약(기획 §9.1)은 표현과 무관하게 유지한다.
+  -->
+  <style>
+    :root {
+      /* 베이스 팔레트 (디자인 §2.1) */
+      --background: #FFFFFF;
+      --card: #FFFFFF;
+      --foreground: #0F172A;
+      --muted-foreground: #64748B;
+      --border: #E2E8F0;
+      --muted: #F1F5F9;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --primary-foreground: #FFFFFF;
+      --ring: #2563EB;
+      /* 상태 시맨틱 (디자인 §2.2) */
+      --success: #15803D;
+      --success-muted: #F0FDF4;
+      --success-border: #BBF7D0;
+      --destructive: #B91C1C;
+      --destructive-muted: #FEF2F2;
+      --destructive-border: #FECACA;
+      --info: #1D4ED8;
+      --info-muted: #EFF6FF;
+      --info-border: #BFDBFE;
+      --accent: #7C3AED;
+      --accent-muted: #F5F3FF;
+      --accent-border: #DDD6FE;
+      /* spacing (디자인 §4.2) */
+      --space-1: 4px; --space-2: 8px; --space-3: 12px;
+      --space-4: 16px; --space-5: 24px; --space-6: 32px;
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Roboto Mono", monospace;
+      --radius-card: 12px; --radius-field: 8px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--foreground);
+      background: var(--muted);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page { max-width: 640px; margin: var(--space-6) auto; padding: 0 var(--space-5); }
+    @media (max-width: 480px) { .page { padding: 0 var(--space-4); } }
+    .app {
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: var(--space-5);
+      box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    @media (max-width: 480px) { .app { padding: var(--space-4); } }
+
+    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; margin: 0 0 var(--space-1); }
+    header p  { margin: 0 0 var(--space-5); color: var(--muted-foreground); font-size: 0.9375rem; }
+    @media (max-width: 480px) { header h1 { font-size: 1.375rem; } }
+
+    .field { margin-bottom: var(--space-4); }
+    .field label { display: block; font-size: 0.9375rem; font-weight: 500; margin-bottom: var(--space-2); }
+    .field label .req { color: var(--destructive); margin-left: 2px; }
+
+    input, select {
+      width: 100%; min-width: 0; min-height: 44px;
+      padding: 10px var(--space-3);
+      font-size: 0.9375rem; font-family: inherit;
+      color: var(--foreground); background: var(--background);
+      border: 1px solid var(--border); border-radius: var(--radius-field);
+    }
+    input:hover, select:hover { border-color: #CBD5E1; }
+    input:focus-visible, select:focus-visible, button:focus-visible, .alt-card:focus-visible {
+      outline: 2px solid var(--ring); outline-offset: 2px; border-color: var(--ring);
+    }
+    input[aria-invalid="true"], select[aria-invalid="true"] {
+      border-color: var(--destructive); background: var(--destructive-muted);
+    }
+
+    .time-row { display: flex; gap: var(--space-4); }
+    .time-row .field { flex: 1; margin-bottom: var(--space-4); }
+    @media (max-width: 480px) { .time-row { flex-direction: column; gap: 0; } }
+
+    .btn-check {
+      min-height: 44px; padding: 10px 20px;
+      font-size: 0.9375rem; font-weight: 600; font-family: inherit;
+      color: var(--primary-foreground); background: var(--primary);
+      border: none; border-radius: var(--radius-field); cursor: pointer;
+    }
+    .btn-check:hover { background: var(--primary-hover); }
+    @media (max-width: 480px) { .btn-check { width: 100%; } }
+
+    .form-error {
+      display: flex; gap: var(--space-2); align-items: flex-start;
+      margin-top: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      background: var(--destructive-muted);
+      border: 1px solid var(--destructive-border);
+      border-left: 4px solid var(--destructive);
+      border-radius: var(--radius-field);
+      color: var(--destructive); font-size: 0.8125rem; font-weight: 500;
+    }
+    .form-error .icon { flex: none; font-weight: 700; }
+
+    .result-panel { margin-top: var(--space-6); }
+    .banner {
+      display: flex; gap: var(--space-2); align-items: flex-start;
+      padding: var(--space-4); border-radius: var(--radius-field);
+      border: 1px solid; margin-bottom: var(--space-4);
+    }
+    .banner .icon { flex: none; font-size: 1.05rem; font-weight: 700; }
+    .banner .title { font-weight: 600; }
+    .banner .meta { display: block; font-size: 0.8125rem; color: var(--muted-foreground); margin-top: var(--space-1); }
+    .banner.available { background: var(--success-muted); border-color: var(--success-border); color: var(--success); }
+    .banner.conflict  { background: var(--destructive-muted); border-color: var(--destructive-border); color: var(--destructive); }
+
+    .list-h { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.01em; color: var(--muted-foreground); text-transform: uppercase; margin: var(--space-5) 0 var(--space-2); }
+
+    .conflict-item {
+      display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap;
+      padding: var(--space-3) var(--space-4);
+      background: var(--destructive-muted);
+      border: 1px solid var(--destructive-border);
+      border-radius: var(--radius-field);
+      margin-bottom: var(--space-2); font-size: 0.9375rem;
+    }
+    .conflict-item .mark { color: var(--destructive); font-weight: 700; }
+    .conflict-item .room { font-weight: 600; }
+    .conflict-item .who { color: var(--muted-foreground); }
+    .t { font-family: var(--font-mono); font-size: 0.875rem; font-weight: 500; overflow-wrap: anywhere; }
+
+    .alt-list { display: flex; flex-direction: column; gap: var(--space-2); }
+    .alt-card {
+      display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+      padding: var(--space-3) var(--space-4);
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius-field);
+    }
+    .alt-card:hover { box-shadow: 0 2px 8px rgba(15,23,42,.08); }
+    .alt-card .room { font-weight: 600; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.01em;
+      padding: 2px 10px; border-radius: 9999px; border: 1px solid; white-space: nowrap;
+    }
+    .badge.trackA { color: var(--info); background: var(--info-muted); border-color: var(--info-border); }
+    .badge.trackB { color: var(--accent); background: var(--accent-muted); border-color: var(--accent-border); }
+    .alt-empty { padding: var(--space-4); color: var(--muted-foreground); font-size: 0.9375rem; text-align: center; background: var(--muted); border-radius: var(--radius-field); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="app" data-testid="booking-check-app">
+      <header>
+        <h1 id="form-heading">회의실 예약 충돌 검사</h1>
+        <p>회의실과 시간을 입력하면 기존 예약과 겹치는지 확인하고, 겹치면 대체 시간을 제안합니다. (시각은 UTC 기준)</p>
+      </header>
+
+      <form data-testid="booking-check-form" aria-labelledby="form-heading" novalidate>
+        <div class="field">
+          <label for="f-room">회의실<span class="req" aria-hidden="true">*</span></label>
+          <select id="f-room" data-field="roomId" aria-required="true" aria-describedby="form-error">
+            <option value="" disabled selected>회의실을 선택하세요</option>
+            <option value="room-01">3층 대회의실 (정원 12)</option>
+            <option value="room-02">4층 소회의실 A (정원 4)</option>
+            <option value="room-03">4층 소회의실 B (정원 4)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-name">신청자명<span class="req" aria-hidden="true">*</span></label>
+          <input id="f-name" type="text" data-field="requesterName" placeholder="예: 김도윤" autocomplete="name" aria-required="true" aria-describedby="form-error" />
+        </div>
+        <div class="time-row">
+          <div class="field">
+            <label for="f-start">시작 시각<span class="req" aria-hidden="true">*</span></label>
+            <input id="f-start" type="datetime-local" data-field="startAt" aria-required="true" aria-describedby="form-error" />
+          </div>
+          <div class="field">
+            <label for="f-end">종료 시각<span class="req" aria-hidden="true">*</span></label>
+            <input id="f-end" type="datetime-local" data-field="endAt" aria-required="true" aria-describedby="form-error" />
+          </div>
+        </div>
+        <button class="btn-check" type="submit" data-testid="check-btn">예약 가능 여부 검사</button>
+
+        <div id="form-error" class="form-error" data-testid="form-error" role="alert" aria-live="assertive" tabindex="-1" hidden>
+          <span class="icon" aria-hidden="true">⚠</span>
+          <span data-testid="form-error-text"></span>
+        </div>
+      </form>
+
+      <div id="result-root"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    'use strict';
+    /*
+     * booking-canary 브라우저 로직 — canonical 구현: src/features/booking-canary/*.ts (단위 테스트 대상).
+     * self-contained 데모(디자인 §9)이므로 동일 규칙을 여기 인라인 포팅한다. 규칙 변경 시 양쪽을 함께 갱신.
+     */
+
+    // --- Fixture (기획 §4, ROOMS/BOOKINGS 그대로) ---
+    const ROOMS = [
+      { id: 'room-01', name: '3층 대회의실', capacity: 12 },
+      { id: 'room-02', name: '4층 소회의실 A', capacity: 4 },
+      { id: 'room-03', name: '4층 소회의실 B', capacity: 4 },
+    ];
+    const BOOKINGS = [
+      { id: 'bkg-01', roomId: 'room-01', requesterName: '김도윤', startAt: '2026-07-27T01:00:00.000Z', endAt: '2026-07-27T02:00:00.000Z' },
+      { id: 'bkg-02', roomId: 'room-01', requesterName: '이서준', startAt: '2026-07-27T02:00:00.000Z', endAt: '2026-07-27T03:00:00.000Z' },
+      { id: 'bkg-03', roomId: 'room-02', requesterName: '박지호', startAt: '2026-07-27T04:00:00.000Z', endAt: '2026-07-27T05:00:00.000Z' },
+      { id: 'bkg-04', roomId: 'room-03', requesterName: '최하은', startAt: '2026-07-27T04:00:00.000Z', endAt: '2026-07-27T05:00:00.000Z' },
+      { id: 'bkg-05', roomId: 'room-01', requesterName: '정민서', startAt: '2026-07-28T00:00:00.000Z', endAt: '2026-07-28T01:00:00.000Z' },
+    ];
+
+    // --- 순수 로직 (§5~§7) ---
+    const REQUIRED_FIELDS = ['roomId', 'requesterName', 'startAt', 'endAt'];
+    const isNonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
+
+    function validateBookingInput(input, rooms) {
+      for (const field of REQUIRED_FIELDS) {
+        if (!isNonEmpty(input[field])) return { valid: false, code: 'MISSING_FIELD', field };
+      }
+      const startMs = Date.parse(input.startAt);
+      const endMs = Date.parse(input.endAt);
+      if (Number.isNaN(startMs) || Number.isNaN(endMs)) return { valid: false, code: 'INVALID_TIME_FORMAT' };
+      if (startMs >= endMs) return { valid: false, code: 'TIME_INVERSION' };
+      if (!rooms.some((r) => r.id === input.roomId)) return { valid: false, code: 'UNKNOWN_ROOM' };
+      return { valid: true };
+    }
+
+    function hasOverlap(aStart, aEnd, bStart, bEnd) {
+      return Date.parse(aStart) < Date.parse(bEnd) && Date.parse(bStart) < Date.parse(aEnd);
+    }
+
+    function findConflicts(request, allBookings) {
+      const conflicts = allBookings.filter(
+        (b) => b.roomId === request.roomId && hasOverlap(request.startAt, request.endAt, b.startAt, b.endAt),
+      );
+      return { hasConflict: conflicts.length > 0, conflicts };
+    }
+
+    function overlappingIn(bookings, roomId, startAt, endAt) {
+      return bookings.filter((b) => b.roomId === roomId && hasOverlap(startAt, endAt, b.startAt, b.endAt));
+    }
+    function latestEndMs(bookings) {
+      return bookings.reduce((max, b) => Math.max(max, Date.parse(b.endAt)), Number.NEGATIVE_INFINITY);
+    }
+    function findTrackA(request, allBookings, conflicts, maxPushIterations) {
+      const durationMs = Date.parse(request.endAt) - Date.parse(request.startAt);
+      let startMs = latestEndMs(conflicts);
+      for (let i = 0; i < maxPushIterations; i += 1) {
+        const start = new Date(startMs).toISOString();
+        const end = new Date(startMs + durationMs).toISOString();
+        const still = overlappingIn(allBookings, request.roomId, start, end);
+        if (still.length === 0) return { roomId: request.roomId, startAt: start, endAt: end, strategy: 'same-room-push' };
+        startMs = latestEndMs(still);
+      }
+      return null;
+    }
+    function findTrackB(request, allBookings, allRooms, limit) {
+      if (limit <= 0) return [];
+      const sorted = [...allRooms].sort((a, b) => a.id.localeCompare(b.id));
+      const out = [];
+      for (const room of sorted) {
+        if (out.length >= limit) break;
+        if (room.id === request.roomId) continue;
+        if (overlappingIn(allBookings, room.id, request.startAt, request.endAt).length === 0) {
+          out.push({ roomId: room.id, startAt: request.startAt, endAt: request.endAt, strategy: 'same-time-other-room' });
+        }
+      }
+      return out;
+    }
+    function findAlternativeSlots(request, allBookings, allRooms, options = {}) {
+      const maxCandidates = options.maxCandidates ?? 3;
+      const maxPushIterations = options.maxPushIterations ?? 3;
+      if (maxCandidates <= 0) return [];
+      const { hasConflict, conflicts } = findConflicts(request, allBookings);
+      if (!hasConflict) return [];
+      const trackA = findTrackA(request, allBookings, conflicts, maxPushIterations);
+      const trackB = findTrackB(request, allBookings, allRooms, maxCandidates - (trackA ? 1 : 0));
+      return [...(trackA ? [trackA] : []), ...trackB].slice(0, maxCandidates);
+    }
+
+    // --- 표현 헬퍼 ---
+    const FIELD_LABELS = { roomId: '회의실', requesterName: '신청자명', startAt: '시작 시각', endAt: '종료 시각' };
+    const ERROR_TEXT = {
+      MISSING_FIELD: (r) => `필수 항목을 모두 입력해 주세요: ${FIELD_LABELS[r.field] ?? ''}`.trim(),
+      INVALID_TIME_FORMAT: () => '시작·종료 시각을 올바른 날짜/시간 형식으로 입력해 주세요.',
+      TIME_INVERSION: () => '종료 시각은 시작 시각보다 뒤여야 합니다.',
+      UNKNOWN_ROOM: () => '선택한 회의실을 찾을 수 없습니다. 목록에서 다시 선택해 주세요.',
+    };
+    const ERROR_FIELDS = {
+      MISSING_FIELD: (r) => (r.field ? [r.field] : []),
+      INVALID_TIME_FORMAT: () => ['startAt', 'endAt'],
+      TIME_INVERSION: () => ['startAt', 'endAt'],
+      UNKNOWN_ROOM: () => ['roomId'],
+    };
+    const BADGE = {
+      'same-room-push': { cls: 'trackA', text: '↪ 같은 회의실 · 시간 순연' },
+      'same-time-other-room': { cls: 'trackB', text: '⇄ 같은 시간 · 다른 회의실' },
+    };
+    const roomName = (id) => ROOMS.find((r) => r.id === id)?.name ?? id;
+    const pad = (n) => String(n).padStart(2, '0');
+    function hhmm(iso) {
+      const d = new Date(iso);
+      return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    }
+    const range = (s, e) => `${hhmm(s)}–${hhmm(e)}`;
+    // datetime-local(무타임존) 값을 UTC ISO 로 직렬화(디자인 §8.3 — UTC 고정 표시)
+    function localToIso(v) {
+      if (!v) return '';
+      let s = v;
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)) s += ':00';
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) s += '.000';
+      return `${s}Z`;
+    }
+    function esc(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // --- DOM 배선 ---
+    const form = document.querySelector('[data-testid="booking-check-form"]');
+    const errBox = document.getElementById('form-error');
+    const errText = errBox.querySelector('[data-testid="form-error-text"]');
+    const resultRoot = document.getElementById('result-root');
+    const fieldEls = {
+      roomId: form.querySelector('[data-field="roomId"]'),
+      requesterName: form.querySelector('[data-field="requesterName"]'),
+      startAt: form.querySelector('[data-field="startAt"]'),
+      endAt: form.querySelector('[data-field="endAt"]'),
+    };
+
+    function clearInvalid() {
+      Object.values(fieldEls).forEach((el) => el.removeAttribute('aria-invalid'));
+    }
+    function showError(result) {
+      resultRoot.innerHTML = '';
+      clearInvalid();
+      errText.textContent = ERROR_TEXT[result.code](result);
+      errBox.setAttribute('data-error-code', result.code);
+      errBox.hidden = false;
+      (ERROR_FIELDS[result.code](result) || []).forEach((f) => fieldEls[f]?.setAttribute('aria-invalid', 'true'));
+      errBox.focus();
+    }
+    function hideError() {
+      errBox.hidden = true;
+      errBox.removeAttribute('data-error-code');
+      errText.textContent = '';
+      clearInvalid();
+    }
+
+    function renderResult(request) {
+      const { hasConflict, conflicts } = findConflicts(request, BOOKINGS);
+      if (!hasConflict) {
+        // IA-02: available — 대체 후보 목록 미렌더
+        resultRoot.innerHTML = `
+          <div class="result-panel" data-testid="result-panel" data-result="available" role="status" aria-live="polite">
+            <div class="banner available">
+              <span class="icon" aria-hidden="true">✓</span>
+              <span>
+                <span class="title">예약 가능합니다</span>
+                <span class="meta">${esc(roomName(request.roomId))} · ${esc(request.requesterName)} · <span class="t">${range(request.startAt, request.endAt)} (UTC)</span></span>
+              </span>
+            </div>
+          </div>`;
+        return;
+      }
+      // IA-03: conflict — 충돌 목록 + 대체 후보 목록
+      const conflictItems = conflicts
+        .map(
+          (b) => `
+            <div class="conflict-item" data-testid="conflict-item">
+              <span class="mark" aria-hidden="true">⚠</span>
+              <span class="room">${esc(roomName(b.roomId))}</span>
+              <span class="who">${esc(b.requesterName)}</span>
+              <span class="t">${range(b.startAt, b.endAt)}</span>
+            </div>`,
+        )
+        .join('');
+
+      const alternatives = findAlternativeSlots(request, BOOKINGS, ROOMS);
+      const altInner =
+        alternatives.length === 0
+          ? '<div class="alt-empty">제안 가능한 대체 시간이 없습니다.</div>' // IA-04
+          : alternatives
+              .map((a) => {
+                const badge = BADGE[a.strategy];
+                return `
+                  <div class="alt-card" data-testid="alternative-item" data-strategy="${a.strategy}" tabindex="0">
+                    <span class="room">${esc(roomName(a.roomId))}</span>
+                    <span class="t">${range(a.startAt, a.endAt)}</span>
+                    <span class="badge ${badge.cls}">${esc(badge.text)}</span>
+                  </div>`;
+              })
+              .join('');
+
+      resultRoot.innerHTML = `
+        <div class="result-panel" data-testid="result-panel" data-result="conflict" role="status" aria-live="polite">
+          <div class="banner conflict">
+            <span class="icon" aria-hidden="true">⚠</span>
+            <span>
+              <span class="title">선택한 시간에 이미 예약이 있습니다</span>
+              <span class="meta">${esc(roomName(request.roomId))} · 요청 <span class="t">${range(request.startAt, request.endAt)} (UTC)</span></span>
+            </span>
+          </div>
+          <div class="list-h">겹치는 기존 예약</div>
+          <div data-testid="conflict-list">${conflictItems}</div>
+          <div class="list-h">대체 시간 후보</div>
+          <div class="alt-list" data-testid="alternative-list">${altInner}</div>
+        </div>`;
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const request = {
+        roomId: fieldEls.roomId.value,
+        requesterName: fieldEls.requesterName.value,
+        startAt: localToIso(fieldEls.startAt.value),
+        endAt: localToIso(fieldEls.endAt.value),
+      };
+      // IA-01: 검증 우선. 실패 시 findConflicts/findAlternativeSlots 미호출
+      const result = validateBookingInput(request, ROOMS);
+      if (!result.valid) {
+        showError(result);
+        return;
+      }
+      hideError();
+      renderResult(request);
+    });
+  </script>
+</body>
+</html>
