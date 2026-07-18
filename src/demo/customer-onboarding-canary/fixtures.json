@@ -1,0 +1,60 @@
+{
+  "checklistCatalog": [
+    { "itemId": "email_verification", "label": "이메일 인증", "required": true, "priority": 1 },
+    { "itemId": "profile_setup", "label": "프로필 정보 입력", "required": true, "priority": 2 },
+    { "itemId": "payment_method", "label": "결제 수단 등록", "required": true, "priority": 3 },
+    { "itemId": "team_invite", "label": "팀원 초대", "required": false, "priority": 4 },
+    { "itemId": "first_project_created", "label": "첫 프로젝트 생성", "required": true, "priority": 5 },
+    { "itemId": "security_2fa", "label": "2단계 인증 설정", "required": false, "priority": 6 }
+  ],
+  "customers": [
+    {
+      "customerId": "cust-001",
+      "displayName": "그린테크 주식회사",
+      "checklist": [
+        { "itemId": "email_verification", "status": "complete", "completedAt": "2026-06-01T09:00:00Z" },
+        { "itemId": "profile_setup", "status": "complete", "completedAt": "2026-06-01T09:10:00Z" },
+        { "itemId": "payment_method", "status": "incomplete" },
+        { "itemId": "team_invite", "status": "incomplete" },
+        { "itemId": "first_project_created", "status": "incomplete" },
+        { "itemId": "security_2fa", "status": "incomplete" }
+      ]
+    },
+    {
+      "customerId": "cust-002",
+      "displayName": "블루오션 상사",
+      "checklist": [
+        { "itemId": "email_verification", "status": "complete", "completedAt": "2026-05-20T01:00:00Z" },
+        { "itemId": "profile_setup", "status": "complete", "completedAt": "2026-05-20T01:05:00Z" },
+        { "itemId": "payment_method", "status": "blocked", "blockedReason": "카드 인증 실패 — 고객센터 확인 필요" },
+        { "itemId": "team_invite", "status": "incomplete" },
+        { "itemId": "first_project_created", "status": "incomplete" },
+        { "itemId": "security_2fa", "status": "incomplete" }
+      ]
+    },
+    {
+      "customerId": "cust-003",
+      "displayName": "always-ready 데모 고객",
+      "checklist": [
+        { "itemId": "email_verification", "status": "complete", "completedAt": "2026-04-01T00:00:00Z" },
+        { "itemId": "profile_setup", "status": "complete", "completedAt": "2026-04-01T00:05:00Z" },
+        { "itemId": "payment_method", "status": "complete", "completedAt": "2026-04-01T00:10:00Z" },
+        { "itemId": "team_invite", "status": "complete", "completedAt": "2026-04-01T00:15:00Z" },
+        { "itemId": "first_project_created", "status": "complete", "completedAt": "2026-04-01T00:20:00Z" },
+        { "itemId": "security_2fa", "status": "incomplete" }
+      ]
+    },
+    {
+      "customerId": "cust-004",
+      "displayName": "not-started 데모 고객",
+      "checklist": [
+        { "itemId": "email_verification", "status": "incomplete" },
+        { "itemId": "profile_setup", "status": "incomplete" },
+        { "itemId": "payment_method", "status": "incomplete" },
+        { "itemId": "team_invite", "status": "incomplete" },
+        { "itemId": "first_project_created", "status": "incomplete" },
+        { "itemId": "security_2fa", "status": "incomplete" }
+      ]
+    }
+  ]
+}

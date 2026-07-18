@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>고객 온보딩 체크리스트 — brix-Flow Demo</title>
+    <!-- 테마 초기화: 저장된 선택을 첫 페인트 전에 적용 (FOUC 방지). 공용 인프라 비의존, self-contained. -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('bf-theme');
+          if (saved === 'dark' || saved === 'light') {
+            document.documentElement.setAttribute('data-theme', saved);
+          }
+        } catch (e) {
+          /* localStorage 미가용 환경에서도 기본 light로 정상 동작 */
+        }
+      })();
+    </script>
+    <style>
+      :root {
+        --bg: #f7f8fa;
+        --fg: #1c2430;
+        --muted: #5a6473;
+        --card: #ffffff;
+        --border: #e2e6ec;
+        --accent: #2563eb;
+        --ok: #16a34a;
+        --warn: #b45309;
+        --blocked: #dc2626;
+      }
+      [data-theme='dark'] {
+        --bg: #12161c;
+        --fg: #e6eaf0;
+        --muted: #9aa4b2;
+        --card: #1b2129;
+        --border: #2b333d;
+        --accent: #60a5fa;
+        --ok: #4ade80;
+        --warn: #fbbf24;
+        --blocked: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.5;
+      }
+      main { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+      .onboarding-summary h1 { margin: 8px 0 4px; font-size: 1.5rem; }
+      .onboarding-customer-picker { margin-bottom: 8px; color: var(--muted); }
+      .onboarding-customer-picker select {
+        padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+        background: var(--card); color: var(--fg);
+      }
+      .onboarding-readiness { font-weight: 600; margin: 4px 0; }
+      .onboarding-readiness[data-status='ready'] { color: var(--ok); }
+      .onboarding-readiness[data-status='in_progress'] { color: var(--warn); }
+      .onboarding-readiness[data-status='blocked'] { color: var(--blocked); }
+      .onboarding-progress { color: var(--muted); margin: 0 0 16px; }
+      .onboarding-checklist { list-style: none; margin: 0; padding: 0; }
+      .checklist-item {
+        display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+        padding: 12px 14px; margin-bottom: 8px;
+        background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      }
+      .item-label { font-weight: 600; }
+      .item-status {
+        font-size: 0.8rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border);
+      }
+      .item-status[data-status='complete'] { color: var(--ok); border-color: var(--ok); }
+      .item-status[data-status='blocked'] { color: var(--blocked); border-color: var(--blocked); }
+      .item-required { font-size: 0.75rem; color: var(--accent); }
+      .item-optional { font-size: 0.75rem; color: var(--muted); }
+      .item-blocked-reason { flex-basis: 100%; font-size: 0.85rem; color: var(--blocked); }
+      .item-complete-btn {
+        margin-left: auto; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+        border: 1px solid var(--accent); background: var(--accent); color: #fff; font-size: 0.85rem;
+      }
+      .item-complete-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+      .onboarding-next-action {
+        margin-top: 24px; padding: 16px; border-radius: 12px;
+        background: var(--card); border: 1px dashed var(--border);
+      }
+      .onboarding-next-action h2 { margin: 0 0 4px; font-size: 1rem; }
+      .onboarding-next-action[data-type='completed'] { border-color: var(--ok); }
+      .onboarding-empty { padding: 32px; text-align: center; color: var(--muted); }
+      .app-footer { max-width: 720px; margin: 0 auto; padding: 16px; text-align: right; }
+      #theme-toggle {
+        padding: 6px 12px; border-radius: 8px; cursor: pointer;
+        border: 1px solid var(--border); background: var(--card); color: var(--fg);
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app" aria-live="polite">
+      <!-- app.js가 로컬 fixture를 로드해 체크리스트를 렌더링 -->
+    </main>
+    <footer class="app-footer">
+      <button id="theme-toggle" type="button" aria-label="테마 전환">테마 전환</button>
+    </footer>
+    <script>
+      (function () {
+        var btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          try { localStorage.setItem('bf-theme', next); } catch (e) { /* 저장 실패 무시 */ }
+        });
+      })();
+    </script>
+    <script type="module" src="/src/demo/customer-onboarding-canary/app.js"></script>
+  </body>
+</html>
