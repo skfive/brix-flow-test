@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>예약 충돌 검사 UI 시안 — BF-1044 (booking-canary)</title>
+  <style>
+    :root {
+      /* --- 베이스 팔레트 (명세 §2.1 — 구현은 design-tokens 시맨틱 토큰으로 치환) --- */
+      --background: #FFFFFF;
+      --card: #FFFFFF;
+      --foreground: #0F172A;
+      --muted-foreground: #64748B;
+      --border: #E2E8F0;
+      --muted: #F1F5F9;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --primary-foreground: #FFFFFF;
+      --ring: #2563EB;
+
+      /* --- 상태 시맨틱 (명세 §2.2) --- */
+      --success: #15803D;
+      --success-muted: #F0FDF4;
+      --success-border: #BBF7D0;
+      --destructive: #B91C1C;
+      --destructive-muted: #FEF2F2;
+      --destructive-border: #FECACA;
+      --info: #1D4ED8;
+      --info-muted: #EFF6FF;
+      --info-border: #BFDBFE;
+      --accent: #7C3AED;
+      --accent-muted: #F5F3FF;
+      --accent-border: #DDD6FE;
+
+      /* --- spacing (§4.2) --- */
+      --space-1: 4px; --space-2: 8px; --space-3: 12px;
+      --space-4: 16px; --space-5: 24px; --space-6: 32px;
+
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Roboto Mono", monospace;
+      --radius-card: 12px; --radius-field: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--foreground);
+      background: var(--muted);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .mock-note {
+      max-width: 900px;
+      margin: var(--space-6) auto var(--space-3);
+      padding: 0 var(--space-4);
+      color: var(--muted-foreground);
+      font-size: 0.8125rem;
+    }
+    .mock-note code { background: #fff; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border); }
+
+    .state-block {
+      max-width: 900px;
+      margin: 0 auto var(--space-6);
+      padding: 0 var(--space-4);
+    }
+    .state-label {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 2px 12px;
+      margin-bottom: var(--space-2);
+    }
+
+    /* --- 앱 컨테이너 (실제 화면 폭 640px) --- */
+    .app {
+      max-width: 640px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: var(--space-5);
+      box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    .app.mobile { max-width: 360px; }
+
+    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; margin: 0 0 var(--space-1); }
+    header p  { margin: 0 0 var(--space-5); color: var(--muted-foreground); font-size: 0.9375rem; }
+    .app.mobile header h1 { font-size: 1.375rem; }
+
+    h2.section-h { font-size: 1.125rem; font-weight: 600; margin: 0 0 var(--space-4); }
+
+    /* --- 폼 --- */
+    .field { margin-bottom: var(--space-4); }
+    .field label { display: block; font-size: 0.9375rem; font-weight: 500; margin-bottom: var(--space-2); }
+    .field label .req { color: var(--destructive); margin-left: 2px; }
+    .field .help { font-size: 0.8125rem; color: var(--muted-foreground); margin-top: var(--space-1); }
+
+    input, select {
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      padding: 10px var(--space-3);
+      font-size: 0.9375rem;
+      font-family: inherit;
+      color: var(--foreground);
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-field);
+    }
+    input:hover, select:hover { border-color: #CBD5E1; }
+    input:focus-visible, select:focus-visible, button:focus-visible, .alt-card:focus-visible {
+      outline: 2px solid var(--ring);
+      outline-offset: 2px;
+      border-color: var(--ring);
+    }
+    input[aria-invalid="true"], select[aria-invalid="true"] {
+      border-color: var(--destructive);
+      background: var(--destructive-muted);
+    }
+
+    .time-row { display: flex; gap: var(--space-4); }
+    .time-row .field { flex: 1; margin-bottom: var(--space-4); }
+    @media (max-width: 480px) { .time-row { flex-direction: column; gap: 0; } }
+
+    .btn-check {
+      min-height: 44px;
+      padding: 10px 20px;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--primary-foreground);
+      background: var(--primary);
+      border: none;
+      border-radius: var(--radius-field);
+      cursor: pointer;
+    }
+    .btn-check:hover { background: var(--primary-hover); }
+    .app.mobile .btn-check { width: 100%; }
+
+    /* --- form-error --- */
+    .form-error {
+      display: flex;
+      gap: var(--space-2);
+      align-items: flex-start;
+      margin-top: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      background: var(--destructive-muted);
+      border: 1px solid var(--destructive-border);
+      border-left: 4px solid var(--destructive);
+      border-radius: var(--radius-field);
+      color: var(--destructive);
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+    .form-error .icon { flex: none; font-weight: 700; }
+
+    /* --- result panel --- */
+    .result-panel { margin-top: var(--space-6); }
+    .banner {
+      display: flex; gap: var(--space-2); align-items: flex-start;
+      padding: var(--space-4);
+      border-radius: var(--radius-field);
+      border: 1px solid;
+      margin-bottom: var(--space-4);
+    }
+    .banner .icon { flex: none; font-size: 1.05rem; font-weight: 700; }
+    .banner .title { font-weight: 600; }
+    .banner .meta { display: block; font-size: 0.8125rem; color: var(--muted-foreground); margin-top: var(--space-1); }
+    .banner.available { background: var(--success-muted); border-color: var(--success-border); color: var(--success); }
+    .banner.conflict  { background: var(--destructive-muted); border-color: var(--destructive-border); color: var(--destructive); }
+
+    .list-h { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.01em; color: var(--muted-foreground); text-transform: uppercase; margin: var(--space-5) 0 var(--space-2); }
+
+    .conflict-item {
+      display: flex; gap: var(--space-2); align-items: baseline;
+      flex-wrap: wrap;
+      padding: var(--space-3) var(--space-4);
+      background: var(--destructive-muted);
+      border: 1px solid var(--destructive-border);
+      border-radius: var(--radius-field);
+      margin-bottom: var(--space-2);
+      font-size: 0.9375rem;
+    }
+    .conflict-item .mark { color: var(--destructive); font-weight: 700; }
+    .conflict-item .room { font-weight: 600; }
+    .conflict-item .who { color: var(--muted-foreground); }
+    .t { font-family: var(--font-mono); font-size: 0.875rem; font-weight: 500; overflow-wrap: anywhere; }
+
+    /* --- alternative cards --- */
+    .alt-list { display: flex; flex-direction: column; gap: var(--space-2); }
+    .alt-card {
+      display: flex; align-items: center; gap: var(--space-3);
+      flex-wrap: wrap;
+      padding: var(--space-3) var(--space-4);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-field);
+    }
+    .alt-card:hover { box-shadow: 0 2px 8px rgba(15,23,42,.08); }
+    .alt-card .room { font-weight: 600; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.01em;
+      padding: 2px 10px; border-radius: 9999px; border: 1px solid;
+      white-space: nowrap;
+    }
+    .badge.trackA { color: var(--info); background: var(--info-muted); border-color: var(--info-border); }
+    .badge.trackB { color: var(--accent); background: var(--accent-muted); border-color: var(--accent-border); }
+    .alt-empty { padding: var(--space-4); color: var(--muted-foreground); font-size: 0.9375rem; text-align: center; background: var(--muted); border-radius: var(--radius-field); }
+
+    .spacer { height: var(--space-4); }
+    .focus-demo input { outline: 2px solid var(--ring); outline-offset: 2px; border-color: var(--ring); }
+
+    .kbd { font-family: var(--font-mono); font-size: 0.75rem; background: var(--muted); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+    .flow-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+    .flow-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .flow-table td:first-child { white-space: nowrap; width: 1%; }
+  </style>
+</head>
+<body>
+
+  <div class="mock-note">
+    <strong>예약 충돌 검사 UI 시안 — BF-1044</strong> · booking-canary · 시각 시뮬레이션 전용 mockup(실제 dev 산출물 아님).
+    <code>data-*</code> 계약(기획 §9.1)은 표현과 무관하게 유지. 상태별 <code>&lt;section&gt;</code> 으로 구분.
+  </div>
+
+  <!-- ① idle 입력 폼 -->
+  <section class="state-block">
+    <span class="state-label">① 초기 입력 폼 (idle)</span>
+    <div class="app" data-testid="booking-check-app">
+      <header>
+        <h1 id="form-heading">회의실 예약 충돌 검사</h1>
+        <p>회의실과 시간을 입력하면 기존 예약과 겹치는지 확인하고, 겹치면 대체 시간을 제안합니다.</p>
+      </header>
+      <form data-testid="booking-check-form" aria-labelledby="form-heading">
+        <div class="field">
+          <label for="f-room">회의실<span class="req" aria-hidden="true">*</span></label>
+          <select id="f-room" data-field="roomId" aria-required="true">
+            <option value="" disabled selected>회의실을 선택하세요</option>
+            <option value="room-01">3층 대회의실 (정원 12)</option>
+            <option value="room-02">4층 소회의실 A (정원 4)</option>
+            <option value="room-03">4층 소회의실 B (정원 4)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-name">신청자명<span class="req" aria-hidden="true">*</span></label>
+          <input id="f-name" type="text" data-field="requesterName" placeholder="예: 김도윤" autocomplete="name" aria-required="true">
+        </div>
+        <div class="time-row">
+          <div class="field">
+            <label for="f-start">시작 시각<span class="req" aria-hidden="true">*</span></label>
+            <input id="f-start" type="datetime-local" data-field="startAt" aria-required="true">
+          </div>
+          <div class="field">
+            <label for="f-end">종료 시각<span class="req" aria-hidden="true">*</span></label>
+            <input id="f-end" type="datetime-local" data-field="endAt" aria-required="true">
+          </div>
+        </div>
+        <button class="btn-check" type="submit" data-testid="check-btn">예약 가능 여부 검사</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ② 검증 오류 -->
+  <section class="state-block">
+    <span class="state-label">② 검증 오류 (form-error · 4개 코드 예시)</span>
+    <div class="app">
+      <form data-testid="booking-check-form" aria-labelledby="form-heading">
+        <div class="field">
+          <label for="f-room2">회의실<span class="req" aria-hidden="true">*</span></label>
+          <select id="f-room2" data-field="roomId" aria-required="true">
+            <option value="" disabled selected>회의실을 선택하세요</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-name2">신청자명<span class="req" aria-hidden="true">*</span></label>
+          <input id="f-name2" type="text" data-field="requesterName" value="   " aria-invalid="true" aria-describedby="err1">
+          <div class="help">공백만 입력되어 있습니다.</div>
+        </div>
+        <button class="btn-check" type="submit" data-testid="check-btn">예약 가능 여부 검사</button>
+        <div id="err1" class="form-error" data-testid="form-error" data-error-code="MISSING_FIELD" role="alert" aria-live="assertive">
+          <span class="icon" aria-hidden="true">⚠</span>
+          <span>필수 항목을 모두 입력해 주세요: 신청자명</span>
+        </div>
+      </form>
+      <div class="spacer"></div>
+      <div class="form-error" data-testid="form-error" data-error-code="TIME_INVERSION" role="alert">
+        <span class="icon" aria-hidden="true">⚠</span><span>종료 시각은 시작 시각보다 뒤여야 합니다.</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="form-error" data-testid="form-error" data-error-code="INVALID_TIME_FORMAT" role="alert">
+        <span class="icon" aria-hidden="true">⚠</span><span>시작·종료 시각을 올바른 날짜/시간 형식으로 입력해 주세요.</span>
+      </div>
+      <div class="spacer"></div>
+      <div class="form-error" data-testid="form-error" data-error-code="UNKNOWN_ROOM" role="alert">
+        <span class="icon" aria-hidden="true">⚠</span><span>선택한 회의실을 찾을 수 없습니다. 목록에서 다시 선택해 주세요.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 예약 가능 -->
+  <section class="state-block">
+    <span class="state-label">③ 예약 가능 (available · 대체 후보 미렌더)</span>
+    <div class="app">
+      <div class="result-panel" data-testid="result-panel" data-result="available" role="status" aria-live="polite">
+        <div class="banner available">
+          <span class="icon" aria-hidden="true">✓</span>
+          <span>
+            <span class="title">예약 가능합니다</span>
+            <span class="meta">3층 대회의실 · 김도윤 · <span class="t">2026-07-29 09:00–10:00 (UTC)</span></span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ 충돌 + 대체 후보 -->
+  <section class="state-block">
+    <span class="state-label">④ 충돌 (conflict) + 대체 후보 (Track A/B)</span>
+    <div class="app">
+      <div class="result-panel" data-testid="result-panel" data-result="conflict" role="status" aria-live="polite">
+        <div class="banner conflict">
+          <span class="icon" aria-hidden="true">⚠</span>
+          <span>
+            <span class="title">선택한 시간에 이미 예약이 있습니다</span>
+            <span class="meta">3층 대회의실 · 요청 <span class="t">01:30–02:30 (UTC)</span></span>
+          </span>
+        </div>
+
+        <div class="list-h">겹치는 기존 예약</div>
+        <div data-testid="conflict-list">
+          <div class="conflict-item" data-testid="conflict-item">
+            <span class="mark" aria-hidden="true">⚠</span>
+            <span class="room">3층 대회의실</span>
+            <span class="who">김도윤</span>
+            <span class="t">01:00–02:00</span>
+          </div>
+          <div class="conflict-item" data-testid="conflict-item">
+            <span class="mark" aria-hidden="true">⚠</span>
+            <span class="room">3층 대회의실</span>
+            <span class="who">이서준</span>
+            <span class="t">02:00–03:00</span>
+          </div>
+        </div>
+
+        <div class="list-h">대체 시간 후보</div>
+        <div class="alt-list" data-testid="alternative-list">
+          <div class="alt-card" data-testid="alternative-item" data-strategy="same-room-push" tabindex="0">
+            <span class="room">3층 대회의실</span>
+            <span class="t">03:00–04:00</span>
+            <span class="badge trackA">↪ 같은 회의실 · 시간 순연</span>
+          </div>
+          <div class="alt-card" data-testid="alternative-item" data-strategy="same-time-other-room" tabindex="0">
+            <span class="room">4층 소회의실 A</span>
+            <span class="t">01:30–02:30</span>
+            <span class="badge trackB">⇄ 같은 시간 · 다른 회의실</span>
+          </div>
+          <div class="alt-card" data-testid="alternative-item" data-strategy="same-time-other-room" tabindex="0">
+            <span class="room">4층 소회의실 B</span>
+            <span class="t">01:30–02:30</span>
+            <span class="badge trackB">⇄ 같은 시간 · 다른 회의실</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ 충돌 + 대체 후보 0개 -->
+  <section class="state-block">
+    <span class="state-label">⑤ 충돌 + 대체 후보 0개 (빈 상태)</span>
+    <div class="app">
+      <div class="result-panel" data-testid="result-panel" data-result="conflict" role="status" aria-live="polite">
+        <div class="banner conflict">
+          <span class="icon" aria-hidden="true">⚠</span>
+          <span><span class="title">선택한 시간에 이미 예약이 있습니다</span></span>
+        </div>
+        <div class="list-h">겹치는 기존 예약</div>
+        <div data-testid="conflict-list">
+          <div class="conflict-item" data-testid="conflict-item">
+            <span class="mark" aria-hidden="true">⚠</span>
+            <span class="room">4층 소회의실 A</span><span class="who">박지호</span><span class="t">04:00–05:00</span>
+          </div>
+        </div>
+        <div class="list-h">대체 시간 후보</div>
+        <div class="alt-list" data-testid="alternative-list">
+          <div class="alt-empty">제안 가능한 대체 시간이 없습니다.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑥ 모바일 폭 -->
+  <section class="state-block">
+    <span class="state-label">⑥ 모바일 폭 (360px · 세로 스택 · 터치 44px)</span>
+    <div class="app mobile">
+      <header><h1>회의실 예약 충돌 검사</h1><p>겹치면 대체 시간을 제안합니다.</p></header>
+      <form data-testid="booking-check-form">
+        <div class="field">
+          <label for="m-room">회의실<span class="req">*</span></label>
+          <select id="m-room" data-field="roomId"><option>3층 대회의실 (정원 12)</option></select>
+        </div>
+        <div class="field">
+          <label for="m-name">신청자명<span class="req">*</span></label>
+          <input id="m-name" type="text" data-field="requesterName" value="김도윤">
+        </div>
+        <div class="time-row">
+          <div class="field"><label for="m-start">시작 시각<span class="req">*</span></label><input id="m-start" type="datetime-local" data-field="startAt"></div>
+          <div class="field"><label for="m-end">종료 시각<span class="req">*</span></label><input id="m-end" type="datetime-local" data-field="endAt"></div>
+        </div>
+        <button class="btn-check" type="submit" data-testid="check-btn">예약 가능 여부 검사</button>
+      </form>
+      <div class="result-panel" data-result="conflict">
+        <div class="list-h">대체 시간 후보</div>
+        <div class="alt-list">
+          <div class="alt-card" data-strategy="same-room-push">
+            <span class="room">3층 대회의실</span><span class="t">03:00–04:00</span>
+            <span class="badge trackA">↪ 같은 회의실 · 순연</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑦ 포커스/키보드 -->
+  <section class="state-block">
+    <span class="state-label">⑦ 포커스 링 · 키보드 조작 흐름</span>
+    <div class="app focus-demo">
+      <div class="field">
+        <label for="k-name">신청자명 (Tab 포커스 예시)<span class="req">*</span></label>
+        <input id="k-name" type="text" value="현재 포커스된 필드">
+      </div>
+      <p style="font-size:0.8125rem;color:var(--muted-foreground);margin:0 0 var(--space-3);">
+        모든 인터랙티브 요소는 <code style="background:var(--muted);padding:1px 5px;border-radius:4px;">:focus-visible</code> 시 2px <code style="color:var(--ring);background:var(--muted);padding:1px 5px;border-radius:4px;">--ring</code> 아웃라인 + 2px offset. DOM 순서 = 탭 순서, tabindex 양수 미사용.
+      </p>
+      <table class="flow-table">
+        <tr><td><span class="kbd">Tab</span></td><td>회의실 → 신청자명 → 시작 → 종료 → 검사 버튼 순 진입</td></tr>
+        <tr><td><span class="kbd">Enter</span></td><td>폼 어디서든 submit(검사 실행)</td></tr>
+        <tr><td>검증 실패</td><td>포커스가 <code style="font-size:0.75rem;">form-error</code>(role=alert)로 이동 → 스크린리더 낭독</td></tr>
+        <tr><td>결과 렌더</td><td><code style="font-size:0.75rem;">result-panel</code>(aria-live=polite) 자동 낭독 → Tab 으로 대체 후보 카드 진입</td></tr>
+      </table>
+    </div>
+  </section>
+
+</body>
+</html>
