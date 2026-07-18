@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>반품 승인 워크벤치 — mockup (BF-1038)</title>
+  <style>
+    /* ── 공용 semantic 토큰의 mockup fallback (shadcn/ui 규약, 신규 토큰 없음) ─────────
+       dev는 실제 monorepo design-tokens.json 값을 상속하며, 아래 HEX는 시각 시뮬레이션용 fallback. */
+    :root {
+      --background: #ffffff;
+      --foreground: #0a0a0a;
+      --card: #ffffff;
+      --card-foreground: #0a0a0a;
+      --muted: #f4f4f5;
+      --muted-foreground: #71717a;
+      --primary: #18181b;
+      --primary-foreground: #fafafa;
+      --secondary: #f4f4f5;
+      --secondary-foreground: #18181b;
+      --destructive: #dc2626;
+      --destructive-foreground: #fafafa;
+      --border: #e4e4e7;
+      --input: #e4e4e7;
+      --ring: #0a0a0a;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: var(--muted);
+      color: var(--foreground);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .page { max-width: 1120px; margin: 0 auto; padding: 24px; }
+    .section-note {
+      font-size: 12px; color: var(--muted-foreground);
+      margin: 24px 0 8px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    /* ── 워크벤치 컨테이너 ───────────────────────────────── */
+    .return-workbench {
+      background: var(--card); color: var(--card-foreground);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .rw-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 16px; border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .rw-title { font-size: 20px; font-weight: 600; line-height: 1.4; margin: 0; }
+
+    /* 상태 필터 (tablist) */
+    .rw-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .rw-filter {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px;
+      background: var(--card); color: var(--foreground);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .rw-filter[aria-selected="true"] {
+      background: var(--primary); color: var(--primary-foreground); border-color: var(--primary);
+    }
+    .rw-filter .count {
+      font-size: 12px; padding: 1px 6px; border-radius: 999px;
+      background: var(--muted); color: var(--muted-foreground);
+    }
+    .rw-filter[aria-selected="true"] .count { background: rgba(255,255,255,0.2); color: var(--primary-foreground); }
+    /* 키보드 포커스 링 데모 */
+    .rw-filter.is-focus, .rw-row.is-focus, .btn.is-focus {
+      outline: 2px solid var(--ring); outline-offset: 2px;
+    }
+
+    /* ── 2-pane 레이아웃 ─────────────────────────────────── */
+    .rw-body { display: grid; grid-template-columns: 3fr 2fr; }
+    .rw-list { border-right: 1px solid var(--border); }
+    .rw-detail { padding: 16px; background: var(--card); }
+
+    /* 목록 테이블 */
+    table.rw-table { width: 100%; border-collapse: collapse; }
+    .rw-table thead th {
+      position: sticky; top: 0; text-align: left;
+      background: var(--muted); color: var(--muted-foreground);
+      font-size: 13px; font-weight: 500; padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .rw-table td { padding: 12px; border-bottom: 1px solid var(--border); height: 48px; vertical-align: middle; }
+    .rw-row { cursor: pointer; }
+    .rw-row:hover { background: var(--muted); }
+    .rw-row[aria-selected="true"] {
+      background: color-mix(in srgb, var(--primary) 6%, transparent);
+      box-shadow: inset 4px 0 0 0 var(--primary);
+    }
+    .caption { font-size: 12px; color: var(--muted-foreground); }
+    .num { font-variant-numeric: tabular-nums; text-align: right; }
+
+    /* ── 상태 뱃지 (색상 단독 금지: 라벨 + 형태) ───────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 13px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge--pending {
+      background: var(--muted); color: var(--muted-foreground);
+      border: 1px dashed var(--border);
+    }
+    .badge--approved { background: var(--primary); color: var(--primary-foreground); }
+    .badge--held { background: var(--destructive); color: var(--destructive-foreground); }
+    .badge .ico { font-size: 11px; }
+
+    /* ── 상세 패널 ───────────────────────────────────────── */
+    .rw-detail h2 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+    .detail-meta { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 16px 0; }
+    .detail-meta dt { color: var(--muted-foreground); font-size: 13px; }
+    .detail-meta dd { margin: 0; font-size: 14px; }
+    .detail-amount { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .divider { height: 1px; background: var(--border); margin: 16px 0; border: 0; }
+
+    /* 액션 버튼 */
+    .rw-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      appearance: none; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;
+      background: var(--card); color: var(--foreground);
+    }
+    .btn--primary { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+    .btn--secondary { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border); }
+    .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+
+    /* 보류 사유 폼 */
+    .hold-form { margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--muted); }
+    .hold-form label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+    .hold-form textarea {
+      width: 100%; min-height: 64px; padding: 8px; border: 1px solid var(--input);
+      border-radius: 6px; font: inherit; resize: vertical; background: var(--card);
+    }
+    .hold-form textarea[aria-invalid="true"] { border-color: var(--destructive); outline: 1px solid var(--destructive); }
+    .field-error { color: var(--destructive); font-size: 13px; margin: 6px 0 0; }
+    .hold-form .row { display: flex; gap: 8px; margin-top: 8px; }
+
+    /* placeholder / 빈 상태 / 피드백 */
+    .placeholder, .empty-state {
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      color: var(--muted-foreground); font-size: 14px; padding: 48px 16px;
+    }
+    .toast {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--primary); color: var(--primary-foreground);
+      padding: 10px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+    }
+
+    /* 상태 전이 다이어그램 */
+    .states { display: flex; gap: 12px; flex-wrap: wrap; }
+    .state-card {
+      flex: 1 1 220px; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px; background: var(--card);
+    }
+    .state-card h3 { margin: 0 0 8px; font-size: 14px; }
+
+    /* 다이얼로그 */
+    .dialog {
+      max-width: 360px; border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--card); padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .dialog h3 { margin: 0 0 8px; font-size: 16px; }
+    .dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+    .a11y-list { margin: 0; padding-left: 18px; }
+    .a11y-list li { margin: 4px 0; }
+
+    @media (max-width: 1023px) { .rw-body { grid-template-columns: 1fr; } .rw-list { border-right: 0; border-bottom: 1px solid var(--border); } }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <p class="section-note">A. 메인 워크벤치 — 목록 + 상세 (Desktop 2-pane, pending 선택 상태)</p>
+    <div class="return-workbench">
+      <div class="rw-toolbar">
+        <h1 class="rw-title">반품 승인 워크벤치</h1>
+        <div class="rw-filters" role="tablist" aria-label="상태 필터">
+          <button class="rw-filter" role="tab" aria-selected="true">전체 <span class="count">12</span></button>
+          <button class="rw-filter is-focus" role="tab" aria-selected="false">대기 <span class="count">5</span></button>
+          <button class="rw-filter" role="tab" aria-selected="false">승인 <span class="count">4</span></button>
+          <button class="rw-filter" role="tab" aria-selected="false">보류 <span class="count">3</span></button>
+        </div>
+      </div>
+      <div class="rw-body">
+        <!-- 목록 -->
+        <div class="rw-list">
+          <table class="rw-table">
+            <thead>
+              <tr>
+                <th scope="col">상태</th><th scope="col">주문ID</th><th scope="col">고객명</th>
+                <th scope="col">상품명</th><th scope="col">반품 사유</th><th scope="col">요청일시</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="rw-row" tabindex="0" aria-selected="true">
+                <td><span class="badge badge--pending"><span class="ico" aria-hidden="true">◌</span>대기</span></td>
+                <td>ORD-88231</td><td>김서연</td><td>무선 이어버드 Pro</td><td>불량</td>
+                <td class="caption">2026-07-17 14:22</td>
+              </tr>
+              <tr class="rw-row is-focus" tabindex="0" aria-selected="false">
+                <td><span class="badge badge--pending"><span class="ico" aria-hidden="true">◌</span>대기</span></td>
+                <td>ORD-88190</td><td>박준호</td><td>스탠딩 데스크</td><td>배송 중 파손</td>
+                <td class="caption">2026-07-17 11:03</td>
+              </tr>
+              <tr class="rw-row" tabindex="0" aria-selected="false">
+                <td><span class="badge badge--approved"><span class="ico" aria-hidden="true">✔</span>승인</span></td>
+                <td>ORD-88044</td><td>이지민</td><td>기계식 키보드</td><td>단순 변심</td>
+                <td class="caption">2026-07-16 18:47</td>
+              </tr>
+              <tr class="rw-row" tabindex="0" aria-selected="false">
+                <td><span class="badge badge--held"><span class="ico" aria-hidden="true">⏸</span>보류</span></td>
+                <td>ORD-87998</td><td>최민수</td><td>블루투스 스피커</td><td>오배송</td>
+                <td class="caption">2026-07-16 09:15</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 상세 (pending) -->
+        <div class="rw-detail">
+          <span class="badge badge--pending"><span class="ico" aria-hidden="true">◌</span>대기</span>
+          <h2 style="margin-top:8px;">무선 이어버드 Pro</h2>
+          <div class="caption">RTN-1001 · SKU EAR-PRO-BLK · 주문 ORD-88231</div>
+          <dl class="detail-meta">
+            <dt>고객명</dt><dd>김서연</dd>
+            <dt>반품 사유</dt><dd>불량 — "왼쪽 유닛 소리 끊김"</dd>
+            <dt>반품 수량</dt><dd class="num">1</dd>
+            <dt>환불 예정 금액</dt><dd class="detail-amount">₩189,000</dd>
+            <dt>운영자 메모</dt><dd class="caption">사진 첨부 확인 완료</dd>
+          </dl>
+          <hr class="divider">
+          <div class="rw-actions">
+            <button class="btn btn--primary">승인</button>
+            <button class="btn btn--secondary">보류</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-note">B. 보류 사유 입력 폼 — 검증 실패(공백) 인라인 에러</p>
+    <div class="return-workbench" style="padding:16px;">
+      <div style="max-width:440px;">
+        <div class="rw-actions">
+          <button class="btn btn--primary">승인</button>
+          <button class="btn btn--secondary is-focus" aria-expanded="true">보류</button>
+        </div>
+        <div class="hold-form">
+          <label for="hold-reason">보류 사유 (필수)</label>
+          <textarea id="hold-reason" aria-invalid="true" aria-describedby="hold-err" placeholder="예) 추가 검수 필요 — 파손 부위 재확인 요청"></textarea>
+          <p class="field-error" id="hold-err" role="alert" aria-live="assertive">보류 사유를 입력해 주세요.</p>
+          <div class="row">
+            <button class="btn btn--secondary">취소</button>
+            <button class="btn btn--primary">보류 확정</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-note">C. 상태별 상세 — held / approved(terminal)</p>
+    <div class="states">
+      <div class="state-card">
+        <h3><span class="badge badge--held"><span class="ico" aria-hidden="true">⏸</span>보류</span></h3>
+        <div class="caption">RTN-1004 · 블루투스 스피커</div>
+        <dl class="detail-meta" style="margin:12px 0;">
+          <dt>보류 사유</dt><dd>오배송 확인 중 — 물류 회신 대기</dd>
+          <dt>환불 예정</dt><dd class="detail-amount">₩64,000</dd>
+        </dl>
+        <div class="rw-actions">
+          <button class="btn btn--primary">승인(재검토)</button>
+          <button class="btn btn--secondary">보류 해제</button>
+        </div>
+      </div>
+      <div class="state-card">
+        <h3><span class="badge badge--approved"><span class="ico" aria-hidden="true">✔</span>승인</span></h3>
+        <div class="caption">RTN-1003 · 기계식 키보드</div>
+        <dl class="detail-meta" style="margin:12px 0;">
+          <dt>승인 시각</dt><dd>2026-07-16 18:47</dd>
+          <dt>처리자</dt><dd>operator-02</dd>
+        </dl>
+        <div class="rw-actions">
+          <button class="btn btn--primary" disabled aria-disabled="true">승인</button>
+          <button class="btn btn--secondary" disabled aria-disabled="true">보류</button>
+        </div>
+        <p class="caption" style="margin-top:8px;">승인 완료 — 추가 액션 불가 (terminal)</p>
+      </div>
+    </div>
+
+    <p class="section-note">D. 승인 확인 다이얼로그 · 처리 피드백 토스트 · 빈 상태</p>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+      <div class="dialog" role="alertdialog" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+        <h3 id="dlg-t">반품 요청을 승인할까요?</h3>
+        <p id="dlg-d" class="caption">RTN-1001 · 무선 이어버드 Pro · 환불 ₩189,000<br>승인 후에는 되돌릴 수 없습니다.</p>
+        <div class="row">
+          <button class="btn btn--secondary">취소</button>
+          <button class="btn btn--primary is-focus">승인 확정</button>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <span class="toast" role="status" aria-live="polite"><span aria-hidden="true">✔</span> RTN-1001 승인 처리되었습니다</span>
+        <div class="return-workbench" style="width:320px;">
+          <div class="empty-state" role="status">표시할 반품 요청이 없습니다</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-note">E. 접근성 요약 (구현 필수)</p>
+    <div class="return-workbench" style="padding:16px;">
+      <ul class="a11y-list">
+        <li><strong>키보드 포커스</strong>: 필터·행·버튼·입력 모두 Tab 순서 포함, <code>--ring</code> 2px 링(offset 2px). 행은 Enter/Space로 상세 열기, 보류 폼 등장 시 입력에 포커스 이동.</li>
+        <li><strong>명도 대비</strong>: 본문/배경 ≥ 4.5:1, 뱃지 라벨은 각 배경 위 4.5:1, 포커스 링 대비 ≥ 3:1 (WCAG 2.1 AA).</li>
+        <li><strong>상태 라벨</strong>: 상태는 색상 단독이 아닌 <em>텍스트 라벨(대기/승인/보류) + 형태(점선/채움/아이콘)</em>로 전달. 아이콘은 <code>aria-hidden</code>.</li>
+        <li><strong>live region</strong>: 처리 결과 <code>aria-live="polite"</code>, 검증 에러 <code>role="alert"</code>/<code>aria-live="assertive"</code> + <code>aria-invalid</code>.</li>
+        <li><strong>비활성 액션</strong>: approved terminal 버튼은 <code>disabled</code> + <code>aria-disabled</code>, 사유를 스크린리더에 전달.</li>
+      </ul>
+    </div>
+
+  </div>
+</body>
+</html>
