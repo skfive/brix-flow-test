@@ -90,7 +90,19 @@ function render(root) {
         { class: 'onboarding-readiness', dataset: { status: view.readinessStatus } },
         `준비 상태: ${READINESS_LABEL[view.readinessStatus] ?? view.readinessStatus}`,
       ),
-      h('p', { class: 'onboarding-progress' }, `${requiredCompleted}/${requiredTotal} 필수 항목 완료`),
+      h(
+        'p',
+        {
+          class: 'onboarding-progress',
+          // design §5.2 ProgressBar 접근성 요구: 진행률 시맨틱 노출 (BF-1069 리뷰 반영)
+          role: 'progressbar',
+          'aria-valuenow': String(requiredCompleted),
+          'aria-valuemin': '0',
+          'aria-valuemax': String(requiredTotal),
+          'aria-label': '필수 항목 진행률',
+        },
+        `${requiredCompleted}/${requiredTotal} 필수 항목 완료`,
+      ),
     ]),
   );
 

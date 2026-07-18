@@ -18,17 +18,30 @@
       })();
     </script>
     <style>
+      /*
+        light 테마 토큰 값은 design 명세 BF-1068 §2 컬러 팔레트의 HEX 와 일치시킨다.
+        (변수명은 route 로컬 규약을 유지하되 값은 design authority 를 따름 — BF-1069 리뷰 반영)
+          --bg=#F7F8FA(--color-bg) · --fg=#1F2430(--color-text) · --muted=#6B7280(--color-text-muted)
+          --card=#FFFFFF(--color-surface) · --border=#E2E5EA(--color-border) · --accent=#2563EB(--color-primary)
+          --ok=#16A34A(--color-success) · --warn=#D97706(--color-warning)
+        --blocked 는 planning(BF-1067)의 blocked 상태 전용으로 design §2 에 대응 토큰이 없어 자체 값 유지.
+      */
       :root {
         --bg: #f7f8fa;
-        --fg: #1c2430;
-        --muted: #5a6473;
+        --fg: #1f2430;
+        --muted: #6b7280;
         --card: #ffffff;
-        --border: #e2e6ec;
+        --border: #e2e5ea;
         --accent: #2563eb;
         --ok: #16a34a;
-        --warn: #b45309;
+        --warn: #d97706;
         --blocked: #dc2626;
       }
+      /*
+        다크 테마는 design 명세에 없는 route 로컬 확장이다(근거: 저장소 다수 데모가 #theme-toggle 관례를
+        공유하며, 온보딩 화면 단독으로 light 강제 시 사용자 테마 설정과 불일치). 신규 "시각 토큰"을
+        추가하지 않고 동일 변수의 dark 대체값만 선언하므로 design AC2(신규 토큰 미도입) 취지를 보존한다.
+      */
       [data-theme='dark'] {
         --bg: #12161c;
         --fg: #e6eaf0;
