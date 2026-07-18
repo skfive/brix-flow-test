@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>현장 점검 체크리스트 — 칸반 상태/책임자/차단사유/이력 시안 (BF-1026 · inspection-checklist-canary)</title>
+  <style>
+    :root {
+      /* base — canary(--sib-*) 값 그대로 계승, prefix 만 --icc-*. 신규 base 토큰 0 (AC-3) */
+      --icc-color-bg:            #F1F3F5;
+      --icc-color-surface:       #FFFFFF;
+      --icc-color-surface-muted: #F8F9FA;
+      --icc-color-border:        #DDE1E6;
+      --icc-color-border-strong: #B9C0C8;
+      --icc-color-text:          #1A1D21;
+      --icc-color-text-muted:    #6B6B66;
+      --icc-color-accent:        #3563E9;
+      --icc-color-accent-hover:  #2A50C4;
+      --icc-color-danger:        #B91C1C;
+
+      /* status(칸반 4종) — 대비 AA 검증 완료(명세 §7.2). 임의 변경 금지 */
+      --icc-color-todo:      #475569;  --icc-color-todo-tint:     #F8FAFC;
+      --icc-color-progress:  #1D4ED8;  --icc-color-progress-tint: #EFF6FF;
+      --icc-color-blocked:   #B45309;  --icc-color-blocked-tint:  #FFFBEB;
+      --icc-color-done:      #0F7B4F;  --icc-color-done-tint:     #ECFDF5;
+
+      /* spacing / radius / shape — canary 계승 */
+      --icc-space-1: 4px;  --icc-space-2: 8px;  --icc-space-3: 12px;
+      --icc-space-4: 16px; --icc-space-5: 24px; --icc-space-6: 32px;
+      --icc-radius-sm: 4px; --icc-radius-md: 8px; --icc-radius-lg: 12px; --icc-radius-pill: 999px;
+      --icc-shadow-card: 0 1px 2px rgba(26,29,33,.06), 0 2px 8px rgba(26,29,33,.05);
+      --icc-shadow-hover: 0 2px 4px rgba(26,29,33,.08), 0 6px 16px rgba(26,29,33,.10);
+
+      /* type — system font stack only (CDN 금지) */
+      --icc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+                       system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+      --icc-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--icc-font-sans);
+      font-size: 14px; line-height: 1.5;
+      color: var(--icc-color-text);
+      background: var(--icc-color-bg);
+    }
+    h1, h2, h3 { margin: 0; }
+    button { font-family: inherit; cursor: pointer; }
+    :focus-visible {
+      outline: 2px solid var(--icc-color-accent);
+      outline-offset: 2px; border-radius: var(--icc-radius-sm);
+    }
+
+    /* ===== App shell ===== */
+    .icc-app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+    .icc-header {
+      display: flex; align-items: center; gap: var(--icc-space-5);
+      padding: var(--icc-space-3) var(--icc-space-5);
+      background: var(--icc-color-surface);
+      border-bottom: 1px solid var(--icc-color-border);
+    }
+    .icc-header__title { font-size: 20px; font-weight: 700; line-height: 1.3; }
+    .icc-header__stats { display: flex; gap: var(--icc-space-3); margin-left: auto; flex-wrap: wrap; }
+    .icc-stat {
+      font-size: 12px; font-weight: 500; color: var(--icc-color-text-muted);
+      background: var(--icc-color-surface-muted); border: 1px solid var(--icc-color-border);
+      padding: var(--icc-space-1) var(--icc-space-3); border-radius: var(--icc-radius-pill);
+    }
+    .icc-stat strong { color: var(--icc-color-text); font-size: 13px; font-weight: 700; }
+    .icc-stat--unassigned strong { color: var(--icc-color-text-muted); }
+    .icc-stat--blocked strong { color: var(--icc-color-blocked); }
+
+    /* ===== Body: board + detail ===== */
+    .icc-body {
+      display: grid;
+      grid-template-columns: 1fr minmax(320px, 400px);
+      gap: 0;
+      min-height: 0;
+    }
+    .icc-board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(220px, 1fr));
+      gap: var(--icc-space-4);
+      padding: var(--icc-space-5);
+      align-items: start;
+      overflow-x: auto;
+    }
+
+    /* ===== Column ===== */
+    .icc-column {
+      background: var(--icc-color-surface-muted);
+      border: 1px solid var(--icc-color-border);
+      border-radius: var(--icc-radius-lg);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .icc-column__strip { height: 3px; }
+    .icc-column--todo      .icc-column__strip { background: var(--icc-color-todo); }
+    .icc-column--progress  .icc-column__strip { background: var(--icc-color-progress); }
+    .icc-column--blocked   .icc-column__strip { background: var(--icc-color-blocked); }
+    .icc-column--done      .icc-column__strip { background: var(--icc-color-done); }
+    .icc-column__head {
+      display: flex; align-items: center; gap: var(--icc-space-2);
+      padding: var(--icc-space-3);
+      border-bottom: 1px solid var(--icc-color-border);
+    }
+    .icc-column__label { font-size: 14px; font-weight: 700; }
+    .icc-column__icon { font-size: 13px; }
+    .icc-column--todo     .icc-column__icon { color: var(--icc-color-todo); }
+    .icc-column--progress .icc-column__icon { color: var(--icc-color-progress); }
+    .icc-column--blocked  .icc-column__icon { color: var(--icc-color-blocked); }
+    .icc-column--done     .icc-column__icon { color: var(--icc-color-done); }
+    .icc-column__count {
+      margin-left: auto; font-size: 12px; font-weight: 700;
+      color: var(--icc-color-text-muted);
+      background: var(--icc-color-surface); border: 1px solid var(--icc-color-border);
+      min-width: 22px; text-align: center;
+      padding: 0 var(--icc-space-2); border-radius: var(--icc-radius-pill);
+    }
+    .icc-column__body {
+      display: flex; flex-direction: column; gap: var(--icc-space-3);
+      padding: var(--icc-space-3);
+      min-height: 120px;
+    }
+
+    /* ===== Card ===== */
+    .icc-card {
+      display: flex; flex-direction: column; gap: var(--icc-space-2);
+      background: var(--icc-color-surface);
+      border: 1px solid var(--icc-color-border);
+      border-radius: var(--icc-radius-md);
+      padding: var(--icc-space-3);
+      box-shadow: var(--icc-shadow-card);
+      text-align: left; width: 100%;
+      transition: box-shadow .12s ease, border-color .12s ease;
+    }
+    .icc-card:hover { box-shadow: var(--icc-shadow-hover); border-color: var(--icc-color-border-strong); }
+    .icc-card--selected { border: 2px solid var(--icc-color-accent); padding: calc(var(--icc-space-3) - 1px); }
+    .icc-card__top { display: flex; align-items: center; gap: var(--icc-space-2); }
+    .icc-card__id { font-family: var(--icc-font-mono); font-size: 12px; font-weight: 500; color: var(--icc-color-text-muted); }
+    .icc-card__title { font-size: 15px; font-weight: 600; line-height: 1.4; }
+    .icc-card__location { font-size: 12px; font-weight: 500; color: var(--icc-color-text-muted); }
+    .icc-card__location::before { content: "📍 "; }
+
+    /* ===== Status badge ===== */
+    .icc-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; font-weight: 600; line-height: 1;
+      padding: var(--icc-space-1) var(--icc-space-2);
+      border-radius: var(--icc-radius-pill);
+      margin-left: auto;
+    }
+    .icc-badge--todo      { background: var(--icc-color-todo-tint);     color: var(--icc-color-todo); }
+    .icc-badge--progress  { background: var(--icc-color-progress-tint); color: var(--icc-color-progress); }
+    .icc-badge--blocked   { background: var(--icc-color-blocked-tint);  color: var(--icc-color-blocked); }
+    .icc-badge--done      { background: var(--icc-color-done-tint);     color: var(--icc-color-done); }
+
+    /* ===== Assignee ===== */
+    .icc-assignee { display: inline-flex; align-items: center; gap: var(--icc-space-2); font-size: 13px; font-weight: 600; }
+    .icc-avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      background: var(--icc-color-surface-muted); color: var(--icc-color-text);
+      border: 1px solid var(--icc-color-border);
+    }
+    .icc-assignee--unassigned { color: var(--icc-color-text-muted); font-weight: 500; }
+    .icc-assignee--unassigned .icc-avatar { border-style: dashed; background: transparent; color: var(--icc-color-text-muted); }
+
+    /* ===== Block reason ===== */
+    .icc-blockreason {
+      display: flex; gap: var(--icc-space-2);
+      font-size: 13px; line-height: 1.45;
+      background: var(--icc-color-blocked-tint);
+      border-left: 3px solid var(--icc-color-blocked);
+      border-radius: var(--icc-radius-sm);
+      padding: var(--icc-space-2);
+    }
+    .icc-blockreason__icon { color: var(--icc-color-blocked); font-weight: 700; }
+
+    /* ===== Transition buttons ===== */
+    .icc-actions { display: flex; flex-wrap: wrap; gap: var(--icc-space-2); margin-top: var(--icc-space-1); }
+    .icc-action { display: flex; flex-direction: column; gap: 2px; }
+    .icc-btn {
+      font-size: 12px; font-weight: 600; line-height: 1;
+      padding: var(--icc-space-2) var(--icc-space-3);
+      border-radius: var(--icc-radius-sm); border: 1px solid transparent;
+    }
+    .icc-btn--primary { background: var(--icc-color-accent); color: #fff; }
+    .icc-btn--primary:hover { background: var(--icc-color-accent-hover); }
+    .icc-btn--done { background: var(--icc-color-done); color: #fff; }
+    .icc-btn--outline { background: var(--icc-color-surface); color: var(--icc-color-text); border-color: var(--icc-color-border-strong); }
+    .icc-btn--danger-outline { background: var(--icc-color-surface); color: var(--icc-color-danger); border-color: var(--icc-color-danger); }
+    .icc-btn--ghost { background: transparent; color: var(--icc-color-text-muted); border-color: var(--icc-color-border); }
+    .icc-btn:disabled, .icc-btn[aria-disabled="true"] {
+      opacity: .5; cursor: not-allowed;
+      background: var(--icc-color-surface-muted); color: var(--icc-color-text-muted);
+      border-color: var(--icc-color-border);
+    }
+    .icc-btn__reason { font-size: 11px; font-weight: 500; color: var(--icc-color-text-muted); }
+
+    /* ===== Detail panel ===== */
+    .icc-detail {
+      background: var(--icc-color-surface);
+      border-left: 1px solid var(--icc-color-border);
+      padding: var(--icc-space-5);
+      display: flex; flex-direction: column; gap: var(--icc-space-4);
+      overflow-y: auto;
+    }
+    .icc-detail__id { font-family: var(--icc-font-mono); font-size: 12px; color: var(--icc-color-text-muted); }
+    .icc-detail__title { font-size: 16px; font-weight: 700; line-height: 1.4; }
+    .icc-field { display: flex; flex-direction: column; gap: 2px; }
+    .icc-field__label { font-size: 12px; font-weight: 500; color: var(--icc-color-text-muted); }
+    .icc-field__value { font-size: 14px; }
+    .icc-select {
+      font-family: inherit; font-size: 13px; padding: var(--icc-space-2);
+      border: 1px solid var(--icc-color-border-strong); border-radius: var(--icc-radius-sm);
+      background: var(--icc-color-surface); color: var(--icc-color-text); max-width: 220px;
+    }
+    .icc-hr { border: none; border-top: 1px solid var(--icc-color-border); margin: 0; }
+
+    /* history timeline */
+    .icc-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--icc-space-3); }
+    .icc-history__event { position: relative; padding-left: var(--icc-space-4); }
+    .icc-history__event::before {
+      content: ""; position: absolute; left: 3px; top: 5px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--icc-color-border-strong);
+    }
+    .icc-history__event::after {
+      content: ""; position: absolute; left: 6px; top: 13px; bottom: -14px;
+      width: 1px; background: var(--icc-color-border);
+    }
+    .icc-history__event:last-child::after { display: none; }
+    .icc-history__type { font-size: 12px; font-weight: 700; }
+    .icc-history__meta { font-size: 12px; color: var(--icc-color-text-muted); }
+    .icc-history__at { font-family: var(--icc-font-mono); }
+
+    /* empty states */
+    .icc-empty {
+      border: 1px dashed var(--icc-color-border-strong);
+      border-radius: var(--icc-radius-md);
+      padding: var(--icc-space-4);
+      text-align: center; font-size: 13px; color: var(--icc-color-text-muted);
+    }
+
+    /* ===== States gallery (정적 인터랙션 표현) ===== */
+    .icc-gallery { padding: var(--icc-space-5); background: var(--icc-color-bg); border-top: 1px solid var(--icc-color-border); }
+    .icc-gallery h2 { font-size: 14px; font-weight: 700; margin-bottom: var(--icc-space-3); }
+    .icc-gallery__row { display: flex; flex-wrap: wrap; gap: var(--icc-space-4); align-items: flex-start; }
+    .icc-gallery__item { display: flex; flex-direction: column; gap: var(--icc-space-2); background: var(--icc-color-surface); border: 1px solid var(--icc-color-border); border-radius: var(--icc-radius-md); padding: var(--icc-space-3); }
+    .icc-gallery__cap { font-size: 11px; color: var(--icc-color-text-muted); }
+    .icc-note { font-size: 12px; color: var(--icc-color-text-muted); padding: var(--icc-space-2) var(--icc-space-5) var(--icc-space-5); }
+  </style>
+</head>
+<body>
+  <div class="icc-app">
+    <!-- ===== Header ===== -->
+    <header class="icc-header">
+      <h1 class="icc-header__title">현장 점검 체크리스트</h1>
+      <div class="icc-header__stats" aria-live="polite">
+        <span class="icc-stat">총 <strong>7</strong></span>
+        <span class="icc-stat icc-stat--unassigned">미배정 <strong>1</strong></span>
+        <span class="icc-stat icc-stat--blocked">차단 <strong>1</strong></span>
+      </div>
+    </header>
+
+    <div class="icc-body">
+      <!-- ===== Board (4 columns) ===== -->
+      <main class="icc-board" aria-label="칸반 보드">
+
+        <!-- 예정 (todo) -->
+        <section class="icc-column icc-column--todo" role="group" aria-label="예정 컬럼, 2건">
+          <div class="icc-column__strip" aria-hidden="true"></div>
+          <div class="icc-column__head">
+            <span class="icc-column__icon" aria-hidden="true">○</span>
+            <h2 class="icc-column__label">예정</h2>
+            <span class="icc-column__count">2</span>
+          </div>
+          <div class="icc-column__body">
+            <!-- IC-2001 미배정 · 빈 history -->
+            <div class="icc-card" role="button" tabindex="0" aria-pressed="false"
+                 aria-label="IC-2001 1층 비상구 표지등 점검, 상태 예정, 담당자 미배정">
+              <div class="icc-card__top">
+                <span class="icc-card__id">IC-2001</span>
+                <span class="icc-badge icc-badge--todo"><span aria-hidden="true">○</span>예정</span>
+              </div>
+              <h3 class="icc-card__title">1층 비상구 표지등 점검</h3>
+              <span class="icc-card__location">1F 로비</span>
+              <span class="icc-assignee icc-assignee--unassigned"><span class="icc-avatar" aria-hidden="true">?</span>미배정</span>
+              <div class="icc-actions">
+                <span class="icc-action">
+                  <button class="icc-btn icc-btn--primary" aria-disabled="true" title="담당자 배정 후 진행 가능">진행 시작</button>
+                  <span class="icc-btn__reason">담당자 배정 후 진행 가능 (G1)</span>
+                </span>
+                <span class="icc-action">
+                  <button class="icc-btn icc-btn--danger-outline">차단</button>
+                </span>
+              </div>
+            </div>
+            <!-- IC-2002 배정됨 -->
+            <div class="icc-card" role="button" tabindex="-1" aria-pressed="false"
+                 aria-label="IC-2002 3층 소화기 압력 게이지 확인, 상태 예정, 담당자 김현장">
+              <div class="icc-card__top">
+                <span class="icc-card__id">IC-2002</span>
+                <span class="icc-badge icc-badge--todo"><span aria-hidden="true">○</span>예정</span>
+              </div>
+              <h3 class="icc-card__title">3층 소화기 압력 게이지 확인</h3>
+              <span class="icc-card__location">3F 동관</span>
+              <span class="icc-assignee"><span class="icc-avatar" aria-hidden="true">김</span>김현장</span>
+              <div class="icc-actions">
+                <span class="icc-action"><button class="icc-btn icc-btn--primary">진행 시작</button></span>
+                <span class="icc-action"><button class="icc-btn icc-btn--danger-outline">차단</button></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 진행중 (in_progress) -->
+        <section class="icc-column icc-column--progress" role="group" aria-label="진행중 컬럼, 3건">
+          <div class="icc-column__strip" aria-hidden="true"></div>
+          <div class="icc-column__head">
+            <span class="icc-column__icon" aria-hidden="true">◐</span>
+            <h2 class="icc-column__label">진행중</h2>
+            <span class="icc-column__count">3</span>
+          </div>
+          <div class="icc-column__body">
+            <!-- IC-2003 -->
+            <div class="icc-card" role="button" tabindex="-1" aria-pressed="false"
+                 aria-label="IC-2003 지하 1층 배전반 점검, 상태 진행중, 담당자 김현장">
+              <div class="icc-card__top">
+                <span class="icc-card__id">IC-2003</span>
+                <span class="icc-badge icc-badge--progress"><span aria-hidden="true">◐</span>진행중</span>
+              </div>
+              <h3 class="icc-card__title">지하 1층 배전반 점검</h3>
+              <span class="icc-card__location">B1 기계실</span>
+              <span class="icc-assignee"><span class="icc-avatar" aria-hidden="true">김</span>김현장</span>
+              <div class="icc-actions">
+                <span class="icc-action"><button class="icc-btn icc-btn--done">완료</button></span>
+                <span class="icc-action"><button class="icc-btn icc-btn--danger-outline">차단</button></span>
+                <span class="icc-action"><button class="icc-btn icc-btn--ghost">착수 취소</button></span>
+              </div>
+            </div>
+            <!-- IC-2004 -->
+            <div class="icc-card" role="button" tabindex="-1" aria-pressed="false"
+                 aria-label="IC-2004 옥상 저수조 수위 확인, 상태 진행중, 담당자 이점검">
+              <div class="icc-card__top">
+                <span class="icc-card__id">IC-2004</span>
+                <span class="icc-badge icc-badge--progress"><span aria-hidden="true">◐</span>진행중</span>
+              </div>
+              <h3 class="icc-card__title">옥상 저수조 수위 확인</h3>
+              <span class="icc-card__location">RF 옥상</span>
+              <span class="icc-assignee"><span class="icc-avatar" aria-hidden="true">이</span>이점검</span>
+              <div class="icc-actions">
+                <span class="icc-action"><button class="icc-btn icc-btn--done">완료</button></span>
+                <span class="icc-action"><button class="icc-btn icc-btn--danger-outline">차단</button></span>
+                <span class="icc-action"><button class="icc-btn icc-btn--ghost">착수 취소</button></span>
+              </div>
+            </div>
+            <!-- IC-2007 재오픈 이력 있음 -->
+            <div class="icc-card" role="button" tabindex="-1" aria-pressed="false"
+                 aria-label="IC-2007 옥외 소화전 동파 방지 점검, 상태 진행중, 담당자 이점검">
+              <div class="icc-card__top">
+                <span class="icc-card__id">IC-2007</span>
+                <span class="icc-badge icc-badge--progress"><span aria-hidden="true">◐</span>진행중</span>
+              </div>
+              <h3 class="icc-card__title">옥외 소화전 동파 방지 점검</h3>
+              <span class="icc-card__location">옥외 주차장</span>
+              <span class="icc-assignee"><span class="icc-avatar" aria-hidden="true">이</span>이점검</span>
+              <div class="icc-actions">
+                <span class="icc-action"><button class="icc-btn icc-btn--done">완료</button></span>
+                <span class="icc-action"><button class="icc-btn icc-btn--danger-outline">차단</button></span>
+                <span class="icc-action"><button class="icc-btn icc-btn--ghost">착수 취소</button></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 차단됨 (blocked) -->
+        <section class="icc-column icc-column--blocked" role="group" aria-label="차단됨 컬럼, 1건">
+          <div class="icc-column__strip" aria-hidden="true"></div>
+          <div class="icc-column__head">
+            <span class="icc-column__icon" aria-hidden="true">▲</span>
+            <h2 class="icc-column__label">차단됨</h2>
+            <span class="icc-column__count">1</span>
+          </div>
+          <div class="icc-column__body">
+            <!-- IC-2005 selected + block reason 표면 노출 -->
+            <div class="icc-card icc-card--selected" role="button" tabindex="0" aria-pressed="true"
+                 aria-label="IC-2005 2층 스프링클러 밸브 점검, 상태 차단됨, 담당자 이점검, 차단사유 밸브실 잠김 관리사무소 열쇠 대기 중">
+              <div class="icc-card__top">
+                <span class="icc-card__id">IC-2005</span>
+                <span class="icc-badge icc-badge--blocked"><span aria-hidden="true">▲</span>차단됨</span>
+              </div>
+              <h3 class="icc-card__title">2층 스프링클러 밸브 점검</h3>
+              <span class="icc-card__location">2F 서관</span>
+              <span class="icc-assignee"><span class="icc-avatar" aria-hidden="true">이</span>이점검</span>
+              <div class="icc-blockreason">
+                <span class="icc-blockreason__icon" aria-hidden="true">▲</span>
+                <span>밸브실 잠김 — 관리사무소 열쇠 대기 중</span>
+              </div>
+              <div class="icc-actions">
+                <span class="icc-action"><button class="icc-btn icc-btn--outline">차단 해제(진행중)</button></span>
+                <span class="icc-action"><button class="icc-btn icc-btn--ghost">예정으로</button></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 완료 (done) -->
+        <section class="icc-column icc-column--done" role="group" aria-label="완료 컬럼, 1건">
+          <div class="icc-column__strip" aria-hidden="true"></div>
+          <div class="icc-column__head">
+            <span class="icc-column__icon" aria-hidden="true">✓</span>
+            <h2 class="icc-column__label">완료</h2>
+            <span class="icc-column__count">1</span>
+          </div>
+          <div class="icc-column__body">
+            <!-- IC-2006 -->
+            <div class="icc-card" role="button" tabindex="-1" aria-pressed="false"
+                 aria-label="IC-2006 주차장 CCTV 사각지대 점검, 상태 완료, 담당자 김현장">
+              <div class="icc-card__top">
+                <span class="icc-card__id">IC-2006</span>
+                <span class="icc-badge icc-badge--done"><span aria-hidden="true">✓</span>완료</span>
+              </div>
+              <h3 class="icc-card__title">주차장 CCTV 사각지대 점검</h3>
+              <span class="icc-card__location">B2 주차장</span>
+              <span class="icc-assignee"><span class="icc-avatar" aria-hidden="true">김</span>김현장</span>
+              <div class="icc-actions">
+                <span class="icc-action"><button class="icc-btn icc-btn--ghost">재오픈</button></span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ===== Detail panel (IC-2005 선택 상태) ===== -->
+      <aside class="icc-detail" role="region" aria-label="상세">
+        <div>
+          <div class="icc-detail__id">IC-2005</div>
+          <div class="icc-detail__title">2층 스프링클러 밸브 점검</div>
+        </div>
+        <div class="icc-field">
+          <span class="icc-field__label">상태</span>
+          <span class="icc-field__value"><span class="icc-badge icc-badge--blocked"><span aria-hidden="true">▲</span>차단됨</span></span>
+        </div>
+        <div class="icc-field">
+          <span class="icc-field__label">위치</span>
+          <span class="icc-field__value">2F 서관</span>
+        </div>
+        <div class="icc-field">
+          <label class="icc-field__label" for="assignee-select">담당자</label>
+          <select class="icc-select" id="assignee-select" aria-label="담당자 배정">
+            <option>이점검</option>
+            <option>김현장</option>
+            <option disabled>미배정 (차단 상태는 해제 불가)</option>
+          </select>
+        </div>
+        <div class="icc-field">
+          <span class="icc-field__label">차단 사유</span>
+          <div class="icc-blockreason">
+            <span class="icc-blockreason__icon" aria-hidden="true">▲</span>
+            <span>밸브실 잠김 — 관리사무소 열쇠 대기 중</span>
+          </div>
+        </div>
+        <div class="icc-field">
+          <span class="icc-field__label">생성 / 최종변경</span>
+          <span class="icc-field__value icc-history__at" style="font-size:12px;color:var(--icc-color-text-muted)">2026-07-01 13:00 · 2026-07-01 13:40</span>
+        </div>
+        <hr class="icc-hr">
+        <div>
+          <span class="icc-field__label" style="display:block;margin-bottom:var(--icc-space-3)">변경 이력 (오래된 순)</span>
+          <ol class="icc-history" role="list">
+            <li class="icc-history__event">
+              <div class="icc-history__type">담당자 변경</div>
+              <div class="icc-history__meta">미배정 → 이점검 · <span class="icc-history__at">13:10</span> · 이점검</div>
+            </li>
+            <li class="icc-history__event">
+              <div class="icc-history__type">상태 변경</div>
+              <div class="icc-history__meta">예정 → 진행중 · <span class="icc-history__at">13:20</span> · 이점검</div>
+            </li>
+            <li class="icc-history__event">
+              <div class="icc-history__type">상태 변경</div>
+              <div class="icc-history__meta">진행중 → 차단됨 · <span class="icc-history__at">13:40</span> · 이점검</div>
+            </li>
+            <li class="icc-history__event">
+              <div class="icc-history__type">차단 설정</div>
+              <div class="icc-history__meta">사유: 밸브실 잠김 — 관리사무소 열쇠 대기 중 · <span class="icc-history__at">13:40</span> · 이점검</div>
+            </li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ===== States gallery (정적 인터랙션/상태 표현) ===== -->
+    <section class="icc-gallery" aria-label="상태 · 인터랙션 갤러리">
+      <h2>상태 · 인터랙션 표현 (정적 참조)</h2>
+      <div class="icc-gallery__row">
+        <div class="icc-gallery__item">
+          <span class="icc-gallery__cap">상태 배지 4종 (색 + 텍스트 + 아이콘)</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span class="icc-badge icc-badge--todo"><span aria-hidden="true">○</span>예정</span>
+            <span class="icc-badge icc-badge--progress"><span aria-hidden="true">◐</span>진행중</span>
+            <span class="icc-badge icc-badge--blocked"><span aria-hidden="true">▲</span>차단됨</span>
+            <span class="icc-badge icc-badge--done"><span aria-hidden="true">✓</span>완료</span>
+          </div>
+        </div>
+        <div class="icc-gallery__item">
+          <span class="icc-gallery__cap">담당자 배정 / 미배정</span>
+          <div style="display:flex;gap:12px;align-items:center">
+            <span class="icc-assignee"><span class="icc-avatar" aria-hidden="true">김</span>김현장</span>
+            <span class="icc-assignee icc-assignee--unassigned"><span class="icc-avatar" aria-hidden="true">?</span>미배정</span>
+          </div>
+        </div>
+        <div class="icc-gallery__item">
+          <span class="icc-gallery__cap">전이 버튼: 활성 / 비활성(가드 사유)</span>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <button class="icc-btn icc-btn--primary">진행 시작</button>
+            <span class="icc-action">
+              <button class="icc-btn icc-btn--primary" aria-disabled="true" title="담당자 배정 후 진행 가능">진행 시작</button>
+              <span class="icc-btn__reason">담당자 배정 후 진행 가능 (G1)</span>
+            </span>
+          </div>
+        </div>
+        <div class="icc-gallery__item">
+          <span class="icc-gallery__cap">빈 컬럼 placeholder</span>
+          <div class="icc-empty" style="width:180px">항목 없음</div>
+        </div>
+        <div class="icc-gallery__item">
+          <span class="icc-gallery__cap">차단 사유 표면 노출</span>
+          <div class="icc-blockreason" style="width:220px">
+            <span class="icc-blockreason__icon" aria-hidden="true">▲</span>
+            <span>밸브실 잠김 — 관리사무소 열쇠 대기 중</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <p class="icc-note">※ 본 mockup 은 시안 시각화용(dev 실제 산출물 아님). desktop 레이아웃 기준 — tablet/mobile breakpoint 동작은 명세 §4.4 참조. placeholder 콘텐츠는 s1 §8 seed 7건(IC-2001~IC-2007) 기준.</p>
+  </div>
+</body>
+</html>
