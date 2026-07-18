@@ -1,0 +1,6 @@
+{
+  "name": "support-inbox-phase18",
+  "private": true,
+  "type": "commonjs",
+  "description": "BF-1021 · 본 디렉토리만 CommonJS 로 해석 — support-inbox-phase18 의 fixtures/inbox 는 비-module UMD 패턴 (file:// CORS 안전). Node 단위 테스트는 require 로 로드. 루트 package.json 은 type:module 이므로 로컬 override 필요."
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>고객지원 인박스 — support-inbox-phase18</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="sib-app">
+    <!-- App header (banner) -->
+    <header class="sib-header" role="banner">
+      <h1 class="sib-header__title">고객지원 인박스</h1>
+      <div class="sib-header__summary" id="sib-summary" aria-label="문의 집계 요약"></div>
+    </header>
+
+    <div class="sib-panes">
+      <!-- Pane 1: 목록(검색·필터 툴바 + listbox) -->
+      <section class="sib-pane sib-pane--list" aria-label="문의 목록">
+        <div class="sib-toolbar">
+          <!-- 검색바 (§5.1) -->
+          <search class="sib-search" role="search">
+            <span class="sib-search__icon" aria-hidden="true">🔍</span>
+            <input class="sib-search__input" id="sib-search" type="search"
+                   aria-label="문의 검색" placeholder="문의 번호·제목·요청자 검색"
+                   autocomplete="off">
+            <button class="sib-search__clear" id="sib-search-clear" type="button"
+                    aria-label="검색어 지우기" style="display:none;">✕</button>
+          </search>
+
+          <!-- 필터 칩 그룹 (§5.2) — status/priority/assignee 는 JS 가 렌더 -->
+          <div class="sib-filters" id="sib-filters"></div>
+
+          <div class="sib-toolbar__foot">
+            <span class="sib-result-count" id="sib-result-count" aria-live="polite"></span>
+            <button class="sib-filter__reset" id="sib-reset" type="button">필터 초기화</button>
+          </div>
+        </div>
+
+        <ul class="sib-list" id="sib-list" role="listbox" aria-label="고객 문의"></ul>
+      </section>
+
+      <!-- Pane 2: 상세 / 상태 전환 / 이력 (§5.4/§5.6) -->
+      <main class="sib-pane sib-pane--detail" aria-label="문의 상세">
+        <div class="sib-detail" id="sib-detail"></div>
+        <div class="sib-live" id="sib-live" role="status" aria-live="polite"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- vanilla-static: type=module / fetch / import 금지 · IIFE UMD 전역 · 로드 순서 = 의존 순서 -->
+  <script src="./fixtures.js"></script>
+  <script src="./inbox.js"></script>
+</body>
+</html>
