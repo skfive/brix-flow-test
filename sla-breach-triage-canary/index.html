@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SLA 위반 대응 큐</title>
+  <style>
+    :root {
+      /* ── 컬러 토큰 (디자인 명세 §2) ── */
+      --bf-color-bg: #f4f6f9;
+      --bf-color-surface: #ffffff;
+      --bf-color-surface-muted: #eef1f6;
+      --bf-color-border: #d5dae1;
+      --bf-color-text: #1a2230;
+      --bf-color-text-muted: #4d5769;
+      --bf-color-primary: #1d4ed8;
+      --bf-color-primary-hover: #1740a6;
+      --bf-color-on-primary: #ffffff;
+      --bf-color-danger: #b3261e;
+      --bf-color-focus: #1d4ed8;
+
+      /* 위험도 배지 */
+      --bf-sev-critical: #b3261e;
+      --bf-sev-high: #b5451a;
+      --bf-sev-medium: #8a5a00;
+      --bf-sev-low: #3f6212;
+
+      /* 상태 배지 */
+      --bf-status-pending-bg: #fdecea;   --bf-status-pending-fg: #8a1c15;
+      --bf-status-assigned-bg: #e7effd;  --bf-status-assigned-fg: #1740a6;
+      --bf-status-resolved-bg: #e4f4ea;  --bf-status-resolved-fg: #0f5a2e;
+
+      /* 타이포 (명세 §3) */
+      --bf-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+
+      /* 스페이싱 (명세 §4) */
+      --bf-space-1: 4px;  --bf-space-2: 8px;  --bf-space-3: 12px;
+      --bf-space-4: 16px; --bf-space-6: 24px; --bf-space-8: 32px;
+
+      --bf-radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bf-color-bg);
+      color: var(--bf-color-text);
+      font-family: var(--bf-font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .sla-page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: var(--bf-space-8) var(--bf-space-4);
+    }
+
+    /* ── 헤더 ── */
+    .sla-header h1 {
+      font-size: 24px; font-weight: 700; line-height: 1.3; margin: 0 0 var(--bf-space-2);
+    }
+    .sla-summary {
+      display: flex; flex-wrap: wrap; gap: var(--bf-space-3);
+      color: var(--bf-color-text-muted); font-size: 12px; font-weight: 500; margin: 0;
+    }
+    .sla-summary strong { color: var(--bf-color-text); font-variant-numeric: tabular-nums; }
+
+    /* ── 섹션 ── */
+    .sla-section { margin-top: var(--bf-space-8); }
+    .sla-section h2 {
+      font-size: 18px; font-weight: 600; line-height: 1.35;
+      margin: 0 0 var(--bf-space-3);
+    }
+
+    /* ── 카드 ── */
+    .sla-card {
+      background: var(--bf-color-surface);
+      border: 1px solid var(--bf-color-border);
+      border-radius: var(--bf-radius);
+      padding: var(--bf-space-4);
+      margin-bottom: var(--bf-space-3);
+    }
+    .sla-card--resolved { background: var(--bf-color-surface-muted); }
+
+    .sla-card__top {
+      display: flex; align-items: center; gap: var(--bf-space-2);
+      flex-wrap: wrap;
+    }
+    .sla-card__title {
+      font-size: 16px; font-weight: 600; line-height: 1.4; margin: 0;
+      flex: 1 1 200px;
+    }
+    .sla-card__meta {
+      color: var(--bf-color-text-muted); font-size: 12px; font-weight: 500;
+      margin: var(--bf-space-2) 0 0;
+    }
+    .sla-card__overdue {
+      margin: var(--bf-space-2) 0 0; font-size: 14px;
+    }
+    .sla-card__overdue b { font-variant-numeric: tabular-nums; }
+
+    /* ── 배지 ── */
+    .sla-badge {
+      display: inline-block; padding: 2px var(--bf-space-2);
+      border-radius: 999px; font-size: 12px; font-weight: 700; line-height: 1.45;
+      white-space: nowrap;
+    }
+    .sla-badge-severity { color: var(--bf-color-on-primary); }
+    .sev-critical { background: var(--bf-sev-critical); }
+    .sev-high     { background: var(--bf-sev-high); }
+    .sev-medium   { background: var(--bf-sev-medium); }
+    .sev-low      { background: var(--bf-sev-low); }
+
+    .sla-badge-status { margin-left: auto; }
+    .st-pending  { background: var(--bf-status-pending-bg);  color: var(--bf-status-pending-fg); }
+    .st-assigned { background: var(--bf-status-assigned-bg); color: var(--bf-status-assigned-fg); }
+    .st-resolved { background: var(--bf-status-resolved-bg); color: var(--bf-status-resolved-fg); }
+
+    /* ── 액션 영역 ── */
+    .sla-card__actions {
+      margin-top: var(--bf-space-3);
+      padding-top: var(--bf-space-3);
+      border-top: 1px solid var(--bf-color-border);
+    }
+    .sla-field { display: flex; flex-direction: column; gap: var(--bf-space-1); }
+    .sla-field label { font-size: 12px; font-weight: 600; color: var(--bf-color-text-muted); }
+
+    .sla-input, .sla-textarea {
+      font-family: inherit; font-size: 14px; color: var(--bf-color-text);
+      background: var(--bf-color-surface);
+      border: 1px solid var(--bf-color-border);
+      border-radius: 6px; padding: var(--bf-space-2) var(--bf-space-3);
+      min-height: 44px; width: 100%;
+    }
+    .sla-textarea { min-height: 66px; resize: vertical; }
+    .sla-input:focus-visible, .sla-textarea:focus-visible {
+      outline: 2px solid var(--bf-color-focus); outline-offset: 2px;
+      border-color: var(--bf-color-primary);
+    }
+    .sla-input[aria-invalid="true"], .sla-textarea[aria-invalid="true"] {
+      border-color: var(--bf-color-danger);
+    }
+
+    .sla-row {
+      display: flex; gap: var(--bf-space-2); align-items: flex-end;
+      margin-top: var(--bf-space-2); flex-wrap: wrap;
+    }
+    .sla-row .sla-field { flex: 1 1 220px; }
+
+    .sla-btn {
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      min-height: 44px; padding: 0 var(--bf-space-4);
+      border-radius: 6px; cursor: pointer; border: 1px solid transparent;
+    }
+    .sla-btn--primary {
+      background: var(--bf-color-primary); color: var(--bf-color-on-primary);
+    }
+    .sla-btn--primary:hover { background: var(--bf-color-primary-hover); }
+    .sla-btn--secondary {
+      background: var(--bf-color-surface); color: var(--bf-color-primary);
+      border-color: var(--bf-color-border);
+    }
+    .sla-btn--secondary:hover { border-color: var(--bf-color-primary); }
+    .sla-btn:focus-visible {
+      outline: 2px solid var(--bf-color-focus); outline-offset: 2px;
+    }
+
+    /* ── 인라인 에러 (명세 §5.5) ── */
+    .sla-inline-error {
+      margin-top: var(--bf-space-2);
+      color: var(--bf-color-danger); font-size: 12px; font-weight: 600;
+      display: flex; gap: var(--bf-space-1); align-items: center;
+    }
+    /* 에러 메시지가 비어 있으면(⚠ 만 남으면) 시각적으로 숨김 (명세 §5.5) */
+    .sla-inline-error:empty { display: none; }
+
+    /* ── 읽기전용(resolved) 세부 ── */
+    .sla-readonly { margin-top: var(--bf-space-3); padding-top: var(--bf-space-3); border-top: 1px solid var(--bf-color-border); }
+    .sla-readonly dt { font-size: 12px; font-weight: 600; color: var(--bf-color-text-muted); }
+    .sla-readonly dd { margin: 0 0 var(--bf-space-2); }
+
+    /* ── 빈 상태 (명세 §5.6) ── */
+    .sla-empty {
+      text-align: center; color: var(--bf-color-text-muted);
+      background: var(--bf-color-surface);
+      border: 1px dashed var(--bf-color-border); border-radius: var(--bf-radius);
+      padding: var(--bf-space-8) var(--bf-space-4); font-size: 14px;
+    }
+
+    /* ── 반응형 (명세 §4) ── */
+    @media (max-width: 719px) {
+      .sla-card__top { flex-direction: column; align-items: flex-start; }
+      .sla-badge-status { margin-left: 0; }
+      .sla-row { flex-direction: column; align-items: stretch; }
+      .sla-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="sla-page" id="sla-root">
+    <!-- app.js 가 fixture 로부터 헤더·대응 대기열·해결됨 섹션을 렌더 -->
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
