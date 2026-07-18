@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스네이크 캐너리 시안 · /demo/snake-canary · BF-989(BF-993)</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   토큰 SSOT — docs/design/snake-canary-BF-989.md §2·§3·§4 미러
+   dev(BF-995)는 src/app/demo/snake-canary/styles.css :root 에
+   - §2.1 승계 토큰: src/app/demo/counter/styles.css 그대로 복제
+   - §2.2 --sc-* 6쌍만 신규 추가
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  /* ── 폰트(system stack · 웹폰트/CDN 금지 = vanilla-static) ── */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* ── §2.1 승계 토큰(light · counter/clock/status 공유) ── */
+  --color-accent:#3563e9; --color-accent-hover:#2a4fc0;
+  --color-bg-canvas:#fafaf9; --color-bg-surface:#ffffff; --color-bg-subtle:#f1f1ef;
+  --color-border-default:#e5e5e2; --color-border-strong:#d0d0cc;
+  --color-text-primary:#1a1a19; --color-text-secondary:#6b6b66; --color-text-muted:#9a9a93;
+  --color-focus-ring:rgba(53,99,233,.45);
+
+  /* ── §2.2 게임 고유 토큰(신규 --sc-*, light) ── */
+  --sc-board-bg:#ffffff; --sc-grid-line:#eceae7;
+  --sc-snake-head:#14532d; --sc-snake-body:#15803d; --sc-food:#c81e1e;
+  --sc-overlay-scrim:rgba(26,26,25,.62);
+
+  /* ── 간격·반경·그림자·모션(승계) ── */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px;
+  --shadow-card:0 4px 16px rgba(0,0,0,.06);
+  --motion-fast:120ms; --ease-out:cubic-bezier(.16,1,.3,1);
+
+  /* ── §3 타이포 ── */
+  --text-h1:600 20px/1.3 var(--font-sans);
+  --text-score:700 clamp(24px,7vw,32px)/1 var(--font-mono);
+  --text-label:600 12px/1.2 var(--font-sans);
+  --text-status:500 14px/1.4 var(--font-sans);
+  --text-button-lg:600 16px/1 var(--font-sans);
+  --text-dpad:400 22px/1 var(--font-sans);
+  --text-caption:400 12px/1.4 var(--font-sans);
+  --text-overlay:700 clamp(22px,6vw,28px)/1.2 var(--font-sans);
+}
+/* ── 다크 테마: 시스템 설정 자동 추종(§2.1·§2.2 dark) ── */
+@media (prefers-color-scheme: dark){
+  :root{
+    --color-accent:#5b82f0; --color-accent-hover:#7596f3;
+    --color-bg-canvas:#0f1115; --color-bg-surface:#171a21; --color-bg-subtle:#1e222b;
+    --color-border-default:#262b36; --color-border-strong:#3a4150;
+    --color-text-primary:#e8e8e4; --color-text-secondary:#9a9a93; --color-text-muted:#6b6b66;
+    --color-focus-ring:rgba(91,130,240,.55);
+    --sc-board-bg:#0b0d11; --sc-grid-line:#20242d;
+    --sc-snake-head:#34d399; --sc-snake-body:#22c55e; --sc-food:#f87171;
+    --sc-overlay-scrim:rgba(5,7,11,.70);
+    --shadow-card:0 4px 16px rgba(0,0,0,.32);
+  }
+}
+/* 다크 프리뷰 강제 컨테이너(§7 5번) — 시스템 설정과 무관하게 다크 값 오버라이드 */
+.force-dark{
+  --color-accent:#5b82f0; --color-accent-hover:#7596f3;
+  --color-bg-canvas:#0f1115; --color-bg-surface:#171a21; --color-bg-subtle:#1e222b;
+  --color-border-default:#262b36; --color-border-strong:#3a4150;
+  --color-text-primary:#e8e8e4; --color-text-secondary:#9a9a93; --color-text-muted:#6b6b66;
+  --color-focus-ring:rgba(91,130,240,.55);
+  --sc-board-bg:#0b0d11; --sc-grid-line:#20242d;
+  --sc-snake-head:#34d399; --sc-snake-body:#22c55e; --sc-food:#f87171;
+  --sc-overlay-scrim:rgba(5,7,11,.70);
+  --shadow-card:0 4px 16px rgba(0,0,0,.32);
+  background:var(--color-bg-canvas); color:var(--color-text-primary);
+  border-radius:var(--radius-lg);
+}
+
+/* ─────────────── reset / doc chrome (mockup 전용) ─────────────── */
+*{box-sizing:border-box;}
+body{
+  margin:0; font:var(--text-caption); font-family:var(--font-sans);
+  background:var(--color-bg-canvas); color:var(--color-text-primary);
+  padding:var(--space-6) var(--space-4);
+}
+.doc{max-width:1100px; margin:0 auto;}
+.doc__title{font:var(--text-h1); font-size:26px; margin:0 0 var(--space-2);}
+.doc__lead{color:var(--color-text-secondary); margin:0 0 var(--space-6); max-width:70ch; line-height:1.6;}
+.doc__sec-title{
+  font:var(--text-h1); margin:var(--space-6) 0 var(--space-3);
+  padding-bottom:var(--space-2); border-bottom:1px solid var(--color-border-default);
+}
+.doc__note{color:var(--color-text-muted); font:var(--text-caption); margin:var(--space-2) 0 var(--space-4);}
+.stage{
+  display:flex; flex-wrap:wrap; gap:var(--space-5); align-items:flex-start;
+}
+.stage__cap{
+  display:inline-block; font:var(--text-label); letter-spacing:.02em;
+  color:var(--color-text-secondary); background:var(--color-bg-subtle);
+  border:1px solid var(--color-border-default); border-radius:var(--radius-sm);
+  padding:2px 8px; margin-bottom:var(--space-3);
+}
+
+/* ═══════════════ 실제 UI 시안 (dev 참조 스타일) ═══════════════ */
+
+.sc-page{
+  width:100%; max-width:360px; margin:0 auto;
+  display:flex; flex-direction:column; align-items:stretch; gap:var(--space-4);
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-card);
+  padding:var(--space-5);
+}
+.sc-title{font:var(--text-h1); margin:0; text-align:center;}
+
+/* HUD (§5.2) */
+.sc-hud{display:flex; justify-content:space-between; align-items:center; gap:var(--space-3);}
+.sc-hud__score{
+  display:flex; flex-direction:column; gap:2px;
+  background:var(--color-bg-subtle); border-radius:var(--radius-md);
+  padding:var(--space-2) var(--space-3); min-width:96px;
+}
+.sc-hud__label{font:var(--text-label); color:var(--color-text-muted);}
+.sc-hud__value{font:var(--text-score); color:var(--color-text-primary);}
+.sc-hud__status{font:var(--text-status); color:var(--color-text-secondary); text-align:right; margin:0;}
+
+/* 보드 프레임 (§5.1) — mockup: canvas 대신 CSS grid 로 정지 프레임 흉내 */
+.sc-board-frame{
+  position:relative; width:100%; max-width:320px; margin-inline:auto;
+  aspect-ratio:1/1;
+  background:var(--sc-board-bg);
+  border:1px solid var(--color-border-strong); border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card); overflow:hidden; padding:var(--space-2);
+}
+.sc-board{
+  position:relative; width:100%; height:100%;
+  display:grid; grid-template-columns:repeat(20,1fr); grid-template-rows:repeat(20,1fr);
+  /* 격자선(§5.1 · 장식) */
+  background-image:
+    repeating-linear-gradient(to right,  transparent 0, transparent calc(5% - 1px), var(--sc-grid-line) calc(5% - 1px), var(--sc-grid-line) 5%),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(5% - 1px), var(--sc-grid-line) calc(5% - 1px), var(--sc-grid-line) 5%);
+  border-radius:var(--radius-sm);
+}
+.cell{border-radius:3px; margin:1px;}
+.cell.body{background:var(--sc-snake-body);}
+.cell.head{background:var(--sc-snake-head);}
+.cell.food{background:var(--sc-food); border-radius:50%; margin:2px;}
+
+/* 게임오버 오버레이 (§5.4) */
+.sc-overlay{
+  position:absolute; inset:0; border-radius:var(--radius-lg);
+  background:var(--sc-overlay-scrim); backdrop-filter:blur(2px);
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  gap:var(--space-3); text-align:center; padding:var(--space-4);
+}
+.sc-overlay__title{font:var(--text-overlay); color:#fff; margin:0;}
+.sc-overlay__score{font:600 16px/1.4 var(--font-sans); color:#fff; margin:0;}
+.sc-overlay__reason{
+  font:var(--text-caption); color:#fff;
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.3);
+  border-radius:999px; padding:3px 10px;
+}
+
+/* 주 컨트롤 버튼 (§5.3) */
+.sc-controls{display:flex; justify-content:center;}
+.sc-btn{
+  font:var(--text-button-lg); color:#fff; background:var(--color-accent);
+  border:none; border-radius:var(--radius-md);
+  min-width:44px; min-height:44px; padding:var(--space-3) var(--space-5);
+  cursor:pointer; touch-action:manipulation;
+  transition:background var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out);
+}
+.sc-btn:hover{background:var(--color-accent-hover);}
+.sc-btn:active{transform:translateY(1px);}
+.sc-btn:focus-visible{
+  outline:2px solid var(--color-accent); outline-offset:2px;
+  box-shadow:0 0 0 4px var(--color-focus-ring);
+}
+/* 상태 시각화용(mockup): hover/active/focus 를 강제로 그린 데모 변형 */
+.sc-btn.is-hover{background:var(--color-accent-hover);}
+.sc-btn.is-active{transform:translateY(1px); background:var(--color-accent-hover);}
+.sc-btn.is-focus{outline:2px solid var(--color-accent); outline-offset:2px; box-shadow:0 0 0 4px var(--color-focus-ring);}
+
+/* 조작 안내 (§5.5) */
+.sc-hint{font:var(--text-caption); color:var(--color-text-secondary); text-align:center; margin:0;}
+
+/* D-pad (§5.3) — 십자 grid, DOM 순서 ▲◀▶▼ */
+.sc-dpad{
+  display:grid; grid-template-columns:repeat(3,56px); grid-template-rows:repeat(3,56px);
+  gap:var(--space-2); justify-content:center; margin:0 auto;
+}
+.sc-dpad__btn{
+  font:var(--text-dpad); color:var(--color-text-primary);
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); min-width:44px; min-height:44px;
+  cursor:pointer; touch-action:manipulation;
+  transition:background var(--motion-fast) var(--ease-out), border-color var(--motion-fast) var(--ease-out);
+}
+.sc-dpad__btn:hover{background:#e9e9e6; border-color:var(--color-border-strong);}
+.sc-dpad__btn:active,.sc-dpad__btn.is-pressed{background:var(--color-accent); color:#fff; border-color:var(--color-accent);}
+.sc-dpad__btn:focus-visible,.sc-dpad__btn.is-focus{
+  outline:2px solid var(--color-accent); outline-offset:2px; box-shadow:0 0 0 4px var(--color-focus-ring);
+}
+.dpad-up{grid-area:1/2;} .dpad-left{grid-area:2/1;} .dpad-right{grid-area:2/3;} .dpad-down{grid-area:3/2;}
+
+/* 컴포넌트 상세 그리드 */
+.spec-grid{display:flex; flex-wrap:wrap; gap:var(--space-5);}
+.spec-card{
+  background:var(--color-bg-surface); border:1px solid var(--color-border-default);
+  border-radius:var(--radius-md); padding:var(--space-4); min-width:200px;
+}
+.spec-card h3{font:600 14px/1.2 var(--font-sans); margin:0 0 var(--space-3);}
+.row{display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-3);}
+.row span{font:var(--text-caption); color:var(--color-text-secondary);}
+
+/* 대비표 */
+.contrast{border-collapse:collapse; width:100%; max-width:640px; font:var(--text-caption);}
+.contrast th,.contrast td{border:1px solid var(--color-border-default); padding:6px 10px; text-align:left;}
+.contrast th{background:var(--color-bg-subtle); font-weight:600;}
+.swatch{display:inline-block; width:16px; height:16px; border-radius:3px; vertical-align:middle; margin-right:6px; border:1px solid var(--color-border-default);}
+.pass{color:#15803d; font-weight:600;}
+
+/* 스와치 팔레트 */
+.palette{display:flex; flex-wrap:wrap; gap:var(--space-3);}
+.chip{width:120px; border:1px solid var(--color-border-default); border-radius:var(--radius-md); overflow:hidden; font:var(--text-caption);}
+.chip__color{height:44px;}
+.chip__meta{padding:6px 8px; background:var(--color-bg-surface);}
+.chip__meta b{display:block; font-weight:600;}
+.chip__meta code{color:var(--color-text-secondary);}
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1 class="doc__title">스네이크 캐너리 — 디자인 시안 (mockup)</h1>
+  <p class="doc__lead">
+    <code>/demo/snake-canary</code> · vanilla-static · BF-989(작업 BF-993). 명세: <code>docs/design/snake-canary-BF-989.md</code>.
+    이 파일은 <b>시각 시뮬레이션</b>입니다 — 실제 게임은 dev(BF-995)가 canvas 로 구현하며, 여기 보드는 CSS grid 로 그린 정지 프레임입니다.
+    외부 의존성 0건 · system font · <code>:root</code> 토큰은 형제 데모(counter/clock/status)에서 승계 + <code>--sc-*</code> 6쌍만 신규.
+  </p>
+
+  <!-- ══════════════ 1) 상태별 화면 ══════════════ -->
+  <h2 class="doc__sec-title">1. 상태별 화면 — 대기 / 진행 / 게임오버</h2>
+  <p class="doc__note">상태는 색이 아니라 텍스트 + 버튼 노출로 구분(색맹 대응). 진행 중엔 시작·재시작 버튼 모두 숨김.</p>
+  <div class="stage">
+
+    <!-- 대기(idle) -->
+    <div>
+      <span class="stage__cap">상태 A · 대기(idle)</span>
+      <div class="sc-page">
+        <h2 class="sc-title">스네이크 캐너리</h2>
+        <div class="sc-hud">
+          <div class="sc-hud__score"><span class="sc-hud__label">점수</span><span class="sc-hud__value">0</span></div>
+          <p class="sc-hud__status">대기 중</p>
+        </div>
+        <div class="sc-board-frame">
+          <div class="sc-board">
+            <!-- 초기 뱀: head(10,10),(9,10),(8,10) · 먹이(14,6) -->
+            <div class="cell head" style="grid-area:11/11;"></div>
+            <div class="cell body" style="grid-area:11/10;"></div>
+            <div class="cell body" style="grid-area:11/9;"></div>
+            <div class="cell food" style="grid-area:7/15;"></div>
+          </div>
+        </div>
+        <div class="sc-controls"><button class="sc-btn">시작</button></div>
+        <p class="sc-hint">키보드: 방향키 / WASD · 시작·재시작: Enter / Space</p>
+        <nav class="sc-dpad" aria-label="방향 조작">
+          <button class="sc-dpad__btn dpad-up" aria-label="위로 이동 (↑ 또는 W)">▲</button>
+          <button class="sc-dpad__btn dpad-left" aria-label="왼쪽으로 이동 (← 또는 A)">◀</button>
+          <button class="sc-dpad__btn dpad-right" aria-label="오른쪽으로 이동 (→ 또는 D)">▶</button>
+          <button class="sc-dpad__btn dpad-down" aria-label="아래로 이동 (↓ 또는 S)">▼</button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- 진행(playing) -->
+    <div>
+      <span class="stage__cap">상태 B · 진행(playing)</span>
+      <div class="sc-page">
+        <h2 class="sc-title">스네이크 캐너리</h2>
+        <div class="sc-hud">
+          <div class="sc-hud__score"><span class="sc-hud__label">점수</span><span class="sc-hud__value">40</span></div>
+          <p class="sc-hud__status">진행 중</p>
+        </div>
+        <div class="sc-board-frame">
+          <div class="sc-board">
+            <!-- 뱀: head(12,7) → 좌로 → 아래로 꺾임 · 먹이(15,5) -->
+            <div class="cell head" style="grid-area:8/13;"></div>
+            <div class="cell body" style="grid-area:8/12;"></div>
+            <div class="cell body" style="grid-area:8/11;"></div>
+            <div class="cell body" style="grid-area:8/10;"></div>
+            <div class="cell body" style="grid-area:8/9;"></div>
+            <div class="cell body" style="grid-area:8/8;"></div>
+            <div class="cell body" style="grid-area:9/8;"></div>
+            <div class="cell body" style="grid-area:10/8;"></div>
+            <div class="cell food" style="grid-area:6/16;"></div>
+          </div>
+        </div>
+        <!-- playing: 주 버튼 숨김 -->
+        <p class="sc-hint">키보드: 방향키 / WASD · 시작·재시작: Enter / Space</p>
+        <nav class="sc-dpad" aria-label="방향 조작">
+          <button class="sc-dpad__btn dpad-up is-pressed" aria-label="위로 이동 (↑ 또는 W)">▲</button>
+          <button class="sc-dpad__btn dpad-left" aria-label="왼쪽으로 이동 (← 또는 A)">◀</button>
+          <button class="sc-dpad__btn dpad-right" aria-label="오른쪽으로 이동 (→ 또는 D)">▶</button>
+          <button class="sc-dpad__btn dpad-down" aria-label="아래로 이동 (↓ 또는 S)">▼</button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- 게임오버(gameover) -->
+    <div>
+      <span class="stage__cap">상태 C · 게임오버(gameover)</span>
+      <div class="sc-page">
+        <h2 class="sc-title">스네이크 캐너리</h2>
+        <div class="sc-hud">
+          <div class="sc-hud__score"><span class="sc-hud__label">점수</span><span class="sc-hud__value">40</span></div>
+          <p class="sc-hud__status">게임 오버 · 점수 40</p>
+        </div>
+        <div class="sc-board-frame">
+          <div class="sc-board">
+            <div class="cell head" style="grid-area:8/1;"></div>
+            <div class="cell body" style="grid-area:8/2;"></div>
+            <div class="cell body" style="grid-area:8/3;"></div>
+            <div class="cell body" style="grid-area:8/4;"></div>
+            <div class="cell food" style="grid-area:6/16;"></div>
+          </div>
+          <!-- 오버레이(§5.4) -->
+          <div class="sc-overlay">
+            <p class="sc-overlay__title">게임 오버</p>
+            <p class="sc-overlay__score">최종 점수 40</p>
+            <span class="sc-overlay__reason">벽 충돌</span>
+            <button class="sc-btn">다시 하기</button>
+          </div>
+        </div>
+        <p class="sc-hint">키보드: 방향키 / WASD · 시작·재시작: Enter / Space</p>
+        <nav class="sc-dpad" aria-label="방향 조작">
+          <button class="sc-dpad__btn dpad-up" aria-label="위로 이동 (↑ 또는 W)">▲</button>
+          <button class="sc-dpad__btn dpad-left" aria-label="왼쪽으로 이동 (← 또는 A)">◀</button>
+          <button class="sc-dpad__btn dpad-right" aria-label="오른쪽으로 이동 (→ 또는 D)">▶</button>
+          <button class="sc-dpad__btn dpad-down" aria-label="아래로 이동 (↓ 또는 S)">▼</button>
+        </nav>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ 2) 컴포넌트 상태 상세 ══════════════ -->
+  <h2 class="doc__sec-title">2. 컴포넌트 상태 — 버튼 / D-pad 인터랙션</h2>
+  <p class="doc__note">모든 버튼 44px+ 터치 타깃, <code>:focus-visible</code> 이중 링(outline + box-shadow). <code>outline:none</code> 단독 금지.</p>
+  <div class="spec-grid">
+    <div class="spec-card">
+      <h3>주 컨트롤 (accent 채움)</h3>
+      <div class="row"><button class="sc-btn">기본</button><span>default</span></div>
+      <div class="row"><button class="sc-btn is-hover">hover</button><span>accent-hover</span></div>
+      <div class="row"><button class="sc-btn is-active">active</button><span>translateY(1px)</span></div>
+      <div class="row"><button class="sc-btn is-focus">focus</button><span>이중 링</span></div>
+    </div>
+    <div class="spec-card">
+      <h3>D-pad 버튼 (subtle 아웃라인)</h3>
+      <div class="row">
+        <button class="sc-dpad__btn" style="width:56px;height:56px;">▲</button><span>기본</span>
+      </div>
+      <div class="row">
+        <button class="sc-dpad__btn is-pressed" style="width:56px;height:56px;">▶</button><span>pressed(pointerdown)</span>
+      </div>
+      <div class="row">
+        <button class="sc-dpad__btn is-focus" style="width:56px;height:56px;">◀</button><span>focus-visible</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ 3) 컬러 팔레트 ══════════════ -->
+  <h2 class="doc__sec-title">3. 컬러 팔레트 (light)</h2>
+  <p class="doc__note">크롬 = 승계 토큰(counter 공유) · 게임 요소 = <code>--sc-*</code> 신규 6쌍.</p>
+  <div class="palette">
+    <div class="chip"><div class="chip__color" style="background:#3563e9;"></div><div class="chip__meta"><b>accent</b><code>#3563e9</code></div></div>
+    <div class="chip"><div class="chip__color" style="background:#fafaf9;"></div><div class="chip__meta"><b>bg-canvas</b><code>#fafaf9</code></div></div>
+    <div class="chip"><div class="chip__color" style="background:#f1f1ef;"></div><div class="chip__meta"><b>bg-subtle</b><code>#f1f1ef</code></div></div>
+    <div class="chip"><div class="chip__color" style="background:#1a1a19;"></div><div class="chip__meta"><b>text-primary</b><code>#1a1a19</code></div></div>
+    <div class="chip"><div class="chip__color" style="background:#14532d;"></div><div class="chip__meta"><b>sc-snake-head</b><code>#14532d</code></div></div>
+    <div class="chip"><div class="chip__color" style="background:#15803d;"></div><div class="chip__meta"><b>sc-snake-body</b><code>#15803d</code></div></div>
+    <div class="chip"><div class="chip__color" style="background:#c81e1e;"></div><div class="chip__meta"><b>sc-food</b><code>#c81e1e</code></div></div>
+    <div class="chip"><div class="chip__color" style="background:#ffffff;"></div><div class="chip__meta"><b>sc-board-bg</b><code>#ffffff</code></div></div>
+  </div>
+
+  <!-- ══════════════ 4) 대비 검증 ══════════════ -->
+  <h2 class="doc__sec-title">4. 대비 검증 (WCAG AA · 명세 §2.3)</h2>
+  <table class="contrast">
+    <tr><th>전경</th><th>배경</th><th>대비(근사)</th><th>요건</th><th>판정</th></tr>
+    <tr><td><span class="swatch" style="background:#1a1a19;"></span>text-primary</td><td>bg-canvas #fafaf9</td><td>~16.6:1</td><td>4.5</td><td class="pass">✅</td></tr>
+    <tr><td><span class="swatch" style="background:#6b6b66;"></span>text-secondary(힌트)</td><td>bg-canvas #fafaf9</td><td>~5.1:1</td><td>4.5</td><td class="pass">✅</td></tr>
+    <tr><td><span class="swatch" style="background:#ffffff;"></span>흰색 버튼 라벨</td><td>accent #3563e9</td><td>~5.1:1</td><td>4.5</td><td class="pass">✅</td></tr>
+    <tr><td><span class="swatch" style="background:#15803d;"></span>snake-body</td><td>board-bg #ffffff</td><td>~5.0:1</td><td>3.0</td><td class="pass">✅</td></tr>
+    <tr><td><span class="swatch" style="background:#14532d;"></span>snake-head</td><td>board-bg #ffffff</td><td>~9.1:1</td><td>3.0</td><td class="pass">✅</td></tr>
+    <tr><td><span class="swatch" style="background:#c81e1e;"></span>food</td><td>board-bg #ffffff</td><td>~5.7:1</td><td>3.0</td><td class="pass">✅</td></tr>
+    <tr><td><span class="swatch" style="background:#22c55e;"></span>(dark) snake-body</td><td>board-bg #0b0d11</td><td>~8.2:1</td><td>3.0</td><td class="pass">✅</td></tr>
+    <tr><td><span class="swatch" style="background:#f87171;"></span>(dark) food</td><td>board-bg #0b0d11</td><td>~7.0:1</td><td>3.0</td><td class="pass">✅</td></tr>
+  </table>
+  <p class="doc__note">⚠️ 계산 근사값 — dev 확정 후 WebAIM Contrast Checker 재검증 권장.</p>
+
+  <!-- ══════════════ 5) 다크 모드 프리뷰 ══════════════ -->
+  <h2 class="doc__sec-title">5. 다크 모드 프리뷰 (prefers-color-scheme: dark 강제)</h2>
+  <p class="doc__note">시스템 다크 설정 시 자동 전환. 아래는 강제 오버라이드 컨테이너.</p>
+  <div class="force-dark" style="padding:var(--space-5); display:inline-block;">
+    <div class="sc-page">
+      <h2 class="sc-title">스네이크 캐너리</h2>
+      <div class="sc-hud">
+        <div class="sc-hud__score"><span class="sc-hud__label">점수</span><span class="sc-hud__value">70</span></div>
+        <p class="sc-hud__status">진행 중</p>
+      </div>
+      <div class="sc-board-frame">
+        <div class="sc-board">
+          <div class="cell head" style="grid-area:6/11;"></div>
+          <div class="cell body" style="grid-area:6/10;"></div>
+          <div class="cell body" style="grid-area:7/10;"></div>
+          <div class="cell body" style="grid-area:8/10;"></div>
+          <div class="cell body" style="grid-area:8/11;"></div>
+          <div class="cell body" style="grid-area:8/12;"></div>
+          <div class="cell food" style="grid-area:13/15;"></div>
+        </div>
+      </div>
+      <p class="sc-hint">키보드: 방향키 / WASD · 시작·재시작: Enter / Space</p>
+      <nav class="sc-dpad" aria-label="방향 조작">
+        <button class="sc-dpad__btn dpad-up" aria-label="위로 이동 (↑ 또는 W)">▲</button>
+        <button class="sc-dpad__btn dpad-left" aria-label="왼쪽으로 이동 (← 또는 A)">◀</button>
+        <button class="sc-dpad__btn dpad-right is-pressed" aria-label="오른쪽으로 이동 (→ 또는 D)">▶</button>
+        <button class="sc-dpad__btn dpad-down" aria-label="아래로 이동 (↓ 또는 S)">▼</button>
+      </nav>
+    </div>
+  </div>
+
+  <p class="doc__note" style="margin-top:var(--space-6);">시안 종료 — [이디자인] · BF-993 · 시각 시뮬레이션(실 구현 X)</p>
+</div>
+</body>
+</html>
