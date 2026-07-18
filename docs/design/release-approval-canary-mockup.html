@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>릴리스 변경 승인 큐 — 시안 mockup (BF-1062)</title>
+  <style>
+    /* =========================================================
+       brix-Flow 공용 토큰 (단일 소스 · AC1)
+       모든 색/타이포/간격은 아래 변수만 참조. HEX 직접 사용 금지.
+       ========================================================= */
+    :root {
+      /* 기반 · 텍스트 */
+      --bf-color-bg: #ffffff;
+      --bf-color-surface: #f6f7f9;
+      --bf-color-surface-raised: #ffffff;
+      --bf-color-border: #d5dae1;
+      --bf-color-text: #1a1d21;
+      --bf-color-text-muted: #5b6270;
+      --bf-color-primary: #1f5fd6;
+      --bf-color-primary-contrast: #ffffff;
+      --bf-color-focus-ring: #1f5fd6;
+
+      /* 상태 배지 */
+      --bf-status-pending-bg: #e7effb;
+      --bf-status-pending-text: #1a4a99;
+      --bf-status-pending-border: #b9d0f0;
+      --bf-status-held-bg: #fbf0dd;
+      --bf-status-held-text: #8a4b00;
+      --bf-status-held-border: #f0d59a;
+      --bf-status-approved-bg: #e2f4ea;
+      --bf-status-approved-text: #14663c;
+      --bf-status-approved-border: #b6e0c7;
+
+      /* 위험도 밴드 */
+      --bf-risk-high-bg: #fbe4e2;
+      --bf-risk-high-text: #8f1d17;
+      --bf-risk-mid-bg: #fbf0dd;
+      --bf-risk-mid-text: #8a4b00;
+      --bf-risk-low-bg: #eef1f5;
+      --bf-risk-low-text: #454b56;
+
+      /* 타이포 (system font stack — 외부 의존성 0건) */
+      --bf-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+
+      /* 간격 (4px 스케일) */
+      --bf-space-1: 4px;
+      --bf-space-2: 8px;
+      --bf-space-3: 12px;
+      --bf-space-4: 16px;
+      --bf-space-6: 24px;
+      --bf-space-8: 32px;
+
+      --bf-radius: 8px;
+      --bf-radius-sm: 6px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bf-color-surface);
+      color: var(--bf-color-text);
+      font-family: var(--bf-font-family);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .page { max-width: 1120px; margin: 0 auto; padding: var(--bf-space-6) var(--bf-space-4); }
+
+    /* 포커스 링 — 전 인터랙티브 요소 (AC2) */
+    a:focus-visible, button:focus-visible, [tabindex]:focus-visible, [role="tab"]:focus-visible {
+      outline: 2px solid var(--bf-color-focus-ring);
+      outline-offset: 2px;
+    }
+
+    /* ---------- 큐 헤더 ---------- */
+    .queue-header h1 { font-size: 20px; line-height: 28px; font-weight: 600; margin: 0 0 var(--bf-space-1); }
+    .queue-header p { margin: 0 0 var(--bf-space-4); color: var(--bf-color-text-muted); }
+
+    .filter-tabs { display: flex; flex-wrap: wrap; gap: var(--bf-space-1); border-bottom: 1px solid var(--bf-color-border); margin-bottom: var(--bf-space-6); }
+    .filter-tab {
+      appearance: none; background: none; border: none; cursor: pointer;
+      font-family: inherit; font-size: 14px; color: var(--bf-color-text-muted);
+      padding: var(--bf-space-2) var(--bf-space-3); border-bottom: 2px solid transparent;
+      display: inline-flex; align-items: center; gap: var(--bf-space-2);
+    }
+    .filter-tab[aria-selected="true"] { color: var(--bf-color-text); font-weight: 600; border-bottom-color: var(--bf-color-primary); }
+    .filter-tab .count { font-size: 12px; color: var(--bf-color-text-muted); font-variant-numeric: tabular-nums; }
+
+    /* ---------- 레이아웃: 큐 + 상세 ---------- */
+    .layout { display: grid; grid-template-columns: 3fr 2fr; gap: var(--bf-space-6); align-items: start; }
+    .queue-list { display: flex; flex-direction: column; gap: var(--bf-space-3); }
+    .detail-panel { position: sticky; top: var(--bf-space-4); }
+
+    /* ---------- 후보 카드 ---------- */
+    .candidate-card {
+      position: relative; background: var(--bf-color-surface-raised);
+      border: 1px solid var(--bf-color-border); border-radius: var(--bf-radius);
+      padding: var(--bf-space-4); padding-left: calc(var(--bf-space-4) + 4px);
+      cursor: pointer; text-align: left; width: 100%; font-family: inherit;
+    }
+    .candidate-card:hover { border-color: var(--bf-color-text-muted); }
+    .candidate-card--selected { border-color: var(--bf-color-primary); box-shadow: 0 0 0 1px var(--bf-color-primary); }
+    /* 좌측 accent 스트립 — 고위험 스캔성 */
+    .candidate-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: var(--bf-radius) 0 0 var(--bf-radius); background: transparent; }
+    .candidate-card--high-risk::before { background: var(--bf-risk-high-text); }
+
+    .card-row { display: flex; align-items: center; gap: var(--bf-space-2); flex-wrap: wrap; }
+    .card-row + .card-row { margin-top: var(--bf-space-2); }
+    .card-title { font-size: 16px; line-height: 24px; font-weight: 600; margin: 0; }
+    .card-version { color: var(--bf-color-text-muted); font-variant-numeric: tabular-nums; }
+    .card-meta { color: var(--bf-color-text-muted); font-size: 12px; line-height: 18px; }
+    .card-actions { margin-left: auto; display: flex; gap: var(--bf-space-2); }
+
+    /* ---------- 배지 공통 ---------- */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; line-height: 18px; font-weight: 600;
+      padding: 2px var(--bf-space-2); border-radius: 999px; border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge .glyph { font-weight: 700; }
+
+    .status-badge--pending { background: var(--bf-status-pending-bg); color: var(--bf-status-pending-text); border-color: var(--bf-status-pending-border); }
+    .status-badge--held { background: var(--bf-status-held-bg); color: var(--bf-status-held-text); border-color: var(--bf-status-held-border); }
+    .status-badge--approved { background: var(--bf-status-approved-bg); color: var(--bf-status-approved-text); border-color: var(--bf-status-approved-border); }
+
+    .risk-badge--high { background: var(--bf-risk-high-bg); color: var(--bf-risk-high-text); }
+    .risk-badge--mid { background: var(--bf-risk-mid-bg); color: var(--bf-risk-mid-text); }
+    .risk-badge--low { background: var(--bf-risk-low-bg); color: var(--bf-risk-low-text); }
+
+    .env-badge { background: var(--bf-color-surface); color: var(--bf-color-text-muted); border-color: var(--bf-color-border); }
+    .env-badge--production { color: var(--bf-color-text); border-color: var(--bf-color-text-muted); }
+
+    .risk-factors { display: flex; flex-wrap: wrap; gap: var(--bf-space-1); }
+    .chip { font-size: 12px; line-height: 18px; padding: 2px var(--bf-space-2); border-radius: var(--bf-radius-sm); background: var(--bf-color-surface); border: 1px solid var(--bf-color-border); color: var(--bf-color-text-muted); }
+    .risk-factors--empty { color: var(--bf-color-text-muted); font-size: 12px; font-style: italic; }
+
+    /* ---------- 버튼 ---------- */
+    .btn { font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: var(--bf-space-2) var(--bf-space-3); border-radius: var(--bf-radius-sm); border: 1px solid transparent; }
+    .btn--primary { background: var(--bf-color-primary); color: var(--bf-color-primary-contrast); }
+    .btn--secondary { background: transparent; color: var(--bf-status-held-text); border-color: var(--bf-status-held-border); }
+    .btn--tertiary { background: transparent; color: var(--bf-color-primary); border-color: transparent; }
+    .btn:disabled, .btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+
+    /* ---------- 상세 패널 ---------- */
+    .detail-panel .panel {
+      background: var(--bf-color-surface-raised); border: 1px solid var(--bf-color-border);
+      border-radius: var(--bf-radius); padding: var(--bf-space-4);
+    }
+    .panel h2 { font-size: 16px; line-height: 24px; font-weight: 600; margin: 0 0 var(--bf-space-2); }
+    .panel .section-label { font-size: 12px; font-weight: 600; color: var(--bf-color-text-muted); text-transform: uppercase; letter-spacing: .02em; margin: var(--bf-space-4) 0 var(--bf-space-2); }
+
+    .decision-actions { display: flex; gap: var(--bf-space-2); margin-top: var(--bf-space-2); }
+    .terminal-note { margin-top: var(--bf-space-2); font-size: 12px; color: var(--bf-color-text-muted); }
+
+    /* 이력 타임라인 */
+    .decision-history { list-style: none; margin: 0; padding: 0; }
+    .decision-history__item { position: relative; padding: 0 0 var(--bf-space-3) var(--bf-space-4); border-left: 2px solid var(--bf-color-border); }
+    .decision-history__item:last-child { border-left-color: transparent; }
+    .decision-history__item::before { content: ""; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--bf-color-primary); }
+    .decision-history__transition { font-weight: 600; }
+    .decision-history__meta { font-size: 12px; color: var(--bf-color-text-muted); }
+    .decision-history__empty { color: var(--bf-color-text-muted); font-size: 12px; }
+
+    /* 빈 상태 */
+    .empty-queue { text-align: center; padding: var(--bf-space-8); background: var(--bf-color-surface-raised); border: 1px dashed var(--bf-color-border); border-radius: var(--bf-radius); color: var(--bf-color-text-muted); }
+    .empty-queue strong { display: block; color: var(--bf-color-text); font-size: 16px; margin-bottom: var(--bf-space-1); }
+
+    /* 데모 구획 라벨 (mockup 전용, 실제 UI 아님) */
+    .demo-note { margin: var(--bf-space-8) 0 var(--bf-space-2); padding-top: var(--bf-space-4); border-top: 1px dashed var(--bf-color-border); font-size: 12px; color: var(--bf-color-text-muted); }
+
+    /* 반응형 */
+    @media (max-width: 959px) { .layout { grid-template-columns: 1fr; } .detail-panel { position: static; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ============ 큐 헤더 + 필터 탭 ============ -->
+    <header class="queue-header">
+      <h1>릴리스 변경 승인 큐</h1>
+      <p>위험도가 높은 배포 후보를 검토하고 승인 · 보류 · 재검토를 결정합니다.</p>
+      <div class="filter-tabs" role="tablist" aria-label="상태 필터">
+        <button class="filter-tab" role="tab" aria-selected="false">전체 <span class="count">5</span></button>
+        <button class="filter-tab" role="tab" aria-selected="true">검토 대기 <span class="count">2</span></button>
+        <button class="filter-tab" role="tab" aria-selected="false">보류 <span class="count">1</span></button>
+        <button class="filter-tab" role="tab" aria-selected="false">승인 완료 <span class="count">1</span></button>
+      </div>
+    </header>
+
+    <!-- ============ 큐 + 상세 레이아웃 ============ -->
+    <div class="layout">
+
+      <!-- ---------- 승인 큐 리스트 (정렬 순서대로) ---------- -->
+      <section class="queue-list" aria-label="승인 큐">
+
+        <!-- 카드 1: 고위험 · 선택됨 · pending_review -->
+        <button class="candidate-card candidate-card--high-risk candidate-card--selected" aria-pressed="true">
+          <div class="card-row">
+            <h2 class="card-title">payments-gateway</h2>
+            <span class="card-version">v2026.7.1</span>
+            <span class="badge env-badge env-badge--production">production</span>
+          </div>
+          <div class="card-row">
+            <span class="badge risk-badge--high" aria-label="위험도 92점, 고위험"><span class="glyph" aria-hidden="true">▲</span> 고위험 92</span>
+            <span class="badge status-badge--pending" aria-label="상태: 검토 대기"><span class="glyph" aria-hidden="true">◔</span> 검토 대기</span>
+          </div>
+          <div class="card-row risk-factors">
+            <span class="chip">미검증 마이그레이션</span>
+            <span class="chip">롤백 스크립트 없음</span>
+          </div>
+          <div class="card-row">
+            <span class="card-meta">제출: ops-hana · 2026-07-15 09:20</span>
+            <span class="card-actions">
+              <span class="btn btn--primary">승인</span>
+              <span class="btn btn--secondary">보류</span>
+            </span>
+          </div>
+        </button>
+
+        <!-- 카드 2: 고위험 동률(92) · held (held 우선 tie-break 시각화) -->
+        <button class="candidate-card candidate-card--high-risk" aria-pressed="false">
+          <div class="card-row">
+            <h2 class="card-title">auth-session-store</h2>
+            <span class="card-version">v2026.7.0</span>
+            <span class="badge env-badge env-badge--production">production</span>
+          </div>
+          <div class="card-row">
+            <span class="badge risk-badge--high" aria-label="위험도 92점, 고위험"><span class="glyph" aria-hidden="true">▲</span> 고위험 92</span>
+            <span class="badge status-badge--held" aria-label="상태: 보류"><span class="glyph" aria-hidden="true">▮▮</span> 보류</span>
+          </div>
+          <div class="card-row risk-factors">
+            <span class="chip">세션 스키마 변경</span>
+          </div>
+          <div class="card-row">
+            <span class="card-meta">제출: ops-jin · 2026-07-14 17:05</span>
+            <span class="card-actions">
+              <span class="btn btn--primary">승인</span>
+              <span class="btn btn--tertiary">재검토 요청</span>
+            </span>
+          </div>
+        </button>
+
+        <!-- 카드 3: 중위험 · pending_review · 빈 riskFactors (edge case) -->
+        <button class="candidate-card" aria-pressed="false">
+          <div class="card-row">
+            <h2 class="card-title">docs-portal-theme</h2>
+            <span class="card-version">v2026.6.9</span>
+            <span class="badge env-badge">staging</span>
+          </div>
+          <div class="card-row">
+            <span class="badge risk-badge--mid" aria-label="위험도 63점, 중위험"><span class="glyph" aria-hidden="true">◆</span> 중위험 63</span>
+            <span class="badge status-badge--pending" aria-label="상태: 검토 대기"><span class="glyph" aria-hidden="true">◔</span> 검토 대기</span>
+          </div>
+          <div class="card-row">
+            <span class="risk-factors--empty">위험 요인 기록 없음</span>
+          </div>
+          <div class="card-row">
+            <span class="card-meta">제출: ops-mina · 2026-07-16 11:40</span>
+            <span class="card-actions">
+              <span class="btn btn--primary">승인</span>
+              <span class="btn btn--secondary">보류</span>
+            </span>
+          </div>
+        </button>
+
+      </section>
+
+      <!-- ---------- 후보 상세 패널 (선택된 카드 1) ---------- -->
+      <aside class="detail-panel" aria-label="후보 상세">
+        <div class="panel">
+          <h2>payments-gateway <span class="card-version">v2026.7.1</span></h2>
+          <div class="card-row">
+            <span class="badge risk-badge--high" aria-label="위험도 92점, 고위험"><span class="glyph" aria-hidden="true">▲</span> 고위험 92</span>
+            <span class="badge status-badge--pending" aria-label="상태: 검토 대기"><span class="glyph" aria-hidden="true">◔</span> 검토 대기</span>
+            <span class="badge env-badge env-badge--production">production</span>
+          </div>
+
+          <div class="section-label">위험 요인</div>
+          <div class="risk-factors">
+            <span class="chip">미검증 마이그레이션</span>
+            <span class="chip">롤백 스크립트 없음</span>
+          </div>
+
+          <div class="section-label">결정 이력</div>
+          <ol class="decision-history">
+            <li class="decision-history__item">
+              <span class="decision-history__transition">보류 → 검토 대기</span>
+              <div class="decision-history__meta">재검토 요청 · ops-hana · 결정 #3</div>
+            </li>
+            <li class="decision-history__item">
+              <span class="decision-history__transition">검토 대기 → 보류</span>
+              <div class="decision-history__meta">보류 · ops-jin · 결정 #1 · "롤백 스크립트 확인 필요"</div>
+            </li>
+          </ol>
+
+          <div class="section-label">결정 액션</div>
+          <div class="decision-actions" role="group" aria-label="결정 액션">
+            <button class="btn btn--primary">승인</button>
+            <button class="btn btn--secondary">보류</button>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- ============ [mockup 전용] 종결(approved) 상태 — 액션 비활성 (T5) ============ -->
+    <p class="demo-note">↓ 아래는 상태별 시각 예시입니다 (실제 화면에서는 필터/선택에 따라 노출).</p>
+    <div class="layout">
+      <section class="queue-list" aria-label="승인 완료 예시">
+        <button class="candidate-card" aria-pressed="false">
+          <div class="card-row">
+            <h2 class="card-title">search-index-rebuild</h2>
+            <span class="card-version">v2026.6.5</span>
+            <span class="badge env-badge">staging</span>
+          </div>
+          <div class="card-row">
+            <span class="badge risk-badge--low" aria-label="위험도 41점, 저위험"><span class="glyph" aria-hidden="true">●</span> 저위험 41</span>
+            <span class="badge status-badge--approved" aria-label="상태: 승인 완료"><span class="glyph" aria-hidden="true">✓</span> 승인 완료</span>
+          </div>
+          <div class="card-row">
+            <span class="card-meta">제출: ops-mina · 2026-07-12 08:10</span>
+          </div>
+          <div class="card-row decision-actions" role="group" aria-label="결정 액션">
+            <button class="btn btn--primary" disabled aria-disabled="true">승인</button>
+            <button class="btn btn--secondary" disabled aria-disabled="true">보류</button>
+            <button class="btn btn--tertiary" disabled aria-disabled="true">재검토 요청</button>
+          </div>
+          <p class="terminal-note">승인 완료된 후보입니다. 추가 결정을 내릴 수 없습니다.</p>
+        </button>
+      </section>
+
+      <!-- ============ 빈 상태 (edge case: 후보 0건) ============ -->
+      <aside aria-label="빈 상태 예시">
+        <div class="empty-queue">
+          <strong>검토할 릴리스 후보 없음</strong>
+          현재 결정 대기 중인 릴리스 후보가 없습니다. 새 후보가 큐에 들어오면 여기에 표시됩니다.
+        </div>
+      </aside>
+    </div>
+
+  </div>
+</body>
+</html>
