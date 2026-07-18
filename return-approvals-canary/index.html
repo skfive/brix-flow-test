@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>반품 승인 워크벤치</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="page">
+    <div class="return-workbench">
+      <div class="rw-toolbar">
+        <h1 class="rw-title">반품 승인 워크벤치</h1>
+        <div class="rw-filters" role="tablist" aria-label="상태 필터" id="rw-filters"></div>
+      </div>
+      <div class="rw-body">
+        <!-- 목록 패널 -->
+        <div class="rw-list">
+          <table class="rw-table">
+            <thead>
+              <tr>
+                <th scope="col">상태</th>
+                <th scope="col">주문ID</th>
+                <th scope="col">고객명</th>
+                <th scope="col">상품명</th>
+                <th scope="col">반품 사유</th>
+                <th scope="col">요청일시</th>
+              </tr>
+            </thead>
+            <tbody id="rw-tbody"></tbody>
+          </table>
+          <div class="empty-state" id="rw-empty" role="status" hidden>표시할 반품 요청이 없습니다</div>
+          <div class="load-error" id="rw-load-error" role="alert" hidden>반품 목록을 불러오지 못했습니다.</div>
+        </div>
+
+        <!-- 상세·액션 패널 -->
+        <div class="rw-detail" id="rw-detail" aria-live="off">
+          <div class="placeholder" id="rw-placeholder">요청을 선택하세요</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 처리 결과 피드백 (aria-live polite) -->
+  <div class="toast-region" id="rw-toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- 승인 확인 다이얼로그 -->
+  <div class="dialog-backdrop" id="rw-approve-backdrop" hidden>
+    <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rw-dlg-title" aria-describedby="rw-dlg-desc">
+      <h3 id="rw-dlg-title">반품 요청을 승인할까요?</h3>
+      <p id="rw-dlg-desc" class="caption"></p>
+      <div class="row">
+        <button class="btn btn--secondary" id="rw-approve-cancel" type="button">취소</button>
+        <button class="btn btn--primary" id="rw-approve-confirm" type="button">승인 확정</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
