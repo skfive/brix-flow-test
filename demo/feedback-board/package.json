@@ -1,0 +1,6 @@
+{
+  "name": "feedback-board",
+  "private": true,
+  "type": "commonjs",
+  "description": "고객 피드백 보드 SPA (vanilla-static, localStorage 기반). 루트가 type:module 이라 node --test 의 CommonJS require 를 위해 이 하위 트리만 commonjs 로 오버라이드. 브라우저는 package.json 을 무시하므로 file:// 동작에는 영향이 없다."
+}
