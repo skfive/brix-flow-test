@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>피드백 보드 — BF-1074 mockup</title>
+  <style>
+    :root {
+      /* ── 컬러 (명세 §2) — 기존 공용 토큰 ── */
+      --color-primary: #2563EB;
+      --color-primary-hover: #1D4ED8;
+      --color-primary-soft: #EAF1FE;
+      --color-bg: #F7F8FA;
+      --color-surface: #FFFFFF;
+      --color-border: #E2E5EA;
+      --color-text: #1F2430;
+      --color-text-muted: #6B7280;
+      --color-warning: #D97706;
+      --color-warning-soft: #FEF3E2;
+      --color-success: #16A34A;
+      --color-success-soft: #ECFDF3;
+      --color-pending: #9CA3AF;
+      --color-pending-soft: #F3F4F6;
+
+      /* ── 타이포 (명세 §3) ── */
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
+
+      /* ── spacing (명세 §4) ── */
+      --space-1: 4px; --space-2: 8px; --space-3: 12px;
+      --space-4: 16px; --space-5: 24px; --space-6: 32px;
+
+      /* ── radius (명세 §4) ── */
+      --radius-card: 12px; --radius-item: 10px; --radius-btn: 8px; --radius-pill: 999px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+
+    .board {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: var(--space-6) var(--space-4);
+    }
+
+    /* ── 헤더 ── */
+    .board__header { margin-bottom: var(--space-5); }
+    .board__title { font-size: 22px; line-height: 30px; font-weight: 700; margin: 0; }
+    .board__subtitle {
+      font-size: 14px; line-height: 20px; font-weight: 400;
+      color: var(--color-text-muted); margin: var(--space-1) 0 0;
+    }
+
+    .section { margin-bottom: var(--space-5); }
+    .section__heading {
+      font-size: 15px; line-height: 22px; font-weight: 600;
+      margin: 0 0 var(--space-3);
+    }
+
+    /* ── KPI 바 (명세 §5.1) ── */
+    .kpi-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+    }
+    .kpi-tile {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-item);
+      padding: var(--space-4);
+    }
+    .kpi-tile__value { font-size: 24px; line-height: 30px; font-weight: 700; }
+    .kpi-tile__value--open { color: var(--color-warning); }
+    .kpi-tile__value--planned { color: var(--color-primary); }
+    .kpi-tile__value--done { color: var(--color-success); }
+    .kpi-tile__label {
+      font-size: 12px; line-height: 16px; font-weight: 500;
+      color: var(--color-text-muted); margin-top: var(--space-1);
+    }
+
+    /* ── 손상 복구 배너 (명세 §5.7) ── */
+    .recovery-banner {
+      display: flex; gap: var(--space-3); align-items: flex-start;
+      background: var(--color-warning-soft);
+      border-left: 4px solid var(--color-warning);
+      border-radius: var(--radius-card);
+      padding: var(--space-4);
+    }
+    .recovery-banner__icon { font-size: 18px; line-height: 22px; }
+    .recovery-banner__body { flex: 1; }
+    .recovery-banner__title { font-size: 14px; font-weight: 600; margin: 0; }
+    .recovery-banner__desc {
+      font-size: 13px; color: var(--color-text-muted); margin: 2px 0 0;
+    }
+    .recovery-banner__close {
+      border: none; background: none; cursor: pointer;
+      font-size: 18px; color: var(--color-text-muted); line-height: 1;
+    }
+
+    /* ── 등록 폼 (명세 §5.2) ── */
+    .panel {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-card);
+      padding: var(--space-4);
+    }
+    .feedback-form__row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--space-3);
+    }
+    .feedback-form__field { display: flex; flex-direction: column; margin-bottom: var(--space-3); }
+    .feedback-form__field:last-of-type { margin-bottom: 0; }
+    .feedback-form__label {
+      font-size: 12px; line-height: 16px; font-weight: 500;
+      color: var(--color-text-muted); margin-bottom: var(--space-1);
+    }
+    .input, .textarea, .select {
+      font-family: inherit; font-size: 14px; line-height: 20px;
+      color: var(--color-text);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-btn);
+      padding: var(--space-2) var(--space-3);
+    }
+    .textarea { resize: vertical; min-height: 68px; }
+    .input:focus, .textarea:focus, .select:focus {
+      outline: none; border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-soft);
+    }
+    /* error 상태 (명세 §5.2 error / AC-2) */
+    .feedback-form__field--error .input,
+    .feedback-form__field--error .select { border-color: var(--color-warning); }
+    .feedback-form__error {
+      font-size: 12px; line-height: 16px; color: var(--color-warning);
+      margin-top: var(--space-1);
+    }
+    .feedback-form__actions {
+      display: flex; justify-content: flex-end; margin-top: var(--space-4);
+    }
+
+    /* ── 버튼 ── */
+    .btn {
+      font-family: inherit; font-size: 14px; line-height: 20px; font-weight: 500;
+      border-radius: var(--radius-btn); padding: var(--space-2) var(--space-4);
+      cursor: pointer; border: 1px solid transparent;
+    }
+    .btn--primary { background: var(--color-primary); color: #fff; }
+    .btn--primary:hover { background: var(--color-primary-hover); }
+    .btn--ghost {
+      background: var(--color-surface); color: var(--color-text);
+      border-color: var(--color-border);
+    }
+    .btn--ghost:hover { background: var(--color-bg); }
+    .btn--sm { font-size: 12px; padding: var(--space-1) var(--space-3); }
+
+    /* ── 필터 바 (명세 §5.5) ── */
+    .filter-bar {
+      display: flex; align-items: center; gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .segmented {
+      display: inline-flex; background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius-pill);
+      padding: 3px; gap: 2px;
+    }
+    .segmented__btn {
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      border: none; background: none; cursor: pointer;
+      color: var(--color-text-muted);
+      padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill);
+    }
+    .segmented__btn--active { background: var(--color-primary); color: #fff; }
+    .filter-bar__spacer { flex: 1; }
+    .filter-bar__category { min-width: 120px; }
+
+    /* ── 목록 카드 (명세 §5.3) ── */
+    .fb-list { display: flex; flex-direction: column; gap: var(--space-3); }
+    .fb-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-card);
+      padding: var(--space-4);
+    }
+    .fb-card__head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: var(--space-3);
+    }
+    .fb-card__title { font-size: 15px; line-height: 22px; font-weight: 600; margin: 0; }
+    .fb-card__body {
+      font-size: 14px; line-height: 20px; color: var(--color-text);
+      margin: var(--space-2) 0 var(--space-3);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .fb-card__meta {
+      display: flex; align-items: center; gap: var(--space-3);
+      font-size: 12px; line-height: 16px; color: var(--color-text-muted);
+    }
+    .fb-card__date { margin-left: auto; }
+    .fb-card__actions { display: flex; gap: var(--space-2); }
+
+    /* 카테고리 태그 (명세 §2.3) */
+    .tag {
+      font-size: 12px; font-weight: 500;
+      color: var(--color-text-muted);
+      background: var(--color-pending-soft);
+      border-radius: var(--radius-pill);
+      padding: 2px 10px;
+    }
+
+    /* ── 상태 뱃지 (명세 §5.4) ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      font-size: 12px; line-height: 16px; font-weight: 600;
+      border-radius: var(--radius-pill); padding: 2px 10px;
+      white-space: nowrap;
+    }
+    .badge__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .badge--open { color: var(--color-warning); background: var(--color-warning-soft); }
+    .badge--planned { color: var(--color-primary); background: var(--color-primary-soft); }
+    .badge--done { color: var(--color-success); background: var(--color-success-soft); }
+
+    /* ── 빈 상태 (명세 §5.6) ── */
+    .empty-state {
+      text-align: center;
+      background: var(--color-surface);
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-card);
+      padding: var(--space-6) var(--space-4);
+    }
+    .empty-state__icon { font-size: 28px; }
+    .empty-state__title {
+      font-size: 15px; font-weight: 600; margin: var(--space-2) 0 var(--space-1);
+    }
+    .empty-state__desc { font-size: 13px; color: var(--color-text-muted); margin: 0; }
+
+    /* ── mockup 데모 구분용 (실 산출물 아님) ── */
+    .demo-note {
+      font-size: 12px; color: var(--color-text-muted);
+      border-top: 1px dashed var(--color-border);
+      margin-top: var(--space-6); padding-top: var(--space-3);
+    }
+    .demo-label {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em;
+      margin: var(--space-5) 0 var(--space-2);
+    }
+
+    /* ── 반응형 (명세 §4.3) ── */
+    @media (max-width: 640px) {
+      .kpi-bar { grid-template-columns: repeat(2, 1fr); }
+      .feedback-form__row { grid-template-columns: 1fr; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-bar__spacer { display: none; }
+      .filter-bar__export { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <!-- ── 헤더 ── -->
+    <header class="board__header">
+      <h1 class="board__title">피드백 보드</h1>
+      <p class="board__subtitle">고객 피드백을 등록하고 상태별로 관리·필터링하세요. (mockup — placeholder 데이터)</p>
+    </header>
+
+    <!-- ── KPI 요약 바 (명세 §5.1) ── -->
+    <section class="section" aria-label="KPI 요약">
+      <div class="kpi-bar">
+        <div class="kpi-tile">
+          <div class="kpi-tile__value">8</div>
+          <div class="kpi-tile__label">전체 피드백</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile__value kpi-tile__value--open">3</div>
+          <div class="kpi-tile__label">접수 · 미처리 적체</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile__value kpi-tile__value--planned">2</div>
+          <div class="kpi-tile__label">계획됨</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile__value kpi-tile__value--done">3</div>
+          <div class="kpi-tile__label">완료</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile__value">37.5%</div>
+          <div class="kpi-tile__label">완료율</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile__value">2일 4시간</div>
+          <div class="kpi-tile__label">평균 처리 시간</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 손상 복구 배너 (명세 §5.7, 조건부 노출 예시) ── -->
+    <section class="section" aria-label="손상 복구 알림">
+      <span class="demo-label">상태: 손상 복구 알림 (조건부 노출)</span>
+      <div class="recovery-banner" role="status">
+        <span class="recovery-banner__icon" aria-hidden="true">⚠️</span>
+        <div class="recovery-banner__body">
+          <p class="recovery-banner__title">저장된 데이터를 복구할 수 없어 초기화되었습니다</p>
+          <p class="recovery-banner__desc">손상된 원본은 백업 후 보관되었습니다. 다시 피드백을 등록해 주세요.</p>
+        </div>
+        <button class="recovery-banner__close" aria-label="알림 닫기">×</button>
+      </div>
+    </section>
+
+    <!-- ── 등록 폼 (명세 §5.2) ── -->
+    <section class="section" aria-label="피드백 등록">
+      <h2 class="section__heading">피드백 등록</h2>
+      <form class="panel feedback-form">
+        <div class="feedback-form__row">
+          <div class="feedback-form__field">
+            <label class="feedback-form__label" for="fb-title">제목</label>
+            <input class="input" id="fb-title" type="text" placeholder="피드백 제목을 입력하세요" />
+          </div>
+          <div class="feedback-form__field">
+            <label class="feedback-form__label" for="fb-category">카테고리</label>
+            <select class="select" id="fb-category">
+              <option value="" disabled selected>카테고리 선택</option>
+              <option value="bug">버그</option>
+              <option value="feature">기능</option>
+              <option value="improvement">개선</option>
+              <option value="other">기타</option>
+            </select>
+          </div>
+        </div>
+        <div class="feedback-form__field">
+          <label class="feedback-form__label" for="fb-content">내용</label>
+          <textarea class="textarea" id="fb-content" placeholder="상세 내용을 입력하세요"></textarea>
+        </div>
+        <div class="feedback-form__actions">
+          <button class="btn btn--primary" type="submit">등록</button>
+        </div>
+      </form>
+
+      <!-- error 상태 예시 (명세 §5.2 / AC-2) -->
+      <span class="demo-label">상태: 입력 오류 (필수값 누락 — AC-2)</span>
+      <form class="panel feedback-form">
+        <div class="feedback-form__row">
+          <div class="feedback-form__field feedback-form__field--error">
+            <label class="feedback-form__label" for="fb-title-err">제목</label>
+            <input class="input" id="fb-title-err" type="text" value="   " />
+            <span class="feedback-form__error">제목을 입력하세요.</span>
+          </div>
+          <div class="feedback-form__field feedback-form__field--error">
+            <label class="feedback-form__label" for="fb-category-err">카테고리</label>
+            <select class="select" id="fb-category-err">
+              <option value="" disabled selected>카테고리 선택</option>
+            </select>
+            <span class="feedback-form__error">카테고리를 선택하세요.</span>
+          </div>
+        </div>
+        <div class="feedback-form__actions">
+          <button class="btn btn--primary" type="submit">등록</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ── 필터 바 (명세 §5.5) ── -->
+    <section class="section" aria-label="필터">
+      <div class="filter-bar">
+        <div class="segmented" role="group" aria-label="상태 필터">
+          <button class="segmented__btn segmented__btn--active" aria-pressed="true">전체</button>
+          <button class="segmented__btn" aria-pressed="false">접수</button>
+          <button class="segmented__btn" aria-pressed="false">계획됨</button>
+          <button class="segmented__btn" aria-pressed="false">완료</button>
+        </div>
+        <select class="select filter-bar__category" aria-label="카테고리 필터">
+          <option value="all" selected>전체 카테고리</option>
+          <option value="bug">버그</option>
+          <option value="feature">기능</option>
+          <option value="improvement">개선</option>
+          <option value="other">기타</option>
+        </select>
+        <span class="filter-bar__spacer"></span>
+        <button class="btn btn--ghost filter-bar__export" type="button">JSON 내보내기</button>
+      </div>
+    </section>
+
+    <!-- ── 목록 (명세 §5.3 / §5.4) ── -->
+    <section class="section" aria-label="피드백 목록">
+      <h2 class="section__heading">피드백 목록</h2>
+      <div class="fb-list">
+
+        <!-- open 카드: → 계획됨 / → 완료 전이 노출 -->
+        <article class="fb-card">
+          <div class="fb-card__head">
+            <h3 class="fb-card__title">로그인 후 대시보드가 간헐적으로 비어 보입니다</h3>
+            <span class="badge badge--open"><span class="badge__dot" aria-hidden="true"></span>접수</span>
+          </div>
+          <p class="fb-card__body">첫 로그인 직후 대시보드 위젯이 렌더되지 않고 빈 화면이 잠깐 노출됩니다. 새로고침하면 정상 표시됩니다. Lorem ipsum dolor sit amet.</p>
+          <div class="fb-card__meta">
+            <span class="tag">버그</span>
+            <div class="fb-card__actions">
+              <button class="btn btn--ghost btn--sm" type="button">계획됨으로</button>
+              <button class="btn btn--ghost btn--sm" type="button">완료로</button>
+            </div>
+            <span class="fb-card__date">2026-07-21 14:32</span>
+          </div>
+        </article>
+
+        <!-- planned 카드: → 완료 전이만 노출 -->
+        <article class="fb-card">
+          <div class="fb-card__head">
+            <h3 class="fb-card__title">피드백 목록에 정렬 옵션을 추가해 주세요</h3>
+            <span class="badge badge--planned"><span class="badge__dot" aria-hidden="true"></span>계획됨</span>
+          </div>
+          <p class="fb-card__body">최신순 외에 상태별·카테고리별 정렬을 선택하고 싶습니다. 다음 스프린트 작업으로 계획되었습니다. Lorem ipsum dolor sit amet consectetur.</p>
+          <div class="fb-card__meta">
+            <span class="tag">개선</span>
+            <div class="fb-card__actions">
+              <button class="btn btn--ghost btn--sm" type="button">완료로</button>
+            </div>
+            <span class="fb-card__date">2026-07-20 09:11</span>
+          </div>
+        </article>
+
+        <!-- done 카드: 전이 버튼 미노출 (종료 상태 — 명세 §5.3) -->
+        <article class="fb-card">
+          <div class="fb-card__head">
+            <h3 class="fb-card__title">CSV 내보내기 시 한글 파일명이 깨집니다</h3>
+            <span class="badge badge--done"><span class="badge__dot" aria-hidden="true"></span>완료</span>
+          </div>
+          <p class="fb-card__body">내보내기 파일명 인코딩을 UTF-8로 수정하여 배포 완료했습니다. Lorem ipsum dolor sit amet consectetur adipiscing elit.</p>
+          <div class="fb-card__meta">
+            <span class="tag">버그</span>
+            <span class="fb-card__date">2026-07-18 16:45</span>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ── 빈 상태: 필터 결과 0건 (명세 §5.6 no-match / AC-5) ── -->
+    <section class="section" aria-label="빈 상태 예시">
+      <span class="demo-label">상태: 필터 결과 0건 (AC-5)</span>
+      <div class="empty-state empty-state--no-match">
+        <div class="empty-state__icon" aria-hidden="true">🔍</div>
+        <p class="empty-state__title">조건에 맞는 피드백이 없습니다</p>
+        <p class="empty-state__desc">필터를 변경하면 다른 결과를 볼 수 있어요.</p>
+      </div>
+
+      <!-- ── 빈 상태: 데이터 0건 (명세 §5.6 no-data) ── -->
+      <span class="demo-label">상태: 등록 데이터 0건</span>
+      <div class="empty-state empty-state--no-data">
+        <div class="empty-state__icon" aria-hidden="true">📝</div>
+        <p class="empty-state__title">아직 등록된 피드백이 없습니다</p>
+        <p class="empty-state__desc">위 폼에서 첫 피드백을 등록해 보세요.</p>
+      </div>
+    </section>
+
+    <p class="demo-note">
+      본 파일은 BF-1074 디자인 시안의 <strong>시각 mockup</strong>입니다. 실제 구현 산출물이 아니며,
+      상태별 카드·오류 폼·빈 상태·복구 배너를 한 페이지에서 동시에 보여주기 위해 데모 상태를 병렬 배치했습니다.
+      실제 화면(BF-1075)에서는 각 상태가 조건에 따라 단일 노출됩니다.
+    </p>
+  </main>
+</body>
+</html>
