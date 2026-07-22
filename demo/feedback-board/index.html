@@ -93,6 +93,8 @@
       padding: var(--space-4);
       margin-bottom: var(--space-5);
     }
+    /* author-origin display:flex 가 UA [hidden]{display:none} 를 덮어쓰지 않도록 명시적 오버라이드 (§5.7 조건부 노출) */
+    .recovery-banner[hidden] { display: none; }
     .recovery-banner__icon { font-size: 18px; line-height: 22px; }
     .recovery-banner__body { flex: 1; }
     .recovery-banner__title { font-size: 14px; font-weight: 600; margin: 0; }
