@@ -15,6 +15,31 @@ import { computeKpi } from './kpi.js';
  */
 
 /**
+ * 기본 ID 생성기.
+ * secure context(HTTPS·localhost)에서는 `crypto.randomUUID()`를 사용하고,
+ * 그렇지 않은 호스트(순수 http 등)에서는 `crypto.randomUUID`가 노출되지 않으므로
+ * 타임스탬프 + 난수 기반 fallback으로 카드 생성이 깨지지 않게 한다(BF-1087 AC-1 회귀).
+ * @returns {string}
+ */
+function defaultGenerateId() {
+  const cryptoRef = typeof crypto !== 'undefined' ? crypto : undefined;
+  if (cryptoRef && typeof cryptoRef.randomUUID === 'function') {
+    return cryptoRef.randomUUID();
+  }
+  const randomChunk = () => {
+    if (cryptoRef && typeof cryptoRef.getRandomValues === 'function') {
+      const bytes = cryptoRef.getRandomValues(new Uint8Array(8));
+      return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    }
+    return (
+      Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, '0') +
+      Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, '0')
+    );
+  };
+  return `rn-${Date.now().toString(16)}-${randomChunk()}`;
+}
+
+/**
  * 릴리스 노트 요약 보드 서비스를 생성한다.
  * clock/id 는 테스트 결정성을 위해 주입 가능(기본값은 실제 시스템 시계·UUID).
  * @param {{
@@ -26,7 +51,7 @@ import { computeKpi } from './kpi.js';
 export function createReleaseNotesService(options = {}) {
   const store = options.store ?? createInMemoryStore();
   const now = options.now ?? (() => new Date());
-  const generateId = options.generateId ?? (() => crypto.randomUUID());
+  const generateId = options.generateId ?? defaultGenerateId;
 
   /**
    * POST /release-notes — 검증 통과 시에만 저장하고 201로 카드 전체를 반환한다.
