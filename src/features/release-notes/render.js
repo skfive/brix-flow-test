@@ -86,7 +86,22 @@ export function renderImpactChip(userImpact) {
 }
 
 /**
- * 요약 카드 (디자인 §6.3). 좌측 accent 보더=중요도, 헤더=배지, 메타=칩.
+ * '검토 준비' 상태 배지 (BF-1097). 사전 검증 흐름의 카드는 저장 없이 검토 대기 상태임을
+ * 조용히 표시한다. 중립 pill + 준비 완료를 뜻하는 dot 만으로 기존 배지/칩과 형태를 구분한다.
+ * dot 은 장식이므로 aria-hidden, 라벨 텍스트로 의미를 전달한다.
+ * @returns {string}
+ */
+export function renderStatusBadge() {
+  return (
+    '<span class="status-badge" data-status="ready">' +
+    '<span class="status-badge__dot" aria-hidden="true"></span>' +
+    '<span class="status-badge__label">검토 준비</span>' +
+    '</span>'
+  );
+}
+
+/**
+ * 요약 카드 (디자인 §6.3). 좌측 accent 보더=중요도, 헤더=배지, 메타=칩+상태 배지.
  * @param {import('./store.js').SummaryCard} card
  * @returns {string}
  */
@@ -102,7 +117,10 @@ export function renderSummaryCard(card) {
     '</header>' +
     `<ul class="summary-card__changes">${changeItems}</ul>` +
     '<div class="summary-card__meta">' +
+    '<div class="summary-card__tags">' +
     renderImpactChip(card.userImpact) +
+    renderStatusBadge() +
+    '</div>' +
     `<time class="summary-card__date" datetime="${escapeHtml(card.createdAt)}">${formatDateTime(card.createdAt)}</time>` +
     '</div>' +
     '</article>'
