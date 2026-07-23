@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>릴리스 요약 보드 (BF-1087)</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="board" data-release-notes-board>
+    <header class="board__header">
+      <h1 class="board__title">릴리스 요약 보드</h1>
+      <p class="board__desc">릴리스 제목·변경 항목·중요도·사용자 영향도를 입력해 요약 카드를 생성·사전 검증합니다. 검증 전용 흐름은 저장하지 않습니다.</p>
+    </header>
+
+    <section aria-label="KPI 요약">
+      <h2 class="section__heading">KPI 요약</h2>
+      <div data-kpi></div>
+    </section>
+
+    <section aria-label="요약 카드 등록/검증">
+      <h2 class="section__heading">요약 카드 등록 · 검증</h2>
+      <form class="summary-form" data-form novalidate>
+        <div class="summary-form__field summary-form__field--full" data-field="title">
+          <label class="summary-form__label" for="rn-title">제목</label>
+          <input id="rn-title" name="title" type="text" placeholder="릴리스 제목을 입력하세요" aria-describedby="rn-title-error" />
+          <span id="rn-title-error" class="summary-form__error" role="alert"></span>
+        </div>
+
+        <div class="summary-form__field summary-form__field--full" data-field="changes">
+          <label class="summary-form__label">변경 항목</label>
+          <div class="changes-list" data-changes></div>
+          <button type="button" class="changes-list__add" data-add-change>+ 항목 추가</button>
+          <span class="summary-form__error" role="alert"></span>
+        </div>
+
+        <div class="summary-form__grid">
+          <div class="summary-form__field" data-field="importance">
+            <label class="summary-form__label" for="rn-importance">중요도</label>
+            <select id="rn-importance" name="importance" aria-describedby="rn-importance-error">
+              <option value="">중요도 선택</option>
+              <option value="low">낮음</option>
+              <option value="medium">보통</option>
+              <option value="high">높음</option>
+              <option value="critical">긴급</option>
+            </select>
+            <span id="rn-importance-error" class="summary-form__error" role="alert"></span>
+          </div>
+          <div class="summary-form__field" data-field="userImpact">
+            <label class="summary-form__label" for="rn-impact">사용자 영향도</label>
+            <select id="rn-impact" name="userImpact" aria-describedby="rn-impact-error">
+              <option value="">사용자 영향도 선택</option>
+              <option value="none">영향 없음</option>
+              <option value="minor">경미</option>
+              <option value="major">상당</option>
+              <option value="breaking">호환성 깨짐</option>
+            </select>
+            <span id="rn-impact-error" class="summary-form__error" role="alert"></span>
+          </div>
+        </div>
+
+        <div class="summary-form__actions">
+          <button type="button" class="btn btn--secondary" data-validate>사전 검증</button>
+          <button type="submit" class="btn btn--primary">요약 카드 생성</button>
+        </div>
+
+        <div data-validate-result aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section aria-label="필터">
+      <h2 class="section__heading">필터</h2>
+      <div class="filter-bar">
+        <div class="segmented" data-segment="importance" role="group" aria-label="중요도 필터">
+          <button type="button" class="segmented__btn segmented__btn--active" data-value="all" aria-pressed="true">전체</button>
+          <button type="button" class="segmented__btn" data-value="low" aria-pressed="false">낮음</button>
+          <button type="button" class="segmented__btn" data-value="medium" aria-pressed="false">보통</button>
+          <button type="button" class="segmented__btn" data-value="high" aria-pressed="false">높음</button>
+          <button type="button" class="segmented__btn" data-value="critical" aria-pressed="false">긴급</button>
+        </div>
+        <div class="segmented" data-segment="userImpact" role="group" aria-label="사용자 영향도 필터">
+          <button type="button" class="segmented__btn segmented__btn--active" data-value="all" aria-pressed="true">전체</button>
+          <button type="button" class="segmented__btn" data-value="none" aria-pressed="false">영향 없음</button>
+          <button type="button" class="segmented__btn" data-value="minor" aria-pressed="false">경미</button>
+          <button type="button" class="segmented__btn" data-value="major" aria-pressed="false">상당</button>
+          <button type="button" class="segmented__btn" data-value="breaking" aria-pressed="false">호환성 깨짐</button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="요약 카드 목록">
+      <h2 class="section__heading">요약 카드</h2>
+      <div class="summary-list" data-list></div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
