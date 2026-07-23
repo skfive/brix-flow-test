@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>피드백 펄스 — 시안 (BF-1080)</title>
+<style>
+  :root {
+    --color-primary:#2563EB; --color-primary-hover:#1D4ED8; --color-primary-soft:#EAF1FE;
+    --color-bg:#F7F8FA; --color-surface:#FFFFFF; --color-border:#E2E5EA;
+    --color-text:#1F2430; --color-text-muted:#5B6472;
+    /* 감정 */
+    --sent-pos:#16A34A; --sent-pos-text:#15803D; --sent-pos-soft:#ECFDF3;
+    --sent-neu:#6B7280; --sent-neu-text:#4B5563; --sent-neu-soft:#F3F4F6;
+    --sent-neg:#DC2626; --sent-neg-text:#B91C1C; --sent-neg-soft:#FEE2E2;
+    /* 긴급도 */
+    --urg-low:#9CA3AF;  --urg-low-text:#4B5563;  --urg-low-soft:#F3F4F6;
+    --urg-med:#2563EB;  --urg-med-text:#1D4ED8;  --urg-med-soft:#EAF1FE;
+    --urg-high:#D97706; --urg-high-text:#B45309; --urg-high-soft:#FEF3E2;
+    --urg-crit:#DC2626; --urg-crit-text:#B91C1C; --urg-crit-soft:#FEE2E2;
+    /* 고지/포커스 */
+    --color-notice:#B45309; --color-notice-soft:#FEF3E2; --color-focus:#2563EB;
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans KR",sans-serif;
+    --font-num:"SF Mono",ui-monospace,"Menlo","Consolas",monospace;
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
+    --radius-card:12px; --radius-item:10px; --radius-btn:8px; --radius-pill:999px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--color-bg); color: var(--color-text);
+    font-family: var(--font-sans); font-size: 14px; line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
+  .mock-note {
+    background: #111827; color: #E5E7EB; border-radius: var(--radius-card);
+    padding: var(--space-4) var(--space-5); margin-bottom: var(--space-6); font-size: 13px; line-height: 20px;
+  }
+  .mock-note strong { color: #fff; }
+  .mock-note code { font-family: var(--font-num); color: #93C5FD; }
+  .screen-label {
+    display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--color-text-muted);
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    padding: 4px 10px; border-radius: var(--radius-pill); margin: var(--space-6) 0 var(--space-3);
+  }
+  .frame {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-card); padding: var(--space-5); margin-bottom: var(--space-2);
+  }
+  .frame--form { max-width: 560px; }
+  h1.title { font-size: 22px; line-height: 30px; font-weight: 700; margin: 0 0 var(--space-1); }
+  p.desc { color: var(--color-text-muted); margin: 0 0 var(--space-5); font-size: 13px; }
+  h2.section { font-size: 15px; line-height: 22px; font-weight: 600; margin: 0 0 var(--space-3); }
+  .field { margin-bottom: var(--space-4); }
+  .field > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: var(--space-2); }
+
+  /* segmented */
+  .segmented { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+  .segmented__btn {
+    flex: 1 1 auto; min-width: 72px; text-align: center; cursor: pointer;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-btn); padding: 9px 12px; font-size: 14px; font-weight: 500;
+    color: var(--color-text);
+  }
+  .segmented__btn--active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .segmented--error .segmented__btn { border-color: var(--sent-neg); }
+  .segmented__btn:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+
+  /* textarea */
+  textarea, select {
+    width: 100%; font-family: inherit; font-size: 14px; color: var(--color-text);
+    border: 1px solid var(--color-border); border-radius: var(--radius-btn);
+    padding: 10px 12px; background: var(--color-surface); resize: vertical;
+  }
+  textarea:focus-visible, select:focus-visible, .btn:focus-visible {
+    outline: 3px solid var(--color-focus); outline-offset: 2px;
+  }
+  textarea.is-error { border-color: var(--sent-neg); }
+  .counter { text-align: right; font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
+  .counter.is-error { color: var(--sent-neg-text); font-weight: 600; }
+  .form-error {
+    display: block; font-size: 12px; line-height: 16px; font-weight: 500;
+    color: var(--sent-neg-text); margin-top: 6px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid transparent; border-radius: var(--radius-btn); cursor: pointer;
+    font-size: 14px; font-weight: 500; padding: 10px 16px;
+  }
+  .btn--primary { background: var(--color-primary); color: #fff; width: 100%; }
+  .btn--primary:hover { background: var(--color-primary-hover); }
+  .btn--ghost { background: var(--color-surface); border-color: var(--color-border); color: var(--color-text); }
+
+  /* toast */
+  .toast {
+    display: flex; align-items: center; gap: var(--space-2);
+    background: var(--sent-pos-soft); color: var(--sent-pos-text);
+    border: 1px solid var(--sent-pos); border-radius: var(--radius-item);
+    padding: 10px 14px; font-size: 13px; font-weight: 600; margin-bottom: var(--space-4);
+  }
+
+  /* notice banner */
+  .notice-banner {
+    display: flex; align-items: flex-start; gap: var(--space-3);
+    background: var(--color-notice-soft); border-left: 4px solid var(--color-notice);
+    border-radius: var(--radius-item); padding: 12px 14px; margin-bottom: var(--space-5);
+  }
+  .notice-banner__icon { color: var(--color-notice); font-weight: 700; }
+  .notice-banner__text { font-size: 13px; color: var(--color-text); }
+  .notice-banner__text strong { color: var(--color-notice); }
+  .notice-banner__close {
+    margin-left: auto; background: none; border: none; cursor: pointer;
+    color: var(--color-text-muted); font-size: 16px; line-height: 1; padding: 2px 6px;
+  }
+
+  /* KPI */
+  .pulse-kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
+  .kpi-tile { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-item); padding: var(--space-4); }
+  .kpi-tile__value { font-family: var(--font-num); font-size: 26px; line-height: 32px; font-weight: 700; }
+  .kpi-tile__value--neg { color: var(--sent-neg-text); }
+  .kpi-tile__value--urg { color: var(--urg-high-text); }
+  .kpi-tile__value--pulse { color: var(--color-primary); }
+  .kpi-tile__value--zero { color: var(--color-text-muted); }
+  .kpi-tile__label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); margin-top: 4px; }
+
+  /* distribution */
+  .dist-2col { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); margin-bottom: var(--space-5); }
+  .dist-chart { display: flex; flex-direction: column; gap: var(--space-3); }
+  .dist-row { display: grid; grid-template-columns: 68px 1fr 92px; align-items: center; gap: var(--space-3); }
+  .dist-row__label { font-size: 13px; font-weight: 600; }
+  .dist-row__bar { height: 10px; background: var(--color-border); border-radius: var(--radius-pill); overflow: hidden; }
+  .dist-row__fill { height: 100%; border-radius: var(--radius-pill); }
+  .dist-row__value { text-align: right; font-size: 13px; font-weight: 600; font-family: var(--font-num); }
+  .dist-empty { color: var(--color-text-muted); font-size: 13px; text-align: center; padding: var(--space-4) 0; }
+
+  /* badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; line-height: 16px; font-weight: 600;
+    padding: 2px 10px; border-radius: var(--radius-pill);
+  }
+  .badge__dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .badge--pos { color: var(--sent-pos-text); background: var(--sent-pos-soft); }
+  .badge--pos .badge__dot { background: var(--sent-pos); }
+  .badge--neu { color: var(--sent-neu-text); background: var(--sent-neu-soft); }
+  .badge--neu .badge__dot { background: var(--sent-neu); }
+  .badge--neg { color: var(--sent-neg-text); background: var(--sent-neg-soft); }
+  .badge--neg .badge__dot { background: var(--sent-neg); }
+  .badge--low { color: var(--urg-low-text); background: var(--urg-low-soft); }
+  .badge--low .badge__dot { background: var(--urg-low); }
+  .badge--med { color: var(--urg-med-text); background: var(--urg-med-soft); }
+  .badge--med .badge__dot { background: var(--urg-med); }
+  .badge--high { color: var(--urg-high-text); background: var(--urg-high-soft); }
+  .badge--high .badge__dot { background: var(--urg-high); }
+  .badge--crit { color: var(--urg-crit-text); background: var(--urg-crit-soft); }
+  .badge--crit .badge__dot { background: var(--urg-crit); }
+
+  /* urgent list */
+  .urgent-list { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-5); }
+  .urgent-item {
+    display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-left-width: 4px; border-radius: var(--radius-item); padding: 10px 14px;
+  }
+  .urgent-item--critical { border-left-color: var(--urg-crit); }
+  .urgent-item--high { border-left-color: var(--urg-high); }
+  .urgent-item__text { flex: 1 1 240px; font-size: 13px; color: var(--color-text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .urgent-item__time { font-size: 12px; color: var(--color-text-muted); }
+  .urgent-ok { color: var(--sent-pos-text); background: var(--sent-pos-soft);
+    border: 1px solid var(--sent-pos); border-radius: var(--radius-item);
+    padding: 12px 14px; font-size: 13px; font-weight: 600; margin-bottom: var(--space-5); }
+
+  /* filter bar */
+  .filter-bar {
+    display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
+    padding: var(--space-3) 0 var(--space-4); border-top: 1px solid var(--color-border);
+  }
+  .filter-group { display: flex; align-items: center; gap: var(--space-2); }
+  .filter-group__label { font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+  .pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+    border-radius: var(--radius-pill); padding: 5px 12px; font-size: 13px; cursor: pointer;
+  }
+  .pill--active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .pill:focus-visible, .btn:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+  select.filter-select { width: auto; min-width: 120px; padding: 6px 10px; }
+
+  /* feed */
+  .recent-feed { display: flex; flex-direction: column; gap: var(--space-3); }
+  .feed-card { border: 1px solid var(--color-border); border-radius: var(--radius-item); padding: var(--space-4); }
+  .feed-card__head { display: flex; gap: var(--space-2); margin-bottom: var(--space-2); flex-wrap: wrap; }
+  .feed-card__body {
+    font-size: 14px; color: var(--color-text); margin: 0 0 var(--space-3);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .feed-card__meta { display: flex; gap: var(--space-3); font-size: 12px; color: var(--color-text-muted); }
+
+  /* empty state */
+  .empty-state { text-align: center; padding: var(--space-6) var(--space-4); color: var(--color-text-muted);
+    border: 1px dashed var(--color-border); border-radius: var(--radius-item); }
+  .empty-state__icon { font-size: 32px; }
+  .empty-state__title { font-size: 15px; font-weight: 600; color: var(--color-text); margin: var(--space-2) 0 4px; }
+  .empty-state__sub { font-size: 13px; }
+
+  @media (max-width: 720px) {
+    .pulse-kpi { grid-template-columns: repeat(2, 1fr); }
+    .dist-2col { grid-template-columns: 1fr; }
+    .filter-bar { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="mock-note">
+    <strong>시안 mockup — BF-1080 · feedback-pulse</strong><br>
+    이 파일은 <code>docs/design/feedback-pulse-BF-1080.md</code> 명세의 시각 시뮬레이션입니다. dev(BF-1081)의 실제 산출물이 아니며 픽셀 일치 대상이 아닙니다.
+    placeholder 콘텐츠 사용. 스택: vanilla-static(외부 의존성 0건, system font). 감정/긴급도 텍스트는 WCAG AA(4.5:1) 충족을 위해 -700 계열 토큰 사용.
+  </div>
+
+  <!-- ============ 1. 제출 폼 — 기본 ============ -->
+  <span class="screen-label">화면 1 · 제출 폼 (기본)</span>
+  <div class="frame frame--form">
+    <h1 class="title">피드백 남기기</h1>
+    <p class="desc">지금 느낀 감정과 긴급도, 의견을 남겨 주세요. 접수 즉시 운영자 펄스 보드에 반영됩니다.</p>
+
+    <div class="field">
+      <label id="lbl-sent">감정</label>
+      <div class="segmented" role="radiogroup" aria-labelledby="lbl-sent">
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">긍정</button>
+        <button type="button" class="segmented__btn segmented__btn--active" role="radio" aria-checked="true">중립</button>
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">부정</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label id="lbl-urg">긴급도</label>
+      <div class="segmented" role="radiogroup" aria-labelledby="lbl-urg">
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">낮음</button>
+        <button type="button" class="segmented__btn segmented__btn--active" role="radio" aria-checked="true">보통</button>
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">높음</button>
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">긴급</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="opinion1">의견</label>
+      <textarea id="opinion1" rows="3" aria-describedby="counter1" placeholder="의견을 입력하세요">배송이 예상보다 빨라서 만족스러웠어요. 다만 포장 박스가 조금 손상되어 있었습니다.</textarea>
+      <div class="counter" id="counter1">57 / 1000</div>
+    </div>
+
+    <button type="submit" class="btn btn--primary">제출</button>
+  </div>
+
+  <!-- ============ 2. 제출 폼 — 에러 ============ -->
+  <span class="screen-label">화면 2 · 제출 폼 (유효성 에러 · AC-2)</span>
+  <div class="frame frame--form">
+    <h1 class="title">피드백 남기기</h1>
+    <p class="desc">감정/긴급도 미선택·의견 공백 시 인라인 에러를 표시하고 접수하지 않습니다.</p>
+
+    <div class="field">
+      <label id="lbl-sent2">감정</label>
+      <div class="segmented segmented--error" role="radiogroup" aria-labelledby="lbl-sent2" aria-describedby="err-sent2">
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">긍정</button>
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">중립</button>
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">부정</button>
+      </div>
+      <span class="form-error" id="err-sent2" role="alert">감정을 선택하세요.</span>
+    </div>
+
+    <div class="field">
+      <label for="opinion2">의견</label>
+      <textarea id="opinion2" rows="3" class="is-error" aria-describedby="counter2 err-op2" placeholder="의견을 입력하세요"></textarea>
+      <div class="counter is-error" id="counter2">0 / 1000</div>
+      <span class="form-error" id="err-op2" role="alert">의견을 입력하세요.</span>
+    </div>
+
+    <button type="submit" class="btn btn--primary">제출</button>
+  </div>
+
+  <!-- ============ 3. 제출 폼 — 성공 ============ -->
+  <span class="screen-label">화면 3 · 제출 폼 (접수 성공 · AC-1)</span>
+  <div class="frame frame--form">
+    <div class="toast" role="status">✓ 피드백이 접수되었습니다.</div>
+    <h1 class="title">피드백 남기기</h1>
+    <p class="desc">접수 후 폼이 초기화되고, 보드 최근 흐름 최상단에 신규 카드가 반영됩니다.</p>
+    <div class="field">
+      <label id="lbl-sent3">감정</label>
+      <div class="segmented" role="radiogroup" aria-labelledby="lbl-sent3">
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">긍정</button>
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">중립</button>
+        <button type="button" class="segmented__btn" role="radio" aria-checked="false">부정</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="opinion3">의견</label>
+      <textarea id="opinion3" rows="3" aria-describedby="counter3" placeholder="의견을 입력하세요"></textarea>
+      <div class="counter" id="counter3">0 / 1000</div>
+    </div>
+    <button type="submit" class="btn btn--primary">제출</button>
+  </div>
+
+  <!-- ============ 4. 펄스 보드 — 데이터 있음 ============ -->
+  <span class="screen-label">화면 4 · 펄스 보드 (데이터 있음)</span>
+  <div class="frame">
+    <h1 class="title">펄스 보드</h1>
+    <p class="desc">실시간 접수 현황과 KPI를 한눈에 확인합니다.</p>
+
+    <div class="notice-banner" role="note">
+      <span class="notice-banner__icon" aria-hidden="true">ℹ</span>
+      <span class="notice-banner__text"><strong>안내</strong> · 이 데이터는 서버 재시작 시 모두 초기화됩니다. 영속 저장은 지원하지 않습니다.</span>
+      <button type="button" class="notice-banner__close" aria-label="안내 닫기">×</button>
+    </div>
+
+    <!-- KPI -->
+    <div class="pulse-kpi">
+      <div class="kpi-tile">
+        <div class="kpi-tile__value">20</div>
+        <div class="kpi-tile__label">누적 접수</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile__value kpi-tile__value--neg">25.0%</div>
+        <div class="kpi-tile__label">부정 감정 비율 (negative / 전체)</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile__value kpi-tile__value--urg">6</div>
+        <div class="kpi-tile__label">긴급 대응 필요 (높음 + 긴급)</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile__value kpi-tile__value--pulse">4</div>
+        <div class="kpi-tile__label">최근 5분 접수 (펄스율)</div>
+      </div>
+    </div>
+
+    <!-- 분포 2단 -->
+    <div class="dist-2col">
+      <div>
+        <h2 class="section">감정 분포</h2>
+        <div class="dist-chart">
+          <div class="dist-row">
+            <span class="dist-row__label badge badge--pos"><span class="badge__dot"></span>긍정</span>
+            <div class="dist-row__bar" role="img" aria-label="긍정 11건, 55.0%"><div class="dist-row__fill" style="width:55%;background:var(--sent-pos)"></div></div>
+            <span class="dist-row__value">11 · 55.0%</span>
+          </div>
+          <div class="dist-row">
+            <span class="dist-row__label badge badge--neu"><span class="badge__dot"></span>중립</span>
+            <div class="dist-row__bar" role="img" aria-label="중립 4건, 20.0%"><div class="dist-row__fill" style="width:20%;background:var(--sent-neu)"></div></div>
+            <span class="dist-row__value">4 · 20.0%</span>
+          </div>
+          <div class="dist-row">
+            <span class="dist-row__label badge badge--neg"><span class="badge__dot"></span>부정</span>
+            <div class="dist-row__bar" role="img" aria-label="부정 5건, 25.0%"><div class="dist-row__fill" style="width:25%;background:var(--sent-neg)"></div></div>
+            <span class="dist-row__value">5 · 25.0%</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2 class="section">긴급도 분포</h2>
+        <div class="dist-chart">
+          <div class="dist-row">
+            <span class="dist-row__label badge badge--low"><span class="badge__dot"></span>낮음</span>
+            <div class="dist-row__bar" role="img" aria-label="낮음 8건, 40.0%"><div class="dist-row__fill" style="width:40%;background:var(--urg-low)"></div></div>
+            <span class="dist-row__value">8 · 40.0%</span>
+          </div>
+          <div class="dist-row">
+            <span class="dist-row__label badge badge--med"><span class="badge__dot"></span>보통</span>
+            <div class="dist-row__bar" role="img" aria-label="보통 6건, 30.0%"><div class="dist-row__fill" style="width:30%;background:var(--urg-med)"></div></div>
+            <span class="dist-row__value">6 · 30.0%</span>
+          </div>
+          <div class="dist-row">
+            <span class="dist-row__label badge badge--high"><span class="badge__dot"></span>높음</span>
+            <div class="dist-row__bar" role="img" aria-label="높음 4건, 20.0%"><div class="dist-row__fill" style="width:20%;background:var(--urg-high)"></div></div>
+            <span class="dist-row__value">4 · 20.0%</span>
+          </div>
+          <div class="dist-row">
+            <span class="dist-row__label badge badge--crit"><span class="badge__dot"></span>긴급</span>
+            <div class="dist-row__bar" role="img" aria-label="긴급 2건, 10.0%"><div class="dist-row__fill" style="width:10%;background:var(--urg-crit)"></div></div>
+            <span class="dist-row__value">2 · 10.0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 긴급 피드백 -->
+    <h2 class="section">긴급 피드백 (우선 대응)</h2>
+    <div class="urgent-list">
+      <div class="urgent-item urgent-item--critical">
+        <span class="badge badge--crit"><span class="badge__dot"></span>긴급</span>
+        <span class="badge badge--neg"><span class="badge__dot"></span>부정</span>
+        <span class="urgent-item__text">결제가 두 번 청구됐어요. 지금 바로 환불이 필요합니다.</span>
+        <span class="urgent-item__time">2분 전</span>
+      </div>
+      <div class="urgent-item urgent-item--critical">
+        <span class="badge badge--crit"><span class="badge__dot"></span>긴급</span>
+        <span class="badge badge--neg"><span class="badge__dot"></span>부정</span>
+        <span class="urgent-item__text">앱이 로그인 화면에서 계속 튕깁니다. 업무를 못 하고 있어요.</span>
+        <span class="urgent-item__time">8분 전</span>
+      </div>
+      <div class="urgent-item urgent-item--high">
+        <span class="badge badge--high"><span class="badge__dot"></span>높음</span>
+        <span class="badge badge--neu"><span class="badge__dot"></span>중립</span>
+        <span class="urgent-item__text">배송 조회가 하루째 갱신되지 않네요. 확인 부탁드립니다.</span>
+        <span class="urgent-item__time">15분 전</span>
+      </div>
+    </div>
+
+    <!-- 필터 + 최근 흐름 -->
+    <h2 class="section">최근 흐름</h2>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-group__label">감정</span>
+        <div class="pill-group" role="group" aria-label="감정 필터">
+          <button type="button" class="pill pill--active" aria-pressed="true">전체</button>
+          <button type="button" class="pill" aria-pressed="false">긍정</button>
+          <button type="button" class="pill" aria-pressed="false">중립</button>
+          <button type="button" class="pill" aria-pressed="false">부정</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label class="filter-group__label" for="urg-filter">긴급도</label>
+        <select id="urg-filter" class="filter-select">
+          <option>전체</option><option>낮음</option><option>보통</option><option>높음</option><option>긴급</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="recent-feed">
+      <div class="feed-card">
+        <div class="feed-card__head">
+          <span class="badge badge--pos"><span class="badge__dot"></span>긍정</span>
+          <span class="badge badge--low"><span class="badge__dot"></span>낮음</span>
+        </div>
+        <p class="feed-card__body">새로 나온 다크 모드 정말 좋아요. 눈이 훨씬 편합니다. 앞으로도 이런 개선 기대할게요.</p>
+        <div class="feed-card__meta"><span>2026-07-23 14:32</span><span>1분 전</span></div>
+      </div>
+      <div class="feed-card">
+        <div class="feed-card__head">
+          <span class="badge badge--neg"><span class="badge__dot"></span>부정</span>
+          <span class="badge badge--crit"><span class="badge__dot"></span>긴급</span>
+        </div>
+        <p class="feed-card__body">결제가 두 번 청구됐어요. 지금 바로 환불이 필요합니다. 고객센터도 연결이 안 됩니다.</p>
+        <div class="feed-card__meta"><span>2026-07-23 14:30</span><span>2분 전</span></div>
+      </div>
+      <div class="feed-card">
+        <div class="feed-card__head">
+          <span class="badge badge--neu"><span class="badge__dot"></span>중립</span>
+          <span class="badge badge--med"><span class="badge__dot"></span>보통</span>
+        </div>
+        <p class="feed-card__body">배송은 무난했는데 포장 박스가 조금 눌려 있었어요. 큰 문제는 아니었습니다.</p>
+        <div class="feed-card__meta"><span>2026-07-23 14:25</span><span>7분 전</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 5. 펄스 보드 — 빈 상태(재시작 직후) ============ -->
+  <span class="screen-label">화면 5 · 펄스 보드 (재시작 직후 · 빈 상태 · AC-5)</span>
+  <div class="frame">
+    <h1 class="title">펄스 보드</h1>
+    <p class="desc">서버 재시작 직후: 데이터 0건 · KPI 전부 0 · 비율 0.0% · 오류 없음.</p>
+
+    <div class="notice-banner" role="note">
+      <span class="notice-banner__icon" aria-hidden="true">ℹ</span>
+      <span class="notice-banner__text"><strong>안내</strong> · 이 데이터는 서버 재시작 시 모두 초기화됩니다. 영속 저장은 지원하지 않습니다.</span>
+      <button type="button" class="notice-banner__close" aria-label="안내 닫기">×</button>
+    </div>
+
+    <div class="pulse-kpi">
+      <div class="kpi-tile"><div class="kpi-tile__value kpi-tile__value--zero">0</div><div class="kpi-tile__label">누적 접수</div></div>
+      <div class="kpi-tile"><div class="kpi-tile__value kpi-tile__value--zero">0.0%</div><div class="kpi-tile__label">부정 감정 비율 (negative / 전체)</div></div>
+      <div class="kpi-tile"><div class="kpi-tile__value kpi-tile__value--zero">0</div><div class="kpi-tile__label">긴급 대응 필요 (높음 + 긴급)</div></div>
+      <div class="kpi-tile"><div class="kpi-tile__value kpi-tile__value--zero">0</div><div class="kpi-tile__label">최근 5분 접수 (펄스율)</div></div>
+    </div>
+
+    <div class="dist-2col">
+      <div>
+        <h2 class="section">감정 분포</h2>
+        <div class="dist-chart">
+          <div class="dist-empty">아직 접수된 피드백이 없습니다.</div>
+        </div>
+      </div>
+      <div>
+        <h2 class="section">긴급도 분포</h2>
+        <div class="dist-chart">
+          <div class="dist-empty">아직 접수된 피드백이 없습니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section">긴급 피드백 (우선 대응)</h2>
+    <div class="urgent-ok" role="status">현재 긴급 대응이 필요한 피드백이 없습니다.</div>
+
+    <h2 class="section">최근 흐름</h2>
+    <div class="empty-state empty-state--no-data">
+      <div class="empty-state__icon" aria-hidden="true">🗒️</div>
+      <div class="empty-state__title">아직 접수된 피드백이 없습니다</div>
+      <div class="empty-state__sub">첫 피드백이 접수되면 이곳에 실시간으로 표시됩니다.</div>
+    </div>
+  </div>
+
+  <!-- ============ 6. 펄스 보드 — 필터 0건 ============ -->
+  <span class="screen-label">화면 6 · 펄스 보드 (필터 결과 0건 · no-match · AC-3)</span>
+  <div class="frame">
+    <h2 class="section">최근 흐름</h2>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-group__label">감정</span>
+        <div class="pill-group" role="group" aria-label="감정 필터">
+          <button type="button" class="pill" aria-pressed="false">전체</button>
+          <button type="button" class="pill" aria-pressed="false">긍정</button>
+          <button type="button" class="pill" aria-pressed="false">중립</button>
+          <button type="button" class="pill pill--active" aria-pressed="true">부정</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label class="filter-group__label" for="urg-filter2">긴급도</label>
+        <select id="urg-filter2" class="filter-select">
+          <option>전체</option><option>낮음</option><option>보통</option><option>높음</option><option selected>긴급</option>
+        </select>
+      </div>
+    </div>
+    <div class="empty-state empty-state--no-match">
+      <div class="empty-state__icon" aria-hidden="true">🔍</div>
+      <div class="empty-state__title">조건에 맞는 피드백이 없습니다</div>
+      <div class="empty-state__sub">필터를 변경하면 다른 결과를 볼 수 있어요. (부정 · 긴급 AND 결합 결과 0건)</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
