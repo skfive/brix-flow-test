@@ -105,7 +105,7 @@ test(
 
       // 배너 닫기 인터랙션 (aria-label="알림 닫기")
       await page.locator('#fb-recovery-close').click();
-      await page.waitForSelector('#fb-recovery[hidden]');
+      await page.locator('#fb-recovery').waitFor({ state: 'hidden' });
     `;
 
     const res = await fetch('http://e2e-runner:3030/run', {
