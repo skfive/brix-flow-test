@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>장애 타임라인 패널 — 시안 (BF-1133)</title>
+<style>
+  :root {
+    /* ── 색상: 전부 brix-Flow 공용 중립 팔레트 재사용 (신규 토큰 0건) ── */
+    --bf-color-bg: #f4f6f9;
+    --bf-color-surface: #ffffff;
+    --bf-color-surface-muted: #eef1f6;
+    --bf-color-border: #d5dae1;
+    --bf-color-text: #1a2230;
+    --bf-color-text-muted: #4d5769;
+    --bf-color-primary: #1d4ed8;
+    --bf-color-primary-hover: #1740a6;
+    --bf-color-on-primary: #ffffff;
+    --bf-color-danger: #b3261e;
+    --bf-color-focus: #1d4ed8;
+    /* 상태(정상/저하/장애)에는 색상 토큰을 배정하지 않는다 — 형태/패턴/라벨로만 구분 */
+
+    /* ── 타이포 ── */
+    --bf-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    --bf-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+    /* ── 스페이싱 (8px 그리드) ── */
+    --bf-space-1: 4px; --bf-space-2: 8px; --bf-space-3: 12px; --bf-space-4: 16px;
+    --bf-space-5: 20px; --bf-space-6: 24px; --bf-space-8: 32px;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bf-color-bg);
+    color: var(--bf-color-text);
+    font-family: var(--bf-font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: var(--bf-space-8) var(--bf-space-4);
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  .mockup-note {
+    max-width: 1080px; margin: 0 auto var(--bf-space-6);
+    font-size: 12px; color: var(--bf-color-text-muted);
+    border-left: 3px solid var(--bf-color-border); padding-left: var(--bf-space-3);
+  }
+  h1, h2, h3 { margin: 0; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .mono { font-family: var(--bf-font-mono); font-variant-numeric: tabular-nums; }
+
+  /* ── 패널 ── */
+  .itp-panel {
+    background: var(--bf-color-surface);
+    border: 1px solid var(--bf-color-border);
+    border-radius: 12px;
+    padding: var(--bf-space-6);
+    margin-bottom: var(--bf-space-8);
+  }
+
+  /* ── 요약 바 (현재 영향) ── */
+  .itp-summary {
+    background: var(--bf-color-surface-muted);
+    border: 1px solid var(--bf-color-border);
+    border-radius: 8px;
+    padding: var(--bf-space-4) var(--bf-space-5);
+    margin-bottom: var(--bf-space-5);
+  }
+  .itp-summary__top {
+    display: flex; align-items: center; gap: var(--bf-space-3);
+    flex-wrap: wrap; margin-bottom: var(--bf-space-3);
+  }
+  .itp-summary__top h1 { font-size: 1.375rem; font-weight: 700; line-height: 1.3; }
+  .itp-elapsed {
+    margin-left: auto; font-size: 0.8125rem; font-weight: 600;
+    color: var(--bf-color-text-muted);
+  }
+  .itp-elapsed b { color: var(--bf-color-text); font-size: 0.9375rem; }
+  .itp-meta {
+    display: flex; flex-wrap: wrap; gap: var(--bf-space-2) var(--bf-space-5);
+    font-size: 0.8125rem; color: var(--bf-color-text-muted);
+  }
+  .itp-meta strong { color: var(--bf-color-text); font-weight: 600; }
+  .itp-owner-btn {
+    font: inherit; font-size: 0.8125rem; cursor: pointer;
+    background: var(--bf-color-surface); color: var(--bf-color-text);
+    border: 1px solid var(--bf-color-border); border-radius: 6px;
+    padding: var(--bf-space-1) var(--bf-space-2);
+  }
+
+  /* ── 상태 표식 (색 없이: 도형 + 라벨 + 패턴) ── */
+  .itp-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; font-weight: 600; line-height: 1;
+    padding: 4px 8px 4px 6px; border-radius: 6px;
+    background: var(--bf-color-surface);
+  }
+  .itp-status::before {
+    font-size: 0.85em; line-height: 1;
+  }
+  .itp-status--operational { border: 1px solid var(--bf-color-border); }
+  .itp-status--operational::before { content: "\25CF"; }           /* ● */
+  .itp-status--degraded { border: 2px dashed var(--bf-color-text-muted); }
+  .itp-status--degraded::before { content: "\25C6"; }              /* ◆ */
+  .itp-status--outage { border: 3px double var(--bf-color-danger); color: var(--bf-color-text); }
+  .itp-status--outage::before { content: "\25A0"; color: var(--bf-color-danger); } /* ■ */
+
+  /* ── 본문 2컬럼 ── */
+  .itp-main { display: grid; grid-template-columns: 1fr 320px; gap: var(--bf-space-6); }
+
+  /* ── 타임라인 레일 ── */
+  .itp-rail h2, .itp-actions h2 {
+    font-size: 1rem; font-weight: 600; margin-bottom: var(--bf-space-4);
+  }
+  .itp-rail__track { position: relative; padding-left: var(--bf-space-6); }
+  .itp-rail__track::before {
+    content: ""; position: absolute; left: 7px; top: 6px; bottom: 6px;
+    width: 1px; background: var(--bf-color-border);
+  }
+  .itp-node { position: relative; margin-bottom: var(--bf-space-5); }
+  .itp-node:last-child { margin-bottom: 0; }
+  /* 축 위의 도형 마커 */
+  .itp-node__dot {
+    position: absolute; left: calc(-1 * var(--bf-space-6)); top: 4px;
+    width: 16px; height: 16px; display: grid; place-items: center;
+    font-size: 13px; color: var(--bf-color-text);
+    background: var(--bf-color-surface);
+  }
+  .itp-node--operational .itp-node__dot::before { content: "\25CF"; } /* ● */
+  .itp-node--degraded   .itp-node__dot::before { content: "\25C6"; } /* ◆ */
+  .itp-node--outage     .itp-node__dot::before { content: "\25A0"; color: var(--bf-color-danger); } /* ■ */
+
+  .itp-node__card {
+    border: 1px solid var(--bf-color-border); border-radius: 8px;
+    padding: var(--bf-space-3); background: var(--bf-color-surface);
+  }
+  /* 상태별 테두리 패턴 + 배경 해칭 (전부 중립색) */
+  .itp-node--degraded .itp-node__card {
+    border: 2px dashed var(--bf-color-text-muted);
+    background-image: repeating-linear-gradient(45deg,
+      var(--bf-color-surface-muted) 0, var(--bf-color-surface-muted) 6px,
+      var(--bf-color-surface) 6px, var(--bf-color-surface) 12px);
+  }
+  .itp-node--outage .itp-node__card {
+    border: 3px double var(--bf-color-danger);
+    background-image:
+      repeating-linear-gradient(45deg, var(--bf-color-surface-muted) 0, var(--bf-color-surface-muted) 3px, transparent 3px, transparent 6px),
+      repeating-linear-gradient(-45deg, var(--bf-color-surface-muted) 0, var(--bf-color-surface-muted) 3px, transparent 3px, transparent 6px);
+  }
+  .itp-node--current .itp-node__card { box-shadow: 0 0 0 2px var(--bf-color-text) inset; }
+  .itp-node__row {
+    display: flex; align-items: center; gap: var(--bf-space-2);
+    flex-wrap: wrap; margin-bottom: var(--bf-space-1);
+  }
+  .itp-node__time { font-family: var(--bf-font-mono); font-size: 0.8125rem; font-weight: 500; color: var(--bf-color-text); }
+  .itp-node__delta { font-family: var(--bf-font-mono); font-size: 0.8125rem; color: var(--bf-color-text-muted); }
+  .itp-node__current-flag { font-size: 0.75rem; font-weight: 700; color: var(--bf-color-danger); margin-left: auto; }
+  .itp-node__title { font-size: 0.9375rem; font-weight: 600; margin: var(--bf-space-1) 0 2px; }
+  .itp-node__summary { font-size: 0.875rem; color: var(--bf-color-text-muted); }
+  .itp-node:focus-visible { outline: none; }
+  .itp-node:focus-visible .itp-node__card {
+    outline: 2px solid var(--bf-color-focus); outline-offset: 2px;
+  }
+
+  /* ── 다음 액션 패널 ── */
+  .itp-actions {
+    border: 1px solid var(--bf-color-border); border-radius: 8px;
+    padding: var(--bf-space-4); background: var(--bf-color-surface-muted);
+    align-self: start;
+  }
+  .itp-actions__ctx { font-size: 0.75rem; color: var(--bf-color-text-muted); margin-bottom: var(--bf-space-3); }
+  .itp-actions__ctx strong { color: var(--bf-color-text); }
+  .btn {
+    display: block; width: 100%; font: inherit; text-align: center;
+    padding: 10px var(--bf-space-3); border-radius: 6px; cursor: pointer;
+    min-height: 44px;
+  }
+  .btn--primary {
+    background: var(--bf-color-primary); color: var(--bf-color-on-primary);
+    border: 1px solid var(--bf-color-primary); font-weight: 600;
+    margin-bottom: var(--bf-space-2);
+  }
+  .btn--primary:hover { background: var(--bf-color-primary-hover); border-color: var(--bf-color-primary-hover); }
+  .btn--secondary {
+    background: var(--bf-color-surface); color: var(--bf-color-text);
+    border: 1px solid var(--bf-color-border); margin-bottom: var(--bf-space-2);
+  }
+  .btn--secondary:hover { background: var(--bf-color-bg); }
+  .itp-divider { border: none; border-top: 1px solid var(--bf-color-border); margin: var(--bf-space-4) 0; }
+  .itp-reassign label { display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: var(--bf-space-1); }
+  .itp-reassign__row { display: flex; gap: var(--bf-space-2); }
+  .itp-reassign input {
+    flex: 1; min-width: 0; font: inherit; padding: 8px var(--bf-space-2);
+    border: 1px solid var(--bf-color-border); border-radius: 6px;
+    background: var(--bf-color-surface); color: var(--bf-color-text); min-height: 44px;
+  }
+  .itp-reassign .btn { width: auto; padding: 8px var(--bf-space-3); }
+  .itp-error-text { display: none; font-size: 0.75rem; color: var(--bf-color-danger); margin-top: var(--bf-space-2); }
+
+  /* 포커스 가시성 (전 인터랙티브 요소) */
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--bf-color-focus); outline-offset: 2px;
+  }
+
+  /* ── 빈 상태 / 실패 상태 데모 ── */
+  .demo-label { font-size: 0.75rem; font-weight: 700; color: var(--bf-color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin: var(--bf-space-6) 0 var(--bf-space-2); }
+  .itp-state {
+    text-align: center; padding: var(--bf-space-8) var(--bf-space-4);
+    border: 1px dashed var(--bf-color-border); border-radius: 8px; background: var(--bf-color-surface);
+  }
+  .itp-state__glyph { font-size: 28px; line-height: 1; display: block; margin-bottom: var(--bf-space-3); }
+  .itp-empty .itp-state__glyph { color: var(--bf-color-text-muted); }        /* ● 중립 */
+  .itp-error .itp-state__glyph { color: var(--bf-color-danger); }             /* ■ danger */
+  .itp-state h3 { font-size: 1rem; margin-bottom: var(--bf-space-2); }
+  .itp-error h3 { color: var(--bf-color-danger); }
+  .itp-state p { font-size: 0.875rem; color: var(--bf-color-text-muted); margin: 0 auto var(--bf-space-4); max-width: 46ch; }
+  .itp-state .btn { display: inline-block; width: auto; padding: 10px var(--bf-space-4); }
+  .itp-state a { color: var(--bf-color-primary); font-size: 0.875rem; }
+
+  @media (max-width: 959px) {
+    .itp-main { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 639px) {
+    .itp-summary__top { flex-direction: column; align-items: flex-start; }
+    .itp-elapsed { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<p class="mockup-note">
+  시안 mockup (BF-1133) · 명세: <code>docs/design/incident-timeline-canary-20260724.md</code> ·
+  상태(정상·저하·장애)는 <strong>색이 아닌 도형(●◆■)·테두리 패턴(실선/파선/이중선)·해칭·텍스트 라벨</strong>로 구분됩니다.
+  채도 있는 색은 "다음 액션 CTA"와 장애 danger 강조에만 사용 — 신규 색상 토큰 0건.
+</p>
+
+<div class="wrap">
+
+  <!-- ══ 정상 로드: 요약 바 + 타임라인 + 다음 액션 ══ -->
+  <div class="itp-panel">
+
+    <!-- 현재 영향 요약 바 -->
+    <header class="itp-summary">
+      <div class="itp-summary__top">
+        <h1>장애 타임라인</h1>
+        <span class="itp-status itp-status--outage" aria-label="현재 상태: 장애">장애</span>
+        <span class="itp-elapsed">경과 <b class="mono">00:42:17</b></span>
+      </div>
+      <div class="itp-meta">
+        <span>영향 서비스: <strong>결제 · 정산 · 영수증 (3)</strong></span>
+        <span>영향 사용자: <strong class="tnum">~12,400</strong></span>
+        <span>심각도: <strong>SEV-1</strong></span>
+        <span>담당(IC): <strong>김온콜</strong> <button type="button" class="itp-owner-btn">담당 재지정 ▾</button></span>
+      </div>
+    </header>
+
+    <div class="itp-main">
+      <!-- 타임라인 레일 -->
+      <section class="itp-rail" aria-labelledby="rail-h">
+        <h2 id="rail-h">타임라인 <span style="font-weight:400;color:var(--bf-color-text-muted);font-size:0.8125rem;">(위=과거 · 아래=현재)</span></h2>
+        <div class="itp-rail__track">
+
+          <article class="itp-node itp-node--operational" tabindex="0">
+            <span class="itp-node__dot" aria-hidden="true"></span>
+            <div class="itp-node__card">
+              <div class="itp-node__row">
+                <span class="itp-node__time">14:02:10</span>
+                <span class="itp-node__delta">Δ —</span>
+                <span class="itp-status itp-status--operational" aria-label="상태: 정상">정상</span>
+              </div>
+              <h3 class="itp-node__title">배포 완료 · v2026.7.24-rc1</h3>
+              <p class="itp-node__summary">결제 서비스 정기 배포 성공. 모든 헬스체크 통과.</p>
+            </div>
+          </article>
+
+          <article class="itp-node itp-node--degraded" tabindex="0">
+            <span class="itp-node__dot" aria-hidden="true"></span>
+            <div class="itp-node__card">
+              <div class="itp-node__row">
+                <span class="itp-node__time">14:20:44</span>
+                <span class="itp-node__delta">Δ 18m</span>
+                <span class="itp-status itp-status--degraded" aria-label="상태: 저하">저하</span>
+              </div>
+              <h3 class="itp-node__title">응답 지연 감지 · p95 1.8s ↑</h3>
+              <p class="itp-node__summary">결제 승인 API 지연 경보. 오류율은 임계 이하이나 지연 상승 추세.</p>
+            </div>
+          </article>
+
+          <article class="itp-node itp-node--outage itp-node--current" tabindex="0">
+            <span class="itp-node__dot" aria-hidden="true"></span>
+            <div class="itp-node__card">
+              <div class="itp-node__row">
+                <span class="itp-node__time">14:31:52</span>
+                <span class="itp-node__delta">Δ 11m</span>
+                <span class="itp-status itp-status--outage" aria-label="상태: 장애">장애</span>
+                <span class="itp-node__current-flag">◀ 현재</span>
+              </div>
+              <h3 class="itp-node__title">결제 API 5xx 급증 · 성공률 41%</h3>
+              <p class="itp-node__summary">결제·정산·영수증 동시 영향. 업스트림 커넥션 풀 고갈 의심.</p>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- 다음 액션 -->
+      <aside class="itp-actions" aria-labelledby="act-h">
+        <h2 id="act-h">다음 액션</h2>
+        <p class="itp-actions__ctx">지금 · <strong>장애</strong> · 결제 API</p>
+        <button type="button" class="btn btn--primary">롤백 실행</button>
+        <button type="button" class="btn btn--secondary">상태페이지 업데이트</button>
+        <button type="button" class="btn btn--secondary">인시던트 브릿지 열기</button>
+        <hr class="itp-divider">
+        <div class="itp-reassign">
+          <label for="reassign-input">담당 재지정</label>
+          <div class="itp-reassign__row">
+            <input id="reassign-input" type="text" placeholder="담당자 이름" aria-describedby="reassign-err">
+            <button type="button" class="btn btn--secondary">지정</button>
+          </div>
+          <p id="reassign-err" class="itp-error-text" role="alert">담당자를 입력하세요.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ══ 빈 상태 데모 (진행 중 장애 없음 — 정상·정보 톤) ══ -->
+  <p class="demo-label">상태 데모 · 빈 상태 (진행 중 장애 없음)</p>
+  <div class="itp-panel">
+    <div class="itp-state itp-empty">
+      <span class="itp-state__glyph" aria-hidden="true">&#9679;</span>
+      <h3>진행 중인 장애가 없습니다</h3>
+      <p>모든 서비스가 정상입니다. 새 인시던트가 열리면 여기에 타임라인이 나타납니다.</p>
+      <a href="#">최근 종료된 인시던트 보기</a>
+    </div>
+  </div>
+
+  <!-- ══ 실패 상태 데모 (타임라인 로드 실패 — danger·재시도) ══ -->
+  <p class="demo-label">상태 데모 · 실패 상태 (타임라인 로드 실패 — 빈 상태와 구분)</p>
+  <div class="itp-panel">
+    <div class="itp-state itp-error" role="alert">
+      <span class="itp-state__glyph" aria-hidden="true">&#9632;</span>
+      <h3>타임라인을 불러오지 못했습니다</h3>
+      <p>네트워크 또는 데이터 소스에 연결하지 못했습니다. 다시 시도하거나 상태 소스를 확인하세요.</p>
+      <button type="button" class="btn btn--primary">다시 시도</button>
+      <div style="margin-top:var(--bf-space-3);"><a href="#">상태 소스 점검</a></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
