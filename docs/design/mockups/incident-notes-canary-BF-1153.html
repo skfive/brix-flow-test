@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>장애 메모 협업 SPA — 시각 mockup · BF-1153</title>
+<style>
+  /* ============================================================
+     BF-1153 · 장애 메모 협업 SPA mockup (시각 시뮬레이션 전용)
+     - vanilla-static: 외부 의존성 0건, system font, :root CSS 변수 자체 정의
+     - 명세: docs/design/incident-notes-canary-BF-1153.md 와 1:1 동기화
+     ============================================================ */
+  :root {
+    /* --- 기반 (demo canary 계열 공용 --bf-*) --- */
+    --bf-color-bg: #f4f6f9;
+    --bf-color-surface: #ffffff;
+    --bf-color-surface-muted: #eef1f6;
+    --bf-color-border: #d5dae1;
+    --bf-color-border-interactive: #8a93a2;
+    --bf-color-text: #1a2230;
+    --bf-color-text-muted: #4d5769;
+    --bf-color-text-faint: #6b7688;
+    --bf-color-primary: #1d4ed8;
+    --bf-color-primary-hover: #1740a6;
+    --bf-color-on-primary: #ffffff;
+    --bf-color-danger: #b3261e;
+    --bf-color-focus: #1d4ed8;
+
+    /* --- 메모 상태 축 (라우트 전용 --in-*) --- */
+    --in-open-fg: #33415a;      --in-open-bg: #eef1f6;
+    --in-inprogress-fg: #1740a6; --in-inprogress-bg: #e7effd;
+    --in-onhold-fg: #7a5200;     --in-onhold-bg: #fbedcb;
+    --in-resolved-fg: #0f5a2e;   --in-resolved-bg: #e4f4ea;
+
+    /* --- 타이포 --- */
+    --bf-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    --bf-font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+    /* --- spacing / radius / shadow (8px 그리드) --- */
+    --bf-space-1: 4px; --bf-space-2: 8px; --bf-space-3: 12px;
+    --bf-space-4: 16px; --bf-space-6: 24px; --bf-space-8: 32px;
+    --bf-radius: 12px; --bf-radius-sm: 8px; --bf-pill: 999px;
+    --bf-shadow: 0 4px 16px rgba(20, 30, 50, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bf-color-bg);
+    color: var(--bf-color-text);
+    font-family: var(--bf-font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* mockup 전용 래퍼 — 실제 SPA 는 하나의 view-state 만 렌더 */
+  .mock-note {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--bf-space-6) var(--bf-space-4) var(--bf-space-2);
+    color: var(--bf-color-text-muted);
+    font-size: 13px;
+  }
+  .mock-note strong { color: var(--bf-color-text); }
+  .mock-state-label {
+    max-width: 760px;
+    margin: var(--bf-space-8) auto var(--bf-space-2);
+    padding: 0 var(--bf-space-4);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bf-color-text-faint);
+  }
+
+  .in-canvas {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: var(--bf-space-6) var(--bf-space-4) var(--bf-space-8);
+  }
+
+  /* ===================== 헤더 ===================== */
+  .in-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--bf-space-2) var(--bf-space-3);
+    margin-bottom: var(--bf-space-6);
+  }
+  .in-header__title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.3;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .in-header__meta {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--bf-color-text-faint);
+  }
+  .in-header__meta time { font-family: var(--bf-font-mono); font-variant-numeric: tabular-nums; }
+
+  /* overall / status 배지 공통 pill */
+  .in-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--bf-pill);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .in-badge__glyph { font-size: 12px; line-height: 1; }
+
+  .in-status--open, .in-overall--open { background: var(--in-open-bg); color: var(--in-open-fg); }
+  .in-status--inprogress, .in-overall--inprogress { background: var(--in-inprogress-bg); color: var(--in-inprogress-fg); }
+  .in-status--onhold, .in-overall--onhold { background: var(--in-onhold-bg); color: var(--in-onhold-fg); }
+  .in-status--resolved, .in-overall--resolved { background: var(--in-resolved-bg); color: var(--in-resolved-fg); }
+
+  /* ===================== 타임라인 (시그니처) ===================== */
+  .in-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--bf-space-4);
+  }
+  .in-note {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    column-gap: var(--bf-space-2);
+    position: relative;
+  }
+
+  /* 좌측 rail: dot + 위/아래 연결선 */
+  .in-note__rail {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding-top: 18px; /* dot 을 카드 헤더 높이에 맞춤 */
+  }
+  .in-note__rail::before,
+  .in-note__rail::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: var(--bf-color-border);
+  }
+  .in-note__rail::before { top: 0; height: 18px; }             /* dot 위 선 */
+  .in-note__rail::after { top: 32px; bottom: -16px; }          /* dot 아래 선 (다음 카드까지) */
+  .in-timeline > .in-note:first-child .in-note__rail::before { display: none; }
+  .in-timeline > .in-note:last-child .in-note__rail::after { display: none; }
+
+  .in-dot {
+    position: relative;
+    z-index: 1;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bf-color-surface);
+  }
+  .in-dot--open      { border: 2px solid var(--in-open-fg); }        /* 빈 원 */
+  .in-dot--inprogress{ background: var(--in-inprogress-fg); box-shadow: 0 0 0 3px var(--in-inprogress-bg); }
+  .in-dot--onhold    { background: var(--in-onhold-fg); box-shadow: 0 0 0 3px var(--in-onhold-bg); }
+  .in-dot--resolved  { background: var(--in-resolved-fg); box-shadow: 0 0 0 3px var(--in-resolved-bg); }
+
+  /* 보류 카드 rail 파선(색 비의존 형태 보조) */
+  .in-note--onhold .in-note__rail::after { background: repeating-linear-gradient(
+      to bottom, var(--in-onhold-fg) 0 4px, transparent 4px 8px); }
+
+  /* 카드 본문 */
+  .in-note__body {
+    background: var(--bf-color-surface);
+    border: 1px solid var(--bf-color-border);
+    border-radius: var(--bf-radius);
+    box-shadow: var(--bf-shadow);
+    padding: var(--bf-space-4);
+  }
+  .in-note--resolved .in-note__body { background: var(--bf-color-surface-muted); }
+
+  .in-note__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--bf-space-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--bf-space-2);
+  }
+  .in-note__who { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
+  .in-note__author { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .in-note__handle { font-family: var(--bf-font-mono); font-size: 12px; color: var(--bf-color-text-muted); }
+  .in-note__at {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .in-note__at time {
+    font-family: var(--bf-font-mono);
+    font-size: 12px;
+    color: var(--bf-color-text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .in-note__text { margin: 0; overflow-wrap: anywhere; }
+  .in-note__text code {
+    font-family: var(--bf-font-mono);
+    font-size: 12.5px;
+    background: var(--bf-color-surface-muted);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  /* ===================== composer ===================== */
+  .in-composer {
+    margin-top: var(--bf-space-6);
+    background: var(--bf-color-surface);
+    border: 1px solid var(--bf-color-border);
+    border-radius: var(--bf-radius);
+    box-shadow: var(--bf-shadow);
+    padding: var(--bf-space-4);
+  }
+  .in-composer__title { margin: 0 0 var(--bf-space-3); font-size: 18px; font-weight: 600; line-height: 1.35; }
+  .in-composer__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--bf-space-3);
+    margin-bottom: var(--bf-space-3);
+  }
+  .in-field-label { font-size: 12px; font-weight: 600; color: var(--bf-color-text-muted); }
+  .in-current-user { font-family: var(--bf-font-mono); font-size: 13px; color: var(--bf-color-text); }
+  .in-composer select,
+  .in-composer textarea {
+    font-family: var(--bf-font-sans);
+    font-size: 15px;
+    color: var(--bf-color-text);
+    background: var(--bf-color-surface);
+    border: 1px solid var(--bf-color-border-interactive);
+    border-radius: var(--bf-radius-sm);
+    padding: 8px 10px;
+  }
+  .in-composer textarea { width: 100%; min-height: 72px; resize: vertical; line-height: 1.6; }
+  .in-composer__actions { display: flex; align-items: center; gap: var(--bf-space-3); margin-top: var(--bf-space-3); flex-wrap: wrap; }
+
+  .in-btn {
+    font-family: var(--bf-font-sans);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: var(--bf-radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    min-height: 44px;
+  }
+  .in-btn--primary { background: var(--bf-color-primary); color: var(--bf-color-on-primary); }
+  .in-btn--primary:hover { background: var(--bf-color-primary-hover); }
+
+  .in-inline-error {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--bf-color-danger);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* 포커스 가시성 — 전역 outline 리셋 금지 */
+  a:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--bf-color-focus);
+    outline-offset: 2px;
+  }
+
+  /* ===================== empty / error ===================== */
+  .in-empty {
+    text-align: center;
+    padding: var(--bf-space-8) var(--bf-space-4);
+    color: var(--bf-color-text-muted);
+  }
+  .in-empty__mark {
+    width: 56px; height: 56px;
+    margin: 0 auto var(--bf-space-3);
+    border: 2px dashed var(--bf-color-border-interactive);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; color: var(--bf-color-text-faint);
+  }
+  .in-error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--bf-space-2);
+    padding: var(--bf-space-4);
+    background: #fdecea;
+    border: 1px solid var(--bf-color-danger);
+    border-radius: var(--bf-radius);
+    color: #8a1c15;
+    font-weight: 500;
+  }
+  .in-error__glyph { flex-shrink: 0; }
+
+  /* ===================== skeleton (참조 — mockup 은 정적) ===================== */
+  .in-skeleton-row {
+    height: 68px;
+    background: linear-gradient(90deg, #eceff4 25%, #f4f6f9 37%, #eceff4 63%);
+    border-radius: var(--bf-radius);
+    margin-bottom: var(--bf-space-4);
+    animation: in-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes in-pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .in-skeleton-row { animation: none; }
+  }
+
+  /* 상태 레전드 */
+  .in-legend {
+    display: flex; flex-wrap: wrap; gap: var(--bf-space-2);
+    margin-bottom: var(--bf-space-4);
+  }
+
+  /* ===================== 반응형 ===================== */
+  @media (max-width: 560px) {
+    .in-note__head { flex-direction: column; align-items: flex-start; }
+    .in-composer__actions { flex-direction: column; align-items: stretch; }
+    .in-btn { width: 100%; }
+  }
+
+  hr.mock-sep { max-width: 900px; margin: var(--bf-space-8) auto 0; border: none; border-top: 1px dashed var(--bf-color-border); }
+</style>
+</head>
+<body>
+
+<p class="mock-note">
+  <strong>시각 mockup (BF-1153)</strong> — 이 파일은 시안 시각화 전용입니다. 실제 SPA(<code>/demo/incident-notes-canary</code>)는
+  데이터/local state 에 따라 <strong>하나의 view-state 만</strong> 렌더합니다. 아래는 비교를 위해 ready / empty / error 3개 상태를
+  나란히 배치하고, ready 타임라인에 <strong>접수·대응중·보류·완료 4개 상태 색</strong>을 모두 포함했습니다(AC-3).
+</p>
+
+<!-- ============================================================
+     STATE 1 · ready — 상태 rail 타임라인 + 메모 4색 + composer
+     ============================================================ -->
+<p class="mock-state-label">view-state: ready</p>
+<main class="in-canvas" id="incident-notes" data-view-state="ready" aria-label="장애 메모 타임라인">
+
+  <header class="in-header">
+    <h1 class="in-header__title">장애 메모 · 결제 API 5xx 급증</h1>
+    <span class="in-badge in-overall--inprogress" role="status" aria-label="장애 상태: 대응 진행 중">
+      <span class="in-badge__glyph" aria-hidden="true">◐</span>대응 진행 중
+    </span>
+    <p class="in-header__meta">영향: 결제 게이트웨이 · 시작 <time datetime="2026-07-24T09:02">09:02</time></p>
+  </header>
+
+  <!-- 상태 레전드 (색 비의존 안내) -->
+  <div class="in-legend" aria-hidden="true">
+    <span class="in-badge in-status--open"><span class="in-badge__glyph">○</span>접수</span>
+    <span class="in-badge in-status--inprogress"><span class="in-badge__glyph">◐</span>대응중</span>
+    <span class="in-badge in-status--onhold"><span class="in-badge__glyph">⏸</span>보류</span>
+    <span class="in-badge in-status--resolved"><span class="in-badge__glyph">✓</span>완료</span>
+  </div>
+
+  <ol class="in-timeline">
+    <!-- 접수 -->
+    <li class="in-note in-note--open" id="note-1">
+      <div class="in-note__rail"><span class="in-dot in-dot--open" aria-hidden="true"></span></div>
+      <div class="in-note__body">
+        <div class="in-note__head">
+          <div class="in-note__who">
+            <h3 class="in-note__author">김에스알이</h3>
+            <span class="in-note__handle">@kim.sre</span>
+          </div>
+          <div class="in-note__at">
+            <time datetime="2026-07-24T09:02">09:02</time>
+            <span class="in-badge in-status--open" role="img" aria-label="상태: 접수">
+              <span class="in-badge__glyph" aria-hidden="true">○</span>접수
+            </span>
+          </div>
+        </div>
+        <p class="in-note__text">결제 승인 API <code>5xx</code> 비율이 12%로 급증, 알림 수신했습니다. 조사 시작합니다.</p>
+      </div>
+    </li>
+
+    <!-- 대응중 -->
+    <li class="in-note in-note--inprogress" id="note-2">
+      <div class="in-note__rail"><span class="in-dot in-dot--inprogress" aria-hidden="true"></span></div>
+      <div class="in-note__body">
+        <div class="in-note__head">
+          <div class="in-note__who">
+            <h3 class="in-note__author">이백엔드</h3>
+            <span class="in-note__handle">@lee.be</span>
+          </div>
+          <div class="in-note__at">
+            <time datetime="2026-07-24T09:08">09:08</time>
+            <span class="in-badge in-status--inprogress" role="img" aria-label="상태: 대응중">
+              <span class="in-badge__glyph" aria-hidden="true">◐</span>대응중
+            </span>
+          </div>
+        </div>
+        <p class="in-note__text">결제 게이트웨이 커넥션 풀 고갈 확인. 인스턴스 2대 롤링 재시작 진행 중입니다.</p>
+      </div>
+    </li>
+
+    <!-- 보류 -->
+    <li class="in-note in-note--onhold" id="note-3">
+      <div class="in-note__rail"><span class="in-dot in-dot--onhold" aria-hidden="true"></span></div>
+      <div class="in-note__body">
+        <div class="in-note__head">
+          <div class="in-note__who">
+            <h3 class="in-note__author">박인프라</h3>
+            <span class="in-note__handle">@park.infra</span>
+          </div>
+          <div class="in-note__at">
+            <time datetime="2026-07-24T09:15">09:15</time>
+            <span class="in-badge in-status--onhold" role="img" aria-label="상태: 보류">
+              <span class="in-badge__glyph" aria-hidden="true">⏸</span>보류
+            </span>
+          </div>
+        </div>
+        <p class="in-note__text">DB 프라이머리 페일오버 여부는 DBA 확인 대기 중. 우선 캐시 우회를 적용해 두었습니다.</p>
+      </div>
+    </li>
+
+    <!-- 완료 -->
+    <li class="in-note in-note--resolved" id="note-4">
+      <div class="in-note__rail"><span class="in-dot in-dot--resolved" aria-hidden="true"></span></div>
+      <div class="in-note__body">
+        <div class="in-note__head">
+          <div class="in-note__who">
+            <h3 class="in-note__author">이백엔드</h3>
+            <span class="in-note__handle">@lee.be</span>
+          </div>
+          <div class="in-note__at">
+            <time datetime="2026-07-24T09:24">09:24</time>
+            <span class="in-badge in-status--resolved" role="img" aria-label="상태: 완료">
+              <span class="in-badge__glyph" aria-hidden="true">✓</span>완료
+            </span>
+          </div>
+        </div>
+        <p class="in-note__text">커넥션 풀 상향 배포 완료, <code>5xx</code> 0.2%로 회복. 모니터링 지속하겠습니다.</p>
+      </div>
+    </li>
+  </ol>
+
+  <!-- composer (브라우저 local state append) -->
+  <form class="in-composer" novalidate>
+    <h2 class="in-composer__title">메모 추가</h2>
+    <div class="in-composer__row">
+      <span class="in-field-label">작성자</span>
+      <span class="in-current-user">@you (나)</span>
+      <span class="in-field-label"><label for="note-status">상태</label></span>
+      <select id="note-status" name="status">
+        <option value="open">접수</option>
+        <option value="inprogress" selected>대응중</option>
+        <option value="onhold">보류</option>
+        <option value="resolved">완료</option>
+      </select>
+    </div>
+    <label class="in-field-label" for="note-text">메모 내용</label>
+    <textarea id="note-text" name="text" placeholder="대응 내용을 입력하세요…" aria-describedby="note-err"></textarea>
+    <div class="in-composer__actions">
+      <button type="button" class="in-btn in-btn--primary">메모 추가</button>
+      <!-- 인라인 에러: 평상시 비어있음. 아래는 검증 실패 예시 표현 -->
+      <span class="in-inline-error" id="note-err" role="alert" aria-live="polite">
+        <span aria-hidden="true">⚠</span>메모 내용을 입력하세요
+      </span>
+    </div>
+  </form>
+</main>
+
+<hr class="mock-sep">
+
+<!-- ============================================================
+     STATE 2 · empty — 메모 0건 + composer 유지
+     ============================================================ -->
+<p class="mock-state-label">view-state: empty</p>
+<main class="in-canvas" data-view-state="empty" aria-label="장애 메모 타임라인 (빈 상태)">
+  <header class="in-header">
+    <h1 class="in-header__title">장애 메모 · 신규 장애</h1>
+    <span class="in-badge in-overall--open" role="status" aria-label="장애 상태: 접수">
+      <span class="in-badge__glyph" aria-hidden="true">○</span>접수
+    </span>
+    <p class="in-header__meta">영향: 미지정 · 시작 <time datetime="2026-07-24T10:40">10:40</time></p>
+  </header>
+
+  <div class="in-empty">
+    <div class="in-empty__mark" aria-hidden="true">—</div>
+    <p>아직 기록된 장애 메모가 없습니다.</p>
+  </div>
+
+  <form class="in-composer" novalidate>
+    <h2 class="in-composer__title">메모 추가</h2>
+    <div class="in-composer__row">
+      <span class="in-field-label">작성자</span>
+      <span class="in-current-user">@you (나)</span>
+      <span class="in-field-label"><label for="note-status-2">상태</label></span>
+      <select id="note-status-2" name="status">
+        <option value="open" selected>접수</option>
+        <option value="inprogress">대응중</option>
+        <option value="onhold">보류</option>
+        <option value="resolved">완료</option>
+      </select>
+    </div>
+    <label class="in-field-label" for="note-text-2">메모 내용</label>
+    <textarea id="note-text-2" name="text" placeholder="첫 메모를 입력하세요…"></textarea>
+    <div class="in-composer__actions">
+      <button type="button" class="in-btn in-btn--primary">메모 추가</button>
+    </div>
+  </form>
+</main>
+
+<hr class="mock-sep">
+
+<!-- ============================================================
+     STATE 3 · error — 데이터 로드 실패 배너
+     ============================================================ -->
+<p class="mock-state-label">view-state: error</p>
+<main class="in-canvas" data-view-state="error" aria-label="장애 메모 타임라인 (에러 상태)">
+  <header class="in-header">
+    <h1 class="in-header__title">장애 메모</h1>
+  </header>
+  <div class="in-error" role="alert">
+    <span class="in-error__glyph" aria-hidden="true">⚠</span>
+    <span>장애 메모를 불러오지 못했습니다. 페이지를 새로고침해 주세요.</span>
+  </div>
+</main>
+
+<hr class="mock-sep">
+
+<!-- ============================================================
+     참조 · loading — 정적 스켈레톤 (명세 §6, 실제 SPA 초기 진입)
+     ============================================================ -->
+<p class="mock-state-label">view-state: loading (참조)</p>
+<main class="in-canvas" data-view-state="loading" aria-label="장애 메모 타임라인 (로딩)" aria-busy="true">
+  <header class="in-header">
+    <h1 class="in-header__title">장애 메모</h1>
+  </header>
+  <div class="in-skeleton">
+    <div class="in-skeleton-row"></div>
+    <div class="in-skeleton-row"></div>
+    <div class="in-skeleton-row"></div>
+  </div>
+</main>
+
+</body>
+</html>
