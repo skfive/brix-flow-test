@@ -1,0 +1,6 @@
+{
+  "name": "oncall-handoff-spa",
+  "private": true,
+  "type": "commonjs",
+  "description": "BF-1140 · 온콜 인수인계 현황 SPA — 본 디렉토리만 CommonJS 로 해석. oncall-handoff/*.js 는 비-module UMD/IIFE 패턴 (file:// CORS 안전, fetch/import/export 0건). Node 단위 테스트는 require() 로 순수 함수 로드."
+}
