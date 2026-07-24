@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>릴리스 준비도 · Release Readiness</title>
+    <script>
+      // 테마 초기화 — 페인트 전 flash 방지 (localStorage 우선, 없으면 시스템 설정)
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var prefersDark =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {
+          /* localStorage 접근 불가 시 기본 light 유지 */
+        }
+      })();
+    </script>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --surface: #ffffff;
+        --border: #e2e5ea;
+        --text: #1b1f27;
+        --muted: #6b7280;
+        --accent: #2563eb;
+        --done: #16a34a;
+        --pending: #d97706;
+        --failed: #dc2626;
+        --blocking-bg: #fef2f2;
+        --ready-bg: #ecfdf5;
+      }
+      [data-theme='dark'] {
+        --bg: #0f1216;
+        --surface: #171b21;
+        --border: #2a2f38;
+        --text: #e6e9ee;
+        --muted: #9aa1ac;
+        --accent: #60a5fa;
+        --done: #4ade80;
+        --pending: #fbbf24;
+        --failed: #f87171;
+        --blocking-bg: #2a1517;
+        --ready-bg: #10241b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .page {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px 20px 64px;
+      }
+      .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .page-title {
+        font-size: 1.5rem;
+        margin: 0;
+      }
+      .page-subtitle {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      #theme-toggle {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+      .summary {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+      }
+      .summary-ready {
+        background: var(--ready-bg);
+      }
+      .summary-blocked {
+        background: var(--blocking-bg);
+      }
+      .summary-rate {
+        display: flex;
+        flex-direction: column;
+      }
+      .summary-rate-value {
+        font-size: 2.4rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .summary-rate-label {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      .summary-counts {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.95rem;
+      }
+      .summary-status {
+        font-weight: 600;
+      }
+      .summary-ready .summary-status {
+        color: var(--done);
+      }
+      .summary-blocked .summary-status {
+        color: var(--failed);
+      }
+      .section-title {
+        font-size: 1.05rem;
+        margin: 28px 0 12px;
+      }
+      .blocking-list,
+      .item-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .blocking-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .blocking-row {
+        display: grid;
+        grid-template-columns: 140px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--failed);
+        border-radius: 8px;
+        padding: 10px 14px;
+      }
+      .blocking-area {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .blocking-status {
+        color: var(--failed);
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .blocking-empty {
+        color: var(--done);
+        background: var(--ready-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin: 0;
+      }
+      .area-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+      }
+      .area {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 18px;
+      }
+      .area-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .area-name {
+        font-size: 1rem;
+        margin: 0;
+      }
+      .area-rate {
+        color: var(--muted);
+        font-size: 0.85rem;
+        font-variant-numeric: tabular-nums;
+      }
+      .item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+        border-top: 1px solid var(--border);
+        font-size: 0.92rem;
+      }
+      .item:first-child {
+        border-top: none;
+      }
+      .item-status {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .item-done .item-status {
+        background: var(--done);
+      }
+      .item-pending .item-status {
+        background: var(--pending);
+      }
+      .item-failed .item-status {
+        background: var(--failed);
+      }
+      .item-label {
+        flex: 1;
+      }
+      .item-status-text {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      .tag {
+        font-size: 0.72rem;
+        padding: 1px 6px;
+        border-radius: 999px;
+        font-weight: 600;
+      }
+      .tag-blocking {
+        background: var(--failed);
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">릴리스 준비도</h1>
+          <p class="page-subtitle">영역별 체크리스트 · 완료율 · 차단 항목 (정적 fixture)</p>
+        </div>
+        <button id="theme-toggle" type="button" aria-label="테마 전환">🌓 테마</button>
+      </header>
+      <main id="app" aria-live="polite">
+        <noscript>이 페이지는 JavaScript 가 필요합니다.</noscript>
+      </main>
+    </div>
+
+    <script type="module">
+      import { RELEASE_READINESS_FIXTURE } from '../../src/features/release-readiness-canary/fixture.js';
+      import { deriveReadiness } from '../../src/features/release-readiness-canary/readiness.js';
+      import { renderReadinessView } from '../../src/features/release-readiness-canary/render.js';
+
+      const app = document.getElementById('app');
+      try {
+        const readiness = deriveReadiness(RELEASE_READINESS_FIXTURE);
+        app.innerHTML = renderReadinessView(readiness);
+      } catch (e) {
+        // 파생/렌더 실패 시 빈 화면 대신 사용자에게 안내 (fixture 는 테스트로 검증되나 방어적 폴백)
+        app.innerHTML =
+          '<p role="alert" style="color: var(--failed);">릴리스 준비도 데이터를 표시할 수 없습니다.</p>';
+      }
+
+      // 테마 토글 (기존 demo 관례와 동일한 localStorage 키 'theme')
+      const toggle = document.getElementById('theme-toggle');
+      toggle.addEventListener('click', () => {
+        const root = document.documentElement;
+        const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try {
+          localStorage.setItem('theme', next);
+        } catch (e) {
+          /* 저장 불가 시 무시 */
+        }
+      });
+    </script>
+  </body>
+</html>
