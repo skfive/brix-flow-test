@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>온콜 인수인계 현황 · mockup · BF-1139</title>
+<style>
+  /* =========================================================
+     온콜 인수인계(On-call Handoff) mockup — BF-1139
+     vanilla-static: 외부 의존성 0건, system font, CSS 변수 자체 정의.
+     신규 토큰 프리픽스 --oh-* (status-card·incident-command 와 충돌 없음).
+     본 파일은 시각 시뮬레이션이며 dev 실제 산출물이 아니다.
+     4개 상태(장애/저하/정상/빈)를 각 <section> 으로 나란히 표시.
+     ========================================================= */
+  :root {
+    /* --- Base / Surface / Text (warm graphite — 야간 온콜, navy war-room 과 구분) --- */
+    --oh-bg: #14171C;
+    --oh-surface: #1C2027;
+    --oh-surface-raised: #242A33;
+    --oh-border: #2E343F;              /* 장식용 구분선 — 대비 요건 비적용 */
+    --oh-border-interactive: #7C8CA6;  /* 인터랙티브 경계 — WCAG 3:1 충족(4.2~4.8:1) */
+    --oh-text: #E9EDF3;
+    --oh-text-secondary: #A6B2C4;
+    --oh-text-muted: #7C8A9C;          /* 12px 캡션/타임스탬프 전용(4.65:1) */
+    --oh-accent: #66B2FF;              /* 포커스 링·링크·활성 컨트롤 */
+    --oh-accent-fg: #08121F;
+
+    /* --- 전체 근무 상태(posture) — 4-state 축: 정상/저하/장애/빈 --- */
+    --oh-ok-fg: #56D364;    --oh-ok-bg: #10241A;    --oh-ok-border: #1D5A32;
+    --oh-degr-fg: #E3B341;  --oh-degr-bg: #2E2410;  --oh-degr-border: #6B5220;
+    --oh-out-fg: #FF7B72;   --oh-out-bg: #33161A;   --oh-out-border: #7A2E33;
+    --oh-empty-fg: #9AA7B8; --oh-empty-bg: #232830; --oh-empty-border: #3A4250;
+
+    /* --- 인시던트 심각도(severity) — SEV1~SEV3, 색+코드+한글+rail 3중 인코딩 --- */
+    --oh-sev1-fg: #FF9492;  --oh-sev1-bg: #3A181B;  --oh-sev1-border: #7A3036;
+    --oh-sev2-fg: #F0B84D;  --oh-sev2-bg: #33270F;  --oh-sev2-border: #6E561F;
+    --oh-sev3-fg: #79B8FF;  --oh-sev3-bg: #142A40;  --oh-sev3-border: #2C5480;
+
+    /* --- 영향 서비스 칩 --- */
+    --oh-chip-bg: #232A34;  --oh-chip-border: #39424F;  --oh-chip-fg: #C6D0DE;
+
+    /* --- spacing / radius --- */
+    --oh-s1: 4px; --oh-s2: 8px; --oh-s3: 12px; --oh-s4: 16px; --oh-s5: 24px; --oh-s6: 32px;
+    --oh-radius: 12px; --oh-radius-sm: 8px; --oh-pill: 999px;
+    --oh-shadow: 0 6px 20px rgba(0,0,0,0.35);
+
+    /* --- type --- */
+    --oh-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+      Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --oh-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    --oh-focus: var(--oh-accent);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--oh-bg);
+    color: var(--oh-text);
+    font-family: var(--oh-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* 페이지 상단 바 */
+  .oh-topbar {
+    display: flex; align-items: baseline; gap: var(--oh-s3); flex-wrap: wrap;
+    padding: var(--oh-s4) var(--oh-s5);
+    border-bottom: 1px solid var(--oh-border);
+    background: var(--oh-surface);
+  }
+  .oh-topbar__title { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
+  .oh-topbar__meta { color: var(--oh-text-muted); font-family: var(--oh-mono); font-size: 12px; }
+
+  .oh-doc { max-width: 880px; margin: 0 auto; padding: var(--oh-s6) var(--oh-s5) 64px; }
+
+  /* mockup 안내: 4개 상태를 나란히 보여주는 시뮬레이션 라벨 */
+  .oh-state-label {
+    margin: var(--oh-s6) 0 var(--oh-s3);
+    font-size: 12px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--oh-text-secondary);
+    display: flex; align-items: center; gap: var(--oh-s2);
+  }
+  .oh-state-label::before {
+    content: ""; width: 8px; height: 8px; border-radius: var(--oh-pill);
+    background: currentColor; flex: 0 0 auto;
+  }
+  .oh-state-label small { font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--oh-text-muted); }
+
+  /* ---- 근무 프레임(교대 스냅샷 한 화면) ---- */
+  .oh-frame {
+    border: 1px solid var(--oh-border);
+    border-radius: var(--oh-radius);
+    background: var(--oh-surface);
+    box-shadow: var(--oh-shadow);
+    overflow: hidden;
+  }
+
+  /* ============ SIGNATURE: relay header (교대 릴레이) ============ */
+  .oh-relay {
+    padding: var(--oh-s5);
+    border-bottom: 1px solid var(--oh-border);
+    display: grid;
+    gap: var(--oh-s4);
+  }
+  /* 릴레이 트랙: 나가는 담당자 → 다음 담당자, 트랙 색 = 전체 상태 */
+  .oh-relay__track {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--oh-s3);
+  }
+  .oh-watch {
+    display: grid; gap: 2px;
+    padding: var(--oh-s3) var(--oh-s4);
+    background: var(--oh-surface-raised);
+    border: 1px solid var(--oh-border);
+    border-radius: var(--oh-radius-sm);
+  }
+  .oh-watch__role {
+    font-size: 11px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--oh-text-muted);
+  }
+  .oh-watch__name { font-weight: 600; }
+  .oh-watch__handle { font-family: var(--oh-mono); font-size: 12px; color: var(--oh-text-secondary); }
+  .oh-watch--incoming { border-color: var(--oh-border-interactive); }
+
+  /* 트랙 중앙 바통(baton) — 방향 화살표, 색은 posture 로 상속 */
+  .oh-baton {
+    display: grid; justify-items: center; gap: 2px;
+    color: var(--oh-posture, var(--oh-text-secondary));
+  }
+  .oh-baton__line {
+    width: 100%; min-width: 56px; height: 2px; border-radius: 2px;
+    background: currentColor;
+    position: relative;
+  }
+  .oh-baton__line::after {
+    content: "›"; position: absolute; right: -4px; top: -13px;
+    font-size: 22px; line-height: 1; color: currentColor;
+  }
+  .oh-baton__label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oh-text-muted); }
+
+  /* posture 배너: 전체 상태 아이콘 + 라벨 + 요약 카운트 */
+  .oh-posture {
+    display: flex; align-items: center; gap: var(--oh-s3); flex-wrap: wrap;
+    padding: var(--oh-s3) var(--oh-s4);
+    border-radius: var(--oh-radius-sm);
+    border: 1px solid transparent;
+    border-left-width: 4px;
+  }
+  .oh-posture__glyph { font-size: 15px; line-height: 1; }
+  .oh-posture__label { font-weight: 650; }
+  .oh-posture__sub { color: var(--oh-text-secondary); font-size: 13px; }
+  .oh-posture--ok    { background: var(--oh-ok-bg);    border-color: var(--oh-ok-border);   color: var(--oh-ok-fg); }
+  .oh-posture--degr  { background: var(--oh-degr-bg);  border-color: var(--oh-degr-border); color: var(--oh-degr-fg); }
+  .oh-posture--out   { background: var(--oh-out-bg);   border-color: var(--oh-out-border);  color: var(--oh-out-fg); }
+  .oh-posture--empty { background: var(--oh-empty-bg); border-color: var(--oh-empty-border);color: var(--oh-empty-fg); }
+  .oh-posture__label, .oh-posture__glyph { color: inherit; }
+  .oh-posture__sub { color: var(--oh-text-secondary); }
+
+  /* ============ 인수인계 목록 ============ */
+  .oh-list { list-style: none; margin: 0; padding: var(--oh-s5); display: grid; gap: var(--oh-s4); }
+
+  /* 인시던트 인계 카드 — 5요소: 심각도/영향서비스/마지막조치/다음담당자/즉시실행 */
+  .oh-card {
+    position: relative;
+    background: var(--oh-surface-raised);
+    border: 1px solid var(--oh-border);
+    border-radius: var(--oh-radius);
+    padding: var(--oh-s5) var(--oh-s5) var(--oh-s5) calc(var(--oh-s5) + 4px);
+  }
+  .oh-card::before { /* 좌측 severity rail */
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px; border-radius: var(--oh-radius) 0 0 var(--oh-radius);
+    background: var(--oh-rail, var(--oh-border));
+  }
+  .oh-card--sev1 { --oh-rail: var(--oh-sev1-fg); }
+  .oh-card--sev2 { --oh-rail: var(--oh-sev2-fg); }
+  .oh-card--sev3 { --oh-rail: var(--oh-sev3-fg); }
+  .oh-card--sev1::before { width: 6px; } /* 최심각만 6px — 색 비의존 형태 강조 */
+
+  .oh-card__head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: var(--oh-s3);
+    margin-bottom: var(--oh-s3);
+  }
+  .oh-card__title { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+
+  /* severity 배지 */
+  .oh-sev {
+    display: inline-flex; align-items: center; gap: var(--oh-s2);
+    padding: var(--oh-s1) var(--oh-s3);
+    border-radius: var(--oh-pill);
+    border: 1px solid transparent;
+    font-size: 13px; font-weight: 600; white-space: nowrap; flex: 0 0 auto;
+  }
+  .oh-sev__code { font-family: var(--oh-mono); font-size: 12px; }
+  .oh-sev--1 { background: var(--oh-sev1-bg); border-color: var(--oh-sev1-border); color: var(--oh-sev1-fg); border-width: 2px; }
+  .oh-sev--2 { background: var(--oh-sev2-bg); border-color: var(--oh-sev2-border); color: var(--oh-sev2-fg); }
+  .oh-sev--3 { background: var(--oh-sev3-bg); border-color: var(--oh-sev3-border); color: var(--oh-sev3-fg); }
+
+  /* 인계 항목 정의 리스트: 라벨 → 값 */
+  .oh-fields { display: grid; gap: var(--oh-s3); margin: 0; }
+  .oh-field { display: grid; grid-template-columns: 104px 1fr; gap: var(--oh-s3); align-items: start; }
+  .oh-field__k {
+    font-size: 12px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--oh-text-muted); padding-top: 2px;
+  }
+  .oh-field__v { margin: 0; color: var(--oh-text); }
+
+  /* 영향 서비스 칩 */
+  .oh-chips { display: flex; flex-wrap: wrap; gap: var(--oh-s2); }
+  .oh-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px var(--oh-s3);
+    background: var(--oh-chip-bg); border: 1px solid var(--oh-chip-border); border-radius: var(--oh-pill);
+    color: var(--oh-chip-fg); font-size: 13px;
+  }
+  .oh-chip__dot { width: 6px; height: 6px; border-radius: var(--oh-pill); background: var(--oh-out-fg); flex: 0 0 auto; }
+  .oh-chip--degr .oh-chip__dot { background: var(--oh-degr-fg); }
+  .oh-chip--ok   .oh-chip__dot { background: var(--oh-ok-fg); }
+
+  /* 마지막 조치 — 타임스탬프 mono */
+  .oh-action-log { display: flex; gap: var(--oh-s2); align-items: baseline; }
+  .oh-action-log time { font-family: var(--oh-mono); font-size: 12px; color: var(--oh-text-muted); flex: 0 0 auto; }
+
+  /* 다음 담당자 */
+  .oh-owner { display: inline-flex; align-items: center; gap: var(--oh-s2); }
+  .oh-owner__handle { font-family: var(--oh-mono); font-size: 13px; color: var(--oh-text-secondary); }
+  .oh-owner__ack {
+    font-size: 11px; font-weight: 650; letter-spacing: 0.04em;
+    padding: 1px 8px; border-radius: var(--oh-pill);
+  }
+  .oh-owner__ack--pending { color: var(--oh-degr-fg); background: var(--oh-degr-bg); border: 1px solid var(--oh-degr-border); }
+  .oh-owner__ack--done    { color: var(--oh-ok-fg);   background: var(--oh-ok-bg);   border: 1px solid var(--oh-ok-border); }
+
+  /* 즉시 실행 액션 */
+  .oh-actions { display: flex; flex-wrap: wrap; gap: var(--oh-s2); margin-top: var(--oh-s4); }
+  .oh-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: var(--oh-s2) var(--oh-s3);
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    background: var(--oh-surface); color: var(--oh-text);
+    border: 1px solid var(--oh-border-interactive); border-radius: var(--oh-radius-sm);
+    cursor: pointer;
+  }
+  .oh-btn:hover { background: var(--oh-surface-raised); }
+  .oh-btn__glyph { color: var(--oh-text-secondary); }
+  .oh-btn--primary { background: var(--oh-accent); color: var(--oh-accent-fg); border-color: var(--oh-accent); }
+  .oh-btn--primary .oh-btn__glyph { color: var(--oh-accent-fg); }
+  .oh-btn--primary:hover { filter: brightness(1.06); }
+  .oh-btn--danger { border-color: var(--oh-out-border); color: var(--oh-out-fg); }
+
+  /* 포커스 가시성 — 전역 outline:none 금지 */
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--oh-focus); outline-offset: 2px; border-radius: 3px;
+  }
+
+  /* ============ 정상(all-clear) 카드 ============ */
+  .oh-clear {
+    display: grid; gap: var(--oh-s3);
+    background: var(--oh-surface-raised);
+    border: 1px solid var(--oh-ok-border);
+    border-left: 4px solid var(--oh-ok-fg);
+    border-radius: var(--oh-radius);
+    padding: var(--oh-s5);
+  }
+  .oh-clear__title { display: flex; align-items: center; gap: var(--oh-s2); margin: 0; font-size: 16px; font-weight: 600; }
+  .oh-clear__glyph { color: var(--oh-ok-fg); }
+  .oh-notes { margin: 0; padding-left: var(--oh-s5); color: var(--oh-text-secondary); display: grid; gap: 4px; }
+
+  /* ============ 빈(empty) 상태 ============ */
+  .oh-empty { padding: 56px var(--oh-s5); text-align: center; display: grid; justify-items: center; gap: var(--oh-s3); }
+  .oh-empty__mark {
+    width: 48px; height: 48px; border-radius: var(--oh-pill);
+    border: 2px dashed var(--oh-empty-border);
+    display: grid; place-items: center; color: var(--oh-empty-fg); font-size: 20px;
+  }
+  .oh-empty__title { margin: 0; font-weight: 600; color: var(--oh-text); }
+  .oh-empty__sub { margin: 0; color: var(--oh-text-secondary); max-width: 42ch; }
+
+  /* error 배너 예시(참조용) */
+  .oh-error {
+    margin: var(--oh-s5); padding: var(--oh-s4);
+    background: var(--oh-out-bg); border: 1px solid var(--oh-out-fg); border-left-width: 4px;
+    border-radius: var(--oh-radius-sm); color: var(--oh-text);
+    display: flex; gap: var(--oh-s3); align-items: baseline;
+  }
+  .oh-error__glyph { color: var(--oh-out-fg); }
+
+  /* ============ 반응형 ============ */
+  @media (max-width: 640px) {
+    .oh-relay__track { grid-template-columns: 1fr; }
+    .oh-baton { transform: rotate(90deg); padding: var(--oh-s2) 0; }
+    .oh-field { grid-template-columns: 1fr; gap: 2px; }
+    .oh-field__k { padding-top: 0; }
+    .oh-card__head { flex-direction: column-reverse; align-items: flex-start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <header class="oh-topbar">
+    <h1 class="oh-topbar__title">온콜 인수인계 현황</h1>
+    <span class="oh-topbar__meta">2026-07-24 09:00 KST · 야간 → 주간 교대</span>
+  </header>
+
+  <div class="oh-doc">
+    <p style="color:var(--oh-text-secondary); margin:0 0 var(--oh-s3);">
+      아래 4개 프레임은 동일 화면의 <strong>전체 근무 상태</strong>별 시각 표현(장애 / 저하 / 정상 / 빈)입니다.
+      실제 SPA 는 데이터에 따라 이 중 한 상태만 렌더합니다. <em>플레이스홀더 콘텐츠</em>.
+    </p>
+
+    <!-- ================= 상태 1: 장애(outage) ================= -->
+    <p class="oh-state-label" style="color:var(--oh-out-fg)">상태 · 장애(outage) <small>활성 인시던트 존재 · 인계 확인 필요</small></p>
+    <section class="oh-frame" aria-label="온콜 인수인계 — 장애 상태">
+      <div class="oh-relay" style="--oh-posture: var(--oh-out-fg)">
+        <div class="oh-relay__track">
+          <div class="oh-watch">
+            <span class="oh-watch__role">나가는 당직</span>
+            <span class="oh-watch__name">김온콜</span>
+            <span class="oh-watch__handle">@kim.oncall</span>
+          </div>
+          <div class="oh-baton" aria-hidden="true">
+            <span class="oh-baton__label">인계</span>
+            <span class="oh-baton__line"></span>
+          </div>
+          <div class="oh-watch oh-watch--incoming">
+            <span class="oh-watch__role">다음 당직</span>
+            <span class="oh-watch__name">이당직</span>
+            <span class="oh-watch__handle">@lee.duty</span>
+          </div>
+        </div>
+        <div class="oh-posture oh-posture--out" role="status" aria-label="전체 근무 상태: 장애">
+          <span class="oh-posture__glyph" aria-hidden="true">●</span>
+          <span class="oh-posture__label">장애</span>
+          <span class="oh-posture__sub">활성 인시던트 2건 · 미확인 인계 1건</span>
+        </div>
+      </div>
+
+      <ul class="oh-list">
+        <!-- 카드: SEV1 -->
+        <li class="oh-card oh-card--sev1">
+          <div class="oh-card__head">
+            <h3 class="oh-card__title">결제 API 응답 지연 → 타임아웃</h3>
+            <span class="oh-sev oh-sev--1" role="img" aria-label="심각도 SEV1 치명">
+              <span class="oh-sev__code" aria-hidden="true">SEV1</span><span>치명</span>
+            </span>
+          </div>
+          <dl class="oh-fields">
+            <div class="oh-field">
+              <dt class="oh-field__k">영향 서비스</dt>
+              <dd class="oh-field__v">
+                <div class="oh-chips">
+                  <span class="oh-chip"><span class="oh-chip__dot" aria-hidden="true"></span>결제 API</span>
+                  <span class="oh-chip"><span class="oh-chip__dot" aria-hidden="true"></span>체크아웃</span>
+                  <span class="oh-chip oh-chip--degr"><span class="oh-chip__dot" aria-hidden="true"></span>주문 이력(저하)</span>
+                </div>
+              </dd>
+            </div>
+            <div class="oh-field">
+              <dt class="oh-field__k">마지막 조치</dt>
+              <dd class="oh-field__v">
+                <span class="oh-action-log"><time datetime="2026-07-24T08:12">08:12</time><span>결제 서비스 v2.14.1 롤백 배포 완료, 오류율 관찰 중</span></span>
+              </dd>
+            </div>
+            <div class="oh-field">
+              <dt class="oh-field__k">다음 담당자</dt>
+              <dd class="oh-field__v">
+                <span class="oh-owner">
+                  <span>이당직</span><span class="oh-owner__handle">@lee.duty</span>
+                  <span class="oh-owner__ack oh-owner__ack--pending">인계 확인 대기</span>
+                </span>
+              </dd>
+            </div>
+          </dl>
+          <div class="oh-actions">
+            <button type="button" class="oh-btn oh-btn--primary"><span class="oh-btn__glyph" aria-hidden="true">▶</span>런북 열기</button>
+            <button type="button" class="oh-btn"><span class="oh-btn__glyph" aria-hidden="true">◱</span>상태 페이지</button>
+            <button type="button" class="oh-btn oh-btn--danger"><span class="oh-btn__glyph" aria-hidden="true">↑</span>에스컬레이션</button>
+          </div>
+        </li>
+
+        <!-- 카드: SEV2 -->
+        <li class="oh-card oh-card--sev2">
+          <div class="oh-card__head">
+            <h3 class="oh-card__title">이미지 CDN 캐시 적중률 하락</h3>
+            <span class="oh-sev oh-sev--2" role="img" aria-label="심각도 SEV2 높음">
+              <span class="oh-sev__code" aria-hidden="true">SEV2</span><span>높음</span>
+            </span>
+          </div>
+          <dl class="oh-fields">
+            <div class="oh-field">
+              <dt class="oh-field__k">영향 서비스</dt>
+              <dd class="oh-field__v">
+                <div class="oh-chips">
+                  <span class="oh-chip oh-chip--degr"><span class="oh-chip__dot" aria-hidden="true"></span>이미지 CDN</span>
+                  <span class="oh-chip oh-chip--degr"><span class="oh-chip__dot" aria-hidden="true"></span>상품 상세</span>
+                </div>
+              </dd>
+            </div>
+            <div class="oh-field">
+              <dt class="oh-field__k">마지막 조치</dt>
+              <dd class="oh-field__v">
+                <span class="oh-action-log"><time datetime="2026-07-24T07:48">07:48</time><span>엣지 노드 2대 수동 캐시 워밍, 적중률 61%→79% 회복</span></span>
+              </dd>
+            </div>
+            <div class="oh-field">
+              <dt class="oh-field__k">다음 담당자</dt>
+              <dd class="oh-field__v">
+                <span class="oh-owner">
+                  <span>이당직</span><span class="oh-owner__handle">@lee.duty</span>
+                  <span class="oh-owner__ack oh-owner__ack--done">인계 확인됨</span>
+                </span>
+              </dd>
+            </div>
+          </dl>
+          <div class="oh-actions">
+            <button type="button" class="oh-btn oh-btn--primary"><span class="oh-btn__glyph" aria-hidden="true">▶</span>런북 열기</button>
+            <button type="button" class="oh-btn"><span class="oh-btn__glyph" aria-hidden="true">◱</span>대시보드</button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ================= 상태 2: 저하(degraded) ================= -->
+    <p class="oh-state-label" style="color:var(--oh-degr-fg)">상태 · 저하(degraded) <small>모니터링 중 · 심각 인시던트 없음</small></p>
+    <section class="oh-frame" aria-label="온콜 인수인계 — 저하 상태">
+      <div class="oh-relay" style="--oh-posture: var(--oh-degr-fg)">
+        <div class="oh-relay__track">
+          <div class="oh-watch">
+            <span class="oh-watch__role">나가는 당직</span>
+            <span class="oh-watch__name">김온콜</span>
+            <span class="oh-watch__handle">@kim.oncall</span>
+          </div>
+          <div class="oh-baton" aria-hidden="true">
+            <span class="oh-baton__label">인계</span>
+            <span class="oh-baton__line"></span>
+          </div>
+          <div class="oh-watch oh-watch--incoming">
+            <span class="oh-watch__role">다음 당직</span>
+            <span class="oh-watch__name">이당직</span>
+            <span class="oh-watch__handle">@lee.duty</span>
+          </div>
+        </div>
+        <div class="oh-posture oh-posture--degr" role="status" aria-label="전체 근무 상태: 저하">
+          <span class="oh-posture__glyph" aria-hidden="true">▲</span>
+          <span class="oh-posture__label">저하</span>
+          <span class="oh-posture__sub">모니터링 인시던트 1건 · 즉시 조치 불필요</span>
+        </div>
+      </div>
+
+      <ul class="oh-list">
+        <li class="oh-card oh-card--sev3">
+          <div class="oh-card__head">
+            <h3 class="oh-card__title">검색 색인 지연 (backfill 진행)</h3>
+            <span class="oh-sev oh-sev--3" role="img" aria-label="심각도 SEV3 보통">
+              <span class="oh-sev__code" aria-hidden="true">SEV3</span><span>보통</span>
+            </span>
+          </div>
+          <dl class="oh-fields">
+            <div class="oh-field">
+              <dt class="oh-field__k">영향 서비스</dt>
+              <dd class="oh-field__v">
+                <div class="oh-chips">
+                  <span class="oh-chip oh-chip--degr"><span class="oh-chip__dot" aria-hidden="true"></span>검색</span>
+                </div>
+              </dd>
+            </div>
+            <div class="oh-field">
+              <dt class="oh-field__k">마지막 조치</dt>
+              <dd class="oh-field__v">
+                <span class="oh-action-log"><time datetime="2026-07-24T06:30">06:30</time><span>backfill 워커 3→5 증설, 색인 지연 22분→9분</span></span>
+              </dd>
+            </div>
+            <div class="oh-field">
+              <dt class="oh-field__k">다음 담당자</dt>
+              <dd class="oh-field__v">
+                <span class="oh-owner">
+                  <span>이당직</span><span class="oh-owner__handle">@lee.duty</span>
+                  <span class="oh-owner__ack oh-owner__ack--done">인계 확인됨</span>
+                </span>
+              </dd>
+            </div>
+          </dl>
+          <div class="oh-actions">
+            <button type="button" class="oh-btn"><span class="oh-btn__glyph" aria-hidden="true">◱</span>색인 대시보드</button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ================= 상태 3: 정상(healthy) ================= -->
+    <p class="oh-state-label" style="color:var(--oh-ok-fg)">상태 · 정상(healthy) <small>활성 장애 0건 · 클린 인계</small></p>
+    <section class="oh-frame" aria-label="온콜 인수인계 — 정상 상태">
+      <div class="oh-relay" style="--oh-posture: var(--oh-ok-fg)">
+        <div class="oh-relay__track">
+          <div class="oh-watch">
+            <span class="oh-watch__role">나가는 당직</span>
+            <span class="oh-watch__name">김온콜</span>
+            <span class="oh-watch__handle">@kim.oncall</span>
+          </div>
+          <div class="oh-baton" aria-hidden="true">
+            <span class="oh-baton__label">인계</span>
+            <span class="oh-baton__line"></span>
+          </div>
+          <div class="oh-watch oh-watch--incoming">
+            <span class="oh-watch__role">다음 당직</span>
+            <span class="oh-watch__name">이당직</span>
+            <span class="oh-watch__handle">@lee.duty</span>
+          </div>
+        </div>
+        <div class="oh-posture oh-posture--ok" role="status" aria-label="전체 근무 상태: 정상">
+          <span class="oh-posture__glyph" aria-hidden="true">✓</span>
+          <span class="oh-posture__label">정상</span>
+          <span class="oh-posture__sub">인계할 활성 장애 없음 · 주의 노트 2건</span>
+        </div>
+      </div>
+
+      <div class="oh-list">
+        <div class="oh-clear">
+          <h3 class="oh-clear__title"><span class="oh-clear__glyph" aria-hidden="true">✓</span>인계할 활성 장애가 없습니다</h3>
+          <p style="margin:0; color:var(--oh-text-secondary)">다음 당직이 참고할 주의 노트만 전달합니다.</p>
+          <ul class="oh-notes">
+            <li>결제 v2.14.1 롤백 후 오류율 정상. <strong>17:00 재배포 예정</strong> — 로그 주시.</li>
+            <li>검색 backfill 완료 예상 <time datetime="2026-07-24T11:00" style="font-family:var(--oh-mono); font-size:12px; color:var(--oh-text-muted)">11:00</time>, 이후 워커 원복.</li>
+          </ul>
+          <div class="oh-actions" style="margin-top:0">
+            <button type="button" class="oh-btn oh-btn--primary"><span class="oh-btn__glyph" aria-hidden="true">✓</span>인계 확인</button>
+            <button type="button" class="oh-btn"><span class="oh-btn__glyph" aria-hidden="true">◱</span>전체 상태 페이지</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 상태 4: 빈(empty) ================= -->
+    <p class="oh-state-label" style="color:var(--oh-empty-fg)">상태 · 빈(empty) <small>등록된 인수인계 없음</small></p>
+    <section class="oh-frame" aria-label="온콜 인수인계 — 빈 상태">
+      <div class="oh-relay" style="--oh-posture: var(--oh-empty-fg)">
+        <div class="oh-posture oh-posture--empty" role="status" aria-label="전체 근무 상태: 인계 데이터 없음">
+          <span class="oh-posture__glyph" aria-hidden="true">—</span>
+          <span class="oh-posture__label">인계 데이터 없음</span>
+          <span class="oh-posture__sub">현재 교대 스케줄에 등록된 온콜 담당자가 없습니다</span>
+        </div>
+      </div>
+      <div class="oh-empty">
+        <span class="oh-empty__mark" aria-hidden="true">—</span>
+        <p class="oh-empty__title">표시할 인수인계가 없습니다</p>
+        <p class="oh-empty__sub">교대 스케줄에 온콜 담당자가 배정되면 이 화면에 인계 현황이 나타납니다.</p>
+        <div class="oh-actions" style="margin-top:0; justify-content:center">
+          <button type="button" class="oh-btn oh-btn--primary"><span class="oh-btn__glyph" aria-hidden="true">＋</span>온콜 스케줄 열기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 참조: error 배너(로드 실패) ================= -->
+    <p class="oh-state-label" style="color:var(--oh-out-fg)">참조 · 로드 실패(error) <small>데이터 fetch 실패 시</small></p>
+    <section class="oh-frame" aria-label="온콜 인수인계 — 로드 실패">
+      <div class="oh-error" role="alert">
+        <span class="oh-error__glyph" aria-hidden="true">⚠</span>
+        <span>인수인계 데이터를 불러오지 못했습니다. 페이지를 새로고침해 주세요.</span>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
