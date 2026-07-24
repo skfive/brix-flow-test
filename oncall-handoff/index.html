@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>온콜 인수인계 현황 · BF-1140</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="oh-topbar">
+    <h1 class="oh-topbar__title">온콜 인수인계 현황</h1>
+    <span class="oh-topbar__meta">2026-07-24 09:00 KST · 야간 → 주간 교대</span>
+  </header>
+
+  <main id="oncall-handoff" class="oh-shell" data-view-state="loading">
+    <!-- 로딩 스켈레톤(정적 펄스) — data-view-state=loading 에서만 표시 -->
+    <div class="oh-skeleton" aria-hidden="true">
+      <div class="oh-skel-block" style="height: 108px;"></div>
+      <div class="oh-skel-block" style="height: 168px;"></div>
+      <div class="oh-skel-block" style="height: 132px;"></div>
+    </div>
+
+    <!-- 실제 콘텐츠 마운트(handoff.js 가 렌더) -->
+    <div class="oh-mount"></div>
+
+    <noscript>
+      <p class="oh-noscript">
+        이 화면은 JavaScript 로 온콜 인수인계 현황을 렌더합니다.
+        브라우저에서 JavaScript 를 활성화해 주세요.
+      </p>
+    </noscript>
+  </main>
+
+  <script src="fixtures.js"></script>
+  <script src="handoff.js"></script>
+</body>
+</html>
