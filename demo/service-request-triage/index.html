@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>서비스 요청 분류 보드 (BF-1123)</title>
+  <style>
+    :root {
+      /* ── 전역 토큰 재사용 (신규 추가 없음 — 기존 demo/BF-1104 :root, 설계 §2 와 동일 HEX) ── */
+      --color-primary: #2563EB;
+      --color-primary-hover: #1D4ED8;
+      --color-primary-soft: #EAF1FE;
+      --color-bg: #F7F8FA;
+      --color-surface: #FFFFFF;
+      --color-border: #E2E5EA;
+      --color-text: #1F2430;
+      --color-text-muted: #6B7280;
+      --color-warning: #D97706;
+      --color-warning-soft: #FEF3E2;
+      --color-success: #16A34A;
+      --color-success-soft: #ECFDF3;
+      --color-pending: #9CA3AF;
+      --color-pending-soft: #F3F4F6;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
+
+      --space-1: 4px; --space-2: 8px; --space-3: 12px;
+      --space-4: 16px; --space-5: 24px; --space-6: 32px;
+
+      --radius-card: 12px; --radius-item: 10px; --radius-btn: 8px; --radius-pill: 999px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+
+    .page { max-width: 1100px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
+
+    /* ── 헤더 ── */
+    .page__header { margin-bottom: var(--space-5); }
+    .page__title { font-size: 22px; line-height: 30px; font-weight: 700; margin: 0; }
+    .page__subtitle {
+      font-size: 14px; line-height: 20px; color: var(--color-text-muted);
+      margin: var(--space-1) 0 0;
+    }
+
+    .section { margin-bottom: var(--space-6); }
+    .section__heading { font-size: 15px; line-height: 22px; font-weight: 600; margin: 0 0 var(--space-3); }
+
+    /* ── 패널/상태 안내 ── */
+    .panel {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-card);
+      padding: var(--space-4);
+    }
+    .notice {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-card); padding: var(--space-5); text-align: center;
+      color: var(--color-text-muted); font-size: 14px;
+    }
+    .notice--warn { border-color: var(--color-warning); color: var(--color-warning); background: var(--color-warning-soft); }
+
+    /* ── 보드 (5 컬럼) ── */
+    .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); }
+    .column {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-card);
+      border-top: 4px solid var(--color-border);
+      padding: var(--space-3);
+      display: flex; flex-direction: column; gap: var(--space-3);
+    }
+    .column--p1 { border-top-color: var(--color-warning); }
+    .column--p2 { border-top-color: var(--color-primary); }
+    .column--p3 { border-top-color: var(--color-success); }
+    .column--p4 { border-top-color: var(--color-pending); }
+    .column--unclassified { border-top-style: dashed; border-top-color: var(--color-pending); background: var(--color-bg); }
+
+    .column__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+    .column__label { font-size: 14px; line-height: 20px; font-weight: 700; }
+    .column__count {
+      font-size: 12px; line-height: 16px; font-weight: 600;
+      background: var(--color-bg); color: var(--color-text-muted);
+      border-radius: var(--radius-pill); padding: 0 var(--space-2); min-width: 20px; text-align: center;
+    }
+    .column__empty {
+      font-size: 12px; color: var(--color-text-muted);
+      border: 1px dashed var(--color-border); border-radius: var(--radius-item);
+      padding: var(--space-3); text-align: center; background: var(--color-surface);
+    }
+
+    /* ── 요청 카드 ── */
+    .request-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-item);
+      padding: var(--space-3);
+      display: flex; flex-direction: column; gap: var(--space-2);
+    }
+    .request-card--unclassified { border-style: dashed; background: var(--color-bg); }
+    .request-card__title { font-size: 14px; line-height: 20px; font-weight: 600; margin: 0; }
+    .request-card__row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+
+    /* ── 유형 태그 (범주형 — 아이콘+라벨 outline, 색으로 서열 암시 X) ── */
+    .type-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+      border-radius: var(--radius-pill); padding: 2px var(--space-3);
+      font-size: 12px; line-height: 16px; font-weight: 500;
+    }
+    .type-tag__glyph { font-size: 12px; }
+
+    /* ── 영향도 강도 미터 (서열형 — 4 세그먼트) ── */
+    .impact { display: inline-flex; align-items: center; gap: var(--space-2); }
+    .impact-meter { display: inline-flex; gap: 2px; }
+    .impact-seg { width: 8px; height: 12px; border-radius: 2px; background: var(--color-border); }
+    .impact-seg--on { background: var(--color-text); }
+    .impact-label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); }
+
+    /* ── 축 선택 컨트롤 ── */
+    .axis-field { display: flex; flex-direction: column; gap: var(--space-1); }
+    .axis-field__label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); }
+    .axis-select {
+      font-family: inherit; font-size: 13px; color: var(--color-text);
+      border: 1px solid var(--color-border); background: var(--color-surface);
+      border-radius: var(--radius-btn); padding: var(--space-1) var(--space-2);
+    }
+    .axis-select:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--color-primary-soft); border-color: var(--color-primary); }
+
+    /* ── 우선순위 배지 (§2.1 — BF-1104 재사용, 컴팩트) ── */
+    .priority-badge {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      border-radius: var(--radius-pill); padding: 2px var(--space-3);
+      font-size: 13px; line-height: 16px; font-weight: 700;
+    }
+    .priority-badge__label { font-size: 12px; font-weight: 600; }
+    .priority-badge--p1 { background: var(--color-warning-soft); color: var(--color-warning); }
+    .priority-badge--p2 { background: var(--color-primary-soft); color: var(--color-primary); }
+    .priority-badge--p3 { background: var(--color-success-soft); color: var(--color-success); }
+    .priority-badge--p4 { background: var(--color-pending-soft); color: var(--color-text-muted); }
+    .priority-badge--error { background: var(--color-warning-soft); color: var(--color-warning); font-weight: 600; }
+
+    /* pill 소형(매트릭스 셀용) */
+    .badge-pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-pill); padding: 2px var(--space-3);
+      font-size: 12px; line-height: 16px; font-weight: 600;
+    }
+    .badge-pill--p1 { background: var(--color-warning-soft); color: var(--color-warning); }
+    .badge-pill--p2 { background: var(--color-primary-soft); color: var(--color-primary); }
+    .badge-pill--p3 { background: var(--color-success-soft); color: var(--color-success); }
+    .badge-pill--p4 { background: var(--color-pending-soft); color: var(--color-text-muted); }
+
+    /* ── 다음 조치 요약 (border-left accent — 배지와 시각 분리) ── */
+    .next-action-mini {
+      border-radius: var(--radius-btn);
+      padding: var(--space-2) var(--space-3);
+      border-left: 4px solid var(--color-border);
+      background: var(--color-bg);
+    }
+    .next-action-mini--p1 { border-left-color: var(--color-warning); background: var(--color-warning-soft); }
+    .next-action-mini--p2 { border-left-color: var(--color-primary); background: var(--color-primary-soft); }
+    .next-action-mini--p3 { border-left-color: var(--color-success); background: var(--color-success-soft); }
+    .next-action-mini--p4 { border-left-color: var(--color-pending); background: var(--color-pending-soft); }
+    .next-action-mini__body { font-size: 13px; line-height: 18px; margin: 0; }
+    .next-action-mini__time { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); margin: var(--space-1) 0 0; }
+
+    /* ── 안내(unclassified/error) ── */
+    .hint { font-size: 12px; line-height: 16px; color: var(--color-text-muted); margin: 0; }
+    .hint--warn { color: var(--color-warning); }
+
+    /* ── 참조 매트릭스 (기획 §3, 5×4) ── */
+    .matrix { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .matrix th, .matrix td {
+      border: 1px solid var(--color-border); padding: var(--space-2) var(--space-3); text-align: center;
+    }
+    .matrix thead th { background: var(--color-bg); font-weight: 600; }
+    .matrix tbody th { background: var(--color-bg); font-weight: 600; text-align: left; white-space: nowrap; }
+    .matrix .td--selected { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+    .legend { display: flex; gap: var(--space-4); flex-wrap: wrap; margin-top: var(--space-3); }
+    .legend__item { display: flex; align-items: center; gap: var(--space-2); font-size: 12px; color: var(--color-text-muted); }
+    .divider { height: 1px; background: var(--color-border); border: 0; margin: var(--space-6) 0; }
+
+    @media (max-width: 959px) {
+      .board { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .board { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page__header">
+      <h1 class="page__title">서비스 요청 분류 보드</h1>
+      <p class="page__subtitle">요청마다 <strong>유형(Type) × 영향도(Impact)</strong> 를 선택하면 P1~P4 우선순위가 즉시 계산되어 해당 우선순위 컬럼으로 분류됩니다. 미선택 요청은 미분류 컬럼에 모입니다. (로컬 상태 전용 데모)</p>
+    </header>
+
+    <!-- 데이터 의존성 로드 + 인증 가드 결과가 렌더되는 영역 -->
+    <section class="section" id="triage-root" aria-live="polite">
+      <div class="notice" id="triage-status">데이터를 불러오는 중…</div>
+    </section>
+
+    <!-- 축 인코딩 범례 (AC1 — 유형/영향도/우선순위 시각 구분 설명) -->
+    <div class="legend">
+      <span class="legend__item"><span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">🐛</span>유형</span> 범주형 — 아이콘+라벨 태그</span>
+      <span class="legend__item">
+        <span class="impact-meter" aria-hidden="true"><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg"></span><span class="impact-seg"></span></span>
+        영향도 — 서열형 4단계 강도 미터
+      </span>
+      <span class="legend__item"><span class="priority-badge priority-badge--p1">P1</span> 우선순위 — 시맨틱 색상 배지 + 컬럼</span>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- 참조 매트릭스 (기획 §3, 5×4 = 20 조합) -->
+    <section class="section">
+      <div class="panel">
+        <h2 class="section__heading">참조 — 유형(Type) × 영향도(Impact) → P1~P4</h2>
+        <table class="matrix">
+          <thead>
+            <tr><th>유형 \ 영향도</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>⛔ 장애 (incident)</th><td><span class="badge-pill badge-pill--p1">P1</span></td><td><span class="badge-pill badge-pill--p1">P1</span></td><td><span class="badge-pill badge-pill--p2">P2</span></td><td><span class="badge-pill badge-pill--p3">P3</span></td></tr>
+            <tr><th>🔒 보안 (security)</th><td><span class="badge-pill badge-pill--p1">P1</span></td><td><span class="badge-pill badge-pill--p1">P1</span></td><td><span class="badge-pill badge-pill--p2">P2</span></td><td><span class="badge-pill badge-pill--p3">P3</span></td></tr>
+            <tr><th>🐛 버그 (bug)</th><td><span class="badge-pill badge-pill--p1">P1</span></td><td><span class="badge-pill badge-pill--p2">P2</span></td><td><span class="badge-pill badge-pill--p3">P3</span></td><td><span class="badge-pill badge-pill--p4">P4</span></td></tr>
+            <tr><th>⚙ 변경요청 (change_request)</th><td><span class="badge-pill badge-pill--p2">P2</span></td><td><span class="badge-pill badge-pill--p2">P2</span></td><td><span class="badge-pill badge-pill--p3">P3</span></td><td><span class="badge-pill badge-pill--p4">P4</span></td></tr>
+            <tr><th>❓ 문의 (inquiry)</th><td><span class="badge-pill badge-pill--p2">P2</span></td><td><span class="badge-pill badge-pill--p3">P3</span></td><td><span class="badge-pill badge-pill--p4">P4</span></td><td><span class="badge-pill badge-pill--p4">P4</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import {
+      classifyServiceRequestPriority,
+      UndefinedTriageCodeError,
+      REQUEST_TYPES,
+      IMPACTS,
+    } from '../../src/demo/service-request-triage/classify.js';
+
+    // ── 로컬 상태 전용(기획 §5): 네트워크 없음. 데이터 의존성은 아래 로컬 시드다. ──
+    const SEED_REQUESTS = [
+      { id: 'r1', title: '결제 서버 전체 다운', selectedType: 'incident', selectedImpact: 'critical' },
+      { id: 'r2', title: '관리자 콘솔 무단 접근 정황', selectedType: 'security', selectedImpact: 'high' },
+      { id: 'r3', title: '리포트 CSV 내보내기 오류', selectedType: 'bug', selectedImpact: 'high' },
+      { id: 'r4', title: '조직 SSO 설정 변경 요청', selectedType: 'change_request', selectedImpact: 'medium' },
+      { id: 'r5', title: '대시보드 날짜 필터 오작동', selectedType: 'bug', selectedImpact: 'medium' },
+      { id: 'r6', title: '데이터 조회 방법 문의', selectedType: 'inquiry', selectedImpact: 'low' },
+      { id: 'r7', title: '신규 API rate limit 관련 요청', selectedType: null, selectedImpact: null },
+    ];
+
+    const COLUMNS = [
+      { key: 'P1', label: 'P1 · 긴급', cls: 'column--p1' },
+      { key: 'P2', label: 'P2 · 높음', cls: 'column--p2' },
+      { key: 'P3', label: 'P3 · 보통', cls: 'column--p3' },
+      { key: 'P4', label: 'P4 · 낮음', cls: 'column--p4' },
+      { key: 'unclassified', label: '미분류', cls: 'column--unclassified' },
+    ];
+
+    // 인증 가드(§5 로컬 데모: 백엔드 없음). window.__TRIAGE_AUTH__ === false 로만 비인가 경로를 검증 가능하게 둔다.
+    function ensureAuthorized() {
+      const authorized = window.__TRIAGE_AUTH__ !== false;
+      return { authorized };
+    }
+
+    // 데이터 의존성 로드(기획 §5: 로컬 상태). 성공 시 시드 배열을 반환한다(AC1 — fetch 성공).
+    function loadTriageData() {
+      return Promise.resolve(SEED_REQUESTS.map((r) => ({ ...r })));
+    }
+
+    let state = [];
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    // 파생 상태(기획 §7.2): 두 축 모두 유효 → resolved, 하나라도 null → unclassified, 미정의 코드 → error.
+    function deriveCard(card) {
+      if (!card.selectedType || !card.selectedImpact) {
+        return { card, state: 'unclassified', result: null };
+      }
+      try {
+        const result = classifyServiceRequestPriority(card.selectedType, card.selectedImpact);
+        return { card, state: 'resolved', result };
+      } catch (e) {
+        if (e instanceof UndefinedTriageCodeError) return { card, state: 'error', result: null };
+        throw e;
+      }
+    }
+
+    function columnKeyOf(derived) {
+      return derived.state === 'resolved' ? derived.result.priority : 'unclassified';
+    }
+
+    function typeMeta(code) { return REQUEST_TYPES.find((t) => t.code === code) || null; }
+    function impactMeta(code) { return IMPACTS.find((i) => i.code === code) || null; }
+
+    function selectHtml(axis, cardId, options, value, ariaLabel) {
+      const opts = ['<option value="">선택하세요</option>']
+        .concat(options.map((o) => {
+          const sel = o.code === value ? ' selected' : '';
+          const glyph = o.glyph ? `${o.glyph} ` : '';
+          return `<option value="${o.code}"${sel}>${escapeHtml(glyph + o.label)}</option>`;
+        }));
+      return `<select class="axis-select" data-card="${cardId}" data-axis="${axis}" aria-label="${ariaLabel}">${opts.join('')}</select>`;
+    }
+
+    function meterHtml(segments) {
+      let out = '<span class="impact-meter" aria-hidden="true">';
+      for (let i = 0; i < 4; i += 1) {
+        out += `<span class="impact-seg${i < segments ? ' impact-seg--on' : ''}"></span>`;
+      }
+      return out + '</span>';
+    }
+
+    function cardHtml(derived) {
+      const { card } = derived;
+      const p = derived.result ? derived.result.priority.toLowerCase() : '';
+      const tm = typeMeta(card.selectedType);
+      const im = impactMeta(card.selectedImpact);
+      const rootCls = derived.state === 'unclassified' ? 'request-card request-card--unclassified' : 'request-card';
+
+      let body = '';
+      // 축 선택 컨트롤 — 항상 노출(값 변경 시 즉시 재계산, AC2).
+      body += `<div class="axis-field"><span class="axis-field__label">유형</span>${selectHtml('type', card.id, REQUEST_TYPES, card.selectedType, '유형')}</div>`;
+      body += `<div class="axis-field"><span class="axis-field__label">영향도</span>${selectHtml('impact', card.id, IMPACTS, card.selectedImpact, '영향도')}</div>`;
+
+      if (derived.state === 'resolved') {
+        const r = derived.result;
+        body += '<div class="request-card__row">';
+        if (tm) body += `<span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">${tm.glyph}</span>${escapeHtml(tm.label)}</span>`;
+        if (im) body += `<span class="impact">${meterHtml(im.segments)}<span class="impact-label">${escapeHtml(im.label)}</span></span>`;
+        body += '</div>';
+        body += `<div class="request-card__row"><span class="priority-badge priority-badge--${p}">${r.priority} <span class="priority-badge__label">${escapeHtml(r.label)}</span></span></div>`;
+        body += `<div class="next-action-mini next-action-mini--${p}"><p class="next-action-mini__body">${escapeHtml(r.nextAction)}</p><p class="next-action-mini__time">목표 착수: ${escapeHtml(r.targetTime)}</p></div>`;
+      } else if (derived.state === 'error') {
+        body += '<div class="request-card__row"><span class="priority-badge priority-badge--error">정의되지 않은 유형/등급</span></div>';
+        body += '<p class="hint hint--warn">매트릭스(5×4)에 없는 코드입니다. 계산을 수행하지 않습니다. (폴백 추정 없음 · 미분류 컬럼 잔류)</p>';
+      } else {
+        body += '<p class="hint">두 축을 모두 선택하세요. (미선택 시 우선순위를 계산하지 않습니다.)</p>';
+      }
+
+      return `<article class="${rootCls}" data-card-root="${card.id}"><p class="request-card__title">${escapeHtml(card.title)}</p>${body}</article>`;
+    }
+
+    function renderBoard() {
+      const derivedList = state.map(deriveCard);
+      const grouped = {};
+      for (const col of COLUMNS) grouped[col.key] = [];
+      for (const d of derivedList) grouped[columnKeyOf(d)].push(d);
+
+      let html = '<div class="board">';
+      for (const col of COLUMNS) {
+        const cards = grouped[col.key];
+        html += `<div class="column ${col.cls}">`;
+        html += `<div class="column__head"><span class="column__label">${col.label}</span><span class="column__count" aria-label="카드 ${cards.length}건">${cards.length}</span></div>`;
+        html += cards.length
+          ? cards.map(cardHtml).join('')
+          : '<div class="column__empty">이 우선순위의 요청 없음</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+
+      const root = document.getElementById('triage-root');
+      root.innerHTML = html;
+      root.querySelectorAll('.axis-select').forEach((el) => el.addEventListener('change', onAxisChange));
+    }
+
+    function onAxisChange(ev) {
+      const el = ev.currentTarget;
+      const cardId = el.dataset.card;
+      const axis = el.dataset.axis;
+      const value = el.value || null;
+      state = state.map((c) => {
+        if (c.id !== cardId) return c;
+        return axis === 'type' ? { ...c, selectedType: value } : { ...c, selectedImpact: value };
+      });
+      renderBoard();
+    }
+
+    function renderNotice(message, warn) {
+      document.getElementById('triage-root').innerHTML =
+        `<div class="notice${warn ? ' notice--warn' : ''}">${escapeHtml(message)}</div>`;
+    }
+
+    async function init() {
+      const auth = ensureAuthorized();
+      if (!auth.authorized) {
+        renderNotice('접근 권한이 없습니다. 로그인 후 다시 시도하세요.', true);
+        document.body.dataset.triageReady = 'unauthorized';
+        return;
+      }
+      try {
+        state = await loadTriageData();
+        renderBoard();
+        document.body.dataset.triageReady = 'true';
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '알 수 없는 오류';
+        renderNotice(`데이터를 불러오지 못했습니다: ${msg}`, true);
+        document.body.dataset.triageReady = 'error';
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
