@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>서비스 요청 분류 보드 — UI 시안 (BF-1122)</title>
+  <style>
+    :root {
+      /* ── 전역 토큰 재사용 (신규 추가 없음 — 기존 demo/BF-1104 :root 와 동일) ── */
+      --color-primary: #2563EB;
+      --color-primary-hover: #1D4ED8;
+      --color-primary-soft: #EAF1FE;
+      --color-bg: #F7F8FA;
+      --color-surface: #FFFFFF;
+      --color-border: #E2E5EA;
+      --color-text: #1F2430;
+      --color-text-muted: #6B7280;
+      --color-warning: #D97706;
+      --color-warning-soft: #FEF3E2;
+      --color-success: #16A34A;
+      --color-success-soft: #ECFDF3;
+      --color-pending: #9CA3AF;
+      --color-pending-soft: #F3F4F6;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
+
+      --space-1: 4px; --space-2: 8px; --space-3: 12px;
+      --space-4: 16px; --space-5: 24px; --space-6: 32px;
+
+      --radius-card: 12px; --radius-item: 10px; --radius-btn: 8px; --radius-pill: 999px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+
+    .page { max-width: 1100px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
+
+    /* ── 헤더 ── */
+    .page__header { margin-bottom: var(--space-5); }
+    .page__title { font-size: 22px; line-height: 30px; font-weight: 700; margin: 0; }
+    .page__subtitle {
+      font-size: 14px; line-height: 20px; color: var(--color-text-muted);
+      margin: var(--space-1) 0 0;
+    }
+
+    .section { margin-bottom: var(--space-6); }
+    .section__heading { font-size: 15px; line-height: 22px; font-weight: 600; margin: 0 0 var(--space-3); }
+
+    /* ── 카드 (.panel 재사용) ── */
+    .panel {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-card);
+      padding: var(--space-4);
+    }
+
+    /* ── 보드 (5 컬럼) ── */
+    .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); }
+    .column {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-card);
+      border-top: 4px solid var(--color-border);
+      padding: var(--space-3);
+      display: flex; flex-direction: column; gap: var(--space-3);
+    }
+    .column--p1 { border-top-color: var(--color-warning); }
+    .column--p2 { border-top-color: var(--color-primary); }
+    .column--p3 { border-top-color: var(--color-success); }
+    .column--p4 { border-top-color: var(--color-pending); }
+    .column--unclassified { border-top-style: dashed; border-top-color: var(--color-pending); background: var(--color-bg); }
+
+    .column__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+    .column__label { font-size: 14px; line-height: 20px; font-weight: 700; }
+    .column__count {
+      font-size: 12px; line-height: 16px; font-weight: 600;
+      background: var(--color-bg); color: var(--color-text-muted);
+      border-radius: var(--radius-pill); padding: 0 var(--space-2); min-width: 20px; text-align: center;
+    }
+    .column__empty {
+      font-size: 12px; color: var(--color-text-muted);
+      border: 1px dashed var(--color-border); border-radius: var(--radius-item);
+      padding: var(--space-3); text-align: center; background: var(--color-surface);
+    }
+
+    /* ── 요청 카드 ── */
+    .request-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-item);
+      padding: var(--space-3);
+      display: flex; flex-direction: column; gap: var(--space-2);
+    }
+    .request-card--unclassified { border-style: dashed; background: var(--color-bg); }
+    .request-card__title { font-size: 14px; line-height: 20px; font-weight: 600; margin: 0; }
+    .request-card__row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+
+    /* ── 유형 태그 (범주형 — 아이콘+라벨 outline, 색으로 서열 암시 X) ── */
+    .type-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+      border-radius: var(--radius-pill); padding: 2px var(--space-3);
+      font-size: 12px; line-height: 16px; font-weight: 500;
+    }
+    .type-tag__glyph { font-size: 12px; }
+
+    /* ── 영향도 강도 미터 (서열형 — 4 세그먼트) ── */
+    .impact { display: inline-flex; align-items: center; gap: var(--space-2); }
+    .impact-meter { display: inline-flex; gap: 2px; }
+    .impact-seg { width: 8px; height: 12px; border-radius: 2px; background: var(--color-border); }
+    .impact-seg--on { background: var(--color-text); }
+    .impact-label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); }
+
+    /* ── 축 선택 컨트롤 (unclassified 카드) ── */
+    .axis-field { display: flex; flex-direction: column; gap: var(--space-1); }
+    .axis-field__label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); }
+    .axis-select {
+      font-family: inherit; font-size: 13px; color: var(--color-text);
+      border: 1px solid var(--color-border); background: var(--color-surface);
+      border-radius: var(--radius-btn); padding: var(--space-1) var(--space-2);
+    }
+    .axis-select:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--color-primary-soft); border-color: var(--color-primary); }
+
+    /* ── 우선순위 배지 (§2.1 — BF-1104 재사용, 컴팩트) ── */
+    .priority-badge {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      border-radius: var(--radius-pill); padding: 2px var(--space-3);
+      font-size: 13px; line-height: 16px; font-weight: 700;
+    }
+    .priority-badge__label { font-size: 12px; font-weight: 600; }
+    .priority-badge--p1 { background: var(--color-warning-soft); color: var(--color-warning); }
+    .priority-badge--p2 { background: var(--color-primary-soft); color: var(--color-primary); }
+    .priority-badge--p3 { background: var(--color-success-soft); color: var(--color-success); }
+    .priority-badge--p4 { background: var(--color-pending-soft); color: var(--color-text-muted); }
+    .priority-badge--error { background: var(--color-warning-soft); color: var(--color-warning); font-weight: 600; }
+
+    /* pill 소형(매트릭스 셀용) */
+    .badge-pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-pill); padding: 2px var(--space-3);
+      font-size: 12px; line-height: 16px; font-weight: 600;
+    }
+    .badge-pill--p1 { background: var(--color-warning-soft); color: var(--color-warning); }
+    .badge-pill--p2 { background: var(--color-primary-soft); color: var(--color-primary); }
+    .badge-pill--p3 { background: var(--color-success-soft); color: var(--color-success); }
+    .badge-pill--p4 { background: var(--color-pending-soft); color: var(--color-text-muted); }
+
+    /* ── 다음 조치 요약 (border-left accent — 배지와 시각 분리) ── */
+    .next-action-mini {
+      border-radius: var(--radius-btn);
+      padding: var(--space-2) var(--space-3);
+      border-left: 4px solid var(--color-border);
+      background: var(--color-bg);
+    }
+    .next-action-mini--p1 { border-left-color: var(--color-warning); background: var(--color-warning-soft); }
+    .next-action-mini--p2 { border-left-color: var(--color-primary); background: var(--color-primary-soft); }
+    .next-action-mini--p3 { border-left-color: var(--color-success); background: var(--color-success-soft); }
+    .next-action-mini--p4 { border-left-color: var(--color-pending); background: var(--color-pending-soft); }
+    .next-action-mini__body { font-size: 13px; line-height: 18px; margin: 0; }
+    .next-action-mini__time { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); margin: var(--space-1) 0 0; }
+
+    /* ── 안내(unclassified/error) ── */
+    .hint { font-size: 12px; line-height: 16px; color: var(--color-text-muted); margin: 0; }
+    .hint--warn { color: var(--color-warning); }
+
+    /* ── 참조 매트릭스 (기획 §3, 5×4) ── */
+    .matrix { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .matrix th, .matrix td {
+      border: 1px solid var(--color-border); padding: var(--space-2) var(--space-3); text-align: center;
+    }
+    .matrix thead th { background: var(--color-bg); font-weight: 600; }
+    .matrix tbody th { background: var(--color-bg); font-weight: 600; text-align: left; white-space: nowrap; }
+    .matrix .td--selected { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+    /* ── mockup 전용: 상태 시뮬레이션 라벨 ── */
+    .sim-note {
+      font-size: 12px; color: var(--color-text-muted);
+      background: var(--color-primary-soft); border-radius: var(--radius-btn);
+      padding: var(--space-1) var(--space-3); display: inline-block; margin-bottom: var(--space-3);
+    }
+    .legend { display: flex; gap: var(--space-4); flex-wrap: wrap; margin-top: var(--space-3); }
+    .legend__item { display: flex; align-items: center; gap: var(--space-2); font-size: 12px; color: var(--color-text-muted); }
+    .divider { height: 1px; background: var(--color-border); border: 0; margin: var(--space-6) 0; }
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-3); }
+
+    @media (max-width: 959px) {
+      .board { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .board { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page__header">
+      <h1 class="page__title">서비스 요청 분류 보드</h1>
+      <p class="page__subtitle">요청마다 <strong>유형(Type) × 영향도(Impact)</strong> 를 선택하면 P1~P4 우선순위가 즉시 계산되어 해당 우선순위 컬럼으로 분류됩니다. 미선택 요청은 미분류 컬럼에 모입니다. (로컬 상태 전용 데모)</p>
+    </header>
+
+    <!-- ============ 메인 보드 (5 컬럼: P1~P4 + 미분류) ============ -->
+    <section class="section">
+      <span class="sim-note">보드 시뮬레이션 — 샘플 요청 7건이 우선순위 컬럼으로 분류된 상태</span>
+      <div class="board">
+
+        <!-- P1 컬럼 -->
+        <div class="column column--p1">
+          <div class="column__head">
+            <span class="column__label">P1 · 긴급</span>
+            <span class="column__count" aria-label="카드 2건">2</span>
+          </div>
+
+          <article class="request-card">
+            <p class="request-card__title">결제 서버 전체 다운</p>
+            <div class="request-card__row">
+              <span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">⛔</span>장애</span>
+              <span class="impact">
+                <span class="impact-meter" aria-hidden="true">
+                  <span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span>
+                </span>
+                <span class="impact-label">Critical</span>
+              </span>
+            </div>
+            <div class="request-card__row">
+              <span class="priority-badge priority-badge--p1">P1 <span class="priority-badge__label">긴급</span></span>
+            </div>
+            <div class="next-action-mini next-action-mini--p1">
+              <p class="next-action-mini__body">즉시 담당자 배정 + 실시간 모니터링 채널 개설, 필요 시 책임자 에스컬레이션</p>
+              <p class="next-action-mini__time">목표 착수: 15분 이내</p>
+            </div>
+          </article>
+
+          <article class="request-card">
+            <p class="request-card__title">관리자 콘솔 무단 접근 정황</p>
+            <div class="request-card__row">
+              <span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">🔒</span>보안</span>
+              <span class="impact">
+                <span class="impact-meter" aria-hidden="true">
+                  <span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg"></span>
+                </span>
+                <span class="impact-label">High</span>
+              </span>
+            </div>
+            <div class="request-card__row">
+              <span class="priority-badge priority-badge--p1">P1 <span class="priority-badge__label">긴급</span></span>
+            </div>
+            <div class="next-action-mini next-action-mini--p1">
+              <p class="next-action-mini__body">즉시 담당자 배정 + 실시간 모니터링 채널 개설, 필요 시 책임자 에스컬레이션</p>
+              <p class="next-action-mini__time">목표 착수: 15분 이내</p>
+            </div>
+          </article>
+        </div>
+
+        <!-- P2 컬럼 -->
+        <div class="column column--p2">
+          <div class="column__head">
+            <span class="column__label">P2 · 높음</span>
+            <span class="column__count" aria-label="카드 1건">1</span>
+          </div>
+
+          <article class="request-card">
+            <p class="request-card__title">리포트 CSV 내보내기 오류</p>
+            <div class="request-card__row">
+              <span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">🐛</span>버그</span>
+              <span class="impact">
+                <span class="impact-meter" aria-hidden="true">
+                  <span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg"></span>
+                </span>
+                <span class="impact-label">High</span>
+              </span>
+            </div>
+            <div class="request-card__row">
+              <span class="priority-badge priority-badge--p2">P2 <span class="priority-badge__label">높음</span></span>
+            </div>
+            <div class="next-action-mini next-action-mini--p2">
+              <p class="next-action-mini__body">당일 내 담당자 배정 및 착수, 2시간 주기 진행 상황 업데이트</p>
+              <p class="next-action-mini__time">목표 착수: 4시간 이내</p>
+            </div>
+          </article>
+        </div>
+
+        <!-- P3 컬럼 -->
+        <div class="column column--p3">
+          <div class="column__head">
+            <span class="column__label">P3 · 보통</span>
+            <span class="column__count" aria-label="카드 2건">2</span>
+          </div>
+
+          <article class="request-card">
+            <p class="request-card__title">조직 SSO 설정 변경 요청</p>
+            <div class="request-card__row">
+              <span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">⚙</span>변경요청</span>
+              <span class="impact">
+                <span class="impact-meter" aria-hidden="true">
+                  <span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg"></span><span class="impact-seg"></span>
+                </span>
+                <span class="impact-label">Medium</span>
+              </span>
+            </div>
+            <div class="request-card__row">
+              <span class="priority-badge priority-badge--p3">P3 <span class="priority-badge__label">보통</span></span>
+            </div>
+            <div class="next-action-mini next-action-mini--p3">
+              <p class="next-action-mini__body">익영업일 이내 착수, 정기(일 단위) 업데이트</p>
+              <p class="next-action-mini__time">목표 착수: 1영업일 이내</p>
+            </div>
+          </article>
+
+          <article class="request-card">
+            <p class="request-card__title">대시보드 날짜 필터 오작동</p>
+            <div class="request-card__row">
+              <span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">🐛</span>버그</span>
+              <span class="impact">
+                <span class="impact-meter" aria-hidden="true">
+                  <span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg"></span><span class="impact-seg"></span>
+                </span>
+                <span class="impact-label">Medium</span>
+              </span>
+            </div>
+            <div class="request-card__row">
+              <span class="priority-badge priority-badge--p3">P3 <span class="priority-badge__label">보통</span></span>
+            </div>
+            <div class="next-action-mini next-action-mini--p3">
+              <p class="next-action-mini__body">익영업일 이내 착수, 정기(일 단위) 업데이트</p>
+              <p class="next-action-mini__time">목표 착수: 1영업일 이내</p>
+            </div>
+          </article>
+        </div>
+
+        <!-- P4 컬럼 -->
+        <div class="column column--p4">
+          <div class="column__head">
+            <span class="column__label">P4 · 낮음</span>
+            <span class="column__count" aria-label="카드 1건">1</span>
+          </div>
+
+          <article class="request-card">
+            <p class="request-card__title">데이터 조회 방법 문의</p>
+            <div class="request-card__row">
+              <span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">❓</span>문의</span>
+              <span class="impact">
+                <span class="impact-meter" aria-hidden="true">
+                  <span class="impact-seg impact-seg--on"></span><span class="impact-seg"></span><span class="impact-seg"></span><span class="impact-seg"></span>
+                </span>
+                <span class="impact-label">Low</span>
+              </span>
+            </div>
+            <div class="request-card__row">
+              <span class="priority-badge priority-badge--p4">P4 <span class="priority-badge__label">낮음</span></span>
+            </div>
+            <div class="next-action-mini next-action-mini--p4">
+              <p class="next-action-mini__body">백로그에 등록, 다음 스프린트 계획 시 우선순위 재검토</p>
+              <p class="next-action-mini__time">목표 착수: 스프린트 계획 반영</p>
+            </div>
+          </article>
+        </div>
+
+        <!-- 미분류 컬럼 -->
+        <div class="column column--unclassified">
+          <div class="column__head">
+            <span class="column__label">미분류</span>
+            <span class="column__count" aria-label="카드 1건">1</span>
+          </div>
+
+          <article class="request-card request-card--unclassified">
+            <p class="request-card__title">신규 API rate limit 관련 요청</p>
+            <div class="axis-field">
+              <label class="axis-field__label" for="type-unc">유형</label>
+              <select class="axis-select" id="type-unc" aria-label="유형">
+                <option value="" selected>선택하세요</option>
+                <option value="incident">⛔ 장애</option>
+                <option value="security">🔒 보안</option>
+                <option value="bug">🐛 버그</option>
+                <option value="change_request">⚙ 변경요청</option>
+                <option value="inquiry">❓ 문의</option>
+              </select>
+            </div>
+            <div class="axis-field">
+              <label class="axis-field__label" for="impact-unc">영향도</label>
+              <select class="axis-select" id="impact-unc" aria-label="영향도">
+                <option value="" selected>선택하세요</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <p class="hint">두 축을 모두 선택하세요. (미선택 시 우선순위를 계산하지 않습니다.)</p>
+          </article>
+        </div>
+
+      </div>
+
+      <!-- 축 인코딩 범례 (AC1 — 유형/영향도/우선순위 시각 구분 설명) -->
+      <div class="legend">
+        <span class="legend__item"><span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">🐛</span>유형</span> 범주형 — 아이콘+라벨 태그</span>
+        <span class="legend__item">
+          <span class="impact-meter" aria-hidden="true"><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg"></span><span class="impact-seg"></span></span>
+          영향도 — 서열형 4단계 강도 미터
+        </span>
+        <span class="legend__item"><span class="priority-badge priority-badge--p1">P1</span> 우선순위 — 시맨틱 색상 배지 + 컬럼</span>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ============ 카드 상태 상세 (resolved / unclassified / error) ============ -->
+    <section class="section">
+      <span class="sim-note">카드 상태 상세 — resolved / unclassified / error</span>
+      <div class="cards-grid">
+
+        <!-- resolved -->
+        <div class="panel">
+          <h2 class="section__heading">resolved (P1)</h2>
+          <article class="request-card">
+            <p class="request-card__title">결제 서버 전체 다운</p>
+            <div class="request-card__row">
+              <span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">⛔</span>장애</span>
+              <span class="impact">
+                <span class="impact-meter" aria-hidden="true">
+                  <span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span>
+                </span>
+                <span class="impact-label">Critical</span>
+              </span>
+            </div>
+            <div class="request-card__row">
+              <span class="priority-badge priority-badge--p1">P1 <span class="priority-badge__label">긴급(Critical)</span></span>
+            </div>
+            <div class="next-action-mini next-action-mini--p1">
+              <p class="next-action-mini__body">즉시 담당자 배정 + 실시간 모니터링 채널 개설, 필요 시 책임자 에스컬레이션</p>
+              <p class="next-action-mini__time">목표 착수: 15분 이내</p>
+            </div>
+          </article>
+        </div>
+
+        <!-- unclassified -->
+        <div class="panel">
+          <h2 class="section__heading">unclassified (미선택)</h2>
+          <article class="request-card request-card--unclassified">
+            <p class="request-card__title">신규 API rate limit 관련 요청</p>
+            <div class="axis-field">
+              <label class="axis-field__label" for="type-d">유형</label>
+              <select class="axis-select" id="type-d" aria-label="유형">
+                <option value="" selected>선택하세요</option>
+                <option value="incident">⛔ 장애</option>
+                <option value="security">🔒 보안</option>
+                <option value="bug">🐛 버그</option>
+                <option value="change_request">⚙ 변경요청</option>
+                <option value="inquiry">❓ 문의</option>
+              </select>
+            </div>
+            <div class="axis-field">
+              <label class="axis-field__label" for="impact-d">영향도</label>
+              <select class="axis-select" id="impact-d" aria-label="영향도">
+                <option value="" selected>선택하세요</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <p class="hint">두 축을 모두 선택하세요. (미선택 시 우선순위를 계산하지 않습니다.)</p>
+          </article>
+        </div>
+
+        <!-- error -->
+        <div class="panel">
+          <h2 class="section__heading">error (정의되지 않은 코드)</h2>
+          <article class="request-card">
+            <p class="request-card__title">알 수 없는 유형 코드 유입 건</p>
+            <div class="request-card__row">
+              <span class="priority-badge priority-badge--error">정의되지 않은 유형/등급</span>
+            </div>
+            <p class="hint hint--warn">매트릭스(5×4)에 없는 코드입니다. 계산을 수행하지 않습니다. (폴백 추정 없음 · 미분류 컬럼 잔류)</p>
+          </article>
+        </div>
+
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ============ 인터랙션 상태 (hover/selected/focus) 정적 렌더 ============ -->
+    <section class="section">
+      <span class="sim-note">인터랙션 상태 — 축 선택 컨트롤 (정적 표현)</span>
+      <div class="panel">
+        <div class="request-card__row" style="gap: var(--space-5); align-items: flex-end;">
+          <div class="axis-field">
+            <span class="axis-field__label">기본</span>
+            <select class="axis-select" aria-label="유형 기본">
+              <option>⛔ 장애</option>
+            </select>
+          </div>
+          <div class="axis-field">
+            <span class="axis-field__label">focus (box-shadow)</span>
+            <select class="axis-select" aria-label="유형 포커스" style="outline: none; box-shadow: 0 0 0 3px var(--color-primary-soft); border-color: var(--color-primary);">
+              <option>🐛 버그</option>
+            </select>
+          </div>
+          <div class="axis-field">
+            <span class="axis-field__label">유형 태그 선택 결과</span>
+            <span class="type-tag"><span class="type-tag__glyph" aria-hidden="true">🔒</span>보안</span>
+          </div>
+          <div class="axis-field">
+            <span class="axis-field__label">영향도 미터 (High=3칸)</span>
+            <span class="impact">
+              <span class="impact-meter" aria-hidden="true">
+                <span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg impact-seg--on"></span><span class="impact-seg"></span>
+              </span>
+              <span class="impact-label">High</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ============ 참조 매트릭스 (기획 §3, 5×4 = 20 조합) ============ -->
+    <section class="section">
+      <span class="sim-note">참조 — 우선순위 매트릭스 (유형 × 영향도 → P1~P4). 현재 선택: 장애 × Critical 하이라이트</span>
+      <div class="panel">
+        <h2 class="section__heading">유형(Type) × 영향도(Impact) → P1~P4</h2>
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>유형 \ 영향도</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>⛔ 장애 (incident)</th>
+              <td class="td--selected"><span class="badge-pill badge-pill--p1">P1</span></td>
+              <td><span class="badge-pill badge-pill--p1">P1</span></td>
+              <td><span class="badge-pill badge-pill--p2">P2</span></td>
+              <td><span class="badge-pill badge-pill--p3">P3</span></td>
+            </tr>
+            <tr>
+              <th>🔒 보안 (security)</th>
+              <td><span class="badge-pill badge-pill--p1">P1</span></td>
+              <td><span class="badge-pill badge-pill--p1">P1</span></td>
+              <td><span class="badge-pill badge-pill--p2">P2</span></td>
+              <td><span class="badge-pill badge-pill--p3">P3</span></td>
+            </tr>
+            <tr>
+              <th>🐛 버그 (bug)</th>
+              <td><span class="badge-pill badge-pill--p1">P1</span></td>
+              <td><span class="badge-pill badge-pill--p2">P2</span></td>
+              <td><span class="badge-pill badge-pill--p3">P3</span></td>
+              <td><span class="badge-pill badge-pill--p4">P4</span></td>
+            </tr>
+            <tr>
+              <th>⚙ 변경요청 (change_request)</th>
+              <td><span class="badge-pill badge-pill--p2">P2</span></td>
+              <td><span class="badge-pill badge-pill--p2">P2</span></td>
+              <td><span class="badge-pill badge-pill--p3">P3</span></td>
+              <td><span class="badge-pill badge-pill--p4">P4</span></td>
+            </tr>
+            <tr>
+              <th>❓ 문의 (inquiry)</th>
+              <td><span class="badge-pill badge-pill--p2">P2</span></td>
+              <td><span class="badge-pill badge-pill--p3">P3</span></td>
+              <td><span class="badge-pill badge-pill--p4">P4</span></td>
+              <td><span class="badge-pill badge-pill--p4">P4</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
