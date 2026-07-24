@@ -8,7 +8,6 @@ import {
   DEFAULT_STATUS,
   addItem,
   groupByStatus,
-  filterByStatus,
   countsByStatus,
 } from './domain.js';
 import { DEMO_SESSION, loadBoardData, requireAuth } from './board-data.js';
