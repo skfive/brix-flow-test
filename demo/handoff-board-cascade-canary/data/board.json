@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "seed-1",
+      "title": "야간 배포 롤백 절차 인수",
+      "status": "waiting",
+      "assignee": "김지훈",
+      "note": "롤백 스크립트 위치와 승인자 연락처 공유 필요"
+    },
+    {
+      "id": "seed-2",
+      "title": "결제 장애 티켓 이관",
+      "status": "in_progress",
+      "assignee": "이서연",
+      "note": "PG사 응답 대기 중, 재현 로그 첨부됨"
+    },
+    {
+      "id": "seed-3",
+      "title": "온콜 로그 정리 및 요약",
+      "status": "done",
+      "assignee": "박도윤",
+      "note": ""
+    }
+  ]
+}
