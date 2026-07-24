@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>장애 메모 협업</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="in-header">
+      <h1 class="in-header__title" id="in-title">장애 메모</h1>
+      <span
+        class="in-overall in-ready-only"
+        id="in-overall"
+        role="status"
+        hidden
+      ></span>
+      <p class="in-header__meta in-ready-only" id="in-meta" hidden></p>
+    </header>
+
+    <main id="incident-notes" data-view-state="loading">
+      <!-- loading: 정적 스켈레톤 -->
+      <div class="in-skeleton" aria-hidden="true">
+        <div class="in-skeleton__row"></div>
+        <div class="in-skeleton__row"></div>
+        <div class="in-skeleton__row"></div>
+      </div>
+
+      <!-- error: fixture 로드 실패 배너 -->
+      <div class="in-error" role="alert">
+        <span aria-hidden="true">⚠</span>
+        <span>장애 메모를 불러오지 못했습니다. 페이지를 새로고침해 주세요.</span>
+      </div>
+
+      <!-- empty: 메모 0건 -->
+      <div class="in-empty">
+        <span class="in-empty__mark" aria-hidden="true">—</span>
+        <p>아직 기록된 장애 메모가 없습니다.</p>
+      </div>
+
+      <!-- ready: 상태 rail 타임라인 -->
+      <ol class="in-timeline in-ready-only" id="in-timeline"></ol>
+
+      <!-- composer: ready + empty 에서 노출 -->
+      <form class="in-composer in-active-only" id="in-composer" novalidate>
+        <h2 class="in-composer__title">메모 추가</h2>
+        <div class="in-composer__row">
+          <span class="in-composer__author">
+            작성자: <span id="in-current-user"></span>
+            <span class="in-composer__author-handle" id="in-current-handle"></span>
+          </span>
+          <span>
+            <label class="in-field-label" for="in-status-select">상태</label>
+            <select class="in-select" id="in-status-select" name="status"></select>
+          </span>
+        </div>
+        <label class="in-field-label" for="in-text">메모 내용</label>
+        <textarea
+          class="in-textarea"
+          id="in-text"
+          name="text"
+          rows="3"
+          aria-describedby="in-text-error"
+          placeholder="무슨 일이 있었는지 기록하세요"
+        ></textarea>
+        <p
+          class="in-inline-error"
+          id="in-text-error"
+          role="alert"
+          aria-live="polite"
+        ></p>
+        <button class="in-btn" type="submit" id="in-submit">메모 추가</button>
+      </form>
+    </main>
+
+    <noscript>이 화면은 JavaScript(ESM)가 필요합니다.</noscript>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

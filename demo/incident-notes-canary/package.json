@@ -1,0 +1,10 @@
+{
+  "name": "incident-notes-canary",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "장애 메모 협업 SPA canary (vanilla ESM, 빌드 스텝 없음)",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}
