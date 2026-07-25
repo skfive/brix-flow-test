@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>상태 센터 (Sync Status Center) · BF-1163 — 디자인 mockup</title>
+<style>
+  :root {
+    --color-primary: #2563EB; --color-primary-hover: #1D4ED8; --color-primary-soft: #EAF1FE;
+    --color-bg: #F7F8FA; --color-surface: #FFFFFF; --color-surface-raised: #FBFCFE;
+    --color-border: #E2E5EA; --color-text: #1F2430; --color-text-muted: #6B7280;
+    --color-success: #15803D; --color-success-soft: #ECFDF3;
+    --color-info: #0E7490;    --color-info-soft: #E0F2FE;
+    --color-pending: #6B7280; --color-pending-soft: #F3F4F6;
+    --color-danger: #DC2626;  --color-danger-soft: #FEE2E2;
+    --color-warning: #D97706; --color-warning-soft: #FEF3E2;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
+    --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px;
+    --space-4: 16px; --space-5: 24px; --space-6: 32px;
+    --radius-card: 12px; --radius-item: 10px; --radius-btn: 8px; --radius-pill: 999px;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--color-bg); color: var(--color-text);
+    font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: var(--space-5) var(--space-4); }
+
+  /* ---- mockup 메타 배너 (실제 앱 요소 아님) ---- */
+  .mock-note {
+    background: var(--color-primary-soft); color: #123a8a;
+    border: 1px solid #c7dbfb; border-radius: var(--radius-item);
+    padding: var(--space-3) var(--space-4); margin-bottom: var(--space-5);
+    font-size: 12px; line-height: 1.6;
+  }
+  .mock-note strong { color: #0f2f6f; }
+  .mock-section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--color-text-muted); margin: var(--space-6) 0 var(--space-3);
+  }
+
+  /* ---- 헤더 ---- */
+  .center-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-4); flex-wrap: wrap;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-card); padding: var(--space-4) var(--space-5);
+  }
+  .center-header__title { font-size: 22px; line-height: 30px; font-weight: 700; margin: 0; }
+  .center-header__sub { font-size: 12px; color: var(--color-text-muted); margin: 2px 0 0; }
+  .center-header__right { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+  .center-header__live {
+    font-size: 12px; color: var(--color-text-muted); text-align: right; max-width: 320px;
+  }
+  .center-header__live b { color: var(--color-text); font-weight: 600; }
+
+  /* ---- 버튼 ---- */
+  .btn {
+    font-family: inherit; font-size: 14px; font-weight: 500; line-height: 20px;
+    border-radius: var(--radius-btn); padding: 8px 14px; cursor: pointer;
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { border-color: #cdd2da; }
+  .btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .btn--primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+  .btn--primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+  .btn--danger { color: var(--color-danger); border-color: #f4b5b5; background: var(--color-surface); }
+  .btn--danger:hover { background: var(--color-danger-soft); }
+  .btn[aria-busy="true"], .btn[disabled] { opacity: 0.7; cursor: default; }
+  .btn__glyph { font-size: 13px; }
+
+  /* ---- 요약 카드 바 ---- */
+  .summary-bar {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3);
+    margin-top: var(--space-5);
+  }
+  .summary-tile {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-card); padding: var(--space-4);
+  }
+  .summary-tile__head { display: flex; align-items: center; gap: 6px; }
+  .summary-tile__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-text-muted); }
+  .summary-tile__value { font-size: 24px; line-height: 30px; font-weight: 700; margin: var(--space-2) 0 0; }
+  .summary-tile__label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); }
+  .summary-tile--synced .summary-tile__dot { background: var(--color-success); }
+  .summary-tile--syncing .summary-tile__dot { background: var(--color-info); }
+  .summary-tile--pending .summary-tile__dot { background: var(--color-pending); }
+  .summary-tile--error {
+    background: var(--color-danger-soft); border-color: #f4c5c5;
+  }
+  .summary-tile--error .summary-tile__dot { background: var(--color-danger); }
+  .summary-tile--error .summary-tile__value { color: var(--color-danger); }
+
+  /* ---- 필터 바 ---- */
+  .filter-bar {
+    display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+    margin-top: var(--space-5);
+  }
+  .filter-bar__label { font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
+  .segmented { display: inline-flex; gap: var(--space-2); flex-wrap: wrap; }
+  .segmented__btn {
+    font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text);
+    border-radius: var(--radius-pill); padding: 6px 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .segmented__btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .segmented__count {
+    font-size: 11px; color: var(--color-text-muted);
+    background: var(--color-bg); border-radius: var(--radius-pill); padding: 0 6px;
+  }
+  .segmented__btn--active { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary-hover); }
+  .segmented__btn--active .segmented__count { background: #fff; color: var(--color-primary-hover); }
+
+  /* ---- 저장소 목록 ---- */
+  .repo-list { list-style: none; margin: var(--space-4) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+  .repo-row {
+    position: relative; background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-card); padding: var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) + 3px);
+    overflow: hidden;
+  }
+  .repo-row::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--color-border);
+  }
+  .repo-row--synced::before  { background: var(--color-success); }
+  .repo-row--syncing::before { background: var(--color-info); }
+  .repo-row--pending::before { background: var(--color-pending); }
+  .repo-row--error::before   { background: var(--color-danger); width: 4px; }
+  .repo-row--error { padding-left: calc(var(--space-4) + 4px); }
+
+  .repo-row__main {
+    display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: var(--space-4);
+  }
+  .repo-row__name { font-size: 15px; line-height: 22px; font-weight: 600; font-family: var(--font-mono); }
+  .repo-row__time { font-size: 12px; color: var(--color-text-muted); font-family: var(--font-mono); white-space: nowrap; }
+  .repo-row__time--label { font-family: var(--font-sans); }
+
+  /* ---- 상태 배지 ---- */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+    font-size: 12px; line-height: 16px; font-weight: 600;
+    border-radius: var(--radius-pill); padding: 3px 10px; border: 1px solid transparent;
+  }
+  .status-badge__glyph { font-size: 12px; }
+  .status-badge--synced  { color: var(--color-success); background: var(--color-success-soft); border-color: #bfe6cd; }
+  .status-badge--syncing { color: var(--color-info);    background: var(--color-info-soft);    border-color: #b6e2f4; }
+  .status-badge--pending { color: var(--color-pending); background: var(--color-pending-soft); border-color: #dcdfe4; }
+  .status-badge--error   { color: var(--color-danger);  background: var(--color-danger-soft);  border-color: #f4c5c5; }
+
+  .status-badge--syncing .status-badge__glyph--spin {
+    display: inline-block; animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- 오류 확장 영역 ---- */
+  .repo-row__error {
+    margin-top: var(--space-3); padding: var(--space-3) var(--space-4);
+    background: var(--color-surface-raised); border: 1px solid #f0d3d3;
+    border-left: 4px solid var(--color-danger); border-radius: var(--radius-item);
+    display: flex; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap;
+  }
+  .repo-row__error-glyph { color: var(--color-danger); font-size: 15px; line-height: 22px; }
+  .repo-row__error-body { flex: 1 1 220px; }
+  .repo-row__error-reason { font-size: 14px; font-weight: 600; color: var(--color-text); margin: 0; }
+  .repo-row__error-reason code { font-family: var(--font-mono); font-size: 12px; color: var(--color-danger); }
+  .repo-row__error-help { font-size: 12px; color: var(--color-text-muted); margin: 4px 0 0; }
+
+  /* ---- 빈 상태 ---- */
+  .empty-state {
+    background: var(--color-surface); border: 1px dashed var(--color-border);
+    border-radius: var(--radius-card); padding: var(--space-6); text-align: center; margin-top: var(--space-4);
+  }
+  .empty-state__glyph { font-size: 28px; }
+  .empty-state__title { font-size: 15px; font-weight: 600; margin: var(--space-3) 0 4px; }
+  .empty-state__hint { font-size: 13px; color: var(--color-text-muted); margin: 0; }
+
+  /* ---- 접근성/모션 보조 설명 카드 ---- */
+  .a11y-card {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius-card); padding: var(--space-4) var(--space-5); margin-top: var(--space-4);
+    font-size: 13px; line-height: 1.7;
+  }
+  .a11y-card h3 { font-size: 14px; margin: 0 0 var(--space-2); }
+  .a11y-card ul { margin: 0; padding-left: 1.2em; color: var(--color-text-muted); }
+  .a11y-card code { font-family: var(--font-mono); font-size: 12px; background: var(--color-bg); padding: 1px 5px; border-radius: 4px; color: var(--color-text); }
+
+  /* ---- 반응형 ---- */
+  @media (max-width: 720px) {
+    .summary-bar { grid-template-columns: repeat(2, 1fr); }
+    .summary-tile--error { grid-column: 1 / -1; }
+    .center-header { flex-direction: column; align-items: stretch; }
+    .center-header__right { align-items: stretch; }
+    .center-header__live { max-width: none; text-align: left; }
+    .center-header__refresh { width: 100%; justify-content: center; }
+    .repo-row__main { grid-template-columns: 1fr auto; row-gap: var(--space-3); }
+    .repo-row__time { grid-column: 1; }
+    .repo-row__sync { grid-column: 2; grid-row: 2; justify-self: end; }
+  }
+
+  /* ---- reduced-motion: 회전 인디케이터 정지, 텍스트로 진행 전달 ---- */
+  @media (prefers-reduced-motion: reduce) {
+    .status-badge--syncing .status-badge__glyph--spin { animation: none; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="mock-note">
+    <strong>디자인 mockup — BF-1163 상태 센터(Sync Status Center)</strong><br>
+    이 파일은 시안 시각 시뮬레이션이며 실제 앱 코드가 아닙니다. 명세: <code>docs/design/sync-status-center-BF-1163.md</code>.
+    실제 SPA 는 데이터에 따라 상태별로 한 화면을 렌더하며, 아래는 4개 상태 행·오류 확장·빈 상태 2종을 <em>비교용으로 나란히</em> 배치했습니다.
+    placeholder 콘텐츠(예시 저장소·오류)입니다.
+  </div>
+
+  <!-- ① 헤더 + 전체 새로고침 + aria-live -->
+  <div class="mock-section-label">① 헤더 · 전체 새로고침 · aria-live 안내</div>
+  <header class="center-header">
+    <div>
+      <h1 class="center-header__title">상태 센터</h1>
+      <p class="center-header__sub">저장소 동기화 현황 · 마지막 전체 동기화 <time datetime="2026-07-25T14:02">14:02</time></p>
+    </div>
+    <div class="center-header__right">
+      <button class="btn btn--primary center-header__refresh" type="button">
+        <span class="btn__glyph" aria-hidden="true">↻</span> 전체 새로고침
+      </button>
+      <!-- polite: 시작/완료/전체 결과 · assertive: 실패 (SR 겸 시각 텍스트) -->
+      <p class="center-header__live" role="status" aria-live="polite" aria-atomic="true">
+        <b>전체 새로고침 완료</b> — 동기화됨 2, 오류 1.
+      </p>
+    </div>
+  </header>
+
+  <!-- ② 요약 카드 바 -->
+  <div class="mock-section-label">② 요약 카드 바 (오류 강조)</div>
+  <div class="summary-bar">
+    <div class="summary-tile">
+      <div class="summary-tile__head"><span class="summary-tile__dot" aria-hidden="true"></span><span class="summary-tile__label">전체</span></div>
+      <p class="summary-tile__value">4</p>
+    </div>
+    <div class="summary-tile summary-tile--synced">
+      <div class="summary-tile__head"><span class="summary-tile__dot" aria-hidden="true"></span><span class="summary-tile__label">동기화됨</span></div>
+      <p class="summary-tile__value">2</p>
+    </div>
+    <div class="summary-tile summary-tile--syncing">
+      <div class="summary-tile__head"><span class="summary-tile__dot" aria-hidden="true"></span><span class="summary-tile__label">진행중</span></div>
+      <p class="summary-tile__value">1</p>
+    </div>
+    <div class="summary-tile summary-tile--pending">
+      <div class="summary-tile__head"><span class="summary-tile__dot" aria-hidden="true"></span><span class="summary-tile__label">대기</span></div>
+      <p class="summary-tile__value">0</p>
+    </div>
+    <div class="summary-tile summary-tile--error">
+      <div class="summary-tile__head"><span class="summary-tile__dot" aria-hidden="true"></span><span class="summary-tile__label">오류</span></div>
+      <p class="summary-tile__value">1</p>
+    </div>
+  </div>
+
+  <!-- ③ 필터 바 -->
+  <div class="mock-section-label">③ 필터 바 (상태 세그먼트 — '오류' 선택 예시는 아래 각 상태 확인)</div>
+  <div class="filter-bar">
+    <span class="filter-bar__label">상태</span>
+    <div class="segmented" role="group" aria-label="상태 필터">
+      <button class="segmented__btn segmented__btn--active" type="button" aria-pressed="true">전체 <span class="segmented__count">4</span></button>
+      <button class="segmented__btn" type="button" aria-pressed="false">동기화됨 <span class="segmented__count">2</span></button>
+      <button class="segmented__btn" type="button" aria-pressed="false">진행중 <span class="segmented__count">1</span></button>
+      <button class="segmented__btn" type="button" aria-pressed="false">대기 <span class="segmented__count">0</span></button>
+      <button class="segmented__btn" type="button" aria-pressed="false">오류 <span class="segmented__count">1</span></button>
+    </div>
+  </div>
+
+  <!-- ④ 저장소 목록 — 4상태 나란히 + 오류 확장 -->
+  <div class="mock-section-label">④ 저장소 목록 (4상태: 오류 → 진행중 → 대기 → 동기화됨, 급한 것 위로)</div>
+  <ul class="repo-list">
+
+    <!-- 오류 (rail 4px + 확장) -->
+    <li class="repo-row repo-row--error" data-status="error">
+      <div class="repo-row__main">
+        <span class="repo-row__name">acme/web-app</span>
+        <span class="status-badge status-badge--error" role="img" aria-label="동기화 상태: 오류">
+          <span class="status-badge__glyph" aria-hidden="true">⚠</span> 오류
+        </span>
+        <span class="repo-row__time"><time datetime="2026-07-25T13:41">13:41</time></span>
+        <button class="btn repo-row__sync" type="button" disabled>동기화</button>
+      </div>
+      <div class="repo-row__error" role="alert">
+        <span class="repo-row__error-glyph" aria-hidden="true">⚠</span>
+        <div class="repo-row__error-body">
+          <p class="repo-row__error-reason">인증 토큰이 만료되었습니다 <code>(401)</code></p>
+          <p class="repo-row__error-help">토큰 갱신 후 다시 시도하세요.</p>
+        </div>
+        <button class="btn btn--danger" type="button">
+          <span class="btn__glyph" aria-hidden="true">↻</span> 재시도
+        </button>
+      </div>
+    </li>
+
+    <!-- 진행중 (회전 glyph, reduced-motion 시 정지 + 텍스트) -->
+    <li class="repo-row repo-row--syncing" data-status="syncing">
+      <div class="repo-row__main">
+        <span class="repo-row__name">acme/api-gateway</span>
+        <span class="status-badge status-badge--syncing" role="img" aria-label="동기화 상태: 동기화 중">
+          <span class="status-badge__glyph status-badge__glyph--spin" aria-hidden="true">◐</span> 동기화 중
+        </span>
+        <span class="repo-row__time"><time datetime="2026-07-25T14:02">14:02</time></span>
+        <button class="btn repo-row__sync" type="button" aria-busy="true" disabled>동기화 중…</button>
+      </div>
+    </li>
+
+    <!-- 대기 -->
+    <li class="repo-row repo-row--pending" data-status="pending">
+      <div class="repo-row__main">
+        <span class="repo-row__name">acme/docs-site</span>
+        <span class="status-badge status-badge--pending" role="img" aria-label="동기화 상태: 대기">
+          <span class="status-badge__glyph" aria-hidden="true">○</span> 대기
+        </span>
+        <span class="repo-row__time"><span class="repo-row__time--label">동기화 이력 없음</span></span>
+        <button class="btn btn--primary repo-row__sync" type="button">동기화</button>
+      </div>
+    </li>
+
+    <!-- 동기화됨 -->
+    <li class="repo-row repo-row--synced" data-status="synced">
+      <div class="repo-row__main">
+        <span class="repo-row__name">acme/design-tokens</span>
+        <span class="status-badge status-badge--synced" role="img" aria-label="동기화 상태: 동기화됨">
+          <span class="status-badge__glyph" aria-hidden="true">✓</span> 동기화됨
+        </span>
+        <span class="repo-row__time"><time datetime="2026-07-25T14:02">14:02</time></span>
+        <button class="btn repo-row__sync" type="button">동기화</button>
+      </div>
+    </li>
+
+  </ul>
+
+  <!-- ⑤ 빈 상태 2종 -->
+  <div class="mock-section-label">⑤ 빈 상태 — no-data (저장소 0건)</div>
+  <div class="empty-state">
+    <div class="empty-state__glyph" aria-hidden="true">🗂️</div>
+    <p class="empty-state__title">표시할 저장소가 없습니다</p>
+    <p class="empty-state__hint">저장소를 연결하면 동기화 상태가 여기에 표시됩니다.</p>
+  </div>
+
+  <div class="mock-section-label">⑤ 빈 상태 — no-match (필터 결과 0건)</div>
+  <div class="empty-state">
+    <div class="empty-state__glyph" aria-hidden="true">🔍</div>
+    <p class="empty-state__title">조건에 맞는 저장소가 없습니다</p>
+    <p class="empty-state__hint">필터를 변경하면 다른 결과를 볼 수 있어요.</p>
+  </div>
+
+  <!-- 접근성/모션 보조 설명 (mockup 참조용, 실제 앱 요소 아님) -->
+  <div class="mock-section-label">참조 — 접근성 · reduced-motion 규격 (명세 §8)</div>
+  <div class="a11y-card">
+    <h3>키보드 · 포커스 · aria-live · reduced-motion</h3>
+    <ul>
+      <li>Tab 순서 = DOM 순서: 전체 새로고침 → 필터 세그먼트(좌→우) → 저장소 행(위→아래, <code>동기화</code>/<code>재시도</code>). 전 인터랙티브는 네이티브 <code>&lt;button&gt;</code>.</li>
+      <li>포커스: 전 인터랙티브 <code>:focus-visible</code> 2px primary outline(전역 <code>outline:none</code> 금지). 이 mockup 에서 Tab 으로 확인 가능.</li>
+      <li>aria-live: 헤더 <code>role="status" aria-live="polite"</code>(시작/완료/전체 결과) + 실패는 <code>aria-live="assertive"</code>. 오류 확장은 <code>role="alert"</code>.</li>
+      <li>reduced-motion: <code>◐</code> 회전·펄스는 <code>prefers-reduced-motion</code> 에서 정지, 라벨 <code>동기화 중…</code> 텍스트가 진행을 전달(모션 없이도 인지). OS 설정을 켜고 새로고침하면 회전이 멈춥니다.</li>
+      <li>색 비의존: 모든 상태는 색 + 한글 라벨 + glyph + 좌측 rail 두께(오류만 4px)로 3중 인코딩. 배지 <code>role="img"</code> + <code>aria-label</code>.</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>
