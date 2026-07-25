@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>고객 피드백 우선순위 보드 — 시안 mockup (BF-1169)</title>
+<style>
+  /* ===== 2. 디자인 토큰 (docs/design/feedback-board-BF-1167.md §2) ===== */
+  :root{
+    /* 기반 */
+    --color-bg:#f4f6f9; --color-surface:#ffffff; --color-surface-alt:#eef2f7;
+    --color-border:#d3dbe4; --color-text:#1f2933; --color-text-muted:#556170;
+    --color-primary:#2457d6; --color-primary-hover:#1c46ac; --color-primary-contrast:#ffffff;
+    --color-focus:#1c46ac;
+    /* severity */
+    --sev-critical-fg:#a01722; --sev-critical-bg:#fde5e7;
+    --sev-high-fg:#9a4a06; --sev-high-bg:#fceadb;
+    --sev-medium-fg:#8a6100; --sev-medium-bg:#fbf1d3;
+    --sev-low-fg:#1f6f45; --sev-low-bg:#dff2e6;
+    /* status */
+    --status-pending-fg:#455060; --status-pending-bg:#e4e9f0;
+    --status-planned-fg:#1c46ac; --status-planned-bg:#dde6fb;
+    --status-done-fg:#1f6f45; --status-done-bg:#dbf0e4;
+    /* semantic */
+    --color-error-fg:#a01722; --color-error-bg:#fdeef0; --color-error-border:#eab6bc;
+    --color-success-fg:#1f6f45;
+    /* typography */
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+    --font-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --fs-h1:1.5rem; --fs-h2:1.125rem; --fs-h3:1rem; --fs-body:.9375rem;
+    --fs-label:.875rem; --fs-caption:.8125rem; --fs-kpi:1.75rem;
+    /* spacing / radius / shadow */
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
+    --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+    --shadow-card:0 1px 2px rgba(31,41,51,.06),0 1px 3px rgba(31,41,51,.08);
+    --focus-ring:0 0 0 3px rgba(28,70,172,.35);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-sans);font-size:var(--fs-body);line-height:1.55;}
+  .page{max-width:1200px;margin:0 auto;padding:var(--space-5);}
+  h1{font-size:var(--fs-h1);font-weight:700;line-height:1.3;margin:0 0 var(--space-1);}
+  h2{font-size:var(--fs-h2);font-weight:600;line-height:1.35;margin:0 0 var(--space-3);}
+  h3{font-size:var(--fs-h3);font-weight:600;line-height:1.4;margin:0;}
+  .subtitle{color:var(--color-text-muted);font-size:var(--fs-caption);margin:0;}
+  .caption{color:var(--color-text-muted);font-size:var(--fs-caption);}
+  .mono{font-family:var(--font-mono);font-size:var(--fs-caption);font-weight:500;color:var(--color-text-muted);}
+
+  /* focus visibility (§6.2) */
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+    outline:2px solid var(--color-focus);outline-offset:1px;box-shadow:var(--focus-ring);
+  }
+  .sr-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+
+  /* KPI (§5.1) */
+  .kpi-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);margin:var(--space-4) 0 var(--space-5);}
+  .kpi-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:var(--space-4);}
+  .kpi-card__label{font-size:var(--fs-caption);color:var(--color-text-muted);margin:0 0 var(--space-1);}
+  .kpi-card__value{font-size:var(--fs-kpi);font-weight:700;line-height:1.1;}
+  .kpi-split{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-2);font-size:var(--fs-caption);}
+  .kpi-split span{color:var(--color-text-muted);}
+  .kpi-dist{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-top:var(--space-2);}
+
+  /* board grid (§4.1 / §4.3) */
+  .board-grid{display:grid;grid-template-columns:340px 1fr;gap:var(--space-5);align-items:start;}
+  .panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:var(--space-5);}
+
+  /* register form (§5.2) */
+  .form-field{margin-bottom:var(--space-4);}
+  .form-field label{display:block;font-size:var(--fs-label);font-weight:600;margin-bottom:var(--space-1);}
+  .form-field input,.form-field textarea,.form-field select{
+    width:100%;padding:var(--space-2) var(--space-3);font:inherit;color:var(--color-text);
+    background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-sm);
+  }
+  .form-field textarea{min-height:80px;resize:vertical;}
+  .form-field input[aria-invalid="true"],.form-field textarea[aria-invalid="true"]{border-color:var(--color-error-border);background:var(--color-error-bg);}
+  .form-error{color:var(--color-error-fg);font-size:var(--fs-caption);margin-top:var(--space-1);}
+  .btn{font:inherit;font-weight:600;padding:var(--space-2) var(--space-4);border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;}
+  .btn--primary{background:var(--color-primary);color:var(--color-primary-contrast);}
+  .btn--primary:hover{background:var(--color-primary-hover);}
+  .btn--primary[disabled]{opacity:.6;cursor:not-allowed;}
+  .btn--ghost{background:var(--color-surface);color:var(--color-primary);border-color:var(--color-border);}
+  .btn--sm{font-size:var(--fs-caption);padding:var(--space-1) var(--space-3);}
+
+  /* filter bar (§5.3) */
+  .filter-bar{display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:flex-end;margin-bottom:var(--space-4);padding-bottom:var(--space-4);border-bottom:1px solid var(--color-border);}
+  .filter-search{flex:1 1 220px;min-width:0;}
+  .filter-search label{display:block;font-size:var(--fs-label);font-weight:600;margin-bottom:var(--space-1);}
+  .filter-search input{width:100%;padding:var(--space-2) var(--space-3);font:inherit;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-sm);}
+  fieldset.filter-group{border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:var(--space-2) var(--space-3);margin:0;min-width:0;}
+  fieldset.filter-group legend{font-size:var(--fs-caption);font-weight:600;color:var(--color-text-muted);padding:0 var(--space-1);}
+  .filter-group label{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-caption);margin-right:var(--space-3);white-space:nowrap;}
+
+  /* badges (§5.5 / §2.2 / §2.3) */
+  .badge{display:inline-block;font-size:var(--fs-caption);font-weight:600;padding:2px 10px;border-radius:999px;white-space:nowrap;}
+  .badge--sev-critical{background:var(--sev-critical-bg);color:var(--sev-critical-fg);}
+  .badge--sev-high{background:var(--sev-high-bg);color:var(--sev-high-fg);}
+  .badge--sev-medium{background:var(--sev-medium-bg);color:var(--sev-medium-fg);}
+  .badge--sev-low{background:var(--sev-low-bg);color:var(--sev-low-fg);}
+  .badge--status-pending_review{background:var(--status-pending-bg);color:var(--status-pending-fg);}
+  .badge--status-planned{background:var(--status-planned-bg);color:var(--status-planned-fg);}
+  .badge--status-done{background:var(--status-done-bg);color:var(--status-done-fg);}
+
+  /* feedback list (§5.4) */
+  .feedback-list{display:flex;flex-direction:column;gap:var(--space-3);}
+  .feedback-item{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-4);}
+  .feedback-item__head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-3);}
+  .feedback-item__badges{display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;margin-top:var(--space-2);}
+  .feedback-item__meta{display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px dashed var(--color-border);}
+  .feedback-item__meta .spacer{flex:1;}
+
+  /* state placeholders (§5.6) */
+  .state-empty,.state-loading{text-align:center;padding:var(--space-6) var(--space-4);color:var(--color-text-muted);}
+  .state-error{background:var(--color-error-bg);border:1px solid var(--color-error-border);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);color:var(--color-error-fg);display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4);}
+  .state-error .spacer{flex:1;}
+  .skeleton{height:64px;border-radius:var(--radius-md);background:linear-gradient(90deg,var(--color-surface-alt),#e4eaf1,var(--color-surface-alt));margin-bottom:var(--space-3);}
+
+  /* preview meta / responsive demo */
+  .preview-note{background:var(--color-surface-alt);border:1px dashed var(--color-border);border-radius:var(--radius-sm);padding:var(--space-2) var(--space-3);font-size:var(--fs-caption);color:var(--color-text-muted);margin:var(--space-6) 0 var(--space-3);}
+  .tablet-frame{max-width:760px;border:2px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);background:var(--color-bg);}
+  .tablet-frame .kpi-summary{grid-template-columns:repeat(2,1fr);}
+  .tablet-frame .board-grid{grid-template-columns:1fr;}
+
+  /* actual responsive behavior (§4.3) */
+  @media (max-width:1023px){
+    .kpi-summary{grid-template-columns:repeat(2,1fr);}
+    .board-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>고객 피드백 우선순위 보드</h1>
+    <p class="subtitle">운영팀 피드백 등록 · 심각도/상태 관리 · KPI 요약 — 시안 mockup (BF-1169, 토큰 출처: feedback-board-BF-1167.md §2)</p>
+  </header>
+
+  <!-- aria-live 3영역 (§5.7) -->
+  <div class="sr-live" aria-live="polite">8건 표시</div>
+  <div class="sr-live" aria-live="assertive"></div>
+  <div class="sr-live" aria-live="polite"></div>
+
+  <!-- ===== KPI 요약 (§5.1) ===== -->
+  <section class="kpi-summary" aria-label="KPI 요약">
+    <div class="kpi-card">
+      <p class="kpi-card__label">전체 피드백</p>
+      <div class="kpi-card__value">8</div>
+    </div>
+    <div class="kpi-card">
+      <p class="kpi-card__label">상태별 건수</p>
+      <div class="kpi-card__value">3 · 3 · 2</div>
+      <div class="kpi-split"><span>검토 대기 3</span><span>계획됨 3</span><span>처리 완료 2</span></div>
+    </div>
+    <div class="kpi-card">
+      <p class="kpi-card__label">심각도 분포</p>
+      <div class="kpi-dist">
+        <span class="badge badge--sev-critical">치명적 2</span>
+        <span class="badge badge--sev-high">높음 2</span>
+        <span class="badge badge--sev-medium">보통 2</span>
+        <span class="badge badge--sev-low">낮음 2</span>
+      </div>
+      <div class="kpi-split"><span>각 25.0%</span></div>
+    </div>
+    <div class="kpi-card">
+      <p class="kpi-card__label">평균 처리 리드타임</p>
+      <div class="kpi-card__value">10.0<span style="font-size:var(--fs-body);font-weight:400;">일</span></div>
+      <div class="caption">처리 완료 2건 기준</div>
+    </div>
+  </section>
+
+  <!-- ===== 보드 본문 (§4.1) ===== -->
+  <main class="board-grid">
+    <!-- 등록 폼 (§5.2) -->
+    <aside class="panel register-form" aria-label="피드백 등록">
+      <h2>피드백 등록</h2>
+      <form onsubmit="return false">
+        <div class="form-field">
+          <label for="f-title">제목</label>
+          <input id="f-title" type="text" maxlength="100" value="검색 자동완성 노출 지연" placeholder="제목을 입력해 주세요">
+        </div>
+        <div class="form-field">
+          <label for="f-desc">설명</label>
+          <textarea id="f-desc" maxlength="1000" aria-invalid="true" aria-describedby="f-desc-err" placeholder="상세 설명을 입력해 주세요"></textarea>
+          <p class="form-error" id="f-desc-err">설명을 입력해 주세요. (오류 상태 예시)</p>
+        </div>
+        <div class="form-field">
+          <label for="f-sev">심각도</label>
+          <select id="f-sev">
+            <option value="" disabled selected>선택하세요</option>
+            <option value="critical">치명적</option>
+            <option value="high">높음</option>
+            <option value="medium">보통</option>
+            <option value="low">낮음</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="f-ch">유입 채널</label>
+          <select id="f-ch">
+            <option value="" disabled selected>선택하세요</option>
+            <option value="in_app">앱 내 문의</option>
+            <option value="web_form">웹 문의 폼</option>
+            <option value="email">이메일</option>
+            <option value="social">SNS</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn--primary">피드백 등록</button>
+      </form>
+    </aside>
+
+    <!-- 필터 바 + 목록 (§5.3 / §5.4) -->
+    <section class="panel list-panel" aria-label="피드백 목록">
+      <div class="filter-bar">
+        <div class="filter-search">
+          <label for="q">검색</label>
+          <input id="q" type="search" placeholder="제목·설명·ID 검색 (대소문자 무관)">
+        </div>
+        <fieldset class="filter-group">
+          <legend>상태</legend>
+          <label><input type="checkbox">검토 대기</label>
+          <label><input type="checkbox">계획됨</label>
+          <label><input type="checkbox">처리 완료</label>
+        </fieldset>
+        <fieldset class="filter-group">
+          <legend>심각도</legend>
+          <label><input type="checkbox">치명적</label>
+          <label><input type="checkbox">높음</label>
+          <label><input type="checkbox">보통</label>
+          <label><input type="checkbox">낮음</label>
+        </fieldset>
+        <fieldset class="filter-group">
+          <legend>채널</legend>
+          <label><input type="checkbox">앱 내 문의</label>
+          <label><input type="checkbox">웹 문의 폼</label>
+          <label><input type="checkbox">이메일</label>
+          <label><input type="checkbox">SNS</label>
+        </fieldset>
+        <button type="button" class="btn btn--ghost btn--sm">필터 초기화</button>
+      </div>
+
+      <p class="caption" style="margin:0 0 var(--space-3)">8건 표시 · 심각도 내림차순 정렬</p>
+
+      <!-- 저장 오류 배너 예시 (§5.6 SaveErrorBanner) -->
+      <div class="state-error" role="alert">
+        <strong>저장에 실패했습니다.</strong>
+        <span>다시 시도해 주세요.</span>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn--ghost btn--sm">다시 시도</button>
+      </div>
+
+      <div class="feedback-list">
+        <!-- critical 항목 -->
+        <article class="feedback-item">
+          <div class="feedback-item__head">
+            <h3>[긴급] 결제 완료 후 주문내역 미표시</h3>
+            <span class="mono">FB-6002</span>
+          </div>
+          <div class="feedback-item__badges">
+            <span class="badge badge--sev-critical">치명적</span>
+            <span class="badge badge--status-pending_review">검토 대기</span>
+          </div>
+          <div class="feedback-item__meta">
+            <span class="caption">채널: 웹 문의 폼</span>
+            <span class="caption">수정: 2026-07-11</span>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn--primary btn--sm">계획됨으로</button>
+          </div>
+        </article>
+
+        <!-- 진행 중(saving) 상태 예시 -->
+        <article class="feedback-item">
+          <div class="feedback-item__head">
+            <h3>앱 푸시 알림 중복 발송</h3>
+            <span class="mono">FB-6007</span>
+          </div>
+          <div class="feedback-item__badges">
+            <span class="badge badge--sev-critical">치명적</span>
+            <span class="badge badge--status-done">처리 완료</span>
+          </div>
+          <div class="feedback-item__meta">
+            <span class="caption">채널: 앱 내 문의</span>
+            <span class="caption">완료: 2026-07-16</span>
+            <span class="spacer"></span>
+            <span class="caption">전환 완료 — 다음 단계 없음</span>
+          </div>
+        </article>
+
+        <!-- high 항목 -->
+        <article class="feedback-item">
+          <div class="feedback-item__head">
+            <h3>알림 설정 화면 접근성 개선 요청</h3>
+            <span class="mono">FB-6003</span>
+          </div>
+          <div class="feedback-item__badges">
+            <span class="badge badge--sev-high">높음</span>
+            <span class="badge badge--status-planned">계획됨</span>
+          </div>
+          <div class="feedback-item__meta">
+            <span class="caption">채널: 이메일</span>
+            <span class="caption">수정: 2026-07-12</span>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn--primary btn--sm" disabled>저장 중...</button>
+          </div>
+        </article>
+
+        <!-- medium 항목 -->
+        <article class="feedback-item">
+          <div class="feedback-item__head">
+            <h3>로그인 화면 다크모드 대비 부족</h3>
+            <span class="mono">FB-6001</span>
+          </div>
+          <div class="feedback-item__badges">
+            <span class="badge badge--sev-medium">보통</span>
+            <span class="badge badge--status-pending_review">검토 대기</span>
+          </div>
+          <div class="feedback-item__meta">
+            <span class="caption">채널: 앱 내 문의</span>
+            <span class="caption">수정: 2026-07-10</span>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn--primary btn--sm">계획됨으로</button>
+          </div>
+        </article>
+
+        <!-- low 항목 -->
+        <article class="feedback-item">
+          <div class="feedback-item__head">
+            <h3>다국어 지원(영어) 요청</h3>
+            <span class="mono">FB-6006</span>
+          </div>
+          <div class="feedback-item__badges">
+            <span class="badge badge--sev-low">낮음</span>
+            <span class="badge badge--status-done">처리 완료</span>
+          </div>
+          <div class="feedback-item__meta">
+            <span class="caption">채널: 웹 문의 폼</span>
+            <span class="caption">완료: 2026-07-15</span>
+            <span class="spacer"></span>
+            <span class="caption">전환 완료 — 다음 단계 없음</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== 상태 대체 컴포넌트 프리뷰 (§5.6) ===== -->
+  <p class="preview-note">▼ 아래는 <strong>상태 대체 화면</strong> 프리뷰 — 실제로는 목록 영역이 조건부로 아래 중 하나로 치환됨 (동일 토큰 사용)</p>
+
+  <section class="panel" aria-label="빈 상태 (필터 결과 0건)">
+    <h2>빈 상태 — 필터/검색 결과 0건 (§5.6)</h2>
+    <div class="state-empty">
+      <p>조건에 맞는 피드백이 없습니다.</p>
+      <button type="button" class="btn btn--ghost btn--sm">필터 초기화</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="로딩 상태" style="margin-top:var(--space-4)">
+    <h2>로딩 — 최초 fixture 로드 중 (§5.7)</h2>
+    <div class="state-loading" aria-live="polite">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <p class="caption">불러오는 중...</p>
+    </div>
+  </section>
+
+  <!-- ===== 태블릿 레이아웃 프리뷰 (§4.3) ===== -->
+  <p class="preview-note">▼ <strong>태블릿(640~1023px)</strong> 레이아웃 프리뷰 — KPI 2×2, 등록 폼이 목록 위로 세로 스택 (브라우저 창을 1023px 이하로 줄이면 위 실제 보드도 동일 전환)</p>
+  <div class="tablet-frame">
+    <section class="kpi-summary" aria-label="태블릿 KPI">
+      <div class="kpi-card"><p class="kpi-card__label">전체 피드백</p><div class="kpi-card__value">8</div></div>
+      <div class="kpi-card"><p class="kpi-card__label">상태별 건수</p><div class="kpi-card__value">3 · 3 · 2</div></div>
+      <div class="kpi-card"><p class="kpi-card__label">심각도 분포</p><div class="kpi-dist"><span class="badge badge--sev-critical">치명적 2</span><span class="badge badge--sev-low">낮음 2</span></div></div>
+      <div class="kpi-card"><p class="kpi-card__label">평균 리드타임</p><div class="kpi-card__value">10.0<span style="font-size:var(--fs-body);font-weight:400;">일</span></div></div>
+    </section>
+    <div class="board-grid">
+      <aside class="panel"><h2>피드백 등록</h2><p class="caption">제목·설명·심각도·채널 폼 (세로 스택 상단 배치)</p></aside>
+      <section class="panel">
+        <h2>목록</h2>
+        <article class="feedback-item">
+          <div class="feedback-item__head"><h3>[긴급] 결제 완료 후 주문내역 미표시</h3><span class="mono">FB-6002</span></div>
+          <div class="feedback-item__badges"><span class="badge badge--sev-critical">치명적</span><span class="badge badge--status-pending_review">검토 대기</span></div>
+        </article>
+      </section>
+    </div>
+  </div>
+</div>
+</body>
+</html>
