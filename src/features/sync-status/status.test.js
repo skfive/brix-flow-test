@@ -73,6 +73,21 @@ test('TC-17~18 recordRetryOutcome 실패/충돌은 성공 미집계', () => {
   assert.strictEqual(c.retrySuccesses, 1);
 });
 
+test('회귀(BF-1164): recordCheckCost/recordRetryOutcome 는 서로의 필드를 보존한다', () => {
+  // 재시도 1회 후 확인 비용 기록 시 retryAttempts/retrySuccesses 가 유실되면 안 됨
+  const base = { checkDurationsMs: [], retryAttempts: 0, retrySuccesses: 0 };
+  const afterRetry = S.recordRetryOutcome(base, 'up_to_date');
+  assert.deepStrictEqual(afterRetry.checkDurationsMs, [], 'recordRetryOutcome 이 checkDurationsMs 보존');
+  const afterCheck = S.recordCheckCost(afterRetry, 100, 340);
+  assert.strictEqual(afterCheck.retryAttempts, 1, 'recordCheckCost 가 retryAttempts 보존');
+  assert.strictEqual(afterCheck.retrySuccesses, 1, 'recordCheckCost 가 retrySuccesses 보존');
+  assert.deepStrictEqual(afterCheck.checkDurationsMs, [240]);
+  // 연속 2회 재시도 후에도 KPI 집계가 throw 없이 계산 가능해야 함 (E2E-4 고착 원인 차단)
+  const m2 = S.recordRetryOutcome(afterCheck, 'conflict');
+  assert.strictEqual(S.averageCheckCost(m2), 240, 'averageCheckCost 가 undefined.length throw 없이 계산');
+  assert.strictEqual(S.retrySuccessRate(m2), 0.5);
+});
+
 test('파생 헬퍼: triggerFor / summarize / sortBySeverity', () => {
   assert.strictEqual(S.triggerFor('idle'), 'check');
   assert.strictEqual(S.triggerFor('failed'), 'retry');
