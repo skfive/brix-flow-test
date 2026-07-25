@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리뷰 증거 히트맵</title>
+<style>
+  :root {
+    /* neutral */
+    --reh-bg:#F8FAFC; --reh-surface:#FFFFFF; --reh-surface-muted:#F1F5F9;
+    --reh-border:#E2E8F0; --reh-text:#0F172A; --reh-text-secondary:#475569; --reh-text-muted:#94A3B8;
+    /* brand */
+    --reh-primary:#4F46E5; --reh-primary-hover:#4338CA; --reh-focus-ring:#6366F1;
+    /* risk */
+    --reh-risk-critical:#B91C1C; --reh-risk-critical-bg:#FEE2E2; --reh-risk-critical-fg:#7F1D1D;
+    --reh-risk-high:#EA580C; --reh-risk-high-bg:#FFEDD5; --reh-risk-high-fg:#9A3412;
+    --reh-risk-medium:#CA8A04; --reh-risk-medium-bg:#FEF9C3; --reh-risk-medium-fg:#854D0E;
+    --reh-risk-low:#16A34A; --reh-risk-low-bg:#DCFCE7; --reh-risk-low-fg:#166534;
+    /* verify */
+    --reh-vf-verified:#16A34A; --reh-vf-verified-bg:#DCFCE7;
+    --reh-vf-pending:#2563EB; --reh-vf-pending-bg:#DBEAFE;
+    --reh-vf-failed:#B91C1C; --reh-vf-failed-bg:#FEE2E2;
+    --reh-vf-stale:#D97706; --reh-vf-stale-bg:#FEF3C7;
+    /* type */
+    --reh-font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --reh-font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    /* space */
+    --reh-space-1:4px; --reh-space-2:8px; --reh-space-3:12px; --reh-space-4:16px;
+    --reh-space-5:24px; --reh-space-6:32px; --reh-space-8:48px;
+    --reh-radius:12px;
+    --reh-shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.10);
+    --reh-shadow-lg:0 4px 12px rgba(15,23,42,.12),0 2px 4px rgba(15,23,42,.08);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--reh-bg); color:var(--reh-text);
+    font-family:var(--reh-font-sans); font-size:14px; line-height:1.5; }
+  .wrap { max-width:1200px; margin:0 auto; padding:var(--reh-space-6) var(--reh-space-5); }
+  .visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+  /* ---- header ---- */
+  .reh-header { display:flex; align-items:flex-start; gap:var(--reh-space-4); flex-wrap:wrap;
+    padding-bottom:var(--reh-space-5); border-bottom:1px solid var(--reh-border); margin-bottom:var(--reh-space-5); }
+  .reh-header h1 { font-size:24px; font-weight:700; line-height:1.25; margin:0 0 4px; }
+  .reh-header p { margin:0; color:var(--reh-text-secondary); font-size:13px; }
+  .reh-header .spacer { flex:1 1 auto; }
+  .reh-btn { font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+    background:var(--reh-primary); color:#fff; border:none; border-radius:8px; padding:8px 14px; }
+  .reh-btn:hover { background:var(--reh-primary-hover); }
+  .reh-btn:focus-visible { outline:2px solid var(--reh-focus-ring); outline-offset:2px; }
+  .reh-btn--ghost { background:var(--reh-surface); color:var(--reh-text); border:1px solid var(--reh-border); }
+  .reh-btn--ghost:hover { background:var(--reh-surface-muted); }
+
+  /* ---- stats ---- */
+  .reh-stats { display:flex; gap:var(--reh-space-3); flex-wrap:wrap; margin-top:var(--reh-space-3); width:100%; }
+  .reh-stat { flex:1 1 120px; background:var(--reh-surface); border:1px solid var(--reh-border);
+    border-radius:var(--reh-radius); box-shadow:var(--reh-shadow); padding:var(--reh-space-3) var(--reh-space-4); }
+  .reh-stat b { display:block; font-size:22px; font-weight:700; line-height:1.1; }
+  .reh-stat span { font-size:12px; color:var(--reh-text-secondary); }
+  .reh-stat--critical b { color:var(--reh-risk-critical-fg); }
+  .reh-stat--high b { color:var(--reh-risk-high-fg); }
+
+  /* ---- controls ---- */
+  .reh-controls { background:var(--reh-surface); border:1px solid var(--reh-border);
+    border-radius:var(--reh-radius); box-shadow:var(--reh-shadow); padding:var(--reh-space-5);
+    margin-bottom:var(--reh-space-5); }
+  h3.reh-sub { font-size:13px; font-weight:600; color:var(--reh-text-secondary); margin:0 0 var(--reh-space-2);
+    text-transform:uppercase; letter-spacing:.03em; }
+
+  /* legend */
+  .reh-legend { display:flex; gap:var(--reh-space-5); flex-wrap:wrap; margin-bottom:var(--reh-space-4);
+    padding-bottom:var(--reh-space-4); border-bottom:1px solid var(--reh-border); }
+  .reh-legend ul { list-style:none; margin:0; padding:0; display:flex; gap:var(--reh-space-3); flex-wrap:wrap; }
+  .reh-legend__item { display:inline-flex; align-items:center; gap:6px; font-size:12px; }
+  .reh-swatch { width:14px; height:14px; border-radius:4px; display:inline-block; flex:0 0 auto;
+    border:1px solid rgba(15,23,42,.15); }
+  .reh-legend__icon { font-weight:700; width:14px; text-align:center; }
+
+  /* filter */
+  .reh-filter { display:flex; gap:var(--reh-space-5); flex-wrap:wrap; align-items:flex-end; }
+  .reh-filter__group { display:flex; flex-direction:column; gap:var(--reh-space-2); }
+  .reh-pills { display:flex; gap:var(--reh-space-2); flex-wrap:wrap; }
+  .reh-pill { font:inherit; font-size:12px; font-weight:600; cursor:pointer; border-radius:999px;
+    padding:6px 12px; border:1px solid var(--reh-border); background:var(--reh-surface);
+    color:var(--reh-text-secondary); display:inline-flex; align-items:center; gap:6px; }
+  .reh-pill:hover { background:var(--reh-surface-muted); }
+  .reh-pill:focus-visible { outline:2px solid var(--reh-focus-ring); outline-offset:2px; }
+  .reh-pill[aria-pressed="true"] { background:var(--reh-primary); color:#fff; border-color:var(--reh-primary); }
+  .reh-checks { display:flex; gap:var(--reh-space-3); flex-wrap:wrap; }
+  .reh-check { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--reh-text-secondary); cursor:pointer; }
+  .reh-check input { width:16px; height:16px; }
+  .reh-check input:focus-visible { outline:2px solid var(--reh-focus-ring); outline-offset:2px; }
+  .reh-count { margin:var(--reh-space-4) 0 0; font-size:13px; color:var(--reh-text-secondary); font-weight:600; }
+
+  /* ---- main layout ---- */
+  .reh-main { display:grid; grid-template-columns:1fr 380px; gap:var(--reh-space-5); align-items:start; }
+  .reh-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:var(--reh-space-3); }
+
+  /* ---- cell ---- */
+  .reh-cell { position:relative; text-align:left; font:inherit; cursor:pointer;
+    border:1px solid var(--reh-border); border-left-width:4px; border-radius:10px;
+    padding:var(--reh-space-3); min-height:104px; display:flex; flex-direction:column; gap:6px;
+    background:var(--reh-surface); }
+  .reh-cell:hover { box-shadow:var(--reh-shadow-lg); border-color:var(--reh-text-muted); }
+  .reh-cell:focus-visible { outline:2px solid var(--reh-focus-ring); outline-offset:2px; }
+  .reh-cell[aria-pressed="true"] { border-color:var(--reh-primary); border-left-color:var(--reh-primary);
+    box-shadow:0 0 0 2px var(--reh-primary) inset; }
+  .reh-cell[data-risk="critical"] { background:var(--reh-risk-critical-bg); border-left-color:var(--reh-risk-critical); }
+  .reh-cell[data-risk="high"] { background:var(--reh-risk-high-bg); border-left-color:var(--reh-risk-high); }
+  .reh-cell[data-risk="medium"] { background:var(--reh-risk-medium-bg); border-left-color:var(--reh-risk-medium); }
+  .reh-cell[data-risk="low"] { background:var(--reh-risk-low-bg); border-left-color:var(--reh-risk-low); }
+  .reh-cell__top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .reh-cell__icon { font-size:14px; font-weight:700; line-height:1; }
+  .reh-cell[data-risk="critical"] .reh-cell__icon { color:var(--reh-risk-critical-fg); }
+  .reh-cell[data-risk="high"] .reh-cell__icon { color:var(--reh-risk-high-fg); }
+  .reh-cell[data-risk="medium"] .reh-cell__icon { color:var(--reh-risk-medium-fg); }
+  .reh-cell[data-risk="low"] .reh-cell__icon { color:var(--reh-risk-low-fg); }
+  .reh-cell__path { font-family:var(--reh-font-mono); font-size:12px; font-weight:600;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--reh-text); }
+  .reh-cell__meta { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:auto; }
+  .reh-cell__label { font-size:11px; font-weight:700; }
+  .reh-cell[data-risk="critical"] .reh-cell__label { color:var(--reh-risk-critical-fg); }
+  .reh-cell[data-risk="high"] .reh-cell__label { color:var(--reh-risk-high-fg); }
+  .reh-cell[data-risk="medium"] .reh-cell__label { color:var(--reh-risk-medium-fg); }
+  .reh-cell[data-risk="low"] .reh-cell__label { color:var(--reh-risk-low-fg); }
+  .reh-cell__findings { font-size:11px; color:var(--reh-text-secondary); }
+
+  /* verify badge */
+  .reh-vf { display:inline-flex; align-items:center; gap:4px; border-radius:999px;
+    padding:2px 7px; font-size:11px; font-weight:600; line-height:1; border:1px solid transparent; }
+  .reh-vf--verified { background:var(--reh-vf-verified-bg); color:var(--reh-vf-verified); border-color:rgba(22,163,74,.3); }
+  .reh-vf--pending { background:var(--reh-vf-pending-bg); color:var(--reh-vf-pending); border-color:rgba(37,99,235,.3); }
+  .reh-vf--failed { background:var(--reh-vf-failed-bg); color:var(--reh-vf-failed); border-color:rgba(185,28,28,.3); }
+  .reh-vf--stale { background:var(--reh-vf-stale-bg); color:var(--reh-vf-stale); border-color:rgba(217,119,6,.3); }
+
+  /* ---- detail panel ---- */
+  .reh-detail { position:sticky; top:24px; background:var(--reh-surface); border:1px solid var(--reh-border);
+    border-radius:var(--reh-radius); box-shadow:var(--reh-shadow); padding:var(--reh-space-5); }
+  .reh-detail:focus-visible { outline:2px solid var(--reh-focus-ring); outline-offset:2px; }
+  .reh-detail__head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--reh-space-3);
+    padding-bottom:var(--reh-space-3); border-bottom:1px solid var(--reh-border); margin-bottom:var(--reh-space-4); }
+  .reh-detail__title { font-family:var(--reh-font-mono); font-size:14px; font-weight:600; margin:0; word-break:break-all; }
+  .reh-detail__badges { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .reh-badge { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:3px 9px;
+    font-size:11px; font-weight:700; line-height:1; }
+  .reh-badge--critical { background:var(--reh-risk-critical-bg); color:var(--reh-risk-critical-fg); }
+  .reh-badge--high { background:var(--reh-risk-high-bg); color:var(--reh-risk-high-fg); }
+  .reh-badge--medium { background:var(--reh-risk-medium-bg); color:var(--reh-risk-medium-fg); }
+  .reh-badge--low { background:var(--reh-risk-low-bg); color:var(--reh-risk-low-fg); }
+  .reh-close { font:inherit; font-size:12px; font-weight:600; cursor:pointer; background:var(--reh-surface-muted);
+    border:1px solid var(--reh-border); border-radius:8px; padding:5px 10px; color:var(--reh-text-secondary); flex:0 0 auto; }
+  .reh-close:hover { background:var(--reh-border); }
+  .reh-close:focus-visible { outline:2px solid var(--reh-focus-ring); outline-offset:2px; }
+  .reh-metrics { display:flex; gap:var(--reh-space-4); flex-wrap:wrap; margin-bottom:var(--reh-space-4);
+    font-size:12px; color:var(--reh-text-secondary); }
+  .reh-metrics b { color:var(--reh-text); }
+  .reh-detail h4 { font-size:12px; text-transform:uppercase; letter-spacing:.03em; color:var(--reh-text-secondary);
+    margin:var(--reh-space-4) 0 var(--reh-space-2); }
+  .reh-issue { border:1px solid var(--reh-border); border-radius:8px; padding:var(--reh-space-3);
+    margin-bottom:var(--reh-space-2); background:var(--reh-surface-muted); }
+  .reh-issue__head { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; margin-bottom:2px; flex-wrap:wrap; }
+  .reh-issue__sev--critical { color:var(--reh-risk-critical-fg); }
+  .reh-issue__sev--high { color:var(--reh-risk-high-fg); }
+  .reh-issue__sev--medium { color:var(--reh-risk-medium-fg); }
+  .reh-issue__sev--low { color:var(--reh-risk-low-fg); }
+  .reh-issue__sevlabel { font-size:11px; }
+  .reh-issue__note { font-size:12px; color:var(--reh-text-secondary); margin:0; font-weight:400; }
+  .reh-issue__line { font-family:var(--reh-font-mono); font-size:11px; color:var(--reh-text-muted); font-weight:500; }
+  .reh-log { list-style:none; margin:0; padding:0; }
+  .reh-log li { display:flex; align-items:center; gap:8px; font-size:12px; padding:5px 0;
+    border-bottom:1px solid var(--reh-border); }
+  .reh-log li:last-child { border-bottom:none; }
+  .reh-log__st { font-weight:700; width:16px; text-align:center; flex:0 0 auto; }
+  .reh-log__st--pass { color:var(--reh-vf-verified); }
+  .reh-log__st--fail { color:var(--reh-vf-failed); }
+  .reh-log__st--skip { color:var(--reh-text-muted); }
+  .reh-detail__placeholder { color:var(--reh-text-muted); font-size:13px; text-align:center;
+    padding:var(--reh-space-8) var(--reh-space-4); }
+  .reh-sheet-backdrop { display:none; }
+
+  /* ---- responsive ---- */
+  @media (max-width:959px) {
+    .reh-main { grid-template-columns:1fr; }
+    .reh-detail { position:static; }
+    .reh-grid { grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+  }
+  @media (max-width:599px) {
+    .wrap { padding:var(--reh-space-5) var(--reh-space-4); }
+    .reh-grid { grid-template-columns:repeat(auto-fill,minmax(calc(50% - 6px),1fr)); }
+    /* 모바일: 상세는 하단 시트로 슬라이드업 (열림 상태에서만 표시) */
+    .reh-detail { position:fixed; left:0; right:0; bottom:0; top:auto; z-index:20;
+      border-radius:16px 16px 0 0; max-height:75vh; overflow:auto;
+      box-shadow:0 -6px 20px rgba(15,23,42,.18); }
+    .reh-detail[data-open="false"] { display:none; }
+    .reh-sheet-backdrop { display:block; position:fixed; inset:0; background:rgba(15,23,42,.35); z-index:19; }
+    .reh-detail[data-open="false"] ~ .reh-sheet-backdrop,
+    .reh-main:not(:has(.reh-detail[data-open="true"])) .reh-sheet-backdrop { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== 헤더 + 요약 통계 ===== -->
+  <header class="reh-header">
+    <div>
+      <h1>리뷰 증거 히트맵</h1>
+      <p>파일별 위험도와 검증 상태를 한눈에 확인하고, 셀을 선택해 리뷰 근거를 살펴보세요.</p>
+    </div>
+    <span class="spacer"></span>
+    <button class="reh-btn reh-btn--ghost" type="button" id="reh-data-reset">데이터 리셋</button>
+    <div class="reh-stats">
+      <div class="reh-stat"><b id="reh-stat-total">0</b><span>전체 파일</span></div>
+      <div class="reh-stat reh-stat--critical"><b id="reh-stat-critical">0</b><span>심각 위험</span></div>
+      <div class="reh-stat reh-stat--high"><b id="reh-stat-high">0</b><span>높은 위험</span></div>
+      <div class="reh-stat"><b id="reh-stat-unverified">0</b><span>미검증(대기·실패·재검증)</span></div>
+    </div>
+  </header>
+
+  <!-- ===== 범례 + 필터 ===== -->
+  <section class="reh-controls" aria-label="범례 및 필터">
+    <div class="reh-legend">
+      <div>
+        <h3 class="reh-sub">위험도 범례</h3>
+        <ul>
+          <li class="reh-legend__item"><span class="reh-swatch" style="background:var(--reh-risk-critical-bg);border-color:var(--reh-risk-critical)"></span><span class="reh-legend__icon" style="color:var(--reh-risk-critical-fg)">▲</span> 심각</li>
+          <li class="reh-legend__item"><span class="reh-swatch" style="background:var(--reh-risk-high-bg);border-color:var(--reh-risk-high)"></span><span class="reh-legend__icon" style="color:var(--reh-risk-high-fg)">◆</span> 높음</li>
+          <li class="reh-legend__item"><span class="reh-swatch" style="background:var(--reh-risk-medium-bg);border-color:var(--reh-risk-medium)"></span><span class="reh-legend__icon" style="color:var(--reh-risk-medium-fg)">●</span> 보통</li>
+          <li class="reh-legend__item"><span class="reh-swatch" style="background:var(--reh-risk-low-bg);border-color:var(--reh-risk-low)"></span><span class="reh-legend__icon" style="color:var(--reh-risk-low-fg)">▁</span> 낮음</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="reh-sub">검증 상태 범례</h3>
+        <ul>
+          <li class="reh-legend__item"><span class="reh-vf reh-vf--verified">✓ 검증완료</span></li>
+          <li class="reh-legend__item"><span class="reh-vf reh-vf--pending">◷ 검증대기</span></li>
+          <li class="reh-legend__item"><span class="reh-vf reh-vf--failed">✕ 검증실패</span></li>
+          <li class="reh-legend__item"><span class="reh-vf reh-vf--stale">⚠ 재검증</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="reh-filter">
+      <div class="reh-filter__group">
+        <h3 class="reh-sub" id="reh-risk-filter-label">위험도 필터</h3>
+        <div class="reh-pills" id="reh-risk-pills" role="group" aria-labelledby="reh-risk-filter-label">
+          <button class="reh-pill" type="button" data-filter-risk="all" aria-pressed="true">전체</button>
+          <button class="reh-pill" type="button" data-filter-risk="critical" aria-pressed="false">▲ 심각</button>
+          <button class="reh-pill" type="button" data-filter-risk="high" aria-pressed="false">◆ 높음</button>
+          <button class="reh-pill" type="button" data-filter-risk="medium" aria-pressed="false">● 보통</button>
+          <button class="reh-pill" type="button" data-filter-risk="low" aria-pressed="false">▁ 낮음</button>
+        </div>
+      </div>
+      <div class="reh-filter__group">
+        <h3 class="reh-sub" id="reh-vf-filter-label">검증 상태 필터</h3>
+        <div class="reh-checks" id="reh-verify-checks" role="group" aria-labelledby="reh-vf-filter-label">
+          <label class="reh-check"><input type="checkbox" data-filter-verify="verified"> ✓ 검증완료</label>
+          <label class="reh-check"><input type="checkbox" data-filter-verify="pending"> ◷ 검증대기</label>
+          <label class="reh-check"><input type="checkbox" data-filter-verify="failed"> ✕ 검증실패</label>
+          <label class="reh-check"><input type="checkbox" data-filter-verify="stale"> ⚠ 재검증</label>
+        </div>
+      </div>
+      <button class="reh-btn reh-btn--ghost" type="button" id="reh-reset">필터 초기화</button>
+    </div>
+    <p class="reh-count" id="reh-count" role="status" aria-live="polite">표시 중 0 / 0 파일</p>
+  </section>
+
+  <!-- ===== 본문: 히트맵 + 상세 패널 ===== -->
+  <div class="reh-main">
+    <div class="reh-grid" id="reh-grid" aria-label="리뷰 파일 히트맵"></div>
+    <aside class="reh-detail" id="reh-detail" aria-labelledby="reh-detail-title" tabindex="-1" data-open="false"></aside>
+    <div class="reh-sheet-backdrop" aria-hidden="true"></div>
+  </div>
+
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
