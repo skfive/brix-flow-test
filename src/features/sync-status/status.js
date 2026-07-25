@@ -107,9 +107,10 @@
    * @returns {{checkDurationsMs: number[]}}
    */
   function recordCheckCost(metrics, startedAt, resolvedAt) {
-    return {
+    // metrics 전체를 병합해 반환 — 다른 필드(retryAttempts/retrySuccesses) 유실 방지
+    return Object.assign({}, metrics, {
       checkDurationsMs: metrics.checkDurationsMs.concat([resolvedAt - startedAt]),
-    };
+    });
   }
 
   /**
@@ -121,10 +122,11 @@
    */
   function recordRetryOutcome(metrics, finalState) {
     var succeeded = finalState !== 'conflict' && finalState !== 'failed';
-    return {
+    // metrics 전체를 병합해 반환 — 다른 필드(checkDurationsMs) 유실 방지
+    return Object.assign({}, metrics, {
       retryAttempts: metrics.retryAttempts + 1,
       retrySuccesses: metrics.retrySuccesses + (succeeded ? 1 : 0),
-    };
+    });
   }
 
   // ── 파생 순수 헬퍼 (요약/정렬/KPI 집계값) ───────────────────────────────
