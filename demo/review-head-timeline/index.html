@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리뷰 head 전환 타임라인</title>
+<style>
+  :root {
+    /* neutral */
+    --rht-bg:#F8FAFC; --rht-surface:#FFFFFF; --rht-surface-muted:#F1F5F9;
+    --rht-border:#E2E8F0; --rht-text:#0F172A; --rht-text-secondary:#475569; --rht-text-muted:#94A3B8;
+    /* brand */
+    --rht-primary:#4F46E5; --rht-primary-hover:#4338CA; --rht-focus-ring:#6366F1;
+    /* semantic — 세대 상태 */
+    --rht-same:#16A34A; --rht-same-bg:#DCFCE7; --rht-same-fg:#166534;
+    --rht-new:#2563EB; --rht-new-bg:#DBEAFE; --rht-new-fg:#1E40AF;
+    --rht-review:#D97706; --rht-review-bg:#FEF3C7; --rht-review-fg:#92400E;
+    /* type */
+    --rht-font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --rht-font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    /* space */
+    --rht-space-1:4px; --rht-space-2:8px; --rht-space-3:12px; --rht-space-4:16px;
+    --rht-space-5:24px; --rht-space-6:32px; --rht-space-8:48px;
+    --rht-radius:12px;
+    --rht-shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.10);
+    --rht-shadow-hover:0 4px 6px rgba(15,23,42,.08),0 2px 4px rgba(15,23,42,.10);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--rht-bg); color:var(--rht-text);
+    font-family:var(--rht-font-sans); font-size:14px; line-height:1.5; }
+  .wrap { max-width:1120px; margin:0 auto; padding:var(--rht-space-6) var(--rht-space-5); }
+  .mono { font-family:var(--rht-font-mono); font-size:13px; font-weight:500; }
+
+  /* ---- header ---- */
+  .rht-header { display:flex; align-items:center; gap:var(--rht-space-4); flex-wrap:wrap;
+    padding-bottom:var(--rht-space-5); border-bottom:1px solid var(--rht-border); margin-bottom:var(--rht-space-6); }
+  .rht-header h1 { font-size:24px; font-weight:700; line-height:1.25; margin:0; }
+  .rht-header .spacer { flex:1 1 auto; }
+  .rht-btn { font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+    background:var(--rht-primary); color:#fff; border:none; border-radius:8px; padding:8px 14px; }
+  .rht-btn:hover { background:var(--rht-primary-hover); }
+  .rht-btn:focus-visible { outline:2px solid var(--rht-focus-ring); outline-offset:2px; }
+
+  /* ---- badge ---- */
+  .rht-badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+    padding:4px 10px; font-size:12px; font-weight:600; line-height:1; border:1px solid transparent; white-space:nowrap; }
+  .rht-badge__icon { font-size:12px; line-height:1; }
+  .rht-badge--same { background:var(--rht-same-bg); color:var(--rht-same-fg); border-color:rgba(22,163,74,.25); }
+  .rht-badge--new { background:var(--rht-new-bg); color:var(--rht-new-fg); border-color:rgba(37,99,235,.25); }
+  .rht-badge--review { background:var(--rht-review-bg); color:var(--rht-review-fg); border-color:rgba(217,119,6,.25); }
+
+  h2.rht-section { font-size:18px; font-weight:600; line-height:1.33; margin:0 0 var(--rht-space-2); }
+  .rht-block { margin-bottom:var(--rht-space-8); }
+  .rht-block > .lead { color:var(--rht-text-secondary); font-size:13px; margin:0 0 var(--rht-space-5); }
+
+  /* ===== 세대 타임라인 (핵심) — desktop horizontal spine ===== */
+  .rht-timeline { position:relative; display:flex; align-items:flex-start; gap:0;
+    padding:var(--rht-space-5) 0 var(--rht-space-4); overflow-x:auto; }
+  .rht-timeline:focus-visible { outline:2px solid var(--rht-focus-ring); outline-offset:4px; border-radius:8px; }
+  .rht-timeline__spine { position:absolute; top:calc(var(--rht-space-5) + 20px + 8px); left:64px; right:64px;
+    height:2px; display:flex; z-index:0; }
+  .rht-timeline__seg { flex:1 1 auto; height:2px; background:var(--rht-border); transition:background 160ms; }
+  .rht-timeline__seg--changed[data-change="new"] { background:var(--rht-new); }
+  .rht-timeline__seg--changed[data-change="review"] { background:var(--rht-review); }
+  .rht-timeline__node { appearance:none; background:transparent; border:none; cursor:pointer;
+    font:inherit; text-align:center; padding:var(--rht-space-2); border-radius:8px; position:relative; z-index:1;
+    display:flex; flex-direction:column; align-items:center; gap:6px; min-width:130px; flex:1 0 auto; }
+  .rht-timeline__node:hover { background:var(--rht-surface-muted); }
+  .rht-timeline__node:focus-visible { outline:2px solid var(--rht-focus-ring); outline-offset:2px; }
+  .rht-timeline__gen { font-family:var(--rht-font-mono); font-size:11px; font-weight:600; color:var(--rht-text-muted);
+    letter-spacing:.04em; }
+  .rht-timeline__dot { width:20px; height:20px; border-radius:999px; background:var(--rht-text-muted);
+    box-shadow:0 0 0 4px var(--rht-surface),0 0 0 5px var(--rht-border); transition:box-shadow 120ms; }
+  .rht-timeline__node.is-active .rht-timeline__dot { box-shadow:0 0 0 4px var(--rht-surface),0 0 0 6px var(--rht-primary); }
+  .rht-timeline__node[data-state="same"] .rht-timeline__dot { background:var(--rht-same); }
+  .rht-timeline__node[data-state="new"] .rht-timeline__dot { background:var(--rht-new); }
+  .rht-timeline__node[data-state="review"] .rht-timeline__dot { background:var(--rht-review); }
+  .rht-timeline__sha { font-family:var(--rht-font-mono); font-size:13px; font-weight:500; }
+  .rht-timeline__node.is-head .rht-timeline__sha { font-weight:700; }
+  .rht-timeline__ts { font-size:12px; font-weight:500; color:var(--rht-text-muted); }
+  .rht-timeline__head-cap { font-size:11px; font-weight:600; color:var(--rht-primary); }
+
+  /* ===== 세대 비교 ===== */
+  .rht-compare { display:grid; grid-template-columns:1fr 1fr; gap:var(--rht-space-5); align-items:stretch; }
+  .rht-compare-card { position:relative; background:var(--rht-surface); border:1px solid var(--rht-border);
+    border-radius:var(--rht-radius); box-shadow:var(--rht-shadow); padding:var(--rht-space-5);
+    padding-left:calc(var(--rht-space-5) + 4px); overflow:hidden; }
+  .rht-compare-card--curr.is-animating { animation:rht-enter 220ms cubic-bezier(.2,.8,.2,1); }
+  .rht-compare-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--rht-border);
+    transition:background 160ms; }
+  .rht-compare-card--curr[data-state="same"]::before { background:var(--rht-same); }
+  .rht-compare-card--curr[data-state="new"]::before { background:var(--rht-new); }
+  .rht-compare-card--curr[data-state="review"]::before { background:var(--rht-review); }
+  .rht-compare-card--curr { cursor:pointer; }
+  .rht-compare-card--curr:hover { box-shadow:var(--rht-shadow-hover); }
+  .rht-compare-card--curr:focus-visible { outline:2px solid var(--rht-focus-ring); outline-offset:2px; }
+  .rht-compare-card h3 { font-size:15px; font-weight:600; margin:0 0 var(--rht-space-3);
+    display:flex; align-items:center; gap:var(--rht-space-2); flex-wrap:wrap; }
+  .rht-compare-card .role { color:var(--rht-text-secondary); font-size:12px; font-weight:600; }
+  .rht-compare-card .gen-tag { font-family:var(--rht-font-mono); font-size:11px; font-weight:600; color:var(--rht-text-muted);
+    background:var(--rht-surface-muted); border-radius:6px; padding:2px 6px; }
+  .rht-meta { list-style:none; padding:0; margin:0 0 var(--rht-space-4); display:grid; gap:6px;
+    font-size:13px; color:var(--rht-text-secondary); }
+  .rht-meta b { color:var(--rht-text); font-weight:600; }
+  .rht-strip { display:flex; align-items:center; gap:var(--rht-space-2); padding-top:var(--rht-space-3);
+    border-top:1px solid var(--rht-border); }
+
+  /* ---- detail panel ---- */
+  .rht-detail { margin-top:var(--rht-space-4); background:var(--rht-surface-muted); border-radius:10px;
+    padding:var(--rht-space-4); }
+  .rht-detail[hidden] { display:none; }
+  .rht-detail .reason { margin:0 0 var(--rht-space-3); font-size:13px; color:var(--rht-text); }
+  .rht-chips { display:flex; gap:var(--rht-space-2); flex-wrap:wrap; }
+  .rht-chip { font-family:var(--rht-font-mono); font-size:12px; font-weight:600; padding:4px 8px; border-radius:6px;
+    background:var(--rht-surface); border:1px solid var(--rht-border); }
+  .rht-chip.add { color:#166534; } .rht-chip.del { color:#991B1B; } .rht-chip.warn { color:var(--rht-review-fg); }
+
+  /* ---- aria-live status line ---- */
+  .rht-live { margin:0 0 var(--rht-space-4); font-size:13px; color:var(--rht-text-secondary);
+    display:flex; align-items:center; gap:var(--rht-space-2); flex-wrap:wrap; }
+
+  .rht-hint { margin:var(--rht-space-5) 0 0; font-size:12px; color:var(--rht-text-muted); }
+  .kbd { font-family:var(--rht-font-mono); font-size:11px; background:var(--rht-surface-muted);
+    border:1px solid var(--rht-border); border-radius:4px; padding:1px 6px; }
+
+  @keyframes rht-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  /* ---- responsive ---- */
+  @media (max-width:639px) {
+    .rht-timeline { flex-direction:column; align-items:flex-start; gap:var(--rht-space-2); padding:var(--rht-space-3) 0; }
+    .rht-timeline__spine { display:none; }
+    .rht-timeline__node { flex-direction:row; min-width:0; width:100%; gap:var(--rht-space-3); text-align:left; }
+    .rht-compare { grid-template-columns:1fr; }
+    .rht-header h1 { flex-basis:100%; }
+  }
+
+  @media (prefers-reduced-motion:reduce) {
+    .rht-compare-card--curr.is-animating { animation:none; }
+    .rht-compare-card::before, .rht-timeline__dot, .rht-timeline__seg { transition:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== HEADER ===== -->
+  <header class="rht-header">
+    <h1>리뷰 head 전환 타임라인</h1>
+    <span id="head-badge" class="rht-badge rht-badge--review" role="status">
+      <span class="rht-badge__icon" aria-hidden="true">⚠</span><span data-badge-label>검토 필요</span>
+    </span>
+    <span class="spacer"></span>
+    <button id="goto-head" class="rht-btn" type="button">↧ 최신 head로 이동</button>
+  </header>
+
+  <!-- ===== 핵심: 세대 타임라인 ===== -->
+  <section class="rht-block">
+    <h2 class="rht-section">세대 타임라인</h2>
+    <p class="lead">리뷰 대상 head가 <b>G0 → G3</b>로 전환되어 온 이력입니다. 색이 채워진 구간에서 세대가 바뀌었습니다. 노드를 선택하면 아래 비교가 갱신됩니다.</p>
+
+    <div id="timeline" class="rht-timeline" role="group" aria-label="세대 타임라인">
+      <div id="spine" class="rht-timeline__spine" aria-hidden="true"></div>
+      <!-- 노드는 review-head-timeline/timeline.js 로컬 데이터로 렌더됩니다. -->
+    </div>
+
+    <!-- aria-live 상태 안내 (선택 세대 문구) -->
+    <p id="live" class="rht-live" role="status" aria-live="polite"></p>
+  </section>
+
+  <!-- ===== 세대 비교 ===== -->
+  <section class="rht-block">
+    <h2 id="compare-heading" class="rht-section">세대 비교</h2>
+    <p class="lead">선택된 세대와 직전 세대의 head를 나란히 비교합니다. 선택 세대 카드를 열면(클릭/Enter) 판정 근거와 diff 요약을 확인하고, <span class="kbd">Esc</span>로 닫습니다.</p>
+    <div class="rht-compare">
+      <article id="card-prev" class="rht-compare-card rht-compare-card--prev"></article>
+      <article id="card-curr" class="rht-compare-card rht-compare-card--curr" tabindex="0" aria-expanded="true"></article>
+    </div>
+    <p class="rht-hint">키보드: <span class="kbd">←</span>/<span class="kbd">→</span> 이동 · <span class="kbd">Home</span>/<span class="kbd">End</span> 처음·최신 · <span class="kbd">Enter</span>/<span class="kbd">Space</span> 선택 · <span class="kbd">Esc</span> 상세 닫기</p>
+  </section>
+
+</div>
+
+<script type="module">
+import {
+  STATE_META, buildTimeline, computeSegments, moveSelection, statusPhrase,
+  SAMPLE_GENERATIONS, REFERENCE_NOW,
+} from '../../review-head-timeline/timeline.js';
+
+// ── 로컬 결정론 상태 (외부 API 없음) ──────────────────────────────
+const nowMs = Date.parse(REFERENCE_NOW);
+const nodes = buildTimeline(SAMPLE_GENERATIONS, nowMs);
+const segments = computeSegments(nodes);
+let selected = nodes.length - 1; // 기본 선택 = 최신 head
+let detailOpen = true;
+
+const els = {
+  timeline: document.getElementById('timeline'),
+  spine: document.getElementById('spine'),
+  live: document.getElementById('live'),
+  headBadge: document.getElementById('head-badge'),
+  gotoHead: document.getElementById('goto-head'),
+  cardPrev: document.getElementById('card-prev'),
+  cardCurr: document.getElementById('card-curr'),
+  compareHeading: document.getElementById('compare-heading'),
+};
+
+function badgeHtml(state) {
+  const m = STATE_META[state];
+  return `<span class="rht-badge__icon" aria-hidden="true">${m.icon}</span>${m.label}`;
+}
+
+// ── 타임라인 노드 렌더 (1회 생성, 상태만 갱신) ─────────────────────
+const nodeEls = nodes.map((n) => {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'rht-timeline__node';
+  btn.dataset.gen = String(n.gen);
+  btn.innerHTML =
+    `<span class="rht-timeline__gen">G${n.gen}</span>` +
+    `<span class="rht-timeline__dot" aria-hidden="true"></span>` +
+    `<span class="rht-timeline__sha">${n.shortSha}</span>` +
+    (n.isHead
+      ? `<span class="rht-timeline__head-cap">현재 head</span>`
+      : `<span class="rht-timeline__ts">${n.relative}</span>`);
+  btn.addEventListener('click', () => select(n.gen, { focus: true }));
+  els.timeline.appendChild(btn);
+  return btn;
+});
+
+// ── 세그먼트 렌더 (스파인) ────────────────────────────────────────
+for (const seg of segments) {
+  const span = document.createElement('span');
+  span.className = 'rht-timeline__seg' + (seg.changeState ? ' rht-timeline__seg--changed' : '');
+  if (seg.changeState) span.dataset.change = seg.changeState;
+  els.spine.appendChild(span);
+}
+
+function metaCard(role, node, showState) {
+  const roleLabel = role === 'prev' ? '직전 세대 head' : '선택 세대 head';
+  if (!node) {
+    return `<h3><span class="role">${roleLabel}</span></h3>` +
+      `<ul class="rht-meta"><li>이전 세대가 없는 <b>기준 세대(G0)</b>입니다.</li></ul>`;
+  }
+  const files = (node.filesChanged === undefined || node.filesChanged === null) ? '—' : node.filesChanged;
+  const stateMeta = STATE_META[node.state];
+  const strip = `<div class="rht-strip"><span class="rht-badge rht-badge--${node.state}" role="status">${badgeHtml(node.state)}</span></div>`;
+  return `<h3><span class="role">${roleLabel}</span> <span class="gen-tag">G${node.gen}</span> <span class="mono">${node.shortSha}</span></h3>` +
+    `<ul class="rht-meta">` +
+      `<li>작성자 <b>${node.author}</b></li>` +
+      `<li>시각 <b>${node.isHead ? node.relative + ' · 현재 head' : node.relative}</b></li>` +
+      `<li>변경 파일 <b>${files}</b></li>` +
+    `</ul>` + (showState ? strip : '');
+}
+
+function detailHtml(node, prevNode) {
+  const phrase = statusPhrase(node.state);
+  const prevShort = prevNode ? prevNode.shortSha : '(없음)';
+  let reason;
+  if (node.state === 'same') {
+    reason = `head SHA가 <span class="mono">${node.shortSha}</span>로 직전 세대와 동일하여 리뷰 세대가 유지됩니다.`;
+  } else if (node.state === 'new') {
+    reason = `head가 <span class="mono">${prevShort}</span> → <span class="mono">${node.shortSha}</span>로 전환되어 새 리뷰 세대가 시작되었습니다. 미해결 항목이 없습니다.`;
+  } else {
+    reason = `head가 <span class="mono">${prevShort}</span> → <span class="mono">${node.shortSha}</span>로 전환되었고, 미해결 스레드 ${node.unresolvedThreads}건이 남아 있어 재검토가 필요합니다.`;
+  }
+  const chips = [];
+  if (node.additions) chips.push(`<span class="rht-chip add">+${node.additions}</span>`);
+  if (node.deletions) chips.push(`<span class="rht-chip del">−${node.deletions}</span>`);
+  if (node.unresolvedThreads > 0) chips.push(`<span class="rht-chip warn">미해결 ${node.unresolvedThreads}</span>`);
+  return `<section class="rht-detail" data-detail>` +
+    `<p class="reason"><b>${phrase}.</b> ${reason}</p>` +
+    (chips.length ? `<div class="rht-chips">${chips.join('')}</div>` : '') +
+    `</section>`;
+}
+
+// ── 전체 렌더 ─────────────────────────────────────────────────────
+function render(animate) {
+  const curr = nodes[selected];
+  const prev = selected > 0 ? nodes[selected - 1] : null;
+
+  // 타임라인 노드 상태/roving tabindex
+  nodeEls.forEach((btn, i) => {
+    const n = nodes[i];
+    const isActive = i === selected;
+    btn.classList.toggle('is-active', isActive);
+    btn.classList.toggle('is-head', n.isHead);
+    btn.dataset.state = n.state;
+    btn.tabIndex = isActive ? 0 : -1;
+    if (isActive) btn.setAttribute('aria-current', 'true');
+    else btn.removeAttribute('aria-current');
+    const headWord = n.isHead ? '현재 head ' : 'head ';
+    btn.setAttribute('aria-label',
+      `세대 G${n.gen}, ${headWord}${n.sha}, ${STATE_META[n.state].label}, ${n.relative}` +
+      (isActive ? ' (선택됨)' : ''));
+  });
+
+  // 헤더 배지 = 현재(최신 head) 상태
+  const head = nodes[nodes.length - 1];
+  els.headBadge.className = `rht-badge rht-badge--${head.state}`;
+  els.headBadge.innerHTML = badgeHtml(head.state);
+
+  // 비교 제목
+  els.compareHeading.textContent = prev
+    ? `세대 비교 — G${prev.gen} → G${curr.gen}`
+    : `세대 비교 — 기준 세대 G${curr.gen}`;
+
+  // 비교 카드
+  els.cardPrev.dataset.state = prev ? prev.state : '';
+  els.cardPrev.innerHTML = metaCard('prev', prev, Boolean(prev));
+
+  els.cardCurr.dataset.state = curr.state;
+  els.cardCurr.setAttribute('aria-expanded', String(detailOpen));
+  els.cardCurr.innerHTML = metaCard('curr', curr, true) + detailHtml(curr, prev);
+  const detail = els.cardCurr.querySelector('[data-detail]');
+  if (detail) detail.hidden = !detailOpen;
+
+  // 전환 이펙트 (선택 변경 시에만, reduced-motion 은 CSS 가 무효화)
+  if (animate) {
+    els.cardCurr.classList.remove('is-animating');
+    void els.cardCurr.offsetWidth; // reflow → 애니메이션 재시작
+    els.cardCurr.classList.add('is-animating');
+  }
+
+  // aria-live 상태 문구 (§1 고정 문구 재사용)
+  els.live.innerHTML =
+    `<span class="rht-badge rht-badge--${curr.state}">${badgeHtml(curr.state)}</span>` +
+    `<span>G${curr.gen} · ${statusPhrase(curr.state)}</span>`;
+}
+
+// ── 선택 변경 ─────────────────────────────────────────────────────
+function select(index, { focus = false, animate = true } = {}) {
+  const next = Math.max(0, Math.min(nodes.length - 1, index));
+  const changed = next !== selected;
+  selected = next;
+  if (changed) detailOpen = true; // 새 세대 선택 시 상세 기본 열림
+  render(changed && animate);
+  if (focus) nodeEls[selected].focus();
+}
+
+// ── 키보드: 타임라인 roving tabindex ──────────────────────────────
+els.timeline.addEventListener('keydown', (e) => {
+  const navKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+  if (navKeys.includes(e.key)) {
+    e.preventDefault();
+    select(moveSelection(selected, e.key, nodes.length), { focus: true });
+  } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+    // 포커스된 노드 활성화(이미 선택돼 있으면 no-op) — 명시적 선택
+    e.preventDefault();
+    const focused = document.activeElement;
+    const gen = focused && focused.dataset ? Number(focused.dataset.gen) : selected;
+    select(Number.isNaN(gen) ? selected : gen, { focus: true });
+  }
+});
+
+// ── 비교 카드: 상세 토글 + Esc 닫기 ───────────────────────────────
+function toggleDetail() {
+  detailOpen = !detailOpen;
+  els.cardCurr.setAttribute('aria-expanded', String(detailOpen));
+  const detail = els.cardCurr.querySelector('[data-detail]');
+  if (detail) detail.hidden = !detailOpen;
+}
+els.cardCurr.addEventListener('click', toggleDetail);
+els.cardCurr.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+    e.preventDefault();
+    toggleDetail();
+  } else if (e.key === 'Escape' && detailOpen) {
+    e.preventDefault();
+    detailOpen = false;
+    els.cardCurr.setAttribute('aria-expanded', 'false');
+    const detail = els.cardCurr.querySelector('[data-detail]');
+    if (detail) detail.hidden = true;
+    els.cardCurr.focus();
+  }
+});
+// 전역 Esc: 열린 상세 닫고 포커스를 카드로 복귀 (§6.4)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && detailOpen) {
+    detailOpen = false;
+    els.cardCurr.setAttribute('aria-expanded', 'false');
+    const detail = els.cardCurr.querySelector('[data-detail]');
+    if (detail) detail.hidden = true;
+    els.cardCurr.focus();
+  }
+});
+
+// ── "최신 head로 이동" ────────────────────────────────────────────
+els.gotoHead.addEventListener('click', () => select(nodes.length - 1, { focus: true }));
+
+// ── 초기 렌더 ─────────────────────────────────────────────────────
+render(false);
+</script>
+</body>
+</html>
