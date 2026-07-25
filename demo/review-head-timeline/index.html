@@ -53,7 +53,7 @@
   .rht-block { margin-bottom:var(--rht-space-8); }
   .rht-block > .lead { color:var(--rht-text-secondary); font-size:13px; margin:0 0 var(--rht-space-5); }
 
-  /* ===== 세대 타임라인 (핵심) — desktop horizontal spine ===== */
+  /* ===== 세대 타임라인 (핵심 1) — desktop horizontal spine ===== */
   .rht-timeline { position:relative; display:flex; align-items:flex-start; gap:0;
     padding:var(--rht-space-5) 0 var(--rht-space-4); overflow-x:auto; }
   .rht-timeline:focus-visible { outline:2px solid var(--rht-focus-ring); outline-offset:4px; border-radius:8px; }
@@ -79,6 +79,39 @@
   .rht-timeline__node.is-head .rht-timeline__sha { font-weight:700; }
   .rht-timeline__ts { font-size:12px; font-weight:500; color:var(--rht-text-muted); }
   .rht-timeline__head-cap { font-size:11px; font-weight:600; color:var(--rht-primary); }
+
+  /* ===== 전환 단계 트랙 (핵심 2 · "단계별") ===== */
+  .rht-track { background:var(--rht-surface); border:1px solid var(--rht-border);
+    border-radius:var(--rht-radius); box-shadow:var(--rht-shadow); padding:var(--rht-space-5); }
+  .rht-track__cap { font-size:13px; font-weight:600; color:var(--rht-text-secondary); margin:0 0 var(--rht-space-4); }
+  .rht-track__cap .mono { color:var(--rht-text); }
+  .rht-steps { list-style:none; margin:0; padding:0; display:flex; gap:0; }
+  .rht-step { flex:1 1 0; position:relative; display:flex; flex-direction:column; align-items:center;
+    text-align:center; gap:6px; padding:0 var(--rht-space-2); min-width:0; }
+  /* 단계 연결선: done 구간은 --rht-same, 그 외 --rht-border */
+  .rht-step::before { content:""; position:absolute; top:15px; left:-50%; width:100%; height:2px;
+    background:var(--rht-border); z-index:0; transition:background 160ms; }
+  .rht-step:first-child::before { display:none; }
+  .rht-step[data-status="done"]::before { background:var(--rht-same); }
+  .rht-step__num { position:relative; z-index:1; width:32px; height:32px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
+    background:var(--rht-surface-muted); color:var(--rht-text-muted); border:2px solid var(--rht-border);
+    transition:transform 120ms, border-color 160ms, color 160ms; }
+  .rht-step[data-status="done"] .rht-step__num { border-color:var(--rht-same); color:var(--rht-same); }
+  .rht-step[data-status="current"] .rht-step__num { border-color:var(--rht-primary); color:var(--rht-primary); }
+  .rht-step[data-status="blocked"] .rht-step__num { border-color:var(--rht-review); color:var(--rht-review-fg);
+    background:var(--rht-review-bg); }
+  .rht-step__label { font-size:12px; font-weight:600; line-height:1.3; color:var(--rht-text); }
+  .rht-step[data-status="pending"] .rht-step__label { color:var(--rht-text-muted); }
+  .rht-step[data-status="blocked"] .rht-step__label { color:var(--rht-review-fg); }
+  .rht-step__mark { font-size:12px; line-height:1; }
+  .rht-step[data-status="done"] .rht-step__mark { color:var(--rht-same); }
+  .rht-step[data-status="current"] .rht-step__mark { color:var(--rht-primary); }
+  .rht-step[data-status="blocked"] .rht-step__mark { color:var(--rht-review); }
+  .rht-step[data-status="pending"] .rht-step__mark { color:var(--rht-text-muted); }
+  .rht-step__detail { font-size:11px; font-weight:500; color:var(--rht-text-secondary); line-height:1.3; }
+  .rht-step[data-status="pending"] .rht-step__detail { color:var(--rht-text-muted); }
+  .rht-track.is-animating .rht-step__num { animation:rht-pop 120ms cubic-bezier(.2,.8,.2,1); }
 
   /* ===== 세대 비교 ===== */
   .rht-compare { display:grid; grid-template-columns:1fr 1fr; gap:var(--rht-space-5); align-items:stretch; }
@@ -124,19 +157,24 @@
     border:1px solid var(--rht-border); border-radius:4px; padding:1px 6px; }
 
   @keyframes rht-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  @keyframes rht-pop { from { transform:scale(.8); } to { transform:scale(1); } }
 
   /* ---- responsive ---- */
   @media (max-width:639px) {
     .rht-timeline { flex-direction:column; align-items:flex-start; gap:var(--rht-space-2); padding:var(--rht-space-3) 0; }
     .rht-timeline__spine { display:none; }
     .rht-timeline__node { flex-direction:row; min-width:0; width:100%; gap:var(--rht-space-3); text-align:left; }
+    .rht-steps { flex-direction:column; gap:var(--rht-space-3); }
+    .rht-step { flex-direction:row; align-items:flex-start; text-align:left; gap:var(--rht-space-3); padding:0; }
+    .rht-step::before { display:none; }
     .rht-compare { grid-template-columns:1fr; }
     .rht-header h1 { flex-basis:100%; }
   }
 
   @media (prefers-reduced-motion:reduce) {
     .rht-compare-card--curr.is-animating { animation:none; }
-    .rht-compare-card::before, .rht-timeline__dot, .rht-timeline__seg { transition:none; }
+    .rht-track.is-animating .rht-step__num { animation:none; }
+    .rht-compare-card::before, .rht-timeline__dot, .rht-timeline__seg, .rht-step::before, .rht-step__num { transition:none; }
   }
 </style>
 </head>
@@ -153,18 +191,28 @@
     <button id="goto-head" class="rht-btn" type="button">↧ 최신 head로 이동</button>
   </header>
 
-  <!-- ===== 핵심: 세대 타임라인 ===== -->
+  <!-- ===== 핵심 1: 세대 타임라인 ===== -->
   <section class="rht-block">
     <h2 class="rht-section">세대 타임라인</h2>
-    <p class="lead">리뷰 대상 head가 <b>G0 → G3</b>로 전환되어 온 이력입니다. 색이 채워진 구간에서 세대가 바뀌었습니다. 노드를 선택하면 아래 비교가 갱신됩니다.</p>
+    <p class="lead">리뷰 대상 head가 <b>G0 → G3</b>로 전환되어 온 이력입니다. 색이 채워진 구간에서 세대가 바뀌었습니다. 노드를 선택하면 아래 전환 단계와 비교가 갱신됩니다.</p>
 
     <div id="timeline" class="rht-timeline" role="group" aria-label="세대 타임라인">
       <div id="spine" class="rht-timeline__spine" aria-hidden="true"></div>
-      <!-- 노드는 review-head-timeline/timeline.js 로컬 데이터로 렌더됩니다. -->
+      <!-- 노드는 ./timeline.js 로컬 데이터로 렌더됩니다. -->
     </div>
 
     <!-- aria-live 상태 안내 (선택 세대 문구) -->
     <p id="live" class="rht-live" role="status" aria-live="polite"></p>
+  </section>
+
+  <!-- ===== 핵심 2: 전환 단계 트랙 ("단계별") ===== -->
+  <section class="rht-block">
+    <h2 class="rht-section">전환 단계</h2>
+    <p class="lead">선택된 세대 전환이 <b>head 감지 → 변경 계산 → 세대 판정 → 세대 반영</b>의 순서로 어떤 단계를 밟았는지 보여줍니다. 검토가 필요하면 반영 단계가 사람 확인 대기로 멈춥니다.</p>
+    <div class="rht-track">
+      <p id="track-cap" class="rht-track__cap"></p>
+      <ol id="track" class="rht-steps" role="list"></ol>
+    </div>
   </section>
 
   <!-- ===== 세대 비교 ===== -->
@@ -182,9 +230,10 @@
 
 <script type="module">
 import {
-  STATE_META, buildTimeline, computeSegments, moveSelection, statusPhrase,
+  STATE_META, STEP_STATUS_META,
+  buildTimeline, computeSegments, buildTransitionSteps, moveSelection, statusPhrase,
   SAMPLE_GENERATIONS, REFERENCE_NOW,
-} from '../../review-head-timeline/timeline.js';
+} from './timeline.js';
 
 // ── 로컬 결정론 상태 (외부 API 없음) ──────────────────────────────
 const nowMs = Date.parse(REFERENCE_NOW);
@@ -199,6 +248,8 @@ const els = {
   live: document.getElementById('live'),
   headBadge: document.getElementById('head-badge'),
   gotoHead: document.getElementById('goto-head'),
+  track: document.getElementById('track'),
+  trackCap: document.getElementById('track-cap'),
   cardPrev: document.getElementById('card-prev'),
   cardCurr: document.getElementById('card-curr'),
   compareHeading: document.getElementById('compare-heading'),
@@ -242,9 +293,8 @@ function metaCard(role, node, showState) {
       `<ul class="rht-meta"><li>이전 세대가 없는 <b>기준 세대(G0)</b>입니다.</li></ul>`;
   }
   const files = (node.filesChanged === undefined || node.filesChanged === null) ? '—' : node.filesChanged;
-  const stateMeta = STATE_META[node.state];
   const strip = `<div class="rht-strip"><span class="rht-badge rht-badge--${node.state}" role="status">${badgeHtml(node.state)}</span></div>`;
-  return `<h3><span class="role">${roleLabel}</span> <span class="gen-tag">G${node.gen}</span> <span class="mono">${node.shortSha}</span></h3>` +
+  return `<h3><span class="role">${roleLabel}</span> <span class="gen-tag">G${node.gen}</span> <span class="mono" title="${node.sha}">${node.shortSha}</span></h3>` +
     `<ul class="rht-meta">` +
       `<li>작성자 <b>${node.author}</b></li>` +
       `<li>시각 <b>${node.isHead ? node.relative + ' · 현재 head' : node.relative}</b></li>` +
@@ -273,6 +323,26 @@ function detailHtml(node, prevNode) {
     `</section>`;
 }
 
+// ── 전환 단계 트랙 렌더 ───────────────────────────────────────────
+function renderTrack(curr, prev) {
+  const steps = buildTransitionSteps(curr, prev);
+  els.trackCap.innerHTML = prev
+    ? `<span class="mono">G${prev.gen} → G${curr.gen}</span> 전환 단계`
+    : `<span class="mono">기준 세대 G${curr.gen}</span> — 이전 head 전환 없음`;
+  els.track.setAttribute('aria-label',
+    prev ? `G${prev.gen}에서 G${curr.gen}로의 전환 단계` : `기준 세대 G${curr.gen} 전환 단계`);
+  els.track.innerHTML = steps.map((s) => {
+    const meta = STEP_STATUS_META[s.status];
+    const srSuffix = s.status === 'blocked' ? ', 사람 확인 대기' : `, ${meta.srLabel}`;
+    return `<li class="rht-step" data-status="${s.status}" role="listitem" ` +
+      `aria-label="${s.index}단계 ${s.label}${srSuffix}">` +
+      `<span class="rht-step__num" aria-hidden="true">${s.index}</span>` +
+      `<span class="rht-step__label">${s.label} <span class="rht-step__mark" aria-hidden="true">${meta.icon}</span></span>` +
+      (s.detail ? `<span class="rht-step__detail">${s.detail}</span>` : '') +
+      `</li>`;
+  }).join('');
+}
+
 // ── 전체 렌더 ─────────────────────────────────────────────────────
 function render(animate) {
   const curr = nodes[selected];
@@ -299,6 +369,9 @@ function render(animate) {
   els.headBadge.className = `rht-badge rht-badge--${head.state}`;
   els.headBadge.innerHTML = badgeHtml(head.state);
 
+  // 전환 단계 트랙
+  renderTrack(curr, prev);
+
   // 비교 제목
   els.compareHeading.textContent = prev
     ? `세대 비교 — G${prev.gen} → G${curr.gen}`
@@ -317,8 +390,10 @@ function render(animate) {
   // 전환 이펙트 (선택 변경 시에만, reduced-motion 은 CSS 가 무효화)
   if (animate) {
     els.cardCurr.classList.remove('is-animating');
+    els.track.parentElement.classList.remove('is-animating');
     void els.cardCurr.offsetWidth; // reflow → 애니메이션 재시작
     els.cardCurr.classList.add('is-animating');
+    els.track.parentElement.classList.add('is-animating');
   }
 
   // aria-live 상태 문구 (§1 고정 문구 재사용)
