@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리뷰 head 전환 타임라인 — mockup (BF-1184)</title>
+<style>
+  :root {
+    /* neutral */
+    --rht-bg:#F8FAFC; --rht-surface:#FFFFFF; --rht-surface-muted:#F1F5F9;
+    --rht-border:#E2E8F0; --rht-text:#0F172A; --rht-text-secondary:#475569; --rht-text-muted:#94A3B8;
+    /* brand */
+    --rht-primary:#4F46E5; --rht-primary-hover:#4338CA; --rht-focus-ring:#6366F1;
+    /* semantic — 세대 상태 */
+    --rht-same:#16A34A; --rht-same-bg:#DCFCE7; --rht-same-fg:#166534;
+    --rht-new:#2563EB; --rht-new-bg:#DBEAFE; --rht-new-fg:#1E40AF;
+    --rht-review:#D97706; --rht-review-bg:#FEF3C7; --rht-review-fg:#92400E;
+    /* type */
+    --rht-font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --rht-font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    /* space */
+    --rht-space-1:4px; --rht-space-2:8px; --rht-space-3:12px; --rht-space-4:16px;
+    --rht-space-5:24px; --rht-space-6:32px; --rht-space-8:48px;
+    --rht-radius:12px;
+    --rht-shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.10);
+    --rht-shadow-hover:0 4px 6px rgba(15,23,42,.08),0 2px 4px rgba(15,23,42,.10);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--rht-bg); color:var(--rht-text);
+    font-family:var(--rht-font-sans); font-size:14px; line-height:1.5; }
+  .wrap { max-width:1120px; margin:0 auto; padding:var(--rht-space-6) var(--rht-space-5); }
+  .mock-note { background:#EEF2FF; border:1px dashed var(--rht-primary); color:#3730A3;
+    border-radius:8px; padding:var(--rht-space-3) var(--rht-space-4); font-size:12px; margin-bottom:var(--rht-space-6); }
+  .mono { font-family:var(--rht-font-mono); font-size:13px; font-weight:500; }
+
+  /* ---- header ---- */
+  .rht-header { display:flex; align-items:center; gap:var(--rht-space-4); flex-wrap:wrap;
+    padding-bottom:var(--rht-space-5); border-bottom:1px solid var(--rht-border); margin-bottom:var(--rht-space-6); }
+  .rht-header h1 { font-size:24px; font-weight:700; line-height:1.25; margin:0; }
+  .rht-header .spacer { flex:1 1 auto; }
+  .rht-btn { font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+    background:var(--rht-primary); color:#fff; border:none; border-radius:8px; padding:8px 14px; }
+  .rht-btn:hover { background:var(--rht-primary-hover); }
+  .rht-btn:focus-visible { outline:2px solid var(--rht-focus-ring); outline-offset:2px; }
+
+  /* ---- badge ---- */
+  .rht-badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+    padding:4px 10px; font-size:12px; font-weight:600; line-height:1; border:1px solid transparent; white-space:nowrap; }
+  .rht-badge__icon { font-size:12px; line-height:1; }
+  .rht-badge--same { background:var(--rht-same-bg); color:var(--rht-same-fg); border-color:rgba(22,163,74,.25); }
+  .rht-badge--new { background:var(--rht-new-bg); color:var(--rht-new-fg); border-color:rgba(37,99,235,.25); }
+  .rht-badge--review { background:var(--rht-review-bg); color:var(--rht-review-fg); border-color:rgba(217,119,6,.25); }
+
+  h2.rht-section { font-size:18px; font-weight:600; line-height:1.33; margin:0 0 var(--rht-space-2); }
+  .rht-block { margin-bottom:var(--rht-space-8); }
+  .rht-block > .lead { color:var(--rht-text-secondary); font-size:13px; margin:0 0 var(--rht-space-5); }
+
+  /* ===== 세대 타임라인 (핵심 1) — desktop horizontal spine ===== */
+  .rht-timeline { position:relative; display:flex; align-items:flex-start; gap:0;
+    padding:var(--rht-space-5) 0 var(--rht-space-4); overflow-x:auto; }
+  .rht-timeline__spine { position:absolute; top:calc(var(--rht-space-5) + 20px + 8px); left:64px; right:64px;
+    height:2px; display:flex; z-index:0; }
+  .rht-timeline__seg { flex:1 1 auto; height:2px; background:var(--rht-border); }
+  .rht-timeline__seg--changed[data-change="new"] { background:var(--rht-new); }
+  .rht-timeline__seg--changed[data-change="review"] { background:var(--rht-review); }
+  .rht-timeline__node { appearance:none; background:transparent; border:none; cursor:pointer;
+    font:inherit; text-align:center; padding:var(--rht-space-2); border-radius:8px; position:relative; z-index:1;
+    display:flex; flex-direction:column; align-items:center; gap:6px; min-width:130px; flex:1 0 auto; }
+  .rht-timeline__node:hover { background:var(--rht-surface-muted); }
+  .rht-timeline__node:focus-visible { outline:2px solid var(--rht-focus-ring); outline-offset:2px; }
+  .rht-timeline__gen { font-family:var(--rht-font-mono); font-size:11px; font-weight:600; color:var(--rht-text-muted);
+    letter-spacing:.04em; }
+  .rht-timeline__dot { width:20px; height:20px; border-radius:999px; background:var(--rht-text-muted);
+    box-shadow:0 0 0 4px var(--rht-surface),0 0 0 5px var(--rht-border); transition:box-shadow 120ms; }
+  .rht-timeline__node.is-active .rht-timeline__dot { box-shadow:0 0 0 4px var(--rht-surface),0 0 0 6px var(--rht-primary); }
+  .rht-timeline__node[data-state="same"] .rht-timeline__dot { background:var(--rht-same); }
+  .rht-timeline__node[data-state="new"] .rht-timeline__dot { background:var(--rht-new); }
+  .rht-timeline__node[data-state="review"] .rht-timeline__dot { background:var(--rht-review); }
+  .rht-timeline__sha { font-family:var(--rht-font-mono); font-size:13px; font-weight:500; }
+  .rht-timeline__node.is-head .rht-timeline__sha { font-weight:700; }
+  .rht-timeline__ts { font-size:12px; font-weight:500; color:var(--rht-text-muted); }
+  .rht-timeline__head-cap { font-size:11px; font-weight:600; color:var(--rht-primary); }
+
+  /* ===== 전환 단계 트랙 (핵심 2 · "단계별") ===== */
+  .rht-steps-wrap { background:var(--rht-surface); border:1px solid var(--rht-border);
+    border-radius:var(--rht-radius); box-shadow:var(--rht-shadow); padding:var(--rht-space-5); }
+  .rht-steps-cap { font-size:12px; font-weight:600; color:var(--rht-text-secondary);
+    margin:0 0 var(--rht-space-4); display:flex; align-items:center; gap:var(--rht-space-2); }
+  .rht-steps-cap .mono { color:var(--rht-text); }
+  .rht-steps { list-style:none; margin:0; padding:0; display:flex; align-items:flex-start; gap:0; }
+  .rht-step { flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:6px;
+    text-align:center; position:relative; padding:0 var(--rht-space-2); }
+  /* connector line between steps (right side of each step except last) */
+  .rht-step:not(:last-child)::after { content:""; position:absolute; top:15px; left:calc(50% + 16px);
+    right:calc(-50% + 16px); height:2px; background:var(--rht-border); transition:background 160ms; z-index:0; }
+  .rht-step[data-status="done"]:not(:last-child)::after { background:var(--rht-same); }
+  .rht-step__num { width:30px; height:30px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; z-index:1; position:relative; transition:transform 120ms;
+    background:var(--rht-surface); border:2px solid var(--rht-border); color:var(--rht-text-muted); }
+  .rht-step[data-status="done"] .rht-step__num { background:var(--rht-same-bg); border-color:var(--rht-same); color:var(--rht-same-fg); }
+  .rht-step[data-status="current"] .rht-step__num { background:#EEF2FF; border-color:var(--rht-primary); color:var(--rht-primary); }
+  .rht-step[data-status="blocked"] .rht-step__num { background:var(--rht-review-bg); border-color:var(--rht-review); color:var(--rht-review-fg); }
+  .rht-step__label { font-size:12px; font-weight:600; line-height:1.3; color:var(--rht-text); }
+  .rht-step[data-status="pending"] .rht-step__label { color:var(--rht-text-muted); }
+  .rht-step[data-status="blocked"] .rht-step__label { color:var(--rht-review-fg); }
+  .rht-step__status { font-size:11px; font-weight:500; color:var(--rht-text-muted); display:inline-flex; align-items:center; gap:4px; }
+  .rht-step[data-status="done"] .rht-step__status { color:var(--rht-same-fg); }
+  .rht-step[data-status="blocked"] .rht-step__status { color:var(--rht-review-fg); }
+  .rht-step__detail { font-family:var(--rht-font-mono); font-size:11px; color:var(--rht-text-secondary); }
+
+  /* ===== 세대 비교 ===== */
+  .rht-compare { display:grid; grid-template-columns:1fr 1fr; gap:var(--rht-space-5); align-items:stretch; }
+  .rht-compare-card { position:relative; background:var(--rht-surface); border:1px solid var(--rht-border);
+    border-radius:var(--rht-radius); box-shadow:var(--rht-shadow); padding:var(--rht-space-5);
+    padding-left:calc(var(--rht-space-5) + 4px); overflow:hidden;
+    animation:rht-enter 220ms cubic-bezier(.2,.8,.2,1); }
+  .rht-compare-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--rht-border);
+    transition:background 160ms; }
+  .rht-compare-card--curr[data-state="same"]::before { background:var(--rht-same); }
+  .rht-compare-card--curr[data-state="new"]::before { background:var(--rht-new); }
+  .rht-compare-card--curr[data-state="review"]::before { background:var(--rht-review); }
+  .rht-compare-card:hover { box-shadow:var(--rht-shadow-hover); }
+  .rht-compare-card h3 { font-size:15px; font-weight:600; margin:0 0 var(--rht-space-3);
+    display:flex; align-items:center; gap:var(--rht-space-2); flex-wrap:wrap; }
+  .rht-compare-card .role { color:var(--rht-text-secondary); font-size:12px; font-weight:600; }
+  .rht-compare-card .gen-tag { font-family:var(--rht-font-mono); font-size:11px; font-weight:600; color:var(--rht-text-muted);
+    background:var(--rht-surface-muted); border-radius:6px; padding:2px 6px; }
+  .rht-meta { list-style:none; padding:0; margin:0 0 var(--rht-space-4); display:grid; gap:6px;
+    font-size:13px; color:var(--rht-text-secondary); }
+  .rht-meta b { color:var(--rht-text); font-weight:600; }
+  .rht-strip { display:flex; align-items:center; gap:var(--rht-space-2); padding-top:var(--rht-space-3);
+    border-top:1px solid var(--rht-border); }
+
+  /* ---- detail panel ---- */
+  .rht-detail { margin-top:var(--rht-space-4); background:var(--rht-surface-muted); border-radius:10px;
+    padding:var(--rht-space-4); }
+  .rht-detail .reason { margin:0 0 var(--rht-space-3); font-size:13px; color:var(--rht-text); }
+  .rht-chips { display:flex; gap:var(--rht-space-2); flex-wrap:wrap; }
+  .rht-chip { font-family:var(--rht-font-mono); font-size:12px; font-weight:600; padding:4px 8px; border-radius:6px;
+    background:var(--rht-surface); border:1px solid var(--rht-border); }
+  .rht-chip.add { color:#166534; } .rht-chip.del { color:#991B1B; } .rht-chip.warn { color:var(--rht-review-fg); }
+
+  /* ---- aria-live status line ---- */
+  .rht-live { margin:0 0 var(--rht-space-4); font-size:13px; color:var(--rht-text-secondary);
+    display:flex; align-items:center; gap:var(--rht-space-2); flex-wrap:wrap; }
+
+  @keyframes rht-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  /* ---- interaction/focus demo ---- */
+  .state-demo { display:flex; gap:var(--rht-space-4); flex-wrap:wrap; align-items:center;
+    background:var(--rht-surface); border:1px solid var(--rht-border); border-radius:var(--rht-radius);
+    padding:var(--rht-space-4); box-shadow:var(--rht-shadow); }
+  .focus-sample { border:none; background:var(--rht-surface-muted); border-radius:8px; padding:8px 12px; font:inherit;
+    outline:2px solid var(--rht-focus-ring); outline-offset:2px; }
+  .kbd { font-family:var(--rht-font-mono); font-size:11px; background:var(--rht-surface-muted);
+    border:1px solid var(--rht-border); border-radius:4px; padding:1px 6px; }
+
+  /* ---- device frames ---- */
+  .frames { display:grid; grid-template-columns:1fr; gap:var(--rht-space-6); }
+  .frame-label { font-size:12px; font-weight:600; color:var(--rht-text-muted); margin:0 0 var(--rht-space-2); }
+  .frame--mobile { max-width:390px; border:1px solid var(--rht-border); border-radius:16px; overflow:hidden;
+    box-shadow:var(--rht-shadow); background:var(--rht-bg); }
+  .frame--mobile .inner { padding:var(--rht-space-4); }
+
+  /* ---- responsive: mobile ---- */
+  @media (max-width:639px) {
+    .rht-timeline { flex-direction:column; align-items:flex-start; gap:var(--rht-space-2); padding:var(--rht-space-3) 0; }
+    .rht-timeline__spine { display:none; }
+    .rht-timeline__node { flex-direction:row; min-width:0; width:100%; gap:var(--rht-space-3); text-align:left; }
+    .rht-steps { flex-direction:column; align-items:flex-start; gap:var(--rht-space-3); }
+    .rht-step { flex-direction:row; align-items:center; gap:var(--rht-space-3); text-align:left; width:100%; padding:0; }
+    .rht-step:not(:last-child)::after { display:none; }
+    .rht-compare { grid-template-columns:1fr; }
+    .rht-header h1 { flex-basis:100%; }
+  }
+
+  @media (prefers-reduced-motion:reduce) {
+    .rht-compare-card { animation:none; }
+    .rht-compare-card::before, .rht-timeline__dot, .rht-step::after, .rht-step__num { transition:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="mock-note">📐 이 파일은 <b>시각 mockup</b>(시안 시뮬레이션)입니다. 실제 dev 산출물이 아니며 UX 의도 전달용입니다.
+  콘텐츠는 placeholder(샘플 세대/SHA/시각)이고 외부 의존성·JS 없이 정적으로 렌더됩니다.
+  명세: <span class="mono">docs/design/review-head-timeline-BF-1184.md</span></p>
+
+  <!-- ===== HEADER ===== -->
+  <header class="rht-header">
+    <h1>리뷰 head 전환 타임라인</h1>
+    <span class="rht-badge rht-badge--review" role="status">
+      <span class="rht-badge__icon" aria-hidden="true">⚠</span>검토 필요
+    </span>
+    <span class="spacer"></span>
+    <button class="rht-btn" type="button">↧ 최신 head로 이동</button>
+  </header>
+
+  <!-- ===== 핵심 1: 세대 타임라인 (선택=G3, 검토 필요) ===== -->
+  <section class="rht-block">
+    <h2 class="rht-section">세대 타임라인</h2>
+    <p class="lead">리뷰 대상 head가 <b>G0 → G3</b>로 전환되어 온 이력입니다. 색이 채워진 구간에서 세대가 바뀌었습니다. 노드를 선택하면 아래 전환 단계 트랙과 비교가 갱신됩니다.</p>
+
+    <div class="rht-timeline" role="group" aria-label="세대 타임라인 (G0부터 G3까지)">
+      <div class="rht-timeline__spine" aria-hidden="true">
+        <span class="rht-timeline__seg"></span><!-- G0→G1: 동일 -->
+        <span class="rht-timeline__seg rht-timeline__seg--changed" data-change="new"></span><!-- G1→G2: 새 세대 -->
+        <span class="rht-timeline__seg rht-timeline__seg--changed" data-change="review"></span><!-- G2→G3: 검토 필요 -->
+      </div>
+
+      <button class="rht-timeline__node" data-state="same" type="button" tabindex="-1"
+        aria-label="세대 G0, head a1b2c3d, 동일 세대, 3일 전">
+        <span class="rht-timeline__gen">G0</span>
+        <span class="rht-timeline__dot" aria-hidden="true"></span>
+        <span class="rht-timeline__sha">a1b2c3d</span>
+        <span class="rht-timeline__ts">3일 전</span>
+      </button>
+
+      <button class="rht-timeline__node" data-state="same" type="button" tabindex="-1"
+        aria-label="세대 G1, head a1b2c3d, 직전과 동일 세대, 2일 전">
+        <span class="rht-timeline__gen">G1</span>
+        <span class="rht-timeline__dot" aria-hidden="true"></span>
+        <span class="rht-timeline__sha">a1b2c3d</span>
+        <span class="rht-timeline__ts">2일 전</span>
+      </button>
+
+      <button class="rht-timeline__node" data-state="new" type="button" tabindex="-1"
+        aria-label="세대 G2, head 9f8e7d6, 새 세대, 어제">
+        <span class="rht-timeline__gen">G2</span>
+        <span class="rht-timeline__dot" aria-hidden="true"></span>
+        <span class="rht-timeline__sha">9f8e7d6</span>
+        <span class="rht-timeline__ts">어제</span>
+      </button>
+
+      <button class="rht-timeline__node is-active is-head" data-state="review" type="button" tabindex="0"
+        aria-current="true" aria-label="세대 G3, 현재 head 4c5d6e7, 검토 필요, 10분 전 (선택됨)">
+        <span class="rht-timeline__gen">G3</span>
+        <span class="rht-timeline__dot" aria-hidden="true"></span>
+        <span class="rht-timeline__sha">4c5d6e7</span>
+        <span class="rht-timeline__head-cap">현재 head</span>
+      </button>
+    </div>
+
+    <p class="rht-live" role="status" aria-live="polite">
+      <span class="rht-badge rht-badge--review"><span class="rht-badge__icon" aria-hidden="true">⚠</span>검토 필요</span>
+      <span>G3 · head 전환 + 미해결 존재 — 사람 확인 필요</span>
+    </p>
+  </section>
+
+  <!-- ===== 핵심 2: 전환 단계 트랙 ("단계별") — G2 → G3 ===== -->
+  <section class="rht-block">
+    <h2 class="rht-section">전환 단계 <span style="font-weight:400;color:var(--rht-text-muted);font-size:14px;">— 이전 head → 새 head를 단계별로</span></h2>
+    <p class="lead">선택된 세대 전환이 <b>감지 → 변경 계산 → 세대 판정 → 세대 반영</b> 4단계를 어떻게 거쳤는지 순서대로 펼칩니다. "검토 필요"라 마지막 단계는 사람 확인 대기(blocked)로 멈춰 있습니다.</p>
+
+    <div class="rht-steps-wrap">
+      <p class="rht-steps-cap"><span aria-hidden="true">🔀</span> 전환 <span class="mono">9f8e7d6</span> → <span class="mono">4c5d6e7</span> · G2 → G3</p>
+      <ol class="rht-steps" role="list" aria-label="G2에서 G3로의 전환 단계">
+        <li class="rht-step" data-status="done" aria-label="1단계 head 감지, 완료">
+          <span class="rht-step__num" aria-hidden="true">1</span>
+          <span class="rht-step__label">head 감지</span>
+          <span class="rht-step__status"><span aria-hidden="true">✓</span>완료</span>
+          <span class="rht-step__detail">9f8e7d6→4c5d6e7</span>
+        </li>
+        <li class="rht-step" data-status="done" aria-label="2단계 변경 계산, 완료">
+          <span class="rht-step__num" aria-hidden="true">2</span>
+          <span class="rht-step__label">변경 계산</span>
+          <span class="rht-step__status"><span aria-hidden="true">✓</span>완료</span>
+          <span class="rht-step__detail">+312 / −201 · 7파일</span>
+        </li>
+        <li class="rht-step" data-status="done" aria-label="3단계 세대 판정, 완료">
+          <span class="rht-step__num" aria-hidden="true">3</span>
+          <span class="rht-step__label">세대 판정</span>
+          <span class="rht-step__status"><span aria-hidden="true">✓</span>완료</span>
+          <span class="rht-step__detail">검토 필요</span>
+        </li>
+        <li class="rht-step" data-status="blocked" aria-label="4단계 세대 반영, 사람 확인 대기">
+          <span class="rht-step__num" aria-hidden="true">4</span>
+          <span class="rht-step__label">세대 반영</span>
+          <span class="rht-step__status"><span aria-hidden="true">⚠</span>사람 확인 대기</span>
+          <span class="rht-step__detail">미해결 4</span>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===== 세대 비교 (선택=G3 vs 직전 G2) ===== -->
+  <section class="rht-block">
+    <h2 class="rht-section">세대 비교 — G2 → G3</h2>
+    <p class="lead">선택된 세대와 직전 세대의 head를 나란히 비교합니다. 카드/상세를 열면 판정 근거와 diff 요약을 확인할 수 있습니다.</p>
+    <div class="rht-compare">
+      <article class="rht-compare-card rht-compare-card--prev">
+        <h3><span class="role">직전 세대 head</span> <span class="gen-tag">G2</span> <span class="mono">9f8e7d6</span></h3>
+        <ul class="rht-meta">
+          <li>작성자 <b>dev-1</b></li>
+          <li>시각 <b>어제</b></li>
+          <li>변경 파일 <b>—</b></li>
+        </ul>
+        <div class="rht-strip"><span class="rht-badge rht-badge--new" role="status"><span class="rht-badge__icon" aria-hidden="true">↑</span>이전 세대</span></div>
+      </article>
+
+      <article class="rht-compare-card rht-compare-card--curr" data-state="review" aria-expanded="true">
+        <h3><span class="role">선택 세대 head</span> <span class="gen-tag">G3</span> <span class="mono">4c5d6e7</span></h3>
+        <ul class="rht-meta">
+          <li>작성자 <b>dev-1</b></li>
+          <li>시각 <b>10분 전</b></li>
+          <li>변경 파일 <b>7</b></li>
+        </ul>
+        <div class="rht-strip"><span class="rht-badge rht-badge--review" role="status"><span class="rht-badge__icon" aria-hidden="true">⚠</span>검토 필요</span></div>
+        <section class="rht-detail is-open">
+          <p class="reason">head가 <span class="mono">9f8e7d6</span> → <span class="mono">4c5d6e7</span>로 전환되었고, 이전 세대의 미해결 스레드가 남아 있어 재검토가 필요합니다.</p>
+          <div class="rht-chips"><span class="rht-chip add">+312</span><span class="rht-chip del">−201</span><span class="rht-chip warn">미해결 4</span></div>
+        </section>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== 상태 3종 + 전환 이펙트 ===== -->
+  <section class="rht-block">
+    <h2 class="rht-section">세대 상태 3종 · 단계별 전환 이펙트</h2>
+    <p class="lead">각 상태는 색 + 아이콘 + 문구 3중 코드로 구분됩니다(색맹 접근성). 선택이 바뀌면 선택 세대 카드가 fade+slide-up으로 진입하고, 좌측 컬러 바·타임라인 링·세그먼트와 함께 전환 단계 트랙의 연결선이 단계별(staggered)로 채워집니다.</p>
+    <div class="rht-compare" style="grid-template-columns:repeat(3,1fr);">
+      <article class="rht-compare-card rht-compare-card--curr" data-state="same" aria-expanded="false">
+        <h3><span class="role">동일 세대</span></h3>
+        <p class="rht-meta" style="margin-bottom:var(--rht-space-3);">prevHeadSha === currHeadSha</p>
+        <div class="rht-strip"><span class="rht-badge rht-badge--same" role="status"><span class="rht-badge__icon" aria-hidden="true">✓</span>동일 세대</span></div>
+        <p class="reason" style="font-size:12px;color:var(--rht-text-secondary);margin:var(--rht-space-3) 0 0;">직전 세대와 동일 — 재검토 불필요</p>
+      </article>
+      <article class="rht-compare-card rht-compare-card--curr" data-state="new" aria-expanded="false">
+        <h3><span class="role">새 세대</span></h3>
+        <p class="rht-meta" style="margin-bottom:var(--rht-space-3);">SHA 변경 · 미해결/충돌 없음</p>
+        <div class="rht-strip"><span class="rht-badge rht-badge--new" role="status"><span class="rht-badge__icon" aria-hidden="true">↑</span>새 세대</span></div>
+        <p class="reason" style="font-size:12px;color:var(--rht-text-secondary);margin:var(--rht-space-3) 0 0;">새 head로 전환됨 — 새 세대 시작</p>
+      </article>
+      <article class="rht-compare-card rht-compare-card--curr" data-state="review" aria-expanded="false">
+        <h3><span class="role">검토 필요</span></h3>
+        <p class="rht-meta" style="margin-bottom:var(--rht-space-3);">SHA 변경 · 미해결/충돌 존재</p>
+        <div class="rht-strip"><span class="rht-badge rht-badge--review" role="status"><span class="rht-badge__icon" aria-hidden="true">⚠</span>검토 필요</span></div>
+        <p class="reason" style="font-size:12px;color:var(--rht-text-secondary);margin:var(--rht-space-3) 0 0;">head 전환 + 미해결 존재 — 사람 확인 필요</p>
+      </article>
+    </div>
+
+    <!-- 단계 상태 4종 미리보기 -->
+    <div class="rht-steps-wrap" style="margin-top:var(--rht-space-5);">
+      <p class="rht-steps-cap"><span aria-hidden="true">🔢</span> 전환 단계 완료 상태 4종 (done / current / blocked / pending)</p>
+      <ol class="rht-steps" role="list" aria-label="단계 완료 상태 예시">
+        <li class="rht-step" data-status="done" aria-label="완료 단계 예시">
+          <span class="rht-step__num" aria-hidden="true">1</span>
+          <span class="rht-step__label">완료</span>
+          <span class="rht-step__status"><span aria-hidden="true">✓</span>done</span>
+        </li>
+        <li class="rht-step" data-status="current" aria-label="진행 중 단계 예시">
+          <span class="rht-step__num" aria-hidden="true">2</span>
+          <span class="rht-step__label">진행 중</span>
+          <span class="rht-step__status"><span aria-hidden="true">●</span>current</span>
+        </li>
+        <li class="rht-step" data-status="blocked" aria-label="사람 확인 대기 단계 예시">
+          <span class="rht-step__num" aria-hidden="true">3</span>
+          <span class="rht-step__label">확인 대기</span>
+          <span class="rht-step__status"><span aria-hidden="true">⚠</span>blocked</span>
+        </li>
+        <li class="rht-step" data-status="pending" aria-label="대기 단계 예시">
+          <span class="rht-step__num" aria-hidden="true">4</span>
+          <span class="rht-step__label">대기</span>
+          <span class="rht-step__status"><span aria-hidden="true">○</span>pending</span>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===== 반응형 · 인터랙션 상태 ===== -->
+  <section class="rht-block">
+    <h2 class="rht-section">반응형 &amp; 키보드 · 인터랙션 상태</h2>
+    <div class="state-demo">
+      <span style="font-size:12px;color:var(--rht-text-muted);">포커스 링(:focus-visible)</span>
+      <button class="focus-sample" type="button">포커스된 세대 노드</button>
+      <span style="font-size:12px;color:var(--rht-text-muted);">키보드:
+        <span class="kbd">←</span>/<span class="kbd">→</span> 이동 ·
+        <span class="kbd">Home</span>/<span class="kbd">End</span> 처음·최신 ·
+        <span class="kbd">Enter</span> 선택 ·
+        <span class="kbd">Esc</span> 닫기</span>
+    </div>
+
+    <div class="frames" style="margin-top:var(--rht-space-5);">
+      <div>
+        <p class="frame-label">모바일 (&lt;640px) — 세로 spine + 세로 단계 트랙 + 1열 stack</p>
+        <div class="frame--mobile">
+          <div class="inner">
+            <div class="rht-header" style="margin-bottom:var(--rht-space-4);padding-bottom:var(--rht-space-3);">
+              <h1 style="font-size:18px;">리뷰 head 전환 타임라인</h1>
+              <span class="rht-badge rht-badge--review" role="status"><span class="rht-badge__icon" aria-hidden="true">⚠</span>검토 필요</span>
+            </div>
+            <div class="rht-timeline" style="flex-direction:column;align-items:flex-start;gap:8px;padding:8px 0;" role="group" aria-label="모바일 세대 타임라인">
+              <button class="rht-timeline__node" data-state="new" type="button" tabindex="-1"
+                style="flex-direction:row;min-width:0;width:100%;gap:12px;text-align:left;">
+                <span class="rht-timeline__gen">G2</span>
+                <span class="rht-timeline__dot" aria-hidden="true"></span>
+                <span class="rht-timeline__sha">9f8e7d6</span><span class="rht-timeline__ts">어제</span>
+              </button>
+              <button class="rht-timeline__node is-active is-head" data-state="review" type="button" tabindex="0"
+                aria-current="true" style="flex-direction:row;min-width:0;width:100%;gap:12px;text-align:left;">
+                <span class="rht-timeline__gen">G3</span>
+                <span class="rht-timeline__dot" aria-hidden="true"></span>
+                <span class="rht-timeline__sha">4c5d6e7</span><span class="rht-timeline__head-cap">현재 head</span>
+              </button>
+            </div>
+            <div class="rht-steps-wrap" style="margin-top:var(--rht-space-4);padding:var(--rht-space-4);">
+              <p class="rht-steps-cap" style="margin-bottom:var(--rht-space-3);">전환 단계 G2 → G3</p>
+              <ol class="rht-steps" role="list" style="flex-direction:column;align-items:flex-start;gap:12px;" aria-label="모바일 전환 단계">
+                <li class="rht-step" data-status="done" style="flex-direction:row;align-items:center;gap:12px;text-align:left;width:100%;padding:0;">
+                  <span class="rht-step__num" aria-hidden="true">1</span><span class="rht-step__label">head 감지</span>
+                  <span class="rht-step__status"><span aria-hidden="true">✓</span>완료</span>
+                </li>
+                <li class="rht-step" data-status="done" style="flex-direction:row;align-items:center;gap:12px;text-align:left;width:100%;padding:0;">
+                  <span class="rht-step__num" aria-hidden="true">2</span><span class="rht-step__label">변경 계산</span>
+                  <span class="rht-step__status"><span aria-hidden="true">✓</span>완료</span>
+                </li>
+                <li class="rht-step" data-status="done" style="flex-direction:row;align-items:center;gap:12px;text-align:left;width:100%;padding:0;">
+                  <span class="rht-step__num" aria-hidden="true">3</span><span class="rht-step__label">세대 판정</span>
+                  <span class="rht-step__status"><span aria-hidden="true">✓</span>완료</span>
+                </li>
+                <li class="rht-step" data-status="blocked" style="flex-direction:row;align-items:center;gap:12px;text-align:left;width:100%;padding:0;">
+                  <span class="rht-step__num" aria-hidden="true">4</span><span class="rht-step__label">세대 반영</span>
+                  <span class="rht-step__status"><span aria-hidden="true">⚠</span>확인 대기</span>
+                </li>
+              </ol>
+            </div>
+            <div class="rht-compare" style="grid-template-columns:1fr;margin-top:var(--rht-space-4);">
+              <article class="rht-compare-card rht-compare-card--curr" data-state="review" aria-expanded="false">
+                <h3><span class="role">선택 세대 head</span> <span class="gen-tag">G3</span> <span class="mono">4c5d6e7</span></h3>
+                <ul class="rht-meta"><li>변경 파일 <b>7</b></li></ul>
+                <div class="rht-strip"><span class="rht-badge rht-badge--review" role="status"><span class="rht-badge__icon" aria-hidden="true">⚠</span>검토 필요</span></div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
