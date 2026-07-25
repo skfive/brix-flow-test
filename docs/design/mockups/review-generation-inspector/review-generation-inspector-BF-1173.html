@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리뷰 세대 전환 인스펙터 — mockup (BF-1174)</title>
+<style>
+  :root {
+    /* neutral */
+    --rgi-bg:#F8FAFC; --rgi-surface:#FFFFFF; --rgi-surface-muted:#F1F5F9;
+    --rgi-border:#E2E8F0; --rgi-text:#0F172A; --rgi-text-secondary:#475569; --rgi-text-muted:#94A3B8;
+    /* brand */
+    --rgi-primary:#4F46E5; --rgi-primary-hover:#4338CA; --rgi-focus-ring:#6366F1;
+    /* semantic — 세대 상태 */
+    --rgi-same:#16A34A; --rgi-same-bg:#DCFCE7; --rgi-same-fg:#166534;
+    --rgi-new:#2563EB; --rgi-new-bg:#DBEAFE; --rgi-new-fg:#1E40AF;
+    --rgi-review:#D97706; --rgi-review-bg:#FEF3C7; --rgi-review-fg:#92400E;
+    /* type */
+    --rgi-font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --rgi-font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    /* space */
+    --rgi-space-1:4px; --rgi-space-2:8px; --rgi-space-3:12px; --rgi-space-4:16px;
+    --rgi-space-5:24px; --rgi-space-6:32px; --rgi-space-8:48px;
+    --rgi-radius:12px;
+    --rgi-shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.10);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--rgi-bg); color:var(--rgi-text);
+    font-family:var(--rgi-font-sans); font-size:14px; line-height:1.5; }
+  .wrap { max-width:1120px; margin:0 auto; padding:var(--rgi-space-6) var(--rgi-space-5); }
+  .mock-note { background:#EEF2FF; border:1px dashed var(--rgi-primary); color:#3730A3;
+    border-radius:8px; padding:var(--rgi-space-3) var(--rgi-space-4); font-size:12px; margin-bottom:var(--rgi-space-6); }
+  .mono { font-family:var(--rgi-font-mono); font-size:13px; font-weight:500; }
+
+  /* ---- header ---- */
+  .rgi-header { display:flex; align-items:center; gap:var(--rgi-space-4); flex-wrap:wrap;
+    padding-bottom:var(--rgi-space-5); border-bottom:1px solid var(--rgi-border); margin-bottom:var(--rgi-space-6); }
+  .rgi-header h1 { font-size:24px; font-weight:700; line-height:1.25; margin:0; }
+  .rgi-header .spacer { flex:1 1 auto; }
+  .rgi-btn { font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+    background:var(--rgi-primary); color:#fff; border:none; border-radius:8px; padding:8px 14px; }
+  .rgi-btn:hover { background:var(--rgi-primary-hover); }
+  .rgi-btn:focus-visible { outline:2px solid var(--rgi-focus-ring); outline-offset:2px; }
+
+  /* ---- badge ---- */
+  .rgi-badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+    padding:4px 10px; font-size:12px; font-weight:600; line-height:1; border:1px solid transparent; }
+  .rgi-badge__icon { font-size:12px; line-height:1; }
+  .rgi-badge--same { background:var(--rgi-same-bg); color:var(--rgi-same-fg); border-color:rgba(22,163,74,.25); }
+  .rgi-badge--new { background:var(--rgi-new-bg); color:var(--rgi-new-fg); border-color:rgba(37,99,235,.25); }
+  .rgi-badge--review { background:var(--rgi-review-bg); color:var(--rgi-review-fg); border-color:rgba(217,119,6,.25); }
+
+  h2.rgi-section { font-size:18px; font-weight:600; line-height:1.33; margin:0 0 var(--rgi-space-4); }
+  .rgi-state-block { margin-bottom:var(--rgi-space-8); }
+  .rgi-state-block > .lead { color:var(--rgi-text-secondary); font-size:13px; margin:0 0 var(--rgi-space-4); }
+
+  /* ---- timeline (desktop horizontal) ---- */
+  .rgi-timeline { display:flex; align-items:flex-start; gap:0; position:relative;
+    padding:var(--rgi-space-4) 0; overflow-x:auto; }
+  .rgi-timeline__node { appearance:none; background:transparent; border:none; cursor:pointer;
+    font:inherit; text-align:center; padding:var(--rgi-space-2); border-radius:8px;
+    display:flex; flex-direction:column; align-items:center; gap:6px; min-width:120px; flex:1 0 auto; }
+  .rgi-timeline__node:hover { background:var(--rgi-surface-muted); }
+  .rgi-timeline__node:focus-visible { outline:2px solid var(--rgi-focus-ring); outline-offset:2px; }
+  .rgi-timeline__dot { width:16px; height:16px; border-radius:999px; background:var(--rgi-text-muted);
+    box-shadow:0 0 0 4px var(--rgi-surface),0 0 0 5px var(--rgi-border); position:relative; }
+  .rgi-timeline__node.is-active .rgi-timeline__dot { box-shadow:0 0 0 4px var(--rgi-surface),0 0 0 6px var(--rgi-primary); }
+  .rgi-timeline__node[data-state="same"] .rgi-timeline__dot { background:var(--rgi-same); }
+  .rgi-timeline__node[data-state="new"] .rgi-timeline__dot { background:var(--rgi-new); }
+  .rgi-timeline__node[data-state="review"] .rgi-timeline__dot { background:var(--rgi-review); }
+  .rgi-timeline__line { position:absolute; top:calc(var(--rgi-space-4) + 8px + var(--rgi-space-2)); left:60px; right:60px;
+    height:2px; background:var(--rgi-border); z-index:-0; }
+  .rgi-timeline__sha { font-family:var(--rgi-font-mono); font-size:13px; font-weight:500; }
+  .rgi-timeline__ts { font-size:12px; font-weight:500; color:var(--rgi-text-muted); }
+  .rgi-timeline__node.is-head .rgi-timeline__sha { font-weight:700; }
+
+  /* ---- comparison ---- */
+  .rgi-compare { display:grid; grid-template-columns:1fr 1fr; gap:var(--rgi-space-5); align-items:stretch; }
+  .rgi-compare-card { position:relative; background:var(--rgi-surface); border:1px solid var(--rgi-border);
+    border-radius:var(--rgi-radius); box-shadow:var(--rgi-shadow); padding:var(--rgi-space-5);
+    padding-left:calc(var(--rgi-space-5) + 4px); overflow:hidden;
+    animation:rgi-enter 220ms cubic-bezier(.2,.8,.2,1); }
+  .rgi-compare-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--rgi-border);
+    transition:background 160ms; }
+  .rgi-compare-card--curr[data-state="same"]::before { background:var(--rgi-same); }
+  .rgi-compare-card--curr[data-state="new"]::before { background:var(--rgi-new); }
+  .rgi-compare-card--curr[data-state="review"]::before { background:var(--rgi-review); }
+  .rgi-compare-card:hover { box-shadow:0 4px 6px rgba(15,23,42,.08),0 2px 4px rgba(15,23,42,.10); }
+  .rgi-compare-card h3 { font-size:15px; font-weight:600; margin:0 0 var(--rgi-space-3);
+    display:flex; align-items:center; gap:var(--rgi-space-2); flex-wrap:wrap; }
+  .rgi-compare-card .role { color:var(--rgi-text-secondary); font-size:12px; font-weight:600; text-transform:none; }
+  .rgi-meta { list-style:none; padding:0; margin:0 0 var(--rgi-space-4); display:grid; gap:6px;
+    font-size:13px; color:var(--rgi-text-secondary); }
+  .rgi-meta b { color:var(--rgi-text); font-weight:600; }
+  .rgi-strip { display:flex; align-items:center; gap:var(--rgi-space-2); padding-top:var(--rgi-space-3);
+    border-top:1px solid var(--rgi-border); }
+
+  /* ---- detail panel ---- */
+  .rgi-detail { margin-top:var(--rgi-space-4); background:var(--rgi-surface-muted); border-radius:10px;
+    padding:var(--rgi-space-4); }
+  .rgi-detail .reason { margin:0 0 var(--rgi-space-3); font-size:13px; color:var(--rgi-text); }
+  .rgi-chips { display:flex; gap:var(--rgi-space-2); flex-wrap:wrap; }
+  .rgi-chip { font-family:var(--rgi-font-mono); font-size:12px; font-weight:600; padding:4px 8px; border-radius:6px;
+    background:var(--rgi-surface); border:1px solid var(--rgi-border); }
+  .rgi-chip.add { color:#166534; } .rgi-chip.del { color:#991B1B; } .rgi-chip.warn { color:var(--rgi-review-fg); }
+
+  @keyframes rgi-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  /* ---- focus/hover demo strip ---- */
+  .state-demo { display:flex; gap:var(--rgi-space-4); flex-wrap:wrap; align-items:center;
+    background:var(--rgi-surface); border:1px solid var(--rgi-border); border-radius:var(--rgi-radius);
+    padding:var(--rgi-space-4); box-shadow:var(--rgi-shadow); }
+  .focus-sample { border:none; background:var(--rgi-surface-muted); border-radius:8px; padding:8px 12px; font:inherit;
+    outline:2px solid var(--rgi-focus-ring); outline-offset:2px; }
+
+  /* ---- responsive: mobile ---- */
+  @media (max-width:639px) {
+    .rgi-timeline { flex-direction:column; align-items:flex-start; gap:var(--rgi-space-2); }
+    .rgi-timeline__node { flex-direction:row; min-width:0; width:100%; gap:var(--rgi-space-3); text-align:left; }
+    .rgi-timeline__line { display:none; }
+    .rgi-compare { grid-template-columns:1fr; }
+    .rgi-header h1 { flex-basis:100%; }
+  }
+
+  @media (prefers-reduced-motion:reduce) {
+    .rgi-compare-card { animation:none; }
+    .rgi-compare-card::before { transition:none; }
+  }
+
+  /* device frames for docs */
+  .frames { display:grid; grid-template-columns:1fr; gap:var(--rgi-space-6); }
+  .frame-label { font-size:12px; font-weight:600; color:var(--rgi-text-muted); margin:0 0 var(--rgi-space-2); }
+  .frame--mobile { max-width:390px; border:1px solid var(--rgi-border); border-radius:16px; overflow:hidden;
+    box-shadow:var(--rgi-shadow); background:var(--rgi-bg); }
+  .frame--mobile .inner { padding:var(--rgi-space-4); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="mock-note">📐 이 파일은 <b>시각 mockup</b>(시안 시뮬레이션)입니다. 실제 dev 산출물이 아니며 UX 의도 전달용입니다.
+  콘텐츠는 placeholder(샘플 SHA/시각)입니다. 명세: <span class="mono">docs/design/review-generation-inspector-BF-1173.md</span></p>
+
+  <!-- ===== HEADER ===== -->
+  <header class="rgi-header">
+    <h1>리뷰 세대 인스펙터</h1>
+    <span class="rgi-badge rgi-badge--review" role="status">
+      <span class="rgi-badge__icon" aria-hidden="true">⚠</span>검토 필요
+    </span>
+    <span class="spacer"></span>
+    <button class="rgi-btn" type="button">↻ 새로고침</button>
+  </header>
+
+  <!-- ===== 상태 3종 병렬 시각화 ===== -->
+
+  <!-- 동일 세대 -->
+  <section class="rgi-state-block">
+    <h2 class="rgi-section">상태 A · 동일 세대 (same)</h2>
+    <p class="lead">이전 head SHA와 현재 head SHA가 동일 — 재검토 불필요.
+      <span class="rgi-badge rgi-badge--same" role="status"><span class="rgi-badge__icon" aria-hidden="true">✓</span>동일 세대</span>
+    </p>
+    <div class="rgi-timeline" role="group" aria-label="세대 타임라인 (동일 세대)">
+      <span class="rgi-timeline__line" aria-hidden="true"></span>
+      <button class="rgi-timeline__node" data-state="same" type="button" tabindex="-1">
+        <span class="rgi-timeline__dot" aria-hidden="true"></span>
+        <span class="rgi-timeline__sha">a1b2c3d</span>
+        <span class="rgi-timeline__ts">2일 전</span>
+      </button>
+      <button class="rgi-timeline__node is-active is-head" data-state="same" type="button" tabindex="0"
+        aria-current="true" aria-label="현재 head a1b2c3d, 동일 세대">
+        <span class="rgi-timeline__dot" aria-hidden="true"></span>
+        <span class="rgi-timeline__sha">a1b2c3d</span>
+        <span class="rgi-timeline__ts">현재 head</span>
+      </button>
+    </div>
+    <div class="rgi-compare">
+      <article class="rgi-compare-card rgi-compare-card--prev">
+        <h3><span class="role">이전 head</span> <span class="mono">a1b2c3d</span></h3>
+        <ul class="rgi-meta">
+          <li>작성자 <b>reviewer-bot</b></li>
+          <li>시각 <b>2일 전</b></li>
+          <li>변경 파일 <b>0</b></li>
+        </ul>
+        <div class="rgi-strip"><span class="rgi-badge rgi-badge--same" role="status"><span class="rgi-badge__icon" aria-hidden="true">✓</span>기준</span></div>
+      </article>
+      <article class="rgi-compare-card rgi-compare-card--curr" data-state="same" aria-expanded="true">
+        <h3><span class="role">현재 head</span> <span class="mono">a1b2c3d</span></h3>
+        <ul class="rgi-meta">
+          <li>작성자 <b>reviewer-bot</b></li>
+          <li>시각 <b>2일 전</b></li>
+          <li>변경 파일 <b>0</b></li>
+        </ul>
+        <div class="rgi-strip"><span class="rgi-badge rgi-badge--same" role="status"><span class="rgi-badge__icon" aria-hidden="true">✓</span>동일 세대</span></div>
+        <div class="rgi-detail">
+          <p class="reason">SHA가 이전과 동일하여 리뷰 세대가 유지됩니다. 추가 조치 불필요.</p>
+          <div class="rgi-chips"><span class="rgi-chip add">+0</span><span class="rgi-chip del">−0</span><span class="rgi-chip">미해결 0</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 새 세대 -->
+  <section class="rgi-state-block">
+    <h2 class="rgi-section">상태 B · 새 세대 (new)</h2>
+    <p class="lead">head SHA가 갱신되었고 충돌/미해결 없음 — 새 리뷰 세대 시작.
+      <span class="rgi-badge rgi-badge--new" role="status"><span class="rgi-badge__icon" aria-hidden="true">↑</span>새 세대</span>
+    </p>
+    <div class="rgi-timeline" role="group" aria-label="세대 타임라인 (새 세대)">
+      <span class="rgi-timeline__line" aria-hidden="true"></span>
+      <button class="rgi-timeline__node" data-state="same" type="button" tabindex="-1">
+        <span class="rgi-timeline__dot" aria-hidden="true"></span>
+        <span class="rgi-timeline__sha">a1b2c3d</span>
+        <span class="rgi-timeline__ts">2일 전</span>
+      </button>
+      <button class="rgi-timeline__node is-active is-head" data-state="new" type="button" tabindex="0"
+        aria-current="true" aria-label="현재 head 9f8e7d6, 새 세대">
+        <span class="rgi-timeline__dot" aria-hidden="true"></span>
+        <span class="rgi-timeline__sha">9f8e7d6</span>
+        <span class="rgi-timeline__ts">방금</span>
+      </button>
+    </div>
+    <div class="rgi-compare">
+      <article class="rgi-compare-card rgi-compare-card--prev">
+        <h3><span class="role">이전 head</span> <span class="mono">a1b2c3d</span></h3>
+        <ul class="rgi-meta"><li>작성자 <b>reviewer-bot</b></li><li>시각 <b>2일 전</b></li><li>변경 파일 <b>—</b></li></ul>
+        <div class="rgi-strip"><span class="rgi-badge rgi-badge--same" role="status"><span class="rgi-badge__icon" aria-hidden="true">✓</span>이전 세대</span></div>
+      </article>
+      <article class="rgi-compare-card rgi-compare-card--curr" data-state="new" aria-expanded="true">
+        <h3><span class="role">현재 head</span> <span class="mono">9f8e7d6</span></h3>
+        <ul class="rgi-meta"><li>작성자 <b>dev-1</b></li><li>시각 <b>방금</b></li><li>변경 파일 <b>3</b></li></ul>
+        <div class="rgi-strip"><span class="rgi-badge rgi-badge--new" role="status"><span class="rgi-badge__icon" aria-hidden="true">↑</span>새 세대</span></div>
+        <div class="rgi-detail">
+          <p class="reason">head가 <span class="mono">9f8e7d6</span>로 갱신되어 새 세대가 열렸습니다. 미해결 항목 없음.</p>
+          <div class="rgi-chips"><span class="rgi-chip add">+128</span><span class="rgi-chip del">−34</span><span class="rgi-chip">미해결 0</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 검토 필요 -->
+  <section class="rgi-state-block">
+    <h2 class="rgi-section">상태 C · 검토 필요 (review)</h2>
+    <p class="lead">SHA 변경 + 미해결 스레드/충돌 존재 — 사람 확인 필요.
+      <span class="rgi-badge rgi-badge--review" role="status"><span class="rgi-badge__icon" aria-hidden="true">⚠</span>검토 필요</span>
+    </p>
+    <div class="rgi-timeline" role="group" aria-label="세대 타임라인 (검토 필요)">
+      <span class="rgi-timeline__line" aria-hidden="true"></span>
+      <button class="rgi-timeline__node" data-state="same" type="button" tabindex="-1">
+        <span class="rgi-timeline__dot" aria-hidden="true"></span>
+        <span class="rgi-timeline__sha">a1b2c3d</span><span class="rgi-timeline__ts">3일 전</span>
+      </button>
+      <button class="rgi-timeline__node" data-state="new" type="button" tabindex="-1">
+        <span class="rgi-timeline__dot" aria-hidden="true"></span>
+        <span class="rgi-timeline__sha">9f8e7d6</span><span class="rgi-timeline__ts">어제</span>
+      </button>
+      <button class="rgi-timeline__node is-active is-head" data-state="review" type="button" tabindex="0"
+        aria-current="true" aria-label="현재 head 4c5d6e7, 검토 필요">
+        <span class="rgi-timeline__dot" aria-hidden="true"></span>
+        <span class="rgi-timeline__sha">4c5d6e7</span><span class="rgi-timeline__ts">10분 전</span>
+      </button>
+    </div>
+    <div class="rgi-compare">
+      <article class="rgi-compare-card rgi-compare-card--prev">
+        <h3><span class="role">이전 head</span> <span class="mono">9f8e7d6</span></h3>
+        <ul class="rgi-meta"><li>작성자 <b>dev-1</b></li><li>시각 <b>어제</b></li><li>변경 파일 <b>—</b></li></ul>
+        <div class="rgi-strip"><span class="rgi-badge rgi-badge--new" role="status"><span class="rgi-badge__icon" aria-hidden="true">↑</span>이전 세대</span></div>
+      </article>
+      <article class="rgi-compare-card rgi-compare-card--curr" data-state="review" aria-expanded="true">
+        <h3><span class="role">현재 head</span> <span class="mono">4c5d6e7</span></h3>
+        <ul class="rgi-meta"><li>작성자 <b>dev-1</b></li><li>시각 <b>10분 전</b></li><li>변경 파일 <b>7</b></li></ul>
+        <div class="rgi-strip"><span class="rgi-badge rgi-badge--review" role="status"><span class="rgi-badge__icon" aria-hidden="true">⚠</span>검토 필요</span></div>
+        <div class="rgi-detail">
+          <p class="reason">head가 변경되었고 이전 리뷰의 미해결 스레드가 남아 있어 재검토가 필요합니다.</p>
+          <div class="rgi-chips"><span class="rgi-chip add">+312</span><span class="rgi-chip del">−201</span><span class="rgi-chip warn">미해결 4</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== 반응형 · 포커스/hover 상태 데모 ===== -->
+  <section class="rgi-state-block">
+    <h2 class="rgi-section">반응형 & 인터랙션 상태</h2>
+    <div class="state-demo">
+      <span style="font-size:12px;color:var(--rgi-text-muted);">포커스 링(:focus-visible)</span>
+      <button class="focus-sample" type="button">포커스된 타임라인 노드</button>
+      <span style="font-size:12px;color:var(--rgi-text-muted);">키보드: ←/→ 이동, Enter 선택, Esc 닫기</span>
+    </div>
+    <div class="frames" style="margin-top:var(--rgi-space-5);">
+      <div>
+        <p class="frame-label">모바일 (&lt;640px) — 세로 타임라인 + 1열 stack</p>
+        <div class="frame--mobile">
+          <div class="inner">
+            <div class="rgi-header" style="margin-bottom:var(--rgi-space-4);padding-bottom:var(--rgi-space-3);">
+              <h1 style="font-size:18px;">리뷰 세대 인스펙터</h1>
+              <span class="rgi-badge rgi-badge--new" role="status"><span class="rgi-badge__icon" aria-hidden="true">↑</span>새 세대</span>
+            </div>
+            <div class="rgi-timeline" style="flex-direction:column;align-items:flex-start;gap:8px;" role="group" aria-label="모바일 타임라인">
+              <button class="rgi-timeline__node" data-state="same" type="button" tabindex="-1"
+                style="flex-direction:row;min-width:0;width:100%;gap:12px;text-align:left;">
+                <span class="rgi-timeline__dot" aria-hidden="true"></span>
+                <span class="rgi-timeline__sha">a1b2c3d</span><span class="rgi-timeline__ts">2일 전</span>
+              </button>
+              <button class="rgi-timeline__node is-active is-head" data-state="new" type="button" tabindex="0"
+                style="flex-direction:row;min-width:0;width:100%;gap:12px;text-align:left;">
+                <span class="rgi-timeline__dot" aria-hidden="true"></span>
+                <span class="rgi-timeline__sha">9f8e7d6</span><span class="rgi-timeline__ts">방금</span>
+              </button>
+            </div>
+            <div class="rgi-compare" style="grid-template-columns:1fr;margin-top:var(--rgi-space-4);">
+              <article class="rgi-compare-card rgi-compare-card--curr" data-state="new" aria-expanded="false">
+                <h3><span class="role">현재 head</span> <span class="mono">9f8e7d6</span></h3>
+                <ul class="rgi-meta"><li>변경 파일 <b>3</b></li></ul>
+                <div class="rgi-strip"><span class="rgi-badge rgi-badge--new" role="status"><span class="rgi-badge__icon" aria-hidden="true">↑</span>새 세대</span></div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
