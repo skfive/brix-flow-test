@@ -1,0 +1,4 @@
+{
+  "//": "sync-status feature 모듈(fixtures.js/status.js)을 CommonJS(UMD)로 스코프한다. 루트 package.json 이 type:module 이라 .js 가 기본 ESM 이지만, 이 모듈은 file:// 브라우저 <script> 와 node createRequire 양쪽에서 동작해야 하므로 CommonJS 로 고정한다. 루트 package.json 은 변경하지 않는다(AC-06 additive).",
+  "type": "commonjs"
+}
