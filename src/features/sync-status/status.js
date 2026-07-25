@@ -27,9 +27,9 @@
   var STATE_GLYPH = {
     idle: '○',
     up_to_date: '✓',
-    behind: '↓',
+    behind: '↧',
     syncing: '◐',
-    conflict: '⚠',
+    conflict: '⇆',
     failed: '⚠',
   };
 
