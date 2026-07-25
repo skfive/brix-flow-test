@@ -1,0 +1,134 @@
+/* 고객 피드백 우선순위 보드 — 스타일 (docs/design/feedback-board-BF-1167.md §2·§3·§4) */
+/* ===== 2. 디자인 토큰 ===== */
+:root{
+  /* 기반 */
+  --color-bg:#f4f6f9; --color-surface:#ffffff; --color-surface-alt:#eef2f7;
+  --color-border:#d3dbe4; --color-text:#1f2933; --color-text-muted:#556170;
+  --color-primary:#2457d6; --color-primary-hover:#1c46ac; --color-primary-contrast:#ffffff;
+  --color-focus:#1c46ac;
+  /* severity */
+  --sev-critical-fg:#a01722; --sev-critical-bg:#fde5e7;
+  --sev-high-fg:#9a4a06; --sev-high-bg:#fceadb;
+  --sev-medium-fg:#8a6100; --sev-medium-bg:#fbf1d3;
+  --sev-low-fg:#1f6f45; --sev-low-bg:#dff2e6;
+  /* status */
+  --status-pending-fg:#455060; --status-pending-bg:#e4e9f0;
+  --status-planned-fg:#1c46ac; --status-planned-bg:#dde6fb;
+  --status-done-fg:#1f6f45; --status-done-bg:#dbf0e4;
+  /* semantic */
+  --color-error-fg:#a01722; --color-error-bg:#fdeef0; --color-error-border:#eab6bc;
+  --color-success-fg:#1f6f45;
+  /* typography */
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  --font-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --fs-h1:1.5rem; --fs-h2:1.125rem; --fs-h3:1rem; --fs-body:.9375rem;
+  --fs-label:.875rem; --fs-caption:.8125rem; --fs-kpi:1.75rem;
+  /* spacing / radius / shadow */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px; --space-6:32px;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+  --shadow-card:0 1px 2px rgba(31,41,51,.06),0 1px 3px rgba(31,41,51,.08);
+  --focus-ring:0 0 0 3px rgba(28,70,172,.35);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-sans);font-size:var(--fs-body);line-height:1.55;}
+.page{max-width:1200px;margin:0 auto;padding:var(--space-5);}
+h1{font-size:var(--fs-h1);font-weight:700;line-height:1.3;margin:0 0 var(--space-1);}
+h2{font-size:var(--fs-h2);font-weight:600;line-height:1.35;margin:0 0 var(--space-3);}
+h3{font-size:var(--fs-h3);font-weight:600;line-height:1.4;margin:0;}
+.subtitle{color:var(--color-text-muted);font-size:var(--fs-caption);margin:0;}
+.caption{color:var(--color-text-muted);font-size:var(--fs-caption);}
+.mono{font-family:var(--font-mono);font-size:var(--fs-caption);font-weight:500;color:var(--color-text-muted);}
+
+/* focus visibility (§6.2) — outline 제거 금지 */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--color-focus);outline-offset:1px;box-shadow:var(--focus-ring);
+}
+.sr-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+
+/* KPI (§5.1) */
+.kpi-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);margin:var(--space-4) 0 var(--space-5);}
+.kpi-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:var(--space-4);}
+.kpi-card__label{font-size:var(--fs-caption);color:var(--color-text-muted);margin:0 0 var(--space-1);}
+.kpi-card__value{font-size:var(--fs-kpi);font-weight:700;line-height:1.1;}
+.kpi-card__value .unit{font-size:var(--fs-body);font-weight:400;}
+.kpi-split{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-2);font-size:var(--fs-caption);}
+.kpi-split span{color:var(--color-text-muted);}
+.kpi-dist{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-top:var(--space-2);}
+
+/* board grid (§4.1 / §4.3) — DOM 순서는 §6.1 Tab 순서(필터→등록→목록), 시각 배치는 grid-area 로 조정 */
+.board-grid{
+  display:grid;
+  grid-template-columns:340px 1fr;
+  grid-template-areas:
+    "register filter"
+    "register list";
+  gap:var(--space-5);
+  align-items:start;
+}
+.filter-panel{grid-area:filter;}
+.register-panel{grid-area:register;}
+.list-panel{grid-area:list;}
+.panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:var(--space-5);}
+
+/* register form (§5.2) */
+.form-field{margin-bottom:var(--space-4);}
+.form-field label{display:block;font-size:var(--fs-label);font-weight:600;margin-bottom:var(--space-1);}
+.form-field input,.form-field textarea,.form-field select{
+  width:100%;padding:var(--space-2) var(--space-3);font:inherit;color:var(--color-text);
+  background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-sm);
+}
+.form-field textarea{min-height:80px;resize:vertical;}
+.form-field input[aria-invalid="true"],.form-field textarea[aria-invalid="true"],.form-field select[aria-invalid="true"]{border-color:var(--color-error-border);background:var(--color-error-bg);}
+.form-error{color:var(--color-error-fg);font-size:var(--fs-caption);margin-top:var(--space-1);}
+.form-success{color:var(--color-success-fg);font-size:var(--fs-caption);margin-top:var(--space-2);}
+.btn{font:inherit;font-weight:600;padding:var(--space-2) var(--space-4);border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;}
+.btn--primary{background:var(--color-primary);color:var(--color-primary-contrast);}
+.btn--primary:hover{background:var(--color-primary-hover);}
+.btn--primary[disabled]{opacity:.6;cursor:not-allowed;}
+.btn--ghost{background:var(--color-surface);color:var(--color-primary);border-color:var(--color-border);}
+.btn--ghost[disabled]{opacity:.6;cursor:not-allowed;}
+.btn--sm{font-size:var(--fs-caption);padding:var(--space-1) var(--space-3);}
+
+/* filter bar (§5.3) */
+.filter-bar{display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:flex-end;margin-bottom:var(--space-4);padding-bottom:var(--space-4);border-bottom:1px solid var(--color-border);}
+.filter-search{flex:1 1 220px;min-width:0;}
+.filter-search label{display:block;font-size:var(--fs-label);font-weight:600;margin-bottom:var(--space-1);}
+.filter-search input{width:100%;padding:var(--space-2) var(--space-3);font:inherit;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-sm);}
+fieldset.filter-group{border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:var(--space-2) var(--space-3);margin:0;min-width:0;}
+fieldset.filter-group legend{font-size:var(--fs-caption);font-weight:600;color:var(--color-text-muted);padding:0 var(--space-1);}
+.filter-group label{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-caption);margin-right:var(--space-3);white-space:nowrap;}
+
+/* badges (§2.2 / §2.3) — 색상 + 텍스트 이중 인코딩 */
+.badge{display:inline-block;font-size:var(--fs-caption);font-weight:600;padding:2px 10px;border-radius:999px;white-space:nowrap;}
+.badge--sev-critical{background:var(--sev-critical-bg);color:var(--sev-critical-fg);}
+.badge--sev-high{background:var(--sev-high-bg);color:var(--sev-high-fg);}
+.badge--sev-medium{background:var(--sev-medium-bg);color:var(--sev-medium-fg);}
+.badge--sev-low{background:var(--sev-low-bg);color:var(--sev-low-fg);}
+.badge--status-pending_review{background:var(--status-pending-bg);color:var(--status-pending-fg);}
+.badge--status-planned{background:var(--status-planned-bg);color:var(--status-planned-fg);}
+.badge--status-done{background:var(--status-done-bg);color:var(--status-done-fg);}
+
+/* feedback list (§5.4) */
+.feedback-list{display:flex;flex-direction:column;gap:var(--space-3);list-style:none;margin:0;padding:0;}
+.feedback-item{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-4);}
+.feedback-item__head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-3);}
+.feedback-item__badges{display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;margin-top:var(--space-2);}
+.feedback-item__meta{display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px dashed var(--color-border);}
+.feedback-item__meta .spacer{flex:1;}
+.feedback-item__error{color:var(--color-error-fg);font-size:var(--fs-caption);flex-basis:100%;}
+
+/* state placeholders (§5.6) */
+.state-empty,.state-loading{text-align:center;padding:var(--space-6) var(--space-4);color:var(--color-text-muted);}
+.state-error{background:var(--color-error-bg);border:1px solid var(--color-error-border);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);color:var(--color-error-fg);display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-4);}
+.state-error .spacer{flex:1;}
+.skeleton{height:64px;border-radius:var(--radius-md);background:var(--color-surface-alt);margin-bottom:var(--space-3);}
+
+/* 반응형 (§4.3) — 데스크톱·태블릿 단일 분기 */
+@media (max-width:1023px){
+  .kpi-summary{grid-template-columns:repeat(2,1fr);}
+  /* 태블릿: 1열 세로 스택 — 등록 폼이 목록 위로 이동(§4.3) */
+  .board-grid{
+    grid-template-columns:1fr;
+    grid-template-areas:"register" "filter" "list";
+  }
+}
