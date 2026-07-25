@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>고객 피드백 우선순위 보드</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>고객 피드백 우선순위 보드</h1>
+    <p class="subtitle">운영팀 피드백 등록 · 심각도/상태 관리 · KPI 요약</p>
+  </header>
+
+  <!-- aria-live 3영역 (§5.7) — 상시 DOM 유지 -->
+  <div class="sr-live" id="live-result" aria-live="polite"></div>
+  <div class="sr-live" id="live-save" aria-live="assertive"></div>
+  <div class="sr-live" id="live-loading" aria-live="polite"></div>
+
+  <!-- ===== KPI 요약 (§5.1) — 전체 fixture 기준 ===== -->
+  <section class="kpi-summary" id="kpi-summary" aria-label="KPI 요약"></section>
+
+  <!-- ===== 보드 본문 (§4.1) — DOM 순서: 필터 → 등록 → 목록 (§6.1 Tab 순서) ===== -->
+  <main class="board-grid">
+    <!-- 필터 바 (§5.3) -->
+    <section class="panel filter-panel" aria-label="피드백 필터">
+      <div class="filter-bar">
+        <div class="filter-search">
+          <label for="q">검색</label>
+          <input id="q" type="search" autocomplete="off" placeholder="제목·설명·ID 검색 (대소문자 무관)">
+        </div>
+        <fieldset class="filter-group" data-cat="status">
+          <legend>상태</legend>
+          <label><input type="checkbox" value="pending_review">검토 대기</label>
+          <label><input type="checkbox" value="planned">계획됨</label>
+          <label><input type="checkbox" value="done">처리 완료</label>
+        </fieldset>
+        <fieldset class="filter-group" data-cat="severity">
+          <legend>심각도</legend>
+          <label><input type="checkbox" value="critical">치명적</label>
+          <label><input type="checkbox" value="high">높음</label>
+          <label><input type="checkbox" value="medium">보통</label>
+          <label><input type="checkbox" value="low">낮음</label>
+        </fieldset>
+        <fieldset class="filter-group" data-cat="channel">
+          <legend>채널</legend>
+          <label><input type="checkbox" value="in_app">앱 내 문의</label>
+          <label><input type="checkbox" value="web_form">웹 문의 폼</label>
+          <label><input type="checkbox" value="email">이메일</label>
+          <label><input type="checkbox" value="social">SNS</label>
+        </fieldset>
+        <button type="button" class="btn btn--ghost btn--sm" id="filter-reset">필터 초기화</button>
+      </div>
+    </section>
+
+    <!-- 등록 폼 (§5.2) -->
+    <aside class="panel register-panel" aria-label="피드백 등록">
+      <h2>피드백 등록</h2>
+      <form id="register-form" novalidate>
+        <div class="form-field">
+          <label for="f-title">제목</label>
+          <input id="f-title" name="title" type="text" maxlength="100" aria-describedby="f-title-err" placeholder="제목을 입력해 주세요">
+          <p class="form-error" id="f-title-err" hidden></p>
+        </div>
+        <div class="form-field">
+          <label for="f-desc">설명</label>
+          <textarea id="f-desc" name="description" maxlength="1000" aria-describedby="f-desc-err" placeholder="상세 설명을 입력해 주세요"></textarea>
+          <p class="form-error" id="f-desc-err" hidden></p>
+        </div>
+        <div class="form-field">
+          <label for="f-sev">심각도</label>
+          <select id="f-sev" name="severity" aria-describedby="f-sev-err">
+            <option value="" disabled selected>선택하세요</option>
+            <option value="critical">치명적</option>
+            <option value="high">높음</option>
+            <option value="medium">보통</option>
+            <option value="low">낮음</option>
+          </select>
+          <p class="form-error" id="f-sev-err" hidden></p>
+        </div>
+        <div class="form-field">
+          <label for="f-ch">유입 채널</label>
+          <select id="f-ch" name="channel" aria-describedby="f-ch-err">
+            <option value="" disabled selected>선택하세요</option>
+            <option value="in_app">앱 내 문의</option>
+            <option value="web_form">웹 문의 폼</option>
+            <option value="email">이메일</option>
+            <option value="social">SNS</option>
+          </select>
+          <p class="form-error" id="f-ch-err" hidden></p>
+        </div>
+        <!-- 저장 실패 배너(§5.6 SaveErrorBanner) — 동일 입력 재시도 -->
+        <div class="state-error" id="register-error" role="alert" hidden>
+          <strong>저장에 실패했습니다.</strong>
+          <span>다시 시도해 주세요.</span>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn--ghost btn--sm" id="register-retry">다시 시도</button>
+        </div>
+        <button type="submit" class="btn btn--primary" id="register-submit">피드백 등록</button>
+        <p class="form-success" id="register-success" hidden>피드백이 등록되었습니다.</p>
+      </form>
+    </aside>
+
+    <!-- 목록 (§5.4) -->
+    <section class="panel list-panel" aria-label="피드백 목록">
+      <p class="caption" id="result-count" style="margin:0 0 var(--space-3)"></p>
+      <div id="list-region"></div>
+    </section>
+  </main>
+</div>
+<script type="module" src="board.js"></script>
+</body>
+</html>
