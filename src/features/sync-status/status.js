@@ -303,10 +303,13 @@
     function renderSummary() {
       if (!el.summary) return;
       var s = summarize(model.repos);
+      // designer §6.2/§8.5 rev2: 전체 + planner 6-state = 7 타일 (미확인/동기화중 포함)
       var tiles = [
         { key: 'total', label: '전체', value: s.total, mod: '' },
+        { key: 'idle', label: '미확인', value: s.counts.idle, mod: 'summary-tile--idle' },
         { key: 'up_to_date', label: '최신', value: s.counts.up_to_date, mod: 'summary-tile--synced' },
         { key: 'behind', label: '지연', value: s.counts.behind, mod: 'summary-tile--behind' },
+        { key: 'syncing', label: '동기화중', value: s.counts.syncing, mod: 'summary-tile--syncing' },
         { key: 'conflict', label: '충돌', value: s.counts.conflict, mod: 'summary-tile--conflict' },
         { key: 'failed', label: '실패', value: s.counts.failed, mod: 'summary-tile--error' },
       ];

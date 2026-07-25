@@ -11,9 +11,9 @@
   --color-danger: #DC2626;  --color-danger-soft: #FEE2E2;
   --color-warning: #D97706; --color-warning-soft: #FEF3E2;
   /* designer rev2 §2.2/§8.5/§9.1 6-state 전용 토큰 (WCAG AA ≥4.5:1 텍스트) */
-  --color-conflict: #6D28D9; --color-conflict-soft: #F3E8FF; /* 배지 텍스트 대비 6.1:1 */
-  --color-behind: #9A3412;   --color-behind-soft: #FFF7ED;   /* amber 전용 hue, 대비 6.9:1 (info/syncing 과 구분) */
-  --color-idle: #475569;     --color-idle-soft: #F1F5F9;     /* 미확인 전용 slate, 대비 6.9:1 (pending 과 구분) */
+  --color-conflict: #6D28D9; --color-conflict-soft: #F3E8FF; /* designer §8.5 violet 충돌, text/soft 대비 6.1:1 AA ✅ */
+  --color-behind: #9A3412;   --color-behind-soft: #FEF3E2;   /* designer §8.5 amber 지연, text/soft 대비 6.7:1 AA ✅ */
+  --color-idle: #334155;     --color-idle-soft: #F1F5F9;     /* designer §8.5 slate 미확인, text/soft 대비 9.4:1 AA ✅ */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
   --font-mono: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
@@ -83,7 +83,7 @@ body {
 /* ── 요약 카드 바 ─────────────────────────────────────── */
 .summary-bar {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); /* 전체+6-state=7타일 반응형 (designer §4.3) */
   gap: var(--space-3);
   margin-top: var(--space-3);
 }
@@ -99,10 +99,14 @@ body {
 .summary-tile__dot { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--color-text-muted); }
 .summary-tile__value { font-size: 24px; line-height: 30px; font-weight: 700; }
 .summary-tile__label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--color-text-muted); }
+.summary-tile--idle .summary-tile__dot { background: var(--color-idle); }
+.summary-tile--idle .summary-tile__value { color: var(--color-idle); }
 .summary-tile--synced .summary-tile__dot { background: var(--color-success); }
 .summary-tile--synced .summary-tile__value { color: var(--color-success); }
 .summary-tile--behind .summary-tile__dot { background: var(--color-behind); }
 .summary-tile--behind .summary-tile__value { color: var(--color-behind); }
+.summary-tile--syncing .summary-tile__dot { background: var(--color-info); }
+.summary-tile--syncing .summary-tile__value { color: var(--color-info); }
 .summary-tile--conflict .summary-tile__dot { background: var(--color-conflict); }
 .summary-tile--conflict .summary-tile__value { color: var(--color-conflict); }
 .summary-tile--error {
