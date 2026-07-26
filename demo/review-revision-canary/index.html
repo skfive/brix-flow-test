@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="/src/demo/review-revision-canary/styles.css" />
   </head>
   <body>
-    <!-- 통제된 검증 프로토콜(1차 PR): data-review-cycle="pending" 표식 유지, aria-live 의도적 누락 -->
-    <main id="app" data-region="review-status" data-review-cycle="pending">
+    <!-- 통제된 검증 프로토콜(revision 단계): pending 표식 완전 제거, aria-live="polite" 추가 -->
+    <main id="app" data-region="review-status" aria-live="polite">
       <p class="loading">상태 패널을 불러오는 중…</p>
     </main>
     <script type="module" src="/src/demo/review-revision-canary/main.js"></script>

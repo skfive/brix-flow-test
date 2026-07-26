@@ -54,23 +54,25 @@ test('AC1: 렌더된 검증 단계 목록이 activeIndex 를 active 로 표시�
   assert.match(html, new RegExp(`data-state="active"[^>]*>${activeName}`));
 });
 
-test('AC2: 상태 변경 영역에 data-review-cycle="pending" 표식이 있다 (1차 PR)', async () => {
+test('AC3: revision 단계에서 상태 변경 영역의 pending 표식이 완전히 제거된다', async () => {
   const html = renderStatusPanel(await loadAll());
   assert.match(html, /data-region="review-status"/);
-  assert.match(html, /data-review-cycle="pending"/);
+  assert.doesNotMatch(html, /data-review-cycle/);
+  assert.doesNotMatch(html, /pending/);
 });
 
-test('AC2: 1차 PR 상태 변경 영역에는 aria-live 가 누락돼 있다 (통제된 프로토콜)', async () => {
+test('AC3: revision 단계 상태 변경 영역에 aria-live="polite" 가 추가된다', async () => {
   const html = renderStatusPanel(await loadAll());
   const region = html.match(/<div class="status-region"[^>]*>/);
   assert.ok(region, 'status-region 엘리먼트가 존재해야 한다');
-  assert.doesNotMatch(region[0], /aria-live/);
+  assert.match(region[0], /aria-live="polite"/);
 });
 
-test('index.html 엔트리에 앱 마운트 지점·pending 표식·모듈 스크립트가 있다', async () => {
+test('index.html 엔트리에 앱 마운트 지점·aria-live·모듈 스크립트가 있고 pending 표식이 없다', async () => {
   const html = await readFile(join(repoRoot, 'demo/review-revision-canary/index.html'), 'utf8');
   assert.match(html, /id="app"/);
-  assert.match(html, /data-review-cycle="pending"/);
+  assert.match(html, /aria-live="polite"/);
+  assert.doesNotMatch(html, /data-review-cycle/);
   assert.match(html, /main\.js/);
 });
 

@@ -58,9 +58,9 @@ export function renderReviewResult(review) {
 /**
  * 상태 패널 전체를 렌더한다.
  *
- * 통제된 검증 프로토콜(1차 PR): 상태 변경 영역(data-region="review-status")에
- * data-review-cycle="pending" 표식을 남기고 aria-live 를 의도적으로 누락한다.
- * revision 단계에서 pending 표식을 제거하고 aria-live="polite" 를 추가한다.
+ * 통제된 검증 프로토콜(revision 단계): 상태 변경 영역(data-region="review-status")에서
+ * 1차 PR 의 data-review-cycle="pending" 표식을 완전히 제거하고
+ * aria-live="polite" 를 추가해 상태 갱신을 스크린리더 사용자가 인지할 수 있게 한다.
  *
  * @param {{ stage: object, revision: object, review: object }} data
  * @returns {string}
@@ -69,7 +69,7 @@ export function renderStatusPanel({ stage, revision, review }) {
   return [
     '<section class="review-revision-panel" aria-labelledby="rrc-title">',
     '<h1 id="rrc-title">리뷰 재작업 자동수렴 상태</h1>',
-    '<div class="status-region" data-region="review-status" data-review-cycle="pending">',
+    '<div class="status-region" data-region="review-status" aria-live="polite">',
     '<h2>현재 검증 단계</h2>',
     renderStagePanel(stage),
     '<h2>최신 revision</h2>',
