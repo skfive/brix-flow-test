@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>워크플로 펄스 — /demo/workflow-pulse</title>
+<style>
+  :root {
+    /* neutral */
+    --wp-primary:#2563EB; --wp-primary-hover:#1D4ED8;
+    --wp-bg:#F7F8FA; --wp-surface:#FFFFFF; --wp-surface-muted:#F1F5F9;
+    --wp-border:#E2E5EA; --wp-text:#1F2430; --wp-text-muted:#5B6472;
+    --wp-danger:#B91C1C; --wp-danger-soft:#FEE2E2;
+    /* state fg/bg */
+    --wp-st-requested-fg:#475569; --wp-st-requested-bg:#E2E8F0;
+    --wp-st-planning-fg:#6D28D9;  --wp-st-planning-bg:#EDE9FE;
+    --wp-st-dev-fg:#1D4ED8;       --wp-st-dev-bg:#DBEAFE;
+    --wp-st-review-fg:#B45309;    --wp-st-review-bg:#FEF3C7;
+    --wp-st-testing-fg:#0F766E;   --wp-st-testing-bg:#CCFBF1;
+    --wp-st-done-fg:#166534;      --wp-st-done-bg:#DCFCE7;
+    /* space / shape */
+    --wp-space-1:4px; --wp-space-2:8px; --wp-space-3:12px; --wp-space-4:16px;
+    --wp-space-5:24px; --wp-space-6:32px;
+    --wp-radius:12px; --wp-maxw:1240px;
+    --wp-shadow:0 1px 2px rgba(15,23,42,.06),0 1px 3px rgba(15,23,42,.10);
+    --wp-shadow-lg:0 6px 16px rgba(15,23,42,.14),0 2px 6px rgba(15,23,42,.08);
+    --wp-font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--wp-bg); color:var(--wp-text);
+    font-family:var(--wp-font-sans); font-size:14px; line-height:1.5; }
+  .wrap { max-width:var(--wp-maxw); margin:0 auto; padding:var(--wp-space-6) var(--wp-space-5); }
+  .visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+  /* ---- header ---- */
+  h1 { font-size:24px; font-weight:700; line-height:1.25; margin:0 0 4px; }
+  .sub { margin:0; color:var(--wp-text-muted); font-size:13px; }
+  .wp-notice { display:flex; gap:var(--wp-space-2); align-items:center;
+    margin:var(--wp-space-4) 0 var(--wp-space-5); padding:10px 14px;
+    background:var(--wp-surface-muted); border:1px solid var(--wp-border);
+    border-radius:10px; color:var(--wp-text-muted); font-size:13px; }
+  .wp-notice b { color:var(--wp-text); font-weight:600; }
+
+  .section-title { font-size:12px; font-weight:700; letter-spacing:.04em;
+    text-transform:uppercase; color:var(--wp-text-muted);
+    margin:var(--wp-space-6) 0 var(--wp-space-3); }
+
+  /* ---- pipeline rail ---- */
+  .wp-rail { position:relative; display:grid; grid-template-columns:repeat(6,1fr);
+    gap:var(--wp-space-4); background:var(--wp-surface); border:1px solid var(--wp-border);
+    border-radius:var(--wp-radius); padding:var(--wp-space-5) var(--wp-space-4) var(--wp-space-6);
+    box-shadow:var(--wp-shadow); overflow:hidden; }
+  .wp-step { position:relative; text-align:center; z-index:1; }
+  .wp-step__icon { width:44px; height:44px; margin:0 auto var(--wp-space-2);
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+    border-radius:50%; background:var(--wp-accent-bg); color:var(--wp-accent-fg);
+    border:2px solid var(--wp-accent-fg); }
+  .wp-step__label { font-size:13px; font-weight:700; }
+  .wp-step__count { display:inline-flex; align-items:center; justify-content:center;
+    min-width:22px; height:22px; padding:0 6px; margin-top:6px; border-radius:999px;
+    font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;
+    background:var(--wp-accent-bg); color:var(--wp-accent-fg); }
+  /* connector line: sits behind icons at icon vertical center */
+  .wp-rail__line { position:absolute; top:calc(var(--wp-space-5) + 22px); left:0; right:0;
+    height:2px; background:var(--wp-border); z-index:0; }
+  /* forward arrowheads between steps */
+  .wp-rail__arrows { position:absolute; top:calc(var(--wp-space-5) + 16px); left:0; right:0;
+    display:grid; grid-template-columns:repeat(6,1fr); z-index:0; pointer-events:none; }
+  .wp-rail__arrows span { text-align:right; padding-right:2px; color:#B7BEC9; font-size:12px; }
+  .wp-rail__arrows span:last-child { visibility:hidden; }
+  /* reject back-curve (review -> development) drawn above rail */
+  .wp-reject { position:absolute; top:6px; left:calc(50%); right:calc(16.6%);
+    height:40px; border:2px dashed var(--wp-danger); border-bottom:none;
+    border-radius:16px 16px 0 0; z-index:0; }
+  .wp-reject__label { position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+    background:var(--wp-surface); color:var(--wp-danger); font-size:11px; font-weight:700;
+    padding:0 6px; white-space:nowrap; }
+
+  /* per-state accent locals (rail + board) */
+  .st-requested      { --wp-accent-fg:var(--wp-st-requested-fg); --wp-accent-bg:var(--wp-st-requested-bg); --wp-accent-ring:rgba(71,85,105,.40); }
+  .st-planning       { --wp-accent-fg:var(--wp-st-planning-fg);  --wp-accent-bg:var(--wp-st-planning-bg);  --wp-accent-ring:rgba(109,40,217,.42); }
+  .st-in_development { --wp-accent-fg:var(--wp-st-dev-fg);       --wp-accent-bg:var(--wp-st-dev-bg);       --wp-accent-ring:rgba(37,99,235,.45); }
+  .st-in_review      { --wp-accent-fg:var(--wp-st-review-fg);    --wp-accent-bg:var(--wp-st-review-bg);    --wp-accent-ring:rgba(180,83,9,.45); }
+  .st-testing        { --wp-accent-fg:var(--wp-st-testing-fg);   --wp-accent-bg:var(--wp-st-testing-bg);   --wp-accent-ring:rgba(15,118,110,.45); }
+  .st-done           { --wp-accent-fg:var(--wp-st-done-fg);      --wp-accent-bg:var(--wp-st-done-bg);      --wp-accent-ring:rgba(22,101,52,.42); }
+
+  /* ---- kanban board ---- */
+  .wp-board { display:grid; grid-template-columns:repeat(6,1fr); gap:var(--wp-space-4);
+    margin-top:var(--wp-space-4); }
+  .wp-col { background:var(--wp-surface-muted); border:1px solid var(--wp-border);
+    border-radius:var(--wp-radius); padding:var(--wp-space-3); min-height:120px;
+    border-top:4px solid var(--wp-accent-fg); }
+  .wp-col__head { display:flex; align-items:center; gap:var(--wp-space-2);
+    margin-bottom:var(--wp-space-3); }
+  .wp-col__icon { font-size:15px; color:var(--wp-accent-fg); }
+  .wp-col__label { font-size:13px; font-weight:700; flex:1 1 auto; }
+  .wp-count { display:inline-flex; align-items:center; justify-content:center;
+    min-width:24px; height:24px; padding:0 7px; border-radius:999px; font-size:12px;
+    font-weight:700; font-variant-numeric:tabular-nums;
+    background:var(--wp-accent-bg); color:var(--wp-accent-fg); }
+  .wp-count--active { animation:wp-pulse 2s ease-out infinite; }
+  @keyframes wp-pulse {
+    0%   { box-shadow:0 0 0 0 var(--wp-accent-ring); }
+    70%  { box-shadow:0 0 0 8px rgba(37,99,235,0); }
+    100% { box-shadow:0 0 0 0 rgba(37,99,235,0); }
+  }
+
+  /* ---- card ---- */
+  .wp-card { position:relative; background:var(--wp-surface); border:1px solid var(--wp-border);
+    border-radius:10px; padding:var(--wp-space-3) var(--wp-space-3) var(--wp-space-3) 16px;
+    margin-bottom:var(--wp-space-3); box-shadow:var(--wp-shadow);
+    transition:transform .2s, box-shadow .2s; }
+  .wp-card:hover { transform:translateY(-2px); box-shadow:var(--wp-shadow-lg); }
+  .wp-card__accent { position:absolute; left:0; top:0; bottom:0; width:4px;
+    border-radius:10px 0 0 10px; background:var(--wp-accent-fg); }
+  .wp-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
+    border-radius:999px; font-size:11px; font-weight:600;
+    background:var(--wp-accent-bg); color:var(--wp-accent-fg); }
+  .wp-card__title { font-size:13px; font-weight:600; line-height:1.4;
+    margin:var(--wp-space-2) 0 var(--wp-space-1); }
+  .wp-card__assignee { font-size:12px; color:var(--wp-text-muted); margin-bottom:var(--wp-space-3); }
+  .wp-actions { display:flex; flex-wrap:wrap; gap:var(--wp-space-2); }
+  .wp-btn { font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--wp-primary); color:#fff; border:1px solid var(--wp-primary);
+    border-radius:8px; padding:6px 10px; }
+  .wp-btn:hover { background:var(--wp-primary-hover); border-color:var(--wp-primary-hover); }
+  .wp-btn:focus-visible { outline:2px solid var(--wp-primary); outline-offset:2px; }
+  .wp-btn--reject { background:transparent; color:var(--wp-danger); border-color:var(--wp-danger); }
+  .wp-btn--reject:hover { background:var(--wp-danger-soft); }
+  .wp-done-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
+    border-radius:8px; font-size:12px; font-weight:700;
+    background:var(--wp-st-done-bg); color:var(--wp-st-done-fg); }
+  .wp-empty { border:1px dashed var(--wp-border); border-radius:8px; padding:var(--wp-space-4);
+    text-align:center; font-size:12px; color:var(--wp-text-muted); }
+
+  /* real prefers-reduced-motion behavior on the live board */
+  @media (prefers-reduced-motion: reduce) {
+    .wp-count--active { animation:none; box-shadow:0 0 0 2px var(--wp-accent-ring); }
+    .wp-count--active::after { content:"진행중"; font-size:9px; margin-left:4px;
+      font-weight:700; }
+    .wp-card { transition:none; }
+  }
+
+  /* ---- responsive ---- */
+  @media (max-width:959px) {
+    .wp-rail, .wp-board { grid-template-columns:repeat(3,1fr); }
+    .wp-rail__line, .wp-rail__arrows, .wp-reject { display:none; }
+  }
+  @media (max-width:639px) {
+    .wp-rail, .wp-board { grid-template-columns:1fr; }
+    .wp-step { display:flex; align-items:center; gap:var(--wp-space-3); text-align:left; }
+    .wp-step__icon { margin:0; }
+    .wp-step__count { margin-top:0; margin-left:auto; }
+    .wp-reject-hint { display:block; }
+  }
+  .wp-reject-hint { display:none; margin-top:var(--wp-space-2); font-size:12px;
+    color:var(--wp-danger); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>워크플로 펄스</h1>
+    <p class="sub">요청 → 기획 → 구현 → 리뷰 → 테스트 → 완료 · 6단계 파이프라인 데모</p>
+  </header>
+
+  <div class="wp-notice" role="note">
+    <span aria-hidden="true">ℹ</span>
+    <span><b>인메모리 데모</b> — 새로고침하면 모든 조작이 초기 시드 상태로 복귀합니다. (영속 저장소 없음)</span>
+  </div>
+
+  <!-- ============ 파이프라인 레일 ============ -->
+  <div class="section-title">파이프라인 레일 — 상태 전이(색 · 아이콘 · 텍스트 · 연결선)</div>
+  <div class="wp-rail" id="wp-rail">
+    <div class="wp-rail__line" aria-hidden="true"></div>
+    <div class="wp-rail__arrows" aria-hidden="true">
+      <span>▸</span><span>▸</span><span>▸</span><span>▸</span><span>▸</span><span>▸</span>
+    </div>
+    <div class="wp-reject" aria-hidden="true"><span class="wp-reject__label">⤴ 반려(REJECT) — 리뷰→구현</span></div>
+    <!-- 스텝은 스크립트가 렌더링 -->
+  </div>
+  <p class="wp-reject-hint" aria-hidden="true">⤴ 리뷰에서 반려 시 구현으로 되돌아갑니다.</p>
+
+  <!-- ============ 칸반 보드 ============ -->
+  <div class="section-title">상태 컬럼 보드 — 항목 카드 + 상태별 액션 버튼</div>
+  <div class="wp-board" id="wp-board" aria-live="polite">
+    <!-- 컬럼/카드는 스크립트가 렌더링 -->
+  </div>
+
+</div><!-- /wrap -->
+
+<script type="module">
+  import {
+    WORKFLOW_STATES,
+    STATE_META,
+    createInitialWorkflowItems,
+    applyAction,
+    countByState,
+  } from '../../src/demo/workflow-pulse/workflow.js';
+
+  const railEl = document.getElementById('wp-rail');
+  const boardEl = document.getElementById('wp-board');
+
+  // 인메모리 상태(§4): 새로고침 시 이 모듈이 재평가되어 항상 시드로 복귀한다. localStorage 미사용.
+  let items = createInitialWorkflowItems();
+
+  function el(tag, props = {}, children = []) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props)) {
+      if (key === 'class') node.className = value;
+      else if (key === 'text') node.textContent = value;
+      else node.setAttribute(key, value);
+    }
+    for (const child of children) node.appendChild(child);
+    return node;
+  }
+
+  function renderRail(counts) {
+    // 기존 스텝만 제거(고정 데코 요소 .wp-rail__line/__arrows/.wp-reject 는 보존)
+    railEl.querySelectorAll('.wp-step').forEach((n) => n.remove());
+    for (const state of WORKFLOW_STATES) {
+      const meta = STATE_META[state];
+      const count = counts[state];
+      const active = meta.active && count > 0;
+      const step = el('div', { class: `wp-step st-${state}` }, [
+        el('div', { class: 'wp-step__icon', 'aria-hidden': 'true', text: meta.icon }),
+        el('div', { class: 'wp-step__label', text: meta.label }),
+        el('span', {
+          class: `wp-step__count${active ? ' wp-count--active' : ''}`,
+          'aria-label': active ? `${count}건, 진행 중` : `${count}건`,
+          text: String(count),
+        }),
+      ]);
+      railEl.appendChild(step);
+    }
+  }
+
+  function renderCard(item) {
+    const meta = STATE_META[item.state];
+    const actions = el('div', { class: 'wp-actions' });
+    if (item.state === 'done') {
+      actions.appendChild(el('span', { class: 'wp-done-badge' }, [
+        el('span', { 'aria-hidden': 'true', text: '✓' }),
+        document.createTextNode(' 완료 (터미널)'),
+      ]));
+    } else {
+      for (const btn of meta.buttons) {
+        const button = el('button', {
+          class: btn.action === 'REJECT' ? 'wp-btn wp-btn--reject' : 'wp-btn',
+          type: 'button',
+          text: btn.label,
+        });
+        button.addEventListener('click', () => {
+          items = applyAction(items, item.id, btn.action);
+          render();
+        });
+        actions.appendChild(button);
+      }
+    }
+    return el('article', { class: `wp-card st-${item.state}` }, [
+      el('span', { class: 'wp-card__accent', 'aria-hidden': 'true' }),
+      el('span', { class: 'wp-badge', 'aria-label': `상태: ${meta.label}` }, [
+        el('span', { 'aria-hidden': 'true', text: meta.icon }),
+        document.createTextNode(' ' + meta.label),
+      ]),
+      el('div', { class: 'wp-card__title', text: item.title }),
+      el('div', { class: 'wp-card__assignee', text: `👤 ${item.assignee}` }),
+      actions,
+    ]);
+  }
+
+  function renderBoard(counts) {
+    boardEl.replaceChildren();
+    for (const state of WORKFLOW_STATES) {
+      const meta = STATE_META[state];
+      const count = counts[state];
+      const active = meta.active && count > 0;
+      const head = el('div', { class: 'wp-col__head' }, [
+        el('span', { class: 'wp-col__icon', 'aria-hidden': 'true', text: meta.icon }),
+        el('span', { class: 'wp-col__label', text: meta.label }),
+        el('span', {
+          class: `wp-count${active ? ' wp-count--active' : ''}`,
+          'aria-label': active ? `${count}건, 진행 중` : `${count}건`,
+          text: String(count),
+        }),
+      ]);
+      const col = el('section', { class: `wp-col st-${state}`, 'aria-label': `${meta.label} 컬럼` }, [head]);
+      const stateItems = items.filter((i) => i.state === state);
+      if (stateItems.length === 0) {
+        col.appendChild(el('div', { class: 'wp-empty', text: '항목 없음' }));
+      } else {
+        for (const item of stateItems) col.appendChild(renderCard(item));
+      }
+      boardEl.appendChild(col);
+    }
+  }
+
+  function render() {
+    const counts = countByState(items);
+    renderRail(counts);
+    renderBoard(counts);
+  }
+
+  render();
+</script>
+</body>
+</html>
