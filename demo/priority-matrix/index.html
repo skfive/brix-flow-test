@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>우선순위 매트릭스 · brix-Flow</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="pm-skip" href="#pm-app">본문으로 건너뛰기</a>
+
+    <main id="pm-app" class="pm">
+      <header class="pm-header">
+        <h1 class="pm-header__title">우선순위 매트릭스</h1>
+        <p class="pm-header__lead">
+          긴급도와 중요도를 기준으로 작업을 아이젠하워 4분면에 배치합니다.
+        </p>
+      </header>
+
+      <form id="pm-form" class="pm-form" novalidate aria-label="작업 추가">
+        <div class="pm-field pm-field--grow">
+          <label for="pm-title">작업 제목 <span aria-hidden="true">*</span></label>
+          <input
+            id="pm-title"
+            name="title"
+            type="text"
+            required
+            autocomplete="off"
+            placeholder="예: 분기 보고서 작성"
+            aria-describedby="pm-form-error"
+          />
+        </div>
+
+        <div class="pm-field pm-field--grow">
+          <label for="pm-description">설명</label>
+          <input
+            id="pm-description"
+            name="description"
+            type="text"
+            autocomplete="off"
+            placeholder="선택 입력"
+          />
+        </div>
+
+        <div class="pm-field">
+          <label for="pm-urgency">긴급도</label>
+          <select id="pm-urgency" name="urgency">
+            <option value="high">높음 (긴급)</option>
+            <option value="low" selected>낮음 (비긴급)</option>
+          </select>
+        </div>
+
+        <div class="pm-field">
+          <label for="pm-importance">중요도</label>
+          <select id="pm-importance" name="importance">
+            <option value="high">높음 (중요)</option>
+            <option value="low" selected>낮음 (비중요)</option>
+          </select>
+        </div>
+
+        <div class="pm-field pm-field--action">
+          <button type="submit" class="pm-btn pm-btn--primary">작업 추가</button>
+        </div>
+
+        <p id="pm-form-error" class="pm-form__error" role="alert" hidden></p>
+      </form>
+
+      <section class="pm-toolbar" aria-label="상태 필터">
+        <div id="pm-filters" class="pm-filters" role="group" aria-label="작업 상태 필터">
+          <button type="button" class="pm-filter" data-filter="all" aria-pressed="true">전체</button>
+          <button type="button" class="pm-filter" data-filter="active" aria-pressed="false">진행</button>
+          <button type="button" class="pm-filter" data-filter="done" aria-pressed="false">완료</button>
+        </div>
+        <p id="pm-count" class="pm-count" aria-live="polite"></p>
+      </section>
+
+      <!-- 스크린리더 알림: 작업 추가·삭제 및 필터 변경 안내 (§6.6) -->
+      <p id="pm-announce" class="pm-sr-only" role="status" aria-live="assertive"></p>
+
+      <!-- 매트릭스 축 레이블 (§4.2): 가로=긴급도, 세로=중요도 -->
+      <div class="pm-matrix-wrap">
+        <p class="pm-axis pm-axis--urgency" aria-hidden="true">긴급도 — 왼쪽: 긴급 · 오른쪽: 비긴급</p>
+        <div class="pm-matrix-body">
+          <p class="pm-axis pm-axis--importance" aria-hidden="true">중요도 — 위: 중요 · 아래: 비중요</p>
+          <div id="pm-matrix" class="pm-matrix" aria-label="우선순위 4분면"></div>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
