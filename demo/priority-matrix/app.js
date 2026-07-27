@@ -32,14 +32,17 @@ function normLevel(value) {
   return LEVELS.has(value) ? value : 'low';
 }
 
+let genIdCounter = 0;
+
 function genId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  // node test 경로에서는 createTask 에 id 를 넘기지 않으므로 안전한 대체값 사용
-  return `t_${genIdCounter++}_${process?.hrtime?.bigint?.() ?? ''}`;
+  // crypto.randomUUID 미제공(비보안 컨텍스트 등) 시 브라우저·Node 양쪽에서 안전한 대체값 사용.
+  // process 같은 Node 전용 전역은 브라우저에서 ReferenceError 를 던지므로 참조하지 않는다.
+  const rand = Math.floor(Math.random() * 1e9).toString(36);
+  return `t_${Date.now().toString(36)}_${(genIdCounter++).toString(36)}_${rand}`;
 }
-let genIdCounter = 0;
 
 /**
  * 입력으로 스키마에 맞는 새 task 를 만든다.
