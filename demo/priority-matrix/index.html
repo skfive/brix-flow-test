@@ -74,7 +74,17 @@
         <p id="pm-count" class="pm-count" aria-live="polite"></p>
       </section>
 
-      <div id="pm-matrix" class="pm-matrix" aria-label="우선순위 4분면"></div>
+      <!-- 스크린리더 알림: 작업 추가·삭제 및 필터 변경 안내 (§6.6) -->
+      <p id="pm-announce" class="pm-sr-only" role="status" aria-live="assertive"></p>
+
+      <!-- 매트릭스 축 레이블 (§4.2): 가로=긴급도, 세로=중요도 -->
+      <div class="pm-matrix-wrap">
+        <p class="pm-axis pm-axis--urgency" aria-hidden="true">긴급도 — 왼쪽: 긴급 · 오른쪽: 비긴급</p>
+        <div class="pm-matrix-body">
+          <p class="pm-axis pm-axis--importance" aria-hidden="true">중요도 — 위: 중요 · 아래: 비중요</p>
+          <div id="pm-matrix" class="pm-matrix" aria-label="우선순위 4분면"></div>
+        </div>
+      </div>
     </main>
 
     <script type="module" src="app.js"></script>

@@ -135,11 +135,20 @@ export function mount(root, options = {}) {
     error: root.querySelector('#pm-form-error'),
     filters: root.querySelector('#pm-filters'),
     matrix: root.querySelector('#pm-matrix'),
+    matrixWrap: root.querySelector('.pm-matrix-wrap'),
     count: root.querySelector('#pm-count'),
+    announce: root.querySelector('#pm-announce'),
   };
+
+  const FILTER_LABELS = { all: '전체', active: '진행', done: '완료' };
 
   function persist() {
     saveTasks(store, tasks);
+  }
+
+  /** 스크린리더 assertive 알림 (§6.6) */
+  function announce(msg) {
+    if (els.announce) els.announce.textContent = msg;
   }
 
   function emptyMessage() {
@@ -195,7 +204,7 @@ export function mount(root, options = {}) {
       if (items.length === 0) {
         const empty = doc.createElement('li');
         empty.className = 'pm-quadrant__empty';
-        empty.textContent = '—';
+        empty.textContent = '아직 이 분면에 등록된 작업이 없습니다.';
         list.append(empty);
       } else {
         for (const task of items) {
@@ -214,7 +223,7 @@ export function mount(root, options = {}) {
         banner.id = 'pm-empty';
         banner.className = 'pm-empty';
         banner.setAttribute('role', 'status');
-        els.matrix.before(banner);
+        (els.matrixWrap ?? els.matrix).before(banner);
       }
       banner.textContent = emptyMessage();
       banner.hidden = false;
@@ -242,6 +251,19 @@ export function mount(root, options = {}) {
       desc.textContent = task.description;
       main.append(desc);
     }
+
+    // 긴급/중요 배지 (§6.4)
+    const badges = doc.createElement('div');
+    badges.className = 'pm-card__badges';
+    const urgencyBadge = doc.createElement('span');
+    urgencyBadge.className = `pm-badge pm-badge--urgency pm-badge--${task.urgency}`;
+    urgencyBadge.textContent = task.urgency === 'high' ? '긴급' : '비긴급';
+    const importanceBadge = doc.createElement('span');
+    importanceBadge.className = `pm-badge pm-badge--importance pm-badge--${task.importance}`;
+    importanceBadge.textContent = task.importance === 'high' ? '중요' : '비중요';
+    badges.append(urgencyBadge, importanceBadge);
+    main.append(badges);
+
     li.append(main);
 
     const actions = doc.createElement('div');
@@ -256,6 +278,7 @@ export function mount(root, options = {}) {
     toggle.addEventListener('click', () => {
       task.done = !task.done;
       persist();
+      announce(`${task.title} ${task.done ? '완료 처리됨' : '진행 상태로 되돌림'}`);
       render();
     });
 
@@ -267,6 +290,7 @@ export function mount(root, options = {}) {
     del.addEventListener('click', () => {
       tasks = tasks.filter((t) => t.id !== task.id);
       persist();
+      announce(`${task.title} 삭제됨`);
       render();
     });
 
@@ -296,6 +320,7 @@ export function mount(root, options = {}) {
         );
         tasks.push(task);
         persist();
+        announce(`${task.title} 작업이 추가되었습니다`);
         showError('');
         els.form.reset();
         if (els.title) els.title.focus();
@@ -312,6 +337,7 @@ export function mount(root, options = {}) {
       const btn = event.target?.closest?.('[data-filter]');
       if (!btn) return;
       filter = btn.getAttribute('data-filter');
+      announce(`${FILTER_LABELS[filter] ?? '전체'} 필터로 변경됨`);
       render();
     });
   }
