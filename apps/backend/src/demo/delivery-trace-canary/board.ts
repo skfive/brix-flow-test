@@ -241,7 +241,7 @@ function renderRows(state: BoardState): string {
 function renderWarning(state: BoardState): string {
   const missing = state.phase === 'ready' ? computeMissingEvidence(state.data) : [];
   const attrs =
-    `id="trace-evidence-warning" class="trace-board__warning" role="alert" aria-live="polite" ` +
+    `id="trace-evidence-warning" class="trace-board__warning" aria-live="polite" ` +
     `aria-label="${escapeHtml(TEXT.warningLabel)}"`;
   if (missing.length === 0) {
     return `<div ${attrs} data-empty="true" hidden></div>`;
