@@ -1,0 +1,156 @@
+/* delivery-trace-canary 상태 보드 — 동결 토큰/스타일 (BF-1235)
+ * 토큰·cssClass 는 frozen UI 계약(§6)을 그대로 구현한다. 변경 금지. */
+
+.delivery-trace {
+  /* 동결 디자인 토큰 (§6.4) */
+  --color-trace-complete: #15803d;
+  --color-trace-missing: #b91c1c;
+  --color-trace-pending: #a16207;
+  --space-trace-gap: 16px;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-trace-gap);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-trace-gap);
+  box-sizing: border-box;
+}
+
+.delivery-trace__status {
+  font-weight: 600;
+}
+
+#trace-stage-filter {
+  padding: 6px 8px;
+  min-height: 36px;
+}
+
+#trace-stage-filter:disabled {
+  opacity: 0.6;
+}
+
+#evidence-warning-banner {
+  border: 2px solid var(--color-trace-missing);
+  color: var(--color-trace-missing);
+  background: #fef2f2;
+  padding: var(--space-trace-gap);
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.delivery-trace__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-trace-gap);
+}
+
+.delivery-trace__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-trace-gap);
+}
+
+.delivery-trace__row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delivery-trace__requirement {
+  font-weight: 600;
+}
+
+.delivery-trace__stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.delivery-trace__stage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+  padding: 8px 10px;
+  border: 2px solid var(--color-trace-pending);
+  border-radius: 6px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.delivery-trace__stage-name {
+  font-weight: 600;
+}
+
+.delivery-trace__stage-status::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--color-trace-pending);
+  vertical-align: middle;
+}
+
+.delivery-trace__stage--complete {
+  border-color: var(--color-trace-complete);
+}
+
+.delivery-trace__stage--complete .delivery-trace__stage-status::before {
+  background: var(--color-trace-complete);
+}
+
+.delivery-trace__stage--missing {
+  border-color: var(--color-trace-missing);
+}
+
+.delivery-trace__stage--missing .delivery-trace__stage-status::before {
+  background: var(--color-trace-missing);
+}
+
+.delivery-trace__stage[aria-current="step"] {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.delivery-trace__stage:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.delivery-trace__detail {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: var(--space-trace-gap);
+  background: #f8fafc;
+}
+
+.delivery-trace__empty {
+  padding: var(--space-trace-gap);
+  color: #475569;
+}
+
+/* 반응형 (§6.6) — 320px 이상 세로 스택, 768px 이상 2단 */
+@media (min-width: 768px) {
+  .delivery-trace__body {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .delivery-trace__rows {
+    flex: 2 1 0;
+    min-width: 0;
+  }
+
+  .delivery-trace__detail {
+    flex: 1 1 0;
+    min-width: 0;
+    position: sticky;
+    top: var(--space-trace-gap);
+  }
+}
