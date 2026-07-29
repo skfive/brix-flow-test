@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>납품 추적 상태 보드 · delivery-trace-canary</title>
-    <link rel="stylesheet" href="/apps/web/src/demo/delivery-trace-canary/styles.css" />
+    <link rel="stylesheet" href="/apps/backend/src/demo/delivery-trace-canary/board.css" />
   </head>
   <body>
     <main>
@@ -13,50 +13,19 @@
       <noscript>
         <p>이 보드는 정적 초기 상태로 표시되며, 상호작용(단계 선택·필터)은 JavaScript 활성화 시 동작합니다.</p>
       </noscript>
-      <!-- index.js 가 로드되면 이 root 를 동일 보드로 재렌더(강화)한다. 정적 초기 마크업은 no-JS/route smoke 용. -->
-      <div id="delivery-trace-board-root">
-        <section id="delivery-trace-board" class="delivery-trace" data-state="evidence-missing">
-          <header class="delivery-trace__header">
-            <p class="delivery-trace__status" data-state="evidence-missing">상태: 누락 evidence 있음</p>
-            <div class="delivery-trace__controls">
-              <label class="delivery-trace__filter-label" for="trace-stage-filter">단계 상태 필터</label>
-              <select id="trace-stage-filter" aria-label="단계 상태 필터">
-                <option value="all" selected>전체</option>
-                <option value="complete">완료</option>
-                <option value="pending">진행 중</option>
-                <option value="missing">누락</option>
-              </select>
-            </div>
-          </header>
-          <div id="evidence-warning-banner" role="alert" aria-label="누락 evidence 경고">누락 evidence: 검토, 테스트</div>
-          <div class="delivery-trace__body">
-            <ol class="delivery-trace__rows">
-              <li class="delivery-trace__row" data-row-id="R1">
-                <p class="delivery-trace__requirement">R1. 5단계 추적 카드 렌더</p>
-                <div class="delivery-trace__stages">
-                  <button type="button" class="delivery-trace__stage delivery-trace__stage--complete" data-cell-id="R1:requirement" data-stage="requirement" data-status="complete" aria-label="요구사항 완료(Complete)"><span class="delivery-trace__stage-name">요구사항</span><span class="delivery-trace__stage-status">완료</span></button>
-                  <button type="button" class="delivery-trace__stage delivery-trace__stage--complete" data-cell-id="R1:design" data-stage="design" data-status="complete" aria-label="설계 완료(Complete)"><span class="delivery-trace__stage-name">설계</span><span class="delivery-trace__stage-status">완료</span></button>
-                  <button type="button" class="delivery-trace__stage delivery-trace__stage--complete" data-cell-id="R1:implementation" data-stage="implementation" data-status="complete" aria-label="구현 완료(Complete)"><span class="delivery-trace__stage-name">구현</span><span class="delivery-trace__stage-status">완료</span></button>
-                  <button type="button" class="delivery-trace__stage delivery-trace__stage--complete" data-cell-id="R1:review" data-stage="review" data-status="complete" aria-label="검토 완료(Complete)"><span class="delivery-trace__stage-name">검토</span><span class="delivery-trace__stage-status">완료</span></button>
-                  <button type="button" class="delivery-trace__stage delivery-trace__stage--complete" data-cell-id="R1:test" data-stage="test" data-status="complete" aria-label="테스트 완료(Complete)"><span class="delivery-trace__stage-name">테스트</span><span class="delivery-trace__stage-status">완료</span></button>
-                </div>
-              </li>
-              <li class="delivery-trace__row" data-row-id="R3">
-                <p class="delivery-trace__requirement">R3. 누락 evidence 경고</p>
-                <div class="delivery-trace__stages">
-                  <button type="button" class="delivery-trace__stage delivery-trace__stage--complete" data-cell-id="R3:implementation" data-stage="implementation" data-status="complete" aria-label="구현 완료(Complete)"><span class="delivery-trace__stage-name">구현</span><span class="delivery-trace__stage-status">완료</span></button>
-                  <button type="button" class="delivery-trace__stage" data-cell-id="R3:review" data-stage="review" data-status="pending" aria-label="검토 진행 중(Pending)"><span class="delivery-trace__stage-name">검토</span><span class="delivery-trace__stage-status">진행 중</span></button>
-                  <button type="button" class="delivery-trace__stage delivery-trace__stage--missing" data-cell-id="R3:test" data-stage="test" data-status="missing" aria-label="테스트 누락(Missing)"><span class="delivery-trace__stage-name">테스트</span><span class="delivery-trace__stage-status">누락</span></button>
-                </div>
-              </li>
-            </ol>
-            <aside id="trace-detail-panel" class="delivery-trace__detail" tabindex="-1" aria-label="단계 상세" data-empty="true">
-              <p>단계 카드를 선택하면 상세 evidence 가 표시됩니다.</p>
-            </aside>
-          </div>
-        </section>
-      </div>
+      <!-- board.ts 의 renderBoard(missing-evidence) 출력과 동일한 정적 초기 markup.
+           no-JS/route smoke 용 baseline 이며, board.ts mountBoard 가 로드되면 동일 root 를 재렌더(강화)한다.
+           frozen ui-contract@v1 selector/token 을 그대로 사용한다. -->
+      <div id="delivery-trace-board-root"><section id="delivery-trace-board" class="trace-board" data-phase="ready" data-filter="all"><header class="trace-board__header"><p class="trace-board__status" role="status" data-phase="ready">추적 데이터 준비 완료 · Requirement→Design→Implementation→Review→Test 5단계 연결</p><div class="trace-board__controls"><label class="trace-board__filter-label" for="trace-stage-filter">단계 상태 필터</label><select id="trace-stage-filter" class="trace-board__filter" aria-label="단계 상태 필터"><option value="all" selected>전체 (All)</option><option value="complete">완료 (Complete)</option><option value="pending">진행 중 (Pending)</option><option value="missing">누락 (Missing)</option></select></div></header><div id="trace-evidence-warning" class="trace-board__warning" role="alert" aria-live="polite" aria-label="누락 evidence 경고" data-empty="false"><p class="trace-board__warning-text">누락된 evidence — 보완 대상</p><ul class="trace-board__warning-list"><li class="trace-board__warning-item">누락 evidence 단계에 경고·보완 대상 표시 — 검토 단계</li><li class="trace-board__warning-item">누락 evidence 단계에 경고·보완 대상 표시 — 테스트 단계</li><li class="trace-board__warning-item">단계 선택 시 상세 패널 evidence 표시 — 검토 단계</li><li class="trace-board__warning-item">단계 선택 시 상세 패널 evidence 표시 — 테스트 단계</li></ul></div><div class="trace-board__body"><ol class="trace-board__rows"><li class="trace-board__row" data-row-id="REQ-3"><p class="trace-board__requirement">REQ-3. 누락 evidence 단계에 경고·보완 대상 표시</p><div class="trace-board__stages"><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:requirement" data-stage="requirement" data-status="complete" aria-pressed="false" aria-label="요구사항 Requirement · 완료 (Complete)"><span class="trace-board__stage-name">요구사항 · Requirement</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:design" data-stage="design" data-status="complete" aria-pressed="false" aria-label="설계 Design · 완료 (Complete)"><span class="trace-board__stage-name">설계 · Design</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:implementation" data-stage="implementation" data-status="complete" aria-pressed="false" aria-label="구현 Implementation · 완료 (Complete)"><span class="trace-board__stage-name">구현 · Implementation</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-3:review" data-stage="review" data-status="missing" aria-pressed="false" aria-label="검토 Review · 누락 (Missing)"><span class="trace-board__stage-name">검토 · Review</span><span class="trace-board__stage-status">누락 (Missing)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-3:test" data-stage="test" data-status="missing" aria-pressed="false" aria-label="테스트 Test · 누락 (Missing)"><span class="trace-board__stage-name">테스트 · Test</span><span class="trace-board__stage-status">누락 (Missing)</span></button></div></li><li class="trace-board__row" data-row-id="REQ-4"><p class="trace-board__requirement">REQ-4. 단계 선택 시 상세 패널 evidence 표시</p><div class="trace-board__stages"><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-4:requirement" data-stage="requirement" data-status="complete" aria-pressed="false" aria-label="요구사항 Requirement · 완료 (Complete)"><span class="trace-board__stage-name">요구사항 · Requirement</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-4:design" data-stage="design" data-status="complete" aria-pressed="false" aria-label="설계 Design · 완료 (Complete)"><span class="trace-board__stage-name">설계 · Design</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--pending trace-board__stage--focus" data-cell-id="REQ-4:implementation" data-stage="implementation" data-status="pending" aria-pressed="false" aria-label="구현 Implementation · 진행 중 (Pending)"><span class="trace-board__stage-name">구현 · Implementation</span><span class="trace-board__stage-status">진행 중 (Pending)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-4:review" data-stage="review" data-status="missing" aria-pressed="false" aria-label="검토 Review · 누락 (Missing)"><span class="trace-board__stage-name">검토 · Review</span><span class="trace-board__stage-status">누락 (Missing)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-4:test" data-stage="test" data-status="missing" aria-pressed="false" aria-label="테스트 Test · 누락 (Missing)"><span class="trace-board__stage-name">테스트 · Test</span><span class="trace-board__stage-status">누락 (Missing)</span></button></div></li></ol><aside id="trace-detail-panel" class="trace-board__detail" role="region" aria-label="단계 상세 evidence" tabindex="-1" data-open="false"><p class="trace-board__detail-empty">단계 카드를 선택하면 상세 evidence 가 표시됩니다.</p></aside></div></section></div>
     </main>
-    <script type="module" src="/apps/web/src/demo/delivery-trace-canary/index.js"></script>
+    <!-- 인터랙션 강화: board.ts mountBoard 로 필터/상세/재시도를 연결한다.
+         board.ts(TypeScript) 브라우저 실행은 앱의 TS serve/transpile 계층에 의존한다(이 계층은 developer owned 범위 밖 — fail-honest).
+         node --test type-stripping 으로 로직은 권위 테스트에서 검증됨. -->
+    <script type="module">
+      import { mountBoard } from '/apps/backend/src/demo/delivery-trace-canary/board.ts';
+      import { createDeterministicLoader } from '/apps/backend/src/demo/delivery-trace-canary/fixtures.ts';
+      const root = document.getElementById('delivery-trace-board-root');
+      if (root) mountBoard(root, { loader: createDeterministicLoader('missing') });
+    </script>
   </body>
 </html>

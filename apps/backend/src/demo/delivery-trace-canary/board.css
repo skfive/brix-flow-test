@@ -1,0 +1,236 @@
+/* 납품 추적 상태 보드 스타일 (delivery-trace-canary).
+   frozen ui-contract@v1 §2.3 design token 을 그대로 소비한다(값 재정의 금지).
+   selector 는 계약 class(trace-board, trace-board__stage, trace-board__filter,
+   trace-board__detail, trace-board__warning)만 사용한다. */
+
+:root {
+  --color-stage-complete: #16a34a;
+  --color-stage-pending: #9ca3af;
+  --color-evidence-missing: #dc2626;
+  --space-board-gap: 16px;
+}
+
+.trace-board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-board-gap);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-board-gap);
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #111827;
+}
+
+.trace-board__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-board-gap);
+}
+
+.trace-board__status {
+  margin: 0;
+  font-weight: 600;
+}
+
+.trace-board__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trace-board__filter-label {
+  font-size: 0.9rem;
+}
+
+.trace-board__filter {
+  padding: 6px 10px;
+  border: 1px solid #9ca3af;
+  border-radius: 6px;
+  background: #ffffff;
+  font: inherit;
+}
+
+.trace-board__filter:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 누락 evidence 경고 */
+.trace-board__warning {
+  border: 1px solid var(--color-evidence-missing);
+  border-left: 4px solid var(--color-evidence-missing);
+  border-radius: 6px;
+  padding: 12px;
+  background: #fef2f2;
+  color: var(--color-evidence-missing);
+}
+
+.trace-board__warning[hidden] {
+  display: none;
+}
+
+.trace-board__warning-text {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+.trace-board__warning-list {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.trace-board__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-board-gap);
+  align-items: flex-start;
+}
+
+.trace-board__rows {
+  flex: 1 1 460px;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-board-gap);
+}
+
+.trace-board__row {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.trace-board__requirement {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+/* 5단계 카드 가로 배치 → 480px 미만 세로 스택 */
+.trace-board__stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trace-board__stage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trace-board__stage-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.trace-board__stage-status {
+  font-size: 0.8rem;
+}
+
+/* 상태 색상 — 화면 텍스트와 함께(색상 단독 의존 금지) */
+.trace-board__stage--complete {
+  border-color: var(--color-stage-complete);
+  border-left-width: 4px;
+}
+
+.trace-board__stage--pending {
+  border-color: var(--color-stage-pending);
+  border-left-width: 4px;
+}
+
+.trace-board__stage--missing {
+  border-color: var(--color-evidence-missing);
+  border-left-width: 4px;
+  background: #fef2f2;
+}
+
+/* 필터 강조/흐림 */
+.trace-board__stage--dim {
+  opacity: 0.35;
+}
+
+.trace-board__stage--focus {
+  opacity: 1;
+}
+
+.trace-board__stage--selected {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.trace-board__stage:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* 상세 패널 */
+.trace-board__detail {
+  flex: 1 1 260px;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f9fafb;
+}
+
+.trace-board__detail:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.trace-board__detail-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.trace-board__detail-evidence,
+.trace-board__detail-empty {
+  margin: 0;
+}
+
+/* 로딩/오류 */
+.trace-board__loading,
+.trace-board__error {
+  margin: 0;
+  font-weight: 600;
+}
+
+.trace-board__error {
+  color: var(--color-evidence-missing);
+}
+
+.trace-board__retry {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #2563eb;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* 반응형: 480px 미만 단계 카드 세로 스택 */
+@media (max-width: 479px) {
+  .trace-board__stages {
+    grid-template-columns: 1fr;
+  }
+
+  .trace-board__body {
+    flex-direction: column;
+  }
+}
