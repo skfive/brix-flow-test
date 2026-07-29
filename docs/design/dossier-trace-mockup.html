@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실행 계약 상태 대시보드 — 시안 mockup (BF-1247)</title>
+  <style>
+    /* ===== 계약 토큰 (frozen — 값 변경 금지) ===== */
+    :root {
+      --color-bg-surface: #0f172a;
+      --color-text-primary: #e2e8f0;
+      --color-status-ready: #22c55e;
+      --color-status-progress: #f59e0b;
+      --color-status-error: #ef4444;
+      --space-card-gap: 16px;
+
+      /* ===== mockup 시각 보조 (비계약) ===== */
+      --mk-bg-elevated: #1e293b;
+      --mk-border: #334155;
+      --mk-text-muted: #94a3b8;
+      --mk-status-wait: #64748b;
+      --mk-font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      --mk-radius: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #060b16;
+      color: var(--color-text-primary);
+      font-family: var(--mk-font);
+      line-height: 1.5;
+      padding: 32px 20px 64px;
+    }
+    .mk-page-head { max-width: 1080px; margin: 0 auto 28px; }
+    .mk-page-head h1 { font-size: 22px; margin: 0 0 6px; }
+    .mk-page-head p { color: var(--mk-text-muted); font-size: 13px; margin: 0; }
+    .mk-note {
+      max-width: 1080px; margin: 0 auto 24px;
+      background: rgba(245, 158, 11, .08);
+      border: 1px solid rgba(245, 158, 11, .35);
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 12px; color: #fcd34d;
+    }
+    .mk-section { max-width: 1080px; margin: 0 auto 40px; }
+    .mk-section > h2 {
+      font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--mk-text-muted); border-bottom: 1px solid var(--mk-border);
+      padding-bottom: 8px; margin: 0 0 16px;
+    }
+
+    /* ===== 대시보드 컴포넌트 ===== */
+    .dossier {
+      background: var(--color-bg-surface);
+      border: 1px solid var(--mk-border);
+      border-radius: var(--mk-radius);
+      padding: 20px;
+      color: var(--color-text-primary);
+    }
+    .dossier__header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .dossier__title { font-size: 20px; font-weight: 700; margin: 0; }
+    .dossier__state-summary { font-size: 12px; color: var(--mk-text-muted); }
+
+    /* 필터 */
+    .dossier__filters { display: flex; gap: 8px; margin-bottom: 20px; }
+    .dossier__filters button {
+      font: inherit; font-size: 13px; font-weight: 600;
+      color: var(--color-text-primary);
+      background: var(--mk-bg-elevated);
+      border: 1px solid var(--mk-border);
+      border-radius: 999px; padding: 7px 16px; cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .dossier__filters button:hover { border-color: var(--mk-text-muted); }
+    .dossier__filters button:focus-visible { outline: 2px solid var(--color-status-progress); outline-offset: 2px; }
+    .dossier__filters button[aria-selected="true"] {
+      background: rgba(226, 232, 240, .12);
+      border-color: var(--color-text-primary);
+    }
+    .dossier__filters .mk-count { color: var(--mk-text-muted); font-weight: 400; margin-left: 6px; }
+
+    /* 본문 2열 */
+    .dossier__body { display: grid; grid-template-columns: 1fr 320px; gap: var(--space-card-gap); align-items: start; }
+
+    /* 리스트 & 카드 */
+    #dossier-list, .dossier__list { display: flex; flex-direction: column; gap: var(--space-card-gap); }
+    .dossier__card {
+      position: relative;
+      background: var(--mk-bg-elevated);
+      border: 1px solid var(--mk-border);
+      border-radius: var(--mk-radius);
+      padding: 14px 16px 14px 20px;
+      cursor: pointer;
+      transition: border-color .15s, transform .15s;
+    }
+    .dossier__card::before {
+      content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; border-radius: 4px;
+      background: var(--mk-text-muted);
+    }
+    .dossier__card--requirement::before { background: #38bdf8; }
+    .dossier__card--role::before { background: #a78bfa; }
+    .dossier__card--test::before { background: #f472b6; }
+    .dossier__card:hover { border-color: var(--mk-text-muted); }
+    .dossier__card:focus-visible { outline: 2px solid var(--color-status-progress); outline-offset: 2px; }
+    .dossier__card[aria-selected="true"] { border-color: var(--color-text-primary); background: #24334a; }
+    .dossier__card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .dossier__card-title { font-size: 14px; font-weight: 600; margin: 0; }
+    .dossier__card-kind { font-size: 11px; color: var(--mk-text-muted); margin-top: 4px; }
+
+    /* 상태 badge — 색상 + 아이콘 + 텍스트 병기 */
+    .dossier__status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 600;
+      padding: 3px 9px; border-radius: 999px;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+    .dossier__status-badge .mk-ic { font-size: 12px; line-height: 1; }
+    .dossier__status-badge--done { color: var(--color-status-ready); background: rgba(34, 197, 94, .12); }
+    .dossier__status-badge--progress { color: var(--color-status-progress); background: rgba(245, 158, 11, .12); }
+    .dossier__status-badge--wait { color: var(--mk-status-wait); background: rgba(100, 116, 139, .15); }
+
+    /* 상세 패널 */
+    #dossier-detail-panel, .dossier__detail-panel {
+      background: var(--mk-bg-elevated);
+      border: 1px solid var(--mk-border);
+      border-radius: var(--mk-radius);
+      padding: 16px;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .dossier__detail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .dossier__detail-head h3 { font-size: 15px; margin: 0; }
+    .dossier__detail-close {
+      font: inherit; background: transparent; border: 1px solid var(--mk-border);
+      color: var(--mk-text-muted); border-radius: 6px; width: 28px; height: 28px; cursor: pointer;
+    }
+    .dossier__detail-close:hover { color: var(--color-text-primary); border-color: var(--mk-text-muted); }
+    .dossier__detail-close:focus-visible { outline: 2px solid var(--color-status-progress); outline-offset: 2px; }
+    .dossier__detail dl { margin: 0; font-size: 13px; }
+    .dossier__detail dt { color: var(--mk-text-muted); font-size: 11px; margin-top: 10px; }
+    .dossier__detail dd { margin: 3px 0 0; color: var(--color-text-primary); }
+    .dossier__detail p { color: var(--mk-text-muted); font-size: 13px; line-height: 1.55; }
+
+    /* 상태 화면 (loading/empty/error) */
+    .dossier__placeholder { text-align: center; padding: 40px 16px; color: var(--mk-text-muted); font-size: 14px; }
+    .dossier__skeleton { display: flex; flex-direction: column; gap: var(--space-card-gap); }
+    .dossier__skeleton-row { height: 62px; border-radius: var(--mk-radius); background: linear-gradient(90deg, #1e293b, #24334a, #1e293b); background-size: 200% 100%; animation: mk-shimmer 1.3s infinite; }
+    @keyframes mk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .dossier__error-banner {
+      display: flex; align-items: center; gap: 10px; justify-content: center;
+      background: rgba(239, 68, 68, .1); border: 1px solid var(--color-status-error);
+      color: var(--color-status-error); border-radius: 8px; padding: 12px 16px; font-size: 14px; font-weight: 600;
+    }
+    .dossier__retry {
+      font: inherit; font-size: 13px; font-weight: 600; margin-top: 14px;
+      background: var(--mk-bg-elevated); color: var(--color-text-primary);
+      border: 1px solid var(--mk-border); border-radius: 8px; padding: 8px 18px; cursor: pointer;
+    }
+    .dossier__retry:hover { border-color: var(--mk-text-muted); }
+
+    /* 상태 카탈로그 (정적 hover/focus 표현) */
+    .mk-catalog { display: flex; flex-wrap: wrap; gap: 24px; }
+    .mk-swatch { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+    .mk-swatch small { color: var(--mk-text-muted); font-size: 11px; }
+    .mk-static-hover { border-color: var(--mk-text-muted) !important; }
+    .mk-static-focus { outline: 2px solid var(--color-status-progress); outline-offset: 2px; }
+
+    /* 360px 프레임 시뮬레이션 */
+    .mk-frame-360 { width: 360px; border: 1px dashed var(--mk-border); border-radius: 12px; padding: 8px; background: #060b16; }
+    .mk-frame-360 .dossier__body { grid-template-columns: 1fr; }
+    .mk-frame-360 .dossier { padding: 16px; }
+    .mk-frame-label { font-size: 11px; color: var(--mk-text-muted); margin-bottom: 6px; }
+
+    /* ===== 반응형: 360px~639px 세로 스택 ===== */
+    @media (max-width: 639px) {
+      .dossier__body { grid-template-columns: 1fr; }
+    }
+
+    /* ===== reduced-motion: 전환/애니메이션 제거 ===== */
+    @media (prefers-reduced-motion: reduce) {
+      .dossier__card, .dossier__filters button, #dossier-detail-panel, .dossier__detail-panel { transition: none; }
+      .dossier__skeleton-row { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="mk-page-head">
+    <h1>실행 계약 상태 대시보드 — 시안 mockup</h1>
+    <p>BF-1247 · frozen ui-contract@v1 시각화 · 다크 테마 · 외부 의존성 0건 · placeholder 콘텐츠</p>
+  </header>
+
+  <div class="mk-note">
+    ⚠️ 시안 시각화 전용 mockup 입니다. 실제 구현은 developer(BF-1248) 소유
+    <code>demo/dossier-trace/{index.html,styles.css,app.js,fixtures.js}</code> 에서 이뤄지며, 계약 selector·token 은 변경하지 않습니다.
+    <code>대기</code> 상태 색상은 계약 토큰이 없어 중립 slate 로 표현(명세 §5.3 참조).
+  </div>
+
+  <!-- ============ 1. READY (2열 · 상세 패널 열림) ============ -->
+  <section class="mk-section">
+    <h2>1. ready 상태 — 2열 레이아웃 · 상세 패널 열림 (AC-1/3/4)</h2>
+    <div id="dossier-trace-root" class="dossier" data-state="ready">
+      <div class="dossier__header">
+        <h2 class="dossier__title">실행 계약 상태</h2>
+        <span class="dossier__state-summary">상태: ready · 6개 항목</span>
+      </div>
+
+      <div class="dossier__filters" role="tablist" aria-label="상태 필터">
+        <button id="dossier-filter-all" role="tab" aria-selected="true">전체 <span class="mk-count">6</span></button>
+        <button id="dossier-filter-progress" role="tab" aria-selected="false">진행 <span class="mk-count">2</span></button>
+        <button id="dossier-filter-done" role="tab" aria-selected="false">완료 <span class="mk-count">3</span></button>
+      </div>
+
+      <div class="dossier__body">
+        <div id="dossier-list" role="listbox" aria-label="계약 항목 리스트">
+          <div class="dossier__card dossier__card--requirement" role="option" aria-selected="true" tabindex="0">
+            <div class="dossier__card-top">
+              <h3 class="dossier__card-title">요구사항 — 상태 필터링</h3>
+              <span class="dossier__status-badge dossier__status-badge--done"><span class="mk-ic" aria-hidden="true">✓</span>완료</span>
+            </div>
+            <div class="dossier__card-kind">종류: 요구사항 (requirement)</div>
+          </div>
+
+          <div class="dossier__card dossier__card--role" role="option" aria-selected="false" tabindex="-1">
+            <div class="dossier__card-top">
+              <h3 class="dossier__card-title">역할 — designer 시각 명세</h3>
+              <span class="dossier__status-badge dossier__status-badge--progress"><span class="mk-ic" aria-hidden="true">◐</span>진행</span>
+            </div>
+            <div class="dossier__card-kind">종류: 역할 (role)</div>
+          </div>
+
+          <div class="dossier__card dossier__card--test" role="option" aria-selected="false" tabindex="-1">
+            <div class="dossier__card-top">
+              <h3 class="dossier__card-title">테스트 — node --test 검증</h3>
+              <span class="dossier__status-badge dossier__status-badge--wait"><span class="mk-ic" aria-hidden="true">○</span>대기</span>
+            </div>
+            <div class="dossier__card-kind">종류: 테스트 (test)</div>
+          </div>
+
+          <div class="dossier__card dossier__card--requirement" role="option" aria-selected="false" tabindex="-1">
+            <div class="dossier__card-top">
+              <h3 class="dossier__card-title">요구사항 — 접근성 병기</h3>
+              <span class="dossier__status-badge dossier__status-badge--done"><span class="mk-ic" aria-hidden="true">✓</span>완료</span>
+            </div>
+            <div class="dossier__card-kind">종류: 요구사항 (requirement)</div>
+          </div>
+
+          <div class="dossier__card dossier__card--role" role="option" aria-selected="false" tabindex="-1">
+            <div class="dossier__card-top">
+              <h3 class="dossier__card-title">역할 — developer 구현</h3>
+              <span class="dossier__status-badge dossier__status-badge--progress"><span class="mk-ic" aria-hidden="true">◐</span>진행</span>
+            </div>
+            <div class="dossier__card-kind">종류: 역할 (role)</div>
+          </div>
+
+          <div class="dossier__card dossier__card--test" role="option" aria-selected="false" tabindex="-1">
+            <div class="dossier__card-top">
+              <h3 class="dossier__card-title">테스트 — 반응형 360px</h3>
+              <span class="dossier__status-badge dossier__status-badge--done"><span class="mk-ic" aria-hidden="true">✓</span>완료</span>
+            </div>
+            <div class="dossier__card-kind">종류: 테스트 (test)</div>
+          </div>
+        </div>
+
+        <aside id="dossier-detail-panel" aria-label="선택 항목 상세">
+          <div class="dossier__detail-head">
+            <h3>항목 상세</h3>
+            <button class="dossier__detail-close" type="button" aria-label="상세 패널 닫기">×</button>
+          </div>
+          <div class="dossier__detail">
+            <dl>
+              <dt>제목</dt>
+              <dd>요구사항 — 상태 필터링</dd>
+              <dt>종류</dt>
+              <dd>요구사항 (requirement)</dd>
+              <dt>상태</dt>
+              <dd><span class="dossier__status-badge dossier__status-badge--done"><span class="mk-ic" aria-hidden="true">✓</span>완료</span></dd>
+            </dl>
+            <p>선택한 카드의 세부 내용을 표시합니다. (placeholder — Lorem ipsum) 실행 계약의 요구사항 항목이 어떤 필터·상태로 분류되는지 설명하는 자리입니다.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. LOADING ============ -->
+  <section class="mk-section">
+    <h2>2. loading 상태 (AC-1)</h2>
+    <div class="dossier" data-state="loading">
+      <div class="dossier__header">
+        <h2 class="dossier__title">실행 계약 상태</h2>
+        <span class="dossier__state-summary">상태: loading</span>
+      </div>
+      <div class="dossier__filters" aria-hidden="true">
+        <button aria-selected="true">전체</button>
+        <button aria-selected="false">진행</button>
+        <button aria-selected="false">완료</button>
+      </div>
+      <p class="dossier__placeholder">불러오는 중…</p>
+      <div class="dossier__skeleton" aria-hidden="true">
+        <div class="dossier__skeleton-row"></div>
+        <div class="dossier__skeleton-row"></div>
+        <div class="dossier__skeleton-row"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. EMPTY ============ -->
+  <section class="mk-section">
+    <h2>3. empty 상태 — 상세 패널 미개방 (AC-2)</h2>
+    <div class="dossier" data-state="empty">
+      <div class="dossier__header">
+        <h2 class="dossier__title">실행 계약 상태</h2>
+        <span class="dossier__state-summary">상태: empty · 0개 항목</span>
+      </div>
+      <div class="dossier__filters">
+        <button aria-selected="false">전체</button>
+        <button aria-selected="true">진행</button>
+        <button aria-selected="false">완료</button>
+      </div>
+      <p class="dossier__placeholder">표시할 항목이 없습니다.</p>
+    </div>
+  </section>
+
+  <!-- ============ 4. ERROR ============ -->
+  <section class="mk-section">
+    <h2>4. error 상태 — 재시도 시 초기값 복구 (AC-6 · 후조건 불변식)</h2>
+    <div class="dossier" data-state="error">
+      <div class="dossier__header">
+        <h2 class="dossier__title">실행 계약 상태</h2>
+        <span class="dossier__state-summary">상태: error</span>
+      </div>
+      <p class="dossier__error-banner"><span aria-hidden="true">⚠</span>불러오지 못했습니다.</p>
+      <div style="text-align:center;">
+        <button class="dossier__retry" type="button" aria-label="다시 시도">다시 시도</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. 360px 세로 스택 ============ -->
+  <section class="mk-section">
+    <h2>5. 360px 반응형 — 세로 스택 · overflow 없음 (AC-7)</h2>
+    <div class="mk-frame-label">↓ 360px 폭 프레임 시뮬레이션</div>
+    <div class="mk-frame-360">
+      <div class="dossier" data-state="ready">
+        <div class="dossier__header">
+          <h2 class="dossier__title" style="font-size:17px;">실행 계약 상태</h2>
+        </div>
+        <div class="dossier__filters">
+          <button aria-selected="true">전체</button>
+          <button aria-selected="false">진행</button>
+          <button aria-selected="false">완료</button>
+        </div>
+        <div class="dossier__body">
+          <div class="dossier__list">
+            <div class="dossier__card dossier__card--requirement" aria-selected="true">
+              <div class="dossier__card-top">
+                <h3 class="dossier__card-title">상태 필터링</h3>
+                <span class="dossier__status-badge dossier__status-badge--done"><span class="mk-ic" aria-hidden="true">✓</span>완료</span>
+              </div>
+              <div class="dossier__card-kind">요구사항</div>
+            </div>
+            <div class="dossier__card dossier__card--role">
+              <div class="dossier__card-top">
+                <h3 class="dossier__card-title">designer 명세</h3>
+                <span class="dossier__status-badge dossier__status-badge--progress"><span class="mk-ic" aria-hidden="true">◐</span>진행</span>
+              </div>
+              <div class="dossier__card-kind">역할</div>
+            </div>
+          </div>
+          <aside class="dossier__detail-panel" aria-label="선택 항목 상세">
+            <div class="dossier__detail-head">
+              <h3>항목 상세</h3>
+              <button class="dossier__detail-close" type="button" aria-label="상세 패널 닫기">×</button>
+            </div>
+            <div class="dossier__detail">
+              <dl>
+                <dt>제목</dt><dd>상태 필터링</dd>
+                <dt>상태</dt><dd><span class="dossier__status-badge dossier__status-badge--done"><span class="mk-ic" aria-hidden="true">✓</span>완료</span></dd>
+              </dl>
+              <p>세로 스택에서 리스트 아래에 상세 패널이 재배치됩니다.</p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. 상태·hover·focus 카탈로그 ============ -->
+  <section class="mk-section">
+    <h2>6. 상태 badge · 인터랙션 카탈로그 (AC-5 · 접근성)</h2>
+    <div class="mk-catalog">
+      <div class="mk-swatch">
+        <span class="dossier__status-badge dossier__status-badge--done"><span class="mk-ic" aria-hidden="true">✓</span>완료</span>
+        <small>ready · #22c55e</small>
+      </div>
+      <div class="mk-swatch">
+        <span class="dossier__status-badge dossier__status-badge--progress"><span class="mk-ic" aria-hidden="true">◐</span>진행</span>
+        <small>progress · #f59e0b</small>
+      </div>
+      <div class="mk-swatch">
+        <span class="dossier__status-badge dossier__status-badge--wait"><span class="mk-ic" aria-hidden="true">○</span>대기</span>
+        <small>대기 · #64748b (비계약 ⚠️)</small>
+      </div>
+    </div>
+
+    <div class="mk-catalog" style="margin-top:24px;">
+      <div class="mk-swatch" style="min-width:200px;">
+        <div class="dossier__card dossier__card--requirement" style="width:100%;">
+          <div class="dossier__card-top"><h3 class="dossier__card-title">기본 카드</h3></div>
+          <div class="dossier__card-kind">default</div>
+        </div>
+        <small>기본 상태</small>
+      </div>
+      <div class="mk-swatch" style="min-width:200px;">
+        <div class="dossier__card dossier__card--role mk-static-hover" style="width:100%;">
+          <div class="dossier__card-top"><h3 class="dossier__card-title">hover 카드</h3></div>
+          <div class="dossier__card-kind">:hover</div>
+        </div>
+        <small>hover 상태 (정적 표현)</small>
+      </div>
+      <div class="mk-swatch" style="min-width:200px;">
+        <div class="dossier__card dossier__card--test mk-static-focus" style="width:100%;">
+          <div class="dossier__card-top"><h3 class="dossier__card-title">focus 카드</h3></div>
+          <div class="dossier__card-kind">:focus-visible</div>
+        </div>
+        <small>키보드 focus ring (정적 표현)</small>
+      </div>
+      <div class="mk-swatch" style="min-width:200px;">
+        <div class="dossier__card dossier__card--requirement" aria-selected="true" style="width:100%;">
+          <div class="dossier__card-top"><h3 class="dossier__card-title">선택 카드</h3></div>
+          <div class="dossier__card-kind">aria-selected="true"</div>
+        </div>
+        <small>선택 상태</small>
+      </div>
+    </div>
+
+    <p style="color:var(--mk-text-muted); font-size:12px; margin-top:20px;">
+      키보드: 필터·리스트는 <strong>Tab/Shift+Tab</strong> 진입, <strong>화살표 키</strong>로 항목 이동, Enter/Space 선택 → <code>aria-selected</code> 반영.
+      상세 패널은 <code>aria-label="상세 패널 닫기"</code> control 로 조작. <code>prefers-reduced-motion: reduce</code> 시 전환/애니메이션 제거(AC-8).
+    </p>
+  </section>
+</body>
+</html>
