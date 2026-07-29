@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>실행 계약 상태 대시보드 · dossier-trace</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main id="dossier-trace-root" class="dossier" data-state="loading">
+    <header class="dossier__header">
+      <h1 class="dossier__title">실행 계약 상태 대시보드</h1>
+      <div class="dossier__controls">
+        <button id="dossier-run" type="button" class="dossier__run" aria-label="대시보드 데이터 다시 불러오기">
+          다시 실행
+        </button>
+        <label class="dossier__fail-toggle">
+          <input id="dossier-fail-toggle" type="checkbox" />
+          오류 재현
+        </label>
+      </div>
+    </header>
+
+    <div id="dossier-status" class="dossier__status" role="status" aria-live="polite" data-state="loading">
+      <span class="dossier__status-text">불러오는 중…</span>
+    </div>
+
+    <p id="dossier-progress" class="dossier__progress" aria-live="polite">완료 0 · 진행 0 · 대기 0</p>
+
+    <nav class="dossier__filters" role="tablist" aria-label="상태 필터">
+      <button id="dossier-filter-all" class="dossier__filter" type="button" role="tab" aria-selected="true" aria-label="전체 항목 보기">전체</button>
+      <button id="dossier-filter-progress" class="dossier__filter" type="button" role="tab" aria-selected="false" aria-label="진행 중 항목 보기">진행</button>
+      <button id="dossier-filter-done" class="dossier__filter" type="button" role="tab" aria-selected="false" aria-label="완료 항목 보기">완료</button>
+    </nav>
+
+    <div class="dossier__body">
+      <ul id="dossier-list" class="dossier__list" role="listbox" aria-label="실행 계약 항목 목록"></ul>
+
+      <aside id="dossier-detail-panel" class="dossier__detail-panel" hidden aria-hidden="true" aria-label="선택 항목 상세">
+        <button class="dossier__detail-close" type="button" aria-label="상세 패널 닫기">✕</button>
+        <div class="dossier__detail"></div>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
