@@ -15,13 +15,121 @@
       </noscript>
       <!-- board.ts 의 renderBoard(missing-evidence) 출력과 동일한 정적 읽기 전용 markup.
            frozen ui-contract@v1 selector/token/상태 텍스트를 그대로 사용한다(재정의 금지). -->
-      <div id="delivery-trace-board-root"><section id="delivery-trace-board" class="trace-board" data-phase="ready" data-filter="all"><header class="trace-board__header"><p class="trace-board__status" role="status" data-phase="ready">추적 데이터 준비 완료 · Requirement→Design→Implementation→Review→Test 5단계 연결</p><div class="trace-board__controls"><label class="trace-board__filter-label" for="trace-stage-filter">단계 상태 필터</label><select id="trace-stage-filter" class="trace-board__filter" aria-label="단계 상태 필터"><option value="all" selected>전체 (All)</option><option value="complete">완료 (Complete)</option><option value="pending">진행 중 (Pending)</option><option value="missing">누락 (Missing)</option></select></div></header><div id="trace-evidence-warning" class="trace-board__warning" aria-live="polite" aria-label="누락 evidence 경고" data-empty="false"><p class="trace-board__warning-text">누락된 evidence — 보완 대상</p><ul class="trace-board__warning-list"><li class="trace-board__warning-item">누락 evidence 단계에 경고·보완 대상 표시 — 검토 단계</li><li class="trace-board__warning-item">누락 evidence 단계에 경고·보완 대상 표시 — 테스트 단계</li><li class="trace-board__warning-item">단계 선택 시 상세 패널 evidence 표시 — 검토 단계</li><li class="trace-board__warning-item">단계 선택 시 상세 패널 evidence 표시 — 테스트 단계</li></ul></div><div class="trace-board__body"><ol class="trace-board__rows"><li class="trace-board__row" data-row-id="REQ-3"><p class="trace-board__requirement">REQ-3. 누락 evidence 단계에 경고·보완 대상 표시</p><div class="trace-board__stages"><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:requirement" data-stage="requirement" data-status="complete" aria-pressed="false" aria-label="요구사항 Requirement · 완료 (Complete)"><span class="trace-board__stage-name">요구사항 · Requirement</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:design" data-stage="design" data-status="complete" aria-pressed="false" aria-label="설계 Design · 완료 (Complete)"><span class="trace-board__stage-name">설계 · Design</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:implementation" data-stage="implementation" data-status="complete" aria-pressed="false" aria-label="구현 Implementation · 완료 (Complete)"><span class="trace-board__stage-name">구현 · Implementation</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-3:review" data-stage="review" data-status="missing" aria-pressed="false" aria-label="검토 Review · 누락 (Missing)"><span class="trace-board__stage-name">검토 · Review</span><span class="trace-board__stage-status">누락 (Missing)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-3:test" data-stage="test" data-status="missing" aria-pressed="false" aria-label="테스트 Test · 누락 (Missing)"><span class="trace-board__stage-name">테스트 · Test</span><span class="trace-board__stage-status">누락 (Missing)</span></button></div></li><li class="trace-board__row" data-row-id="REQ-4"><p class="trace-board__requirement">REQ-4. 단계 선택 시 상세 패널 evidence 표시</p><div class="trace-board__stages"><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-4:requirement" data-stage="requirement" data-status="complete" aria-pressed="false" aria-label="요구사항 Requirement · 완료 (Complete)"><span class="trace-board__stage-name">요구사항 · Requirement</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-4:design" data-stage="design" data-status="complete" aria-pressed="false" aria-label="설계 Design · 완료 (Complete)"><span class="trace-board__stage-name">설계 · Design</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--pending trace-board__stage--focus" data-cell-id="REQ-4:implementation" data-stage="implementation" data-status="pending" aria-pressed="false" aria-label="구현 Implementation · 진행 중 (Pending)"><span class="trace-board__stage-name">구현 · Implementation</span><span class="trace-board__stage-status">진행 중 (Pending)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-4:review" data-stage="review" data-status="missing" aria-pressed="false" aria-label="검토 Review · 누락 (Missing)"><span class="trace-board__stage-name">검토 · Review</span><span class="trace-board__stage-status">누락 (Missing)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-4:test" data-stage="test" data-status="missing" aria-pressed="false" aria-label="테스트 Test · 누락 (Missing)"><span class="trace-board__stage-name">테스트 · Test</span><span class="trace-board__stage-status">누락 (Missing)</span></button></div></li></ol><aside id="trace-detail-panel" class="trace-board__detail" role="region" aria-label="단계 상세 evidence" tabindex="-1" data-open="false"><p class="trace-board__detail-empty">단계 카드를 선택하면 상세 evidence 가 표시됩니다.</p></aside></div></section></div>
+      <div id="delivery-trace-board-root"><section id="delivery-trace-board" class="trace-board" data-state="missing-evidence" data-phase="ready" data-filter="all"><header class="trace-board__header"><p class="trace-board__status" role="status" data-phase="ready">추적 데이터 준비 완료 · Requirement→Design→Implementation→Review→Test 5단계 연결</p><div class="trace-board__controls"><label class="trace-board__filter-label" for="trace-stage-filter">단계 상태 필터</label><select id="trace-stage-filter" class="trace-board__filter" aria-label="단계 상태 필터"><option value="all" selected>전체 (All)</option><option value="complete">완료 (Complete)</option><option value="pending">진행 중 (Pending)</option><option value="missing">누락 (Missing)</option></select></div></header><div id="trace-evidence-warning" class="trace-board__warning" aria-live="polite" aria-label="누락 evidence 경고" data-empty="false"><p class="trace-board__warning-text">누락된 evidence — 보완 대상</p><ul class="trace-board__warning-list"><li class="trace-board__warning-item">누락 evidence 단계에 경고·보완 대상 표시 — 검토 단계</li><li class="trace-board__warning-item">누락 evidence 단계에 경고·보완 대상 표시 — 테스트 단계</li><li class="trace-board__warning-item">단계 선택 시 상세 패널 evidence 표시 — 검토 단계</li><li class="trace-board__warning-item">단계 선택 시 상세 패널 evidence 표시 — 테스트 단계</li></ul></div><div class="trace-board__body"><ol class="trace-board__rows"><li class="trace-board__row" data-row-id="REQ-3"><p class="trace-board__requirement">REQ-3. 누락 evidence 단계에 경고·보완 대상 표시</p><div class="trace-board__stages"><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:requirement" data-stage="requirement" data-status="complete" aria-pressed="false" aria-label="요구사항 Requirement · 완료 (Complete)"><span class="trace-board__stage-name">요구사항 · Requirement</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:design" data-stage="design" data-status="complete" aria-pressed="false" aria-label="설계 Design · 완료 (Complete)"><span class="trace-board__stage-name">설계 · Design</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-3:implementation" data-stage="implementation" data-status="complete" aria-pressed="false" aria-label="구현 Implementation · 완료 (Complete)"><span class="trace-board__stage-name">구현 · Implementation</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-3:review" data-stage="review" data-status="missing" aria-pressed="false" aria-label="검토 Review · 누락 (Missing)"><span class="trace-board__stage-name">검토 · Review</span><span class="trace-board__stage-status">누락 (Missing)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-3:test" data-stage="test" data-status="missing" aria-pressed="false" aria-label="테스트 Test · 누락 (Missing)"><span class="trace-board__stage-name">테스트 · Test</span><span class="trace-board__stage-status">누락 (Missing)</span></button></div></li><li class="trace-board__row" data-row-id="REQ-4"><p class="trace-board__requirement">REQ-4. 단계 선택 시 상세 패널 evidence 표시</p><div class="trace-board__stages"><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-4:requirement" data-stage="requirement" data-status="complete" aria-pressed="false" aria-label="요구사항 Requirement · 완료 (Complete)"><span class="trace-board__stage-name">요구사항 · Requirement</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--complete trace-board__stage--focus" data-cell-id="REQ-4:design" data-stage="design" data-status="complete" aria-pressed="false" aria-label="설계 Design · 완료 (Complete)"><span class="trace-board__stage-name">설계 · Design</span><span class="trace-board__stage-status">완료 (Complete)</span></button><button type="button" class="trace-board__stage trace-board__stage--pending trace-board__stage--focus" data-cell-id="REQ-4:implementation" data-stage="implementation" data-status="pending" aria-pressed="false" aria-label="구현 Implementation · 진행 중 (Pending)"><span class="trace-board__stage-name">구현 · Implementation</span><span class="trace-board__stage-status">진행 중 (Pending)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-4:review" data-stage="review" data-status="missing" aria-pressed="false" aria-label="검토 Review · 누락 (Missing)"><span class="trace-board__stage-name">검토 · Review</span><span class="trace-board__stage-status">누락 (Missing)</span></button><button type="button" class="trace-board__stage trace-board__stage--missing trace-board__stage--focus" data-cell-id="REQ-4:test" data-stage="test" data-status="missing" aria-pressed="false" aria-label="테스트 Test · 누락 (Missing)"><span class="trace-board__stage-name">테스트 · Test</span><span class="trace-board__stage-status">누락 (Missing)</span></button></div></li></ol><aside id="trace-detail-panel" class="trace-board__detail" role="region" aria-label="단계 상세 evidence" tabindex="-1" data-open="false"><p class="trace-board__detail-empty">단계 카드를 선택하면 상세 evidence 가 표시됩니다.</p></aside></div></section></div>
     </main>
-    <!-- 읽기 전용 보드는 위 정적 markup 으로 완결된다(빌드/transpile 불필요 — observed_stack: vanilla-static).
-         상태 전이·필터·상세·재시도 등 인터랙션 로직의 권위 구현은 board.ts 이며, 이는 패킷 런타임 범위(4개 owned 파일)에
-         속하고 `node --test demo/delivery-trace-canary/tests/*.test.js` 로 검증된다(type-stripping).
-         vanilla-static 라우트에는 .ts 를 브라우저로 serve 하는 transpile 계층이 없으므로 board.ts 를 브라우저 ES module 로
-         import 하지 않는다(직전 사이클 MINOR 지적 반영 — .ts 브라우저 import 런타임 실패 제거).
-         브라우저/E2E 인터랙션 검증은 downstream tester(BF-1245) 소유이다. -->
+    <!-- 상태 전이·필터·상세·재시도 로직의 권위 구현은 board.ts(mountBoard)이며 node --test 로 검증된다(type-stripping).
+         vanilla-static 라우트에는 .ts 를 브라우저로 serve 하는 transpile 계층이 없어 board.ts 를 브라우저 ES module 로
+         직접 import 할 수 없다(직전 사이클 MINOR — .ts import 런타임 실패). 따라서 board.ts mountBoard 와 동일한
+         계약(selector·상태 텍스트·data-state 6값·aria)을 정적 DOM 위 progressive enhancement 로 재현해 REQ-2(필터)·
+         REQ-4(상세 패널) 인터랙션을 실제 서빙 페이지에서 동작시킨다. JS 비활성 시 위 정적 읽기 전용 markup 으로 완결.
+         브라우저/E2E 인터랙션 검증의 authority 는 downstream tester(BF-1245) 이다. -->
+    <script type="module">
+      // board.ts 의 STAGE_LABELS/STATUS_LABELS/renderDetail·resolveUiState 계약과 동일한 값·precedence.
+      const STATUS_LABELS = {
+        complete: '완료 (Complete)',
+        pending: '진행 중 (Pending)',
+        missing: '누락 (Missing)',
+      };
+      const STAGE_LABELS = {
+        requirement: { ko: '요구사항', en: 'Requirement' },
+        design: { ko: '설계', en: 'Design' },
+        implementation: { ko: '구현', en: 'Implementation' },
+        review: { ko: '검토', en: 'Review' },
+        test: { ko: '테스트', en: 'Test' },
+      };
+      // fixtures.ts(missing-evidence trace)의 결정론적 evidence 상세. missing 단계는 board.ts renderDetail 과 동일 문구.
+      const MISSING_DETAIL = '누락된 evidence — 보완 대상 · evidence 없음';
+      const EVIDENCE = {
+        'REQ-3:requirement': 'REQ-3 경고 요구 확정',
+        'REQ-3:design': 'mockup 경고 영역 정의',
+        'REQ-3:implementation': 'trace-evidence-warning 구현',
+        'REQ-3:review': MISSING_DETAIL,
+        'REQ-3:test': MISSING_DETAIL,
+        'REQ-4:requirement': 'REQ-4 상세 요구 확정',
+        'REQ-4:design': 'mockup 상세 패널',
+        'REQ-4:implementation': '상세 패널 포커스 처리 진행 중',
+        'REQ-4:review': MISSING_DETAIL,
+        'REQ-4:test': MISSING_DETAIL,
+      };
+      const DETAIL_EMPTY = '단계 카드를 선택하면 상세 evidence 가 표시됩니다.';
+
+      const board = document.getElementById('delivery-trace-board');
+      const filter = document.getElementById('trace-stage-filter');
+      const panel = document.getElementById('trace-detail-panel');
+      if (board && filter && panel) {
+        const stages = () => Array.from(board.querySelectorAll('.trace-board__stage'));
+        let selectedCellId = null;
+
+        // resolveUiState precedence: detail-open → filtered → missing-evidence → ready (정적 페이지는 loading/error 없음).
+        const resolveState = () => {
+          if (selectedCellId !== null) return 'detail-open';
+          if (filter.value !== 'all') return 'filtered';
+          if (board.querySelector('.trace-board__stage--missing') !== null) return 'missing-evidence';
+          return 'ready';
+        };
+        const syncState = () => {
+          board.setAttribute('data-state', resolveState());
+          board.setAttribute('data-filter', filter.value);
+        };
+
+        // REQ-2: 필터 선택 시 해당 상태 단계만 강조(focus), 나머지는 흐리게(dim). 'all' 은 초기값 복귀.
+        const applyFilter = () => {
+          const value = filter.value;
+          for (const btn of stages()) {
+            const focused = value === 'all' || btn.getAttribute('data-status') === value;
+            btn.classList.toggle('trace-board__stage--focus', focused);
+            btn.classList.toggle('trace-board__stage--dim', !focused);
+          }
+          syncState();
+        };
+
+        // REQ-4 취소/초기화: 상세 패널을 초기값으로 되돌리고 선택 해제(주 control 재사용 가능 상태 유지).
+        const closeDetail = () => {
+          selectedCellId = null;
+          for (const btn of stages()) {
+            btn.setAttribute('aria-pressed', 'false');
+            btn.classList.remove('trace-board__stage--selected');
+          }
+          panel.setAttribute('data-open', 'false');
+          panel.innerHTML = '<p class="trace-board__detail-empty"></p>';
+          panel.querySelector('.trace-board__detail-empty').textContent = DETAIL_EMPTY;
+          syncState();
+        };
+
+        // REQ-4: 단계 선택 시 상세 패널에 evidence 상세를 텍스트로 표시하고 포커스를 준다(열릴 때 포커스 계약).
+        const openDetail = (btn) => {
+          const cellId = btn.getAttribute('data-cell-id');
+          const stage = btn.getAttribute('data-stage');
+          const status = btn.getAttribute('data-status');
+          selectedCellId = cellId;
+          for (const other of stages()) {
+            const on = other === btn;
+            other.setAttribute('aria-pressed', on ? 'true' : 'false');
+            other.classList.toggle('trace-board__stage--selected', on);
+          }
+          const label = STAGE_LABELS[stage];
+          const evidence = EVIDENCE[cellId] ?? MISSING_DETAIL;
+          panel.setAttribute('data-open', 'true');
+          const title = document.createElement('h3');
+          title.className = 'trace-board__detail-title';
+          title.textContent = `${label.ko} · ${label.en} — ${STATUS_LABELS[status]}`;
+          const body = document.createElement('p');
+          body.className = 'trace-board__detail-evidence';
+          body.textContent = evidence;
+          panel.replaceChildren(title, body);
+          syncState();
+          panel.focus();
+        };
+
+        filter.addEventListener('change', applyFilter);
+        for (const btn of stages()) {
+          btn.addEventListener('click', () => {
+            if (selectedCellId === btn.getAttribute('data-cell-id')) closeDetail();
+            else openDetail(btn);
+          });
+        }
+        syncState();
+      }
+    </script>
   </body>
 </html>

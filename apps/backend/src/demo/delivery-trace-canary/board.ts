@@ -21,6 +21,18 @@ export type StageStatus = 'complete' | 'pending' | 'missing';
 /** 보드 데이터 로드 단계(진행 표시의 근원). */
 export type BoardPhase = 'loading' | 'ready' | 'error';
 
+/**
+ * frozen ui-contract §2.2 의 6-상태 UI 계약값.
+ * DOM 에 `data-state` 로 노출된다(색상 외 화면 텍스트와 함께 접근성 이름으로도 전달).
+ */
+export type UiState =
+  | 'loading'
+  | 'ready'
+  | 'filtered'
+  | 'missing-evidence'
+  | 'detail-open'
+  | 'error';
+
 /** 상태 필터 값. 'all' + 3개 상태. */
 export type StageFilter = 'all' | StageStatus;
 
@@ -181,6 +193,20 @@ export function isCellFocused(cell: StageCell, filter: StageFilter): boolean {
   return filter === 'all' || cell.status === filter;
 }
 
+/**
+ * 현재 BoardState 를 6-상태 UI 계약값(§2.2)으로 결정론적 precedence 로 산출한다.
+ * precedence: loading → error → detail-open → filtered → missing-evidence → ready.
+ * (진행 표시 phase 가 우선, 그 다음 가장 구체적인 사용자 인터랙션 상태 순.)
+ */
+export function resolveUiState(state: BoardState): UiState {
+  if (state.phase === 'loading') return 'loading';
+  if (state.phase === 'error') return 'error';
+  if (state.selectedCellId !== null) return 'detail-open';
+  if (state.filter !== 'all') return 'filtered';
+  if (computeMissingEvidence(state.data).length > 0) return 'missing-evidence';
+  return 'ready';
+}
+
 // ─────────────────────────────────────────────────────────────
 // 렌더 (문자열) — DOM 없이 검증 가능
 // ─────────────────────────────────────────────────────────────
@@ -323,7 +349,7 @@ function renderBody(state: BoardState): string {
 /** 보드 전체 markup 을 문자열로 렌더. mountBoard 와 정적 초기 markup 이 공유. */
 export function renderBoard(state: BoardState): string {
   return (
-    `<section id="delivery-trace-board" class="trace-board" data-phase="${state.phase}" data-filter="${state.filter}">` +
+    `<section id="delivery-trace-board" class="trace-board" data-state="${resolveUiState(state)}" data-phase="${state.phase}" data-filter="${state.filter}">` +
     `<header class="trace-board__header">${renderStatusLine(state)}${renderControls(state)}</header>` +
     renderWarning(state) +
     `<div class="trace-board__body">${renderBody(state)}${renderDetail(state)}</div>` +

@@ -19,6 +19,15 @@ export type BoardPhase = 'loading' | 'ready' | 'error';
 /** 상태 필터 값. */
 export type StageFilter = 'all' | StageStatus;
 
+/** frozen ui-contract §2.2 의 6-상태 UI 계약값(DOM `data-state` 로 노출). */
+export type UiState =
+  | 'loading'
+  | 'ready'
+  | 'filtered'
+  | 'missing-evidence'
+  | 'detail-open'
+  | 'error';
+
 export interface StageCell {
   readonly stage: StageId;
   readonly status: StageStatus;
@@ -73,6 +82,7 @@ export function resetView(state: BoardState): BoardState;
 export function findCell(data: TraceData | null, cellId: string | null): StageCell | null;
 export function computeMissingEvidence(data: TraceData | null): readonly MissingEvidenceItem[];
 export function isCellFocused(cell: StageCell, filter: StageFilter): boolean;
+export function resolveUiState(state: BoardState): UiState;
 export function escapeHtml(value: string): string;
 export function renderBoard(state: BoardState): string;
 export function mountBoard(root: HTMLElement, options: MountOptions): BoardHandle;

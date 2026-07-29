@@ -224,6 +224,21 @@
   cursor: pointer;
 }
 
+/* 6-상태 UI 계약(§2.2) data-state 훅 — 상태별 시각 보강.
+   색상 단독 의존 금지: 상태명은 화면 텍스트(status line·경고·상세 제목)가 주 전달수단이며
+   아래 규칙은 이미 노출된 텍스트/영역을 강조만 한다(기본 레이아웃 회귀 없음). */
+.trace-board[data-state="missing-evidence"] .trace-board__warning {
+  box-shadow: inset 0 0 0 1px var(--color-evidence-missing);
+}
+
+.trace-board[data-state="detail-open"] .trace-board__detail {
+  border-color: #2563eb;
+}
+
+.trace-board[data-state="filtered"] .trace-board__status {
+  color: #2563eb;
+}
+
 /* 반응형: 480px 미만 단계 카드 세로 스택 */
 @media (max-width: 479px) {
   .trace-board__stages {
