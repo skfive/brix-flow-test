@@ -222,10 +222,26 @@ frozen 4개 토큰은 **exact 값**으로 선언한다. 하드코딩된 상태�
 - 6개 상태를 `<section>`으로 구분하여 정적 시뮬레이션(loading/ready/filtered/missing-evidence/detail-open/error).
 - placeholder 콘텐츠로 UX 의도 전달. dev는 참조 가이드로 사용하되 픽셀 단위 일치 의무 없음.
 
+### 8.1 mockup 고유 id 규약 (단일 페이지 시뮬레이션 제약)
+mockup은 6개 보드를 한 페이지에 겹쳐 두므로 **HTML 고유 id 제약**을 지켜야 한다. 따라서 frozen id 4개는
+각 요소가 활성화되는 **대표 상태 섹션에 정확히 1회만** 노출한다(id 개명·재정의 없음). frozen class는 모든
+섹션에서 반복 사용한다. dev(BF-1242)의 실제 산출물은 단일 보드이므로 이 제약 없이 4개 id를 그대로 1회 부여하면 된다.
+
+| frozen id | mockup 노출 섹션 | 부착 요소 |
+| --- | --- | --- |
+| `delivery-trace-board` | `ready` | 보드 루트 `.trace-board` |
+| `trace-stage-filter` | `ready` | 필터 컨트롤 `select.trace-board__filter` |
+| `trace-detail-panel` | `detail-open` | 상세 패널 `.trace-board__detail` (열림·포커스 대상) |
+| `trace-evidence-warning` | `missing-evidence` | 경고 영역 `.trace-board__warning` |
+
+- frozen class `trace-board__filter`는 **필터 컨트롤(`select`) 자체**에 부착한다(§7.2와 일치). label+select 를 감싸는
+  wrapper 는 로컬 class `trace-board__filter-group`(frozen 아님)로 표현하며, 다른 섹션의 select 는 고유 id 없이
+  중첩 `<label>` 로 접근성 이름을 유지한다.
+
 ## 9. AC 매핑
 
 | Acceptance Criteria | 반영 위치 |
 | --- | --- |
-| ui-contract의 domIds/cssClasses/states/designTokens를 재정의 없이 그대로 반영 | §2, §4, §5, §6 (frozen 그대로) + mockup |
+| ui-contract의 domIds/cssClasses/states/designTokens를 재정의 없이 그대로 반영 | §2, §4, §5, §6 (frozen 그대로) + mockup. mockup은 단일 페이지 6-섹션 시뮬레이션이라 HTML 고유 id 제약상 frozen id 4개를 대표 상태 섹션에 정확히 1회씩 노출한다(§8.1 매핑 표 — id 개명·재정의 없음). frozen class는 전 섹션 반복 사용하며, `trace-board__filter`는 필터 컨트롤 `select`에 부착한다 |
 | 5단계 추적 상태·누락 evidence 경고·한국어/영문 용어를 mockup에 시각 표현 | §5, §6.5, mockup의 ready/missing-evidence 섹션 |
 | 시각 명세 범위는 md + mockup.html이며 런타임 HTML/CSS/JS 미생성 | 본 2개 파일만 산출, 코드/entry HTML 미작성 |
