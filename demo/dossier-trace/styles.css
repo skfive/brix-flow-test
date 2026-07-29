@@ -1,0 +1,211 @@
+/* 실행 계약 상태 대시보드 — 스코프 전용 스타일 (BF-1248) */
+/* 계약 §3.4 디자인 토큰(exact). 스코프 루트에서만 정의하여 전역 토큰을 변경하지 않는다. */
+
+.dossier {
+  --color-bg-surface: #0f172a;
+  --color-text-primary: #e2e8f0;
+  --color-status-ready: #22c55e;
+  --color-status-progress: #f59e0b;
+  --color-status-error: #ef4444;
+  --space-card-gap: 16px;
+  /* additive: 대기 상태용 중립 색(계약 토큰 미정의분) */
+  --color-status-muted: #94a3b8;
+
+  box-sizing: border-box;
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+.dossier *,
+.dossier *::before,
+.dossier *::after {
+  box-sizing: border-box;
+}
+
+.dossier__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dossier__title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.dossier__controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.dossier__run {
+  padding: 8px 14px;
+  border: 1px solid var(--color-text-primary);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dossier__run:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.dossier__run:focus-visible,
+.dossier__filter:focus-visible,
+.dossier__card:focus-visible,
+.dossier__detail-close:focus-visible {
+  outline: 2px solid var(--color-status-progress);
+  outline-offset: 2px;
+}
+
+.dossier__fail-toggle {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.dossier__status {
+  margin: 16px 0 4px;
+  font-weight: 600;
+}
+
+.dossier__status[data-state="loading"] .dossier__status-text { color: var(--color-status-progress); }
+.dossier__status[data-state="ready"] .dossier__status-text { color: var(--color-status-ready); }
+.dossier__status[data-state="empty"] .dossier__status-text { color: var(--color-status-muted); }
+.dossier__status[data-state="error"] .dossier__status-text { color: var(--color-status-error); }
+
+.dossier__progress {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: var(--color-status-muted);
+}
+
+.dossier__filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: var(--space-card-gap);
+}
+
+.dossier__filter {
+  padding: 6px 14px;
+  border: 1px solid rgba(226, 232, 240, 0.4);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dossier__filter[aria-selected="true"] {
+  background: var(--color-text-primary);
+  color: var(--color-bg-surface);
+  font-weight: 700;
+}
+
+.dossier__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-card-gap);
+}
+
+.dossier__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-card-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.dossier__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.16);
+  border-left: 4px solid var(--color-status-muted);
+  border-radius: 8px;
+  background: rgba(226, 232, 240, 0.04);
+  cursor: pointer;
+  min-width: 0;
+  word-break: break-word;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dossier__card--requirement { border-left-color: var(--color-status-progress); }
+.dossier__card--role { border-left-color: var(--color-status-ready); }
+.dossier__card--test { border-left-color: var(--color-status-muted); }
+
+.dossier__card[aria-selected="true"] {
+  border-color: var(--color-text-primary);
+  background: rgba(226, 232, 240, 0.1);
+}
+
+.dossier__card-title { font-weight: 600; }
+.dossier__card-summary { font-size: 0.85rem; color: var(--color-status-muted); }
+
+.dossier__status-badge {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border: 1px solid var(--badge-color, var(--color-status-muted));
+  border-radius: 999px;
+  color: var(--badge-color, var(--color-status-muted));
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.dossier__detail-panel {
+  padding: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.2);
+  border-radius: 8px;
+  background: rgba(226, 232, 240, 0.06);
+  min-width: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.dossier__detail-panel[hidden] { display: none; }
+
+.dossier__detail-close {
+  float: right;
+  padding: 4px 8px;
+  border: 1px solid rgba(226, 232, 240, 0.4);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dossier__detail-title { margin: 0 0 8px; font-size: 1.05rem; }
+.dossier__detail-status { margin: 0 0 8px; font-weight: 600; }
+.dossier__detail-body { margin: 0; }
+
+/* 계약 §3.6 반응형: 360px 이상에서 리스트/상세 세로 스택 + overflow 없음 */
+@media (min-width: 360px) {
+  .dossier__body { flex-direction: column; }
+  .dossier__list,
+  .dossier__detail-panel { width: 100%; }
+}
+
+/* 계약 §3.5 reduced-motion: 전환 애니메이션 제거 */
+@media (prefers-reduced-motion: reduce) {
+  .dossier *,
+  .dossier *::before,
+  .dossier *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
