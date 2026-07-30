@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>전달 상태 보드</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section id="board-root" class="board" data-state="idle">
+        <header class="board__header">
+          <h1 class="board__title">전달 상태 보드</h1>
+          <p id="board-revision" class="board__revision">리비전: —</p>
+          <button
+            id="board-refresh"
+            class="board__refresh"
+            type="button"
+            aria-label="전달 상태 새로고침"
+          >
+            새로고침
+          </button>
+        </header>
+
+        <p class="board__message" data-role="status-message" hidden></p>
+
+        <ul id="board-role-list" class="board__role-list" aria-live="polite"></ul>
+      </section>
+    </main>
+
+    <script type="module" src="./src/board.js"></script>
+  </body>
+</html>
