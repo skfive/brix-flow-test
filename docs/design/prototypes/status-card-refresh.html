@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>status-card 새로고침 상태 시안 — BF-1260</title>
+  <style>
+    /* ── frozen designTokens (ui-contract@v1) — 값 변경 금지 ── */
+    :root {
+      --status-refresh-gap: 12px;
+      --status-loading-color: #2563eb;
+      --status-success-color: #16a34a;
+      --status-error-color: #dc2626;
+
+      /* 시각 명세 전용 보조 색상 (frozen 아님) */
+      --surface: #ffffff;
+      --page-bg: #f1f5f9;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+              "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 16px;
+      background: var(--page-bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.5;
+    }
+
+    .page-title { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+    .page-note { font-size: 13px; color: var(--text-muted); margin: 0 0 24px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 960px;
+    }
+    .grid > figure { margin: 0; }
+    .grid figcaption {
+      font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600;
+    }
+
+    /* ── status-card 본체 ── */
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+    .status-card__title { font-size: 18px; font-weight: 600; line-height: 1.4; margin: 0 0 16px; }
+
+    .status-card__status-text {
+      font-size: 15px;
+      font-weight: 500;
+      margin: 0 0 4px;
+      overflow-wrap: anywhere;         /* 320px 폭 overflow 방지 */
+    }
+    /* error 상태 modifier — 색상은 보조 신호, 텍스트가 1차 신호 */
+    .status-card__status-text--error { color: var(--status-error-color); }
+    /* 시각 명세용 상태별 텍스트 색상 (loading/success) — 텍스트로도 상태 명시 */
+    .is-loading .status-card__status-text { color: var(--status-loading-color); }
+    .is-success .status-card__status-text { color: var(--status-success-color); }
+
+    #status-card-last-updated {
+      font-size: 13px; color: var(--text-muted); margin: 0 0 16px; min-height: 1em;
+    }
+
+    .status-card__actions {
+      display: flex;
+      gap: var(--status-refresh-gap);   /* frozen 12px */
+      flex-wrap: wrap;                  /* 좁은 폭에서 줄바꿈 → overflow 방지 */
+      align-items: center;
+    }
+
+    .status-card__refresh {
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.2;
+      padding: 10px 18px;
+      border: 1px solid var(--status-loading-color);
+      border-radius: 8px;
+      background: var(--status-loading-color);
+      color: #ffffff;
+      cursor: pointer;
+    }
+    .status-card__refresh:hover:not([disabled]) { filter: brightness(0.94); }
+    .status-card__refresh:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.4);
+      outline-offset: 2px;
+    }
+    /* loading modifier — disabled + aria-busy 와 함께 중복 클릭 차단 */
+    .status-card__refresh--loading,
+    .status-card__refresh[disabled] {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+    .status-card__refresh--loading::before {
+      content: "";
+      display: inline-block;
+      width: 12px; height: 12px;
+      margin-right: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      vertical-align: -1px;
+      /* 정적 시안: 진행 표시를 시각적으로만 표현 */
+    }
+
+    #status-card-retry-action {
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border: 1px solid var(--status-error-color);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--status-error-color);
+      cursor: pointer;
+    }
+    #status-card-retry-action:hover { background: rgba(220, 38, 38, 0.06); }
+    #status-card-retry-action:focus-visible {
+      outline: 3px solid rgba(220, 38, 38, 0.35);
+      outline-offset: 2px;
+    }
+
+    /* 접근성/토큰 범례 */
+    .legend {
+      max-width: 960px; margin: 32px 0 0; padding: 16px 20px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      font-size: 13px;
+    }
+    .legend h2 { font-size: 15px; margin: 0 0 12px; }
+    .legend table { border-collapse: collapse; width: 100%; }
+    .legend th, .legend td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+
+    @media (max-width: 360px) {
+      body { padding: 20px 12px; }
+      .status-card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">status-card 새로고침 상태 시안 (BF-1260)</h1>
+  <p class="page-note">
+    ui-contract@v1 (blueprint-frozen) 시각화 · 네 상태 각각 고유 화면 텍스트 + 접근성 이름 노출 ·
+    색상은 보조 신호. 상세: docs/design/status-card-refresh-BF-1259.md
+  </p>
+
+  <div class="grid">
+
+    <!-- ── idle ── -->
+    <figure>
+      <figcaption>상태: idle</figcaption>
+      <section class="status-card is-idle" aria-label="상태 카드 (idle)">
+        <h2 class="status-card__title">상태 카드</h2>
+        <p id="status-card-status-text" class="status-card__status-text" aria-live="polite">최근 상태를 확인하려면 새로고침하세요.</p>
+        <p id="status-card-last-updated"></p>
+        <div class="status-card__actions">
+          <button type="button" class="status-card__refresh" aria-label="상태 새로고침">새로고침</button>
+        </div>
+      </section>
+    </figure>
+
+    <!-- ── loading ── -->
+    <figure>
+      <figcaption>상태: loading (버튼 disabled + aria-busy)</figcaption>
+      <section class="status-card is-loading" aria-label="상태 카드 (loading)">
+        <h2 class="status-card__title">상태 카드</h2>
+        <p class="status-card__status-text" aria-live="polite">상태를 불러오는 중…</p>
+        <p>&nbsp;</p>
+        <div class="status-card__actions">
+          <button type="button" class="status-card__refresh status-card__refresh--loading" aria-label="상태 새로고침" aria-busy="true" disabled>새로고침</button>
+        </div>
+      </section>
+    </figure>
+
+    <!-- ── success ── -->
+    <figure>
+      <figcaption>상태: success (마지막 갱신 시각 표기)</figcaption>
+      <section class="status-card is-success" aria-label="상태 카드 (success)">
+        <h2 class="status-card__title">상태 카드</h2>
+        <p class="status-card__status-text" aria-live="polite">상태를 방금 갱신했습니다.</p>
+        <p id="status-card-last-updated">마지막 갱신: 오후 3:24</p>
+        <div class="status-card__actions">
+          <button type="button" class="status-card__refresh" aria-label="상태 새로고침">새로고침</button>
+        </div>
+      </section>
+    </figure>
+
+    <!-- ── error ── -->
+    <figure>
+      <figcaption>상태: error (재시도 control 노출)</figcaption>
+      <section class="status-card is-error" aria-label="상태 카드 (error)">
+        <h2 class="status-card__title">상태 카드</h2>
+        <p class="status-card__status-text status-card__status-text--error" aria-live="polite">상태를 불러오지 못했습니다. 다시 시도해 주세요.</p>
+        <p>&nbsp;</p>
+        <div class="status-card__actions">
+          <button type="button" class="status-card__refresh" aria-label="상태 새로고침">새로고침</button>
+          <button type="button" id="status-card-retry-action">다시 시도</button>
+        </div>
+      </section>
+    </figure>
+
+  </div>
+
+  <!-- ── 토큰/접근성 범례 ── -->
+  <div class="legend">
+    <h2>frozen 디자인 토큰 &amp; 접근성 계약</h2>
+    <table>
+      <tr><th>토큰</th><th>값</th><th>용도</th></tr>
+      <tr><td><span class="swatch" style="background:#2563eb"></span>--status-loading-color</td><td>#2563eb</td><td>loading 진행 표시</td></tr>
+      <tr><td><span class="swatch" style="background:#16a34a"></span>--status-success-color</td><td>#16a34a</td><td>success 텍스트</td></tr>
+      <tr><td><span class="swatch" style="background:#dc2626"></span>--status-error-color</td><td>#dc2626</td><td>error 텍스트</td></tr>
+      <tr><td>--status-refresh-gap</td><td>12px</td><td>action row 간격</td></tr>
+    </table>
+    <p style="margin:12px 0 0; color:var(--text-muted);">
+      접근성: 새로고침 버튼 <code>aria-label="상태 새로고침"</code> ·
+      상태 텍스트 <code>aria-live="polite"</code> ·
+      loading 시 <code>aria-busy="true"</code> + <code>disabled</code> ·
+      모든 상태는 색상 외 화면 텍스트로 상태명 노출 ·
+      320px 이상 폭에서 overflow 없이 배치.
+    </p>
+  </div>
+</body>
+</html>
