@@ -1,0 +1,114 @@
+/*
+ * status-card 새로고침 상태 스타일 (BF-1261)
+ * frozen ui-contract@v1 (BF-1259) 의 디자인 토큰·class 를 그대로 사용한다.
+ * 상태는 색상만으로 구분하지 않으며 화면 텍스트가 항상 상태명을 노출한다.
+ */
+:root {
+  --status-refresh-gap: 12px;
+  --status-loading-color: #2563eb;
+  --status-success-color: #16a34a;
+  --status-error-color: #dc2626;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.status-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--status-refresh-gap);
+  max-width: 480px;
+  margin: 24px auto;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #0f172a;
+}
+
+.status-card__heading {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.status-card__status-text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* success 상태 — 텍스트로 상태를 노출하고 색상은 보조 신호로만 사용 */
+.status-card__status-text[data-state="success"] {
+  color: var(--status-success-color);
+}
+
+/* loading 상태 — 진행 중을 색상으로 보조 표시 */
+.status-card__status-text[data-state="loading"] {
+  color: var(--status-loading-color);
+}
+
+/* error 상태 텍스트 modifier(frozen) */
+.status-card__status-text--error {
+  color: var(--status-error-color);
+}
+
+.status-card__last-updated {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+.status-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--status-refresh-gap);
+}
+
+.status-card__refresh,
+.status-card__retry {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.status-card__refresh {
+  background: var(--status-loading-color);
+  color: #ffffff;
+}
+
+/* loading 상태 버튼 modifier(frozen) — 진행 표시 + 비활성 피드백 */
+.status-card__refresh--loading {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.status-card__refresh:disabled {
+  cursor: not-allowed;
+}
+
+.status-card__retry {
+  background: #ffffff;
+  color: var(--status-error-color);
+  border-color: var(--status-error-color);
+}
+
+/* 320px 이상 폭에서 텍스트·버튼이 overflow 없이 배치되도록 보장 */
+@media (max-width: 480px) {
+  .status-card {
+    margin: 12px;
+    padding: 16px;
+  }
+
+  .status-card__refresh,
+  .status-card__retry {
+    flex: 1 1 auto;
+  }
+}
