@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planning — 종료 준비 상태</title>
+    <style>
+      /* §3.4 디자인 토큰 (정확값 — 재정의 금지) */
+      :root {
+        --color-status-ready: #16a34a;
+        --color-status-blocked: #dc2626;
+        --color-status-neutral: #64748b;
+        --space-panel-gap: 12px;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+
+      .planning-main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 24px 16px;
+      }
+
+      /* ── 종료 준비 상태 안내 영역 (additive) ── */
+      .planning-closure {
+        display: flex;
+        flex-wrap: wrap; /* §3.6 320px 이상에서 content overflow 방지 */
+        align-items: center;
+        gap: var(--space-panel-gap);
+        padding: var(--space-panel-gap);
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .planning-closure__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #ffffff;
+        background: var(--color-status-neutral);
+      }
+
+      /* 상태별 색상 — 상태명 텍스트와 함께 노출(§3.5.3 색상 비의존) */
+      .planning-closure[data-state="ready"] .planning-closure__badge {
+        background: var(--color-status-ready);
+      }
+      .planning-closure[data-state="blocked"] .planning-closure__badge,
+      .planning-closure[data-state="needs-operator-action"] .planning-closure__badge,
+      .planning-closure[data-state="error"] .planning-closure__badge {
+        background: var(--color-status-blocked);
+      }
+      .planning-closure[data-state="loading"] .planning-closure__badge,
+      .planning-closure[data-state="empty"] .planning-closure__badge {
+        background: var(--color-status-neutral);
+      }
+
+      .planning-closure__count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 6px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--color-status-blocked);
+        background: #fee2e2;
+      }
+      .planning-closure__count[hidden] {
+        display: none;
+      }
+
+      .planning-closure__action {
+        margin-left: auto;
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d4ed8;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      .planning-closure__action[aria-disabled="true"] {
+        color: var(--color-status-neutral);
+        pointer-events: none;
+        cursor: default;
+        text-decoration: none;
+      }
+      .planning-closure__action:focus-visible {
+        outline: 2px solid #1d4ed8;
+        outline-offset: 2px;
+      }
+
+      @media (max-width: 360px) {
+        .planning-closure__action {
+          margin-left: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="planning-main">
+      <h1>Planning</h1>
+
+      <!-- 종료 준비 상태 안내 영역 (additive · frozen ui-contract@v1) -->
+      <section
+        id="planning-closure-status"
+        class="planning-closure"
+        aria-live="polite"
+        aria-label="종료 준비 상태: 상태 확인 중"
+        data-state="loading"
+        data-dossier-url="/api/planning/dossier"
+      >
+        <span class="planning-closure__badge" data-role="badge">상태 확인 중</span>
+        <span id="planning-closure-blocker-count" class="planning-closure__count" hidden></span>
+        <a
+          id="planning-closure-action"
+          class="planning-closure__action"
+          href="#"
+          role="button"
+          aria-label="종료 준비 상태 다시 확인"
+          aria-disabled="true"
+          data-action-mode="refresh"
+          tabindex="-1"
+        >종료 준비 상태 다시 확인</a>
+      </section>
+    </main>
+
+    <script type="module" src="./closure-status.js"></script>
+  </body>
+</html>
