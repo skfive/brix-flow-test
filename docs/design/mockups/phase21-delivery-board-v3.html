@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전달 상태 보드 v3 · 시각 mockup (BF-1285)</title>
+  <style>
+    /* ── 동결 design token (frozen ui-contract@v1 — 값 변경 금지) ── */
+    :root {
+      --color-status-verified: #16a34a;
+      --color-status-pending: #f59e0b;
+      --color-status-failed: #dc2626;
+      --space-board-gap: 16px;
+      --font-board-label: 14px;
+
+      /* ── vanilla-static 자체 정의 중립색 ── */
+      --c-text: #111827;
+      --c-text-muted: #6b7280;
+      --c-bg: #f9fafb;
+      --c-surface: #ffffff;
+      --c-border: #e5e7eb;
+      --c-accent: #2563eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--c-bg);
+      color: var(--c-text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      font-size: var(--font-board-label);
+      line-height: 1.5;
+    }
+
+    .page-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+    .page-sub { color: var(--c-text-muted); font-size: 12px; margin: 0 0 24px; }
+    .section-label {
+      font-size: 12px; font-weight: 600; letter-spacing: .04em;
+      text-transform: uppercase; color: var(--c-text-muted);
+      margin: 28px 0 12px;
+    }
+
+    /* ── 보드 컨테이너 ── */
+    .delivery-board {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-board-gap);
+      max-width: 720px;
+      box-shadow: 0 1px 2px rgba(17, 24, 39, .05);
+    }
+
+    .delivery-board__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .delivery-board__title { font-size: 18px; font-weight: 600; margin: 0; }
+
+    /* ── 주 실행 control: board-refresh ── */
+    .delivery-board__refresh {
+      font: inherit;
+      font-weight: 600;
+      color: #fff;
+      background: var(--c-accent);
+      border: 1px solid var(--c-accent);
+      border-radius: 8px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    .delivery-board__refresh:hover { background: #1d4ed8; }
+    .delivery-board__refresh:active { transform: translateY(1px); }
+    .delivery-board__refresh:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+    .delivery-board__refresh:disabled { opacity: .6; cursor: default; }
+
+    /* ── 상태 알림 영역: board-status ── */
+    .delivery-board__status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #f3f4f6;
+    }
+    .delivery-board__status .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--c-text-muted); flex: none;
+    }
+    .delivery-board__status[data-tone="loading"] .dot { background: var(--color-status-pending); }
+    .delivery-board__status[data-tone="loaded"] .dot { background: var(--color-status-verified); }
+    .delivery-board__status[data-tone="error"] .dot { background: var(--color-status-failed); }
+    .status-note { font-weight: 400; color: var(--c-text-muted); }
+
+    /* ── 진행 표시 (loading) ── */
+    .delivery-board__spinner {
+      width: 16px; height: 16px; flex: none;
+      border: 2px solid var(--c-border);
+      border-top-color: var(--c-accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 역할 목록: board-role-list ── */
+    .delivery-board__role-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;   /* ≥320px: 세로 스택 */
+      gap: var(--space-board-gap);
+    }
+    .delivery-board__role {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 16px;
+      border: 1px solid var(--c-border);
+      border-radius: 8px;
+      background: var(--c-surface);
+    }
+    .delivery-board__role .role-name { font-weight: 500; word-break: break-word; }
+
+    /* ── 상태 배지: board__badge (색상 + 상태명 텍스트) ── */
+    .delivery-board__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .delivery-board__badge::before {
+      content: "";
+      width: 8px; height: 8px; border-radius: 50%;
+      background: currentColor;
+    }
+    .delivery-board__badge--verified {
+      color: var(--color-status-verified);
+      background: #dcfce7;
+      border-color: #bbf7d0;
+    }
+    .delivery-board__badge--pending {
+      color: #b45309;                 /* pending 텍스트 대비 확보용 짙은 amber */
+      background: #fef3c7;
+      border-color: #fde68a;
+    }
+    .delivery-board__badge--pending::before { background: var(--color-status-pending); }
+    .delivery-board__badge--failed {
+      color: var(--color-status-failed);
+      background: #fee2e2;
+      border-color: #fecaca;
+    }
+
+    /* ── 빈 상태 (empty) ── */
+    .delivery-board__empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--c-text-muted);
+      border: 1px dashed var(--c-border);
+      border-radius: 8px;
+    }
+
+    /* ── 오류 상태 (error) ── */
+    .delivery-board__error {
+      padding: 16px;
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      border-radius: 8px;
+      color: #991b1b;
+    }
+
+    /* ── revision 표시: board-revision ── */
+    .delivery-board__revision {
+      font-size: 12px;
+      color: var(--c-text-muted);
+      border-top: 1px solid var(--c-border);
+      padding-top: 12px;
+    }
+
+    /* ── 반응형: ≥768px 다열 grid ── */
+    @media (min-width: 768px) {
+      .delivery-board__role-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      }
+    }
+
+    /* mockup 미리보기 나열용 */
+    .preview-grid { display: flex; flex-direction: column; gap: 24px; }
+    @media (min-width: 900px) {
+      .preview-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+    }
+    .state-caption {
+      font-size: 12px; font-weight: 600; color: var(--c-accent); margin: 0 0 8px;
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">전달 상태 보드 v3 · 시각 mockup</h1>
+  <p class="page-sub">BF-1285 · 동결된 UiScreenContract(ui-contract@v1) 그대로 시각화 · vanilla-static · 외부 의존성 0건</p>
+
+  <!-- ══════════════ 상태별 미리보기 (idle / loading / loaded / empty / error) ══════════════ -->
+  <p class="section-label">화면 상태별 미리보기 (5 states)</p>
+  <div class="preview-grid">
+
+    <!-- 1. idle -->
+    <div>
+      <p class="state-caption">state = idle · 라벨: 대기</p>
+      <section id="delivery-board-root" class="delivery-board" data-state="idle">
+        <div class="delivery-board__header">
+          <h2 class="delivery-board__title">전달 상태 보드</h2>
+          <button type="button" id="board-refresh" class="delivery-board__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+        </div>
+        <div id="board-status" class="delivery-board__status" role="status" aria-live="polite" data-tone="idle">
+          <span class="dot" aria-hidden="true"></span>
+          <span>대기</span>
+          <span class="status-note">— 새로고침을 눌러 전달 상태를 조회하세요.</span>
+        </div>
+        <ul id="board-role-list" class="delivery-board__role-list" aria-label="역할별 전달 상태"></ul>
+        <p id="board-revision" class="delivery-board__revision">revision: —</p>
+      </section>
+    </div>
+
+    <!-- 2. loading -->
+    <div>
+      <p class="state-caption">state = loading · 라벨: 로딩 중</p>
+      <section class="delivery-board" data-state="loading">
+        <div class="delivery-board__header">
+          <h2 class="delivery-board__title">전달 상태 보드</h2>
+          <button type="button" class="delivery-board__refresh" aria-label="전달 상태 새로고침" disabled>새로고침</button>
+        </div>
+        <div class="delivery-board__status" role="status" aria-live="polite" data-tone="loading">
+          <span class="delivery-board__spinner" aria-hidden="true"></span>
+          <span>로딩 중</span>
+          <span class="status-note">— 전달 상태를 불러오는 중입니다.</span>
+        </div>
+        <ul class="delivery-board__role-list" aria-label="역할별 전달 상태"></ul>
+        <p class="delivery-board__revision">revision: 불러오는 중…</p>
+      </section>
+    </div>
+
+    <!-- 3. loaded -->
+    <div>
+      <p class="state-caption">state = loaded · 라벨: 불러옴</p>
+      <section class="delivery-board" data-state="loaded">
+        <div class="delivery-board__header">
+          <h2 class="delivery-board__title">전달 상태 보드</h2>
+          <button type="button" class="delivery-board__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+        </div>
+        <div class="delivery-board__status" role="status" aria-live="polite" data-tone="loaded">
+          <span class="dot" aria-hidden="true"></span>
+          <span>불러옴</span>
+          <span class="status-note">— 4개 역할의 전달 상태입니다.</span>
+        </div>
+        <ul class="delivery-board__role-list" aria-label="역할별 전달 상태">
+          <li class="delivery-board__role">
+            <span class="role-name">planner</span>
+            <span class="delivery-board__badge delivery-board__badge--verified">검증됨</span>
+          </li>
+          <li class="delivery-board__role">
+            <span class="role-name">designer</span>
+            <span class="delivery-board__badge delivery-board__badge--verified">검증됨</span>
+          </li>
+          <li class="delivery-board__role">
+            <span class="role-name">developer</span>
+            <span class="delivery-board__badge delivery-board__badge--pending">대기 중</span>
+          </li>
+          <li class="delivery-board__role">
+            <span class="role-name">tester</span>
+            <span class="delivery-board__badge delivery-board__badge--failed">실패</span>
+          </li>
+        </ul>
+        <p class="delivery-board__revision">revision: phase21-delivery-board-v3 · sha 359cf76</p>
+      </section>
+    </div>
+
+    <!-- 4. empty -->
+    <div>
+      <p class="state-caption">state = empty · 라벨: 데이터 없음</p>
+      <section class="delivery-board" data-state="empty">
+        <div class="delivery-board__header">
+          <h2 class="delivery-board__title">전달 상태 보드</h2>
+          <button type="button" class="delivery-board__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+        </div>
+        <div class="delivery-board__status" role="status" aria-live="polite" data-tone="empty">
+          <span class="dot" aria-hidden="true"></span>
+          <span>데이터 없음</span>
+          <span class="status-note">— 표시할 역할 상태가 없습니다.</span>
+        </div>
+        <ul class="delivery-board__role-list" aria-label="역할별 전달 상태"></ul>
+        <p class="delivery-board__empty">전달 상태 데이터가 없습니다. 새로고침으로 다시 조회할 수 있습니다.</p>
+        <p class="delivery-board__revision">revision: phase21-delivery-board-v3 · sha 359cf76</p>
+      </section>
+    </div>
+
+    <!-- 5. error -->
+    <div>
+      <p class="state-caption">state = error · 라벨: 오류</p>
+      <section class="delivery-board" data-state="error">
+        <div class="delivery-board__header">
+          <h2 class="delivery-board__title">전달 상태 보드</h2>
+          <button type="button" class="delivery-board__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+        </div>
+        <div class="delivery-board__status" role="status" aria-live="polite" data-tone="error">
+          <span class="dot" aria-hidden="true"></span>
+          <span>오류</span>
+          <span class="status-note">— 전달 상태 조회에 실패했습니다.</span>
+        </div>
+        <p class="delivery-board__error">전달 상태를 불러오지 못했습니다(오류). 새로고침으로 재시도하세요.</p>
+        <p class="delivery-board__revision">revision: phase21-delivery-board-v3 · sha 359cf76</p>
+      </section>
+    </div>
+
+  </div>
+
+  <!-- ══════════════ 배지 · 접근성 · 반응형 참조 ══════════════ -->
+  <p class="section-label">상태 배지 범례 (색상 + 텍스트 라벨 · 색상 단독 의존 금지)</p>
+  <div class="legend">
+    <span class="delivery-board__badge delivery-board__badge--verified">검증됨 (verified · #16a34a)</span>
+    <span class="delivery-board__badge delivery-board__badge--pending">대기 중 (pending · #f59e0b)</span>
+    <span class="delivery-board__badge delivery-board__badge--failed">실패 (failed · #dc2626)</span>
+  </div>
+
+  <p class="section-label">접근성 요약</p>
+  <ul>
+    <li><code>#board-refresh</code>: <code>aria-label="전달 상태 새로고침"</code>, Tab 도달 · Enter/Space 실행 · <code>:focus-visible</code> 링.</li>
+    <li><code>#board-status</code>: <code>role="status"</code> · <code>aria-live="polite"</code> — 상태 전이를 스크린리더에 polite 알림.</li>
+    <li>모든 상태(대기/로딩 중/불러옴/데이터 없음/오류)와 배지(검증됨/대기 중/실패)를 화면 텍스트로 노출 — 색상 단독 의존 없음.</li>
+  </ul>
+
+  <p class="section-label">반응형</p>
+  <ul>
+    <li>≥ 320px: <code>#board-role-list</code> 세로 스택(1열), content overflow 없음(긴 역할명 <code>word-break</code>).</li>
+    <li>≥ 768px: <code>#board-role-list</code> 다열 grid(<code>repeat(auto-fill, minmax(240px, 1fr))</code>). ← 현재 창을 넓히면 위 loaded 보드 목록이 다열로 재배치됩니다.</li>
+  </ul>
+</body>
+</html>
