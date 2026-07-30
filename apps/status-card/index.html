@@ -47,6 +47,10 @@
       </div>
     </main>
 
-    <script type="module" src="./src/refresh.ts"></script>
+    <!--
+      vanilla-static(빌드 도구 없음) 서빙 환경에서는 브라우저가 .ts 를 실행하지 못하므로
+      타입 계약 원본(src/refresh.ts)과 동일 로직의 실행 아티팩트 src/refresh.js 를 로드한다.
+    -->
+    <script src="./src/refresh.js" defer></script>
   </body>
 </html>
