@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전달 상태 배지 시각 mockup — BF-1317</title>
+  <style>
+    /* frozen ui-contract@v1 tokens — 재정의 금지 */
+    :root {
+      --color-status-success: #16a34a;
+      --color-status-error: #dc2626;
+      --color-status-neutral: #64748b;
+      --space-badge-gap: 8px;
+
+      /* 아래는 계약 토큰이 아닌 시각화 보조값(mockup 전용) */
+      --mk-page-bg: #f1f5f9;
+      --mk-card-bg: #ffffff;
+      --mk-border: #e2e8f0;
+      --mk-text: #0f172a;
+      --mk-text-muted: #475569;
+      --mk-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--mk-font);
+      background: var(--mk-page-bg);
+      color: var(--mk-text);
+      padding: 32px 20px;
+      line-height: 1.5;
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .subtitle { color: var(--mk-text-muted); font-size: 13px; margin: 0 0 28px; }
+    h2 { font-size: 15px; margin: 32px 0 12px; }
+    .card {
+      background: var(--mk-card-bg);
+      border: 1px solid var(--mk-border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .state-label { font-size: 12px; color: var(--mk-text-muted); margin-bottom: 10px; }
+
+    /* ── 전달 상태 배지 컴포넌트 (frozen selector) ───────────────── */
+    .delivery-status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-badge-gap);
+      flex-wrap: wrap;
+    }
+    .delivery-status__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.2;
+      color: #ffffff;
+      background: var(--color-status-neutral); /* idle / loading */
+      white-space: nowrap;
+    }
+    .delivery-status__badge::before {
+      content: "";
+      width: 8px; height: 8px; border-radius: 50%;
+      background: currentColor; opacity: .85;
+    }
+    .delivery-status__badge--success { background: var(--color-status-success); }
+    .delivery-status__badge--error { background: var(--color-status-error); }
+
+    .delivery-status__updated-at { font-size: 12px; font-weight: 400; color: var(--mk-text-muted); line-height: 1.4; }
+    .delivery-status__refresh {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.2;
+      padding: 5px 12px;
+      border: 1px solid var(--mk-border);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--mk-text);
+      cursor: pointer;
+    }
+    .delivery-status__refresh:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .delivery-status__refresh:focus-visible { outline: 2px solid var(--color-status-neutral); outline-offset: 2px; }
+    .delivery-status__refresh[aria-disabled="true"],
+    .delivery-status__refresh:disabled { opacity: .55; cursor: not-allowed; }
+
+    /* 흐름 다이어그램 */
+    .flow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .flow .arrow { color: var(--mk-text-muted); font-size: 18px; }
+    .note { font-size: 12px; color: var(--mk-text-muted); margin-top: 10px; }
+
+    /* 320px 반응형 프레임 */
+    .frame320 { width: 320px; max-width: 100%; border: 1px dashed #94a3b8; border-radius: 10px; padding: 14px; background: #ffffff; }
+    .frame-cap { font-size: 11px; color: var(--mk-text-muted); margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <h1>전달 상태 배지 — 시각 mockup</h1>
+  <p class="subtitle">BF-1317 · frozen ui-contract@v1 시각화 (developer 산출물 아님 · UX 의도 전달용)</p>
+
+  <!-- ── 1. 4개 상태 ─────────────────────────────────────── -->
+  <h2>1. 상태별 배지 (idle / loading / success / error)</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="state-label">idle — 화면 텍스트 "대기 중" · neutral #64748b</div>
+      <div id="delivery-status-root" class="delivery-status">
+        <span class="delivery-status__badge" aria-live="polite">대기 중</span>
+        <span class="delivery-status__updated-at">갱신 시각 미확정</span>
+        <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="state-label">loading — 화면 텍스트 "불러오는 중" · neutral · control 진행 표시</div>
+      <div class="delivery-status">
+        <span class="delivery-status__badge" aria-live="polite">불러오는 중</span>
+        <span class="delivery-status__updated-at">갱신 중…</span>
+        <button class="delivery-status__refresh" aria-label="전달 상태 새로고침" aria-disabled="true" disabled>불러오는 중…</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="state-label">success — 화면 텍스트 "정상" · success #16a34a</div>
+      <div class="delivery-status">
+        <span class="delivery-status__badge delivery-status__badge--success" aria-live="polite">정상</span>
+        <span class="delivery-status__updated-at">마지막 갱신: 2026-07-30 09:00</span>
+        <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="state-label">error — 화면 텍스트 "오류" · error #dc2626</div>
+      <div class="delivery-status">
+        <span class="delivery-status__badge delivery-status__badge--error" aria-live="polite">오류</span>
+        <span class="delivery-status__updated-at">마지막 갱신: 2026-07-30 08:41</span>
+        <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+    </div>
+  </div>
+  <p class="note">모든 상태는 색상 외 화면 텍스트 + 접근성 이름(aria-live)으로 동시에 노출 — 색상만으로 구분하지 않음(AC-6).</p>
+
+  <!-- ── 2. 상태 전이 & 복원 흐름 ────────────────────────── -->
+  <h2>2. 상태 전이 &amp; 복원 흐름 (AC-5 · E5 frozen invariant)</h2>
+  <div class="card">
+    <div class="state-label">새로고침 실행 → 재조회 → 성공/실패</div>
+    <div class="flow">
+      <span class="delivery-status__badge">대기 중</span>
+      <span class="arrow">→</span>
+      <span class="delivery-status__badge">불러오는 중</span>
+      <span class="arrow">→</span>
+      <span class="delivery-status__badge delivery-status__badge--success">정상</span>
+      <span class="arrow">／</span>
+      <span class="delivery-status__badge delivery-status__badge--error">오류</span>
+    </div>
+    <p class="note">새로고침 control 클릭 또는 키보드 Enter/Space → loading 전이 후 <code>delivery-status.json</code> 재조회. loading 중에는 control 진행 표시로 중복 재조회 방지(E4).</p>
+
+    <div class="state-label" style="margin-top:18px;">실패 · 취소 후 복원 — 상태/진행 초기값 복귀 + 새로고침 재활성화</div>
+    <div class="flow">
+      <span class="delivery-status__badge delivery-status__badge--error">오류</span>
+      <span class="arrow">→ (복원) →</span>
+      <span class="delivery-status__badge">대기 중</span>
+      <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침 (재활성화)</button>
+    </div>
+    <p class="note">실패·취소 이후 배지는 idle("대기 중")로 복귀하고 진행 표시가 사라지며, 새로고침 control은 다시 사용 가능해진다(E5 frozen invariant).</p>
+  </div>
+
+  <!-- ── 3. hover / focus 상태 ──────────────────────────── -->
+  <h2>3. control 상호작용 상태 (hover / focus / disabled)</h2>
+  <div class="card">
+    <div class="flow">
+      <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">기본</button>
+      <button class="delivery-status__refresh" aria-label="전달 상태 새로고침" style="background:#f8fafc;border-color:#cbd5e1;">hover</button>
+      <button class="delivery-status__refresh" aria-label="전달 상태 새로고침" style="outline:2px solid var(--color-status-neutral);outline-offset:2px;">focus (키보드)</button>
+      <button class="delivery-status__refresh" aria-label="전달 상태 새로고침" aria-disabled="true" disabled>loading 중 (비활성)</button>
+    </div>
+    <p class="note"><code>&lt;button&gt;</code> 요소로 Enter/Space 키보드 실행 기본 지원(AC-5). focus-visible 아웃라인으로 키보드 포커스 가시화.</p>
+  </div>
+
+  <!-- ── 4. 320px 반응형 ────────────────────────────────── -->
+  <h2>4. 반응형 — 320px content overflow 없음 (AC-7)</h2>
+  <div class="card">
+    <div class="frame-cap">뷰포트 폭 320px 프레임 — 배지 + 갱신 시각이 flex-wrap으로 overflow 없이 표시</div>
+    <div class="frame320">
+      <div class="delivery-status">
+        <span class="delivery-status__badge delivery-status__badge--success" aria-live="polite">정상</span>
+        <span class="delivery-status__updated-at">마지막 갱신: 2026-07-30 09:00</span>
+        <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
