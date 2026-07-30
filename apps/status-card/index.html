@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>상태 카드 — 새로고침</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="status-card" aria-labelledby="status-card-heading">
+      <h1 id="status-card-heading" class="status-card__heading">상태 카드</h1>
+
+      <!-- 상태 텍스트 영역 — aria-live="polite" 로 갱신 결과를 낭독 -->
+      <p
+        id="status-card-status-text"
+        class="status-card__status-text"
+        aria-live="polite"
+        data-state="idle"
+      >
+        최근 상태를 확인하려면 새로고침하세요.
+      </p>
+
+      <!-- 마지막 갱신 시각 (성공 시 노출) -->
+      <p id="status-card-last-updated" class="status-card__last-updated" hidden></p>
+
+      <div class="status-card__actions">
+        <!-- 주 실행 control (새로고침 버튼) -->
+        <button
+          id="status-card-refresh-button"
+          type="button"
+          class="status-card__refresh"
+          aria-label="상태 새로고침"
+          aria-busy="false"
+        >
+          새로고침
+        </button>
+
+        <!-- error 상태 재시도 control (기본 숨김) -->
+        <button
+          id="status-card-retry-action"
+          type="button"
+          class="status-card__retry"
+          hidden
+        >
+          다시 시도
+        </button>
+      </div>
+    </main>
+
+    <script type="module" src="./src/refresh.ts"></script>
+  </body>
+</html>
