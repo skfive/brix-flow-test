@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>전달 상태 배지</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>전달 상태</h1>
+      <section id="delivery-status-root" class="delivery-status" aria-label="전달 상태">
+        <span
+          id="delivery-status-badge"
+          class="delivery-status__badge"
+          role="status"
+          aria-live="polite"
+        >대기 중</span>
+        <time
+          id="delivery-status-updated-at"
+          class="delivery-status__updated-at"
+        >갱신 시각 미확정</time>
+        <button
+          type="button"
+          id="delivery-status-refresh"
+          class="delivery-status__refresh"
+          aria-label="전달 상태 새로고침"
+        >새로고침</button>
+      </section>
+    </main>
+    <script type="module" src="./src/delivery-status.js"></script>
+  </body>
+</html>
