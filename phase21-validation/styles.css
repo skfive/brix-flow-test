@@ -1,0 +1,51 @@
+/* 전달 상태 배지 런타임 스타일 — frozen ui-contract@v1 token/class (재정의 금지) */
+:root {
+  --color-status-success: #16a34a;
+  --color-status-error: #dc2626;
+  --color-status-neutral: #64748b;
+  --space-badge-gap: 8px;
+}
+
+/* 320px+에서 content overflow 없이 wrap (반응형 계약) */
+.delivery-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-badge-gap);
+  min-width: 0;
+}
+
+.delivery-status__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background-color: var(--color-status-neutral);
+  color: #ffffff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.delivery-status__badge--success {
+  background-color: var(--color-status-success);
+}
+
+.delivery-status__badge--error {
+  background-color: var(--color-status-error);
+}
+
+.delivery-status__updated-at {
+  min-width: 0;
+  color: var(--color-status-neutral);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.delivery-status__refresh {
+  cursor: pointer;
+}
+
+.delivery-status__refresh:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
