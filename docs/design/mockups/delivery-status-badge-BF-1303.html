@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전달 상태 배지 시안 — BF-1304 (ui-contract BF-1303)</title>
+  <style>
+    :root{
+      /* frozen 계약 token (변경 금지) */
+      --color-status-delivered:#16a34a;
+      --color-status-failed:#dc2626;
+      --space-badge-gap:8px;
+      /* 보조 색상 (designer 제안 — 비-frozen) */
+      --color-status-idle:#6b7280;
+      --color-status-loading:#2563eb;
+      --color-badge-bg:#ffffff;
+      --color-badge-border:#e5e7eb;
+      --color-badge-text:#111827;
+    }
+    *{box-sizing:border-box;}
+    body{
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      color:var(--color-badge-text);
+      background:#f9fafb;
+      margin:0;padding:32px;line-height:1.5;
+    }
+    h1{font-size:20px;margin:0 0 4px;}
+    .sub{color:#6b7280;font-size:13px;margin:0 0 24px;}
+    h2{font-size:15px;margin:28px 0 12px;color:#374151;border-bottom:1px solid #e5e7eb;padding-bottom:6px;}
+    .grid{display:flex;flex-wrap:wrap;gap:16px;}
+    .cell{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;min-width:220px;}
+    .cell .cap{font-size:12px;color:#6b7280;margin-bottom:10px;}
+
+    /* ===== 배지 컴포넌트 (frozen selector 사용) ===== */
+    .delivery-badge{
+      display:inline-flex;align-items:center;
+      gap:var(--space-badge-gap);
+      max-width:100%;
+      padding:6px 12px;
+      background:var(--color-badge-bg);
+      border:1px solid var(--color-badge-border);
+      border-radius:999px;
+    }
+    .badge-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--color-status-idle);}
+    .delivery-badge__status{
+      font-size:15px;font-weight:600;line-height:1.4;white-space:nowrap;
+    }
+    .delivery-badge__refresh{
+      font-family:inherit;font-size:14px;font-weight:500;line-height:1.2;
+      cursor:pointer;border:1px solid var(--color-badge-border);
+      background:#f3f4f6;color:#374151;border-radius:6px;padding:4px 10px;
+    }
+    .delivery-badge__refresh:hover{background:#e5e7eb;}
+    .delivery-badge__refresh:focus-visible{outline:2px solid var(--color-status-loading);outline-offset:2px;}
+    .delivery-badge__refresh:active{transform:translateY(1px);}
+    .delivery-badge__refresh:disabled{opacity:.6;cursor:not-allowed;}
+
+    /* 상태별 강조 */
+    .state-idle      .badge-dot{background:var(--color-status-idle);}
+    .state-idle      .delivery-badge__status{color:var(--color-status-idle);}
+    .state-loading   .badge-dot{background:var(--color-status-loading);animation:pulse 1s ease-in-out infinite;}
+    .state-loading   .delivery-badge__status{color:var(--color-status-loading);}
+    .state-delivered .badge-dot{background:var(--color-status-delivered);}
+    .state-delivered .delivery-badge__status{color:var(--color-status-delivered);}
+    .state-failed    .badge-dot{background:var(--color-status-failed);}
+    .state-failed    .delivery-badge__status{color:var(--color-status-failed);}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+    .note{font-size:12px;color:#6b7280;margin-top:8px;}
+    .frame{width:320px;border:2px dashed #cbd5e1;border-radius:8px;padding:12px;background:#fff;resize:horizontal;overflow:auto;}
+    table{border-collapse:collapse;font-size:13px;}
+    th,td{border:1px solid #e5e7eb;padding:6px 10px;text-align:left;}
+    th{background:#f3f4f6;}
+  </style>
+</head>
+<body>
+  <h1>전달 상태 배지 — 시안 mockup</h1>
+  <p class="sub">BF-1304 (designer) · ui-contract BF-1303 · 색상은 상태 텍스트의 보조일 뿐, 상태 식별의 유일 근거는 화면 텍스트입니다.</p>
+
+  <h2>1. 4개 상태 (frozen 텍스트 + 강조색)</h2>
+  <div class="grid">
+    <div class="cell">
+      <div class="cap">state = idle</div>
+      <div id="delivery-badge-root" class="delivery-badge state-idle">
+        <span class="badge-dot" aria-hidden="true"></span>
+        <span id="delivery-badge-status" class="delivery-badge__status" aria-live="polite">대기 중</span>
+        <button type="button" id="delivery-badge-refresh" class="delivery-badge__refresh" aria-label="상태 새로고침">새로고침</button>
+      </div>
+      <p class="note">초기 렌더 / 취소·초기화 후 복귀</p>
+    </div>
+
+    <div class="cell">
+      <div class="cap">state = loading</div>
+      <div class="delivery-badge state-loading">
+        <span class="badge-dot" aria-hidden="true"></span>
+        <span class="delivery-badge__status" aria-live="polite">조회 중…</span>
+        <button type="button" class="delivery-badge__refresh" aria-label="상태 새로고침" disabled>새로고침</button>
+      </div>
+      <p class="note">새로고침 실행 시 진입 (control 선택적 disabled)</p>
+    </div>
+
+    <div class="cell">
+      <div class="cap">state = delivered · --color-status-delivered #16a34a</div>
+      <div class="delivery-badge state-delivered">
+        <span class="badge-dot" aria-hidden="true"></span>
+        <span class="delivery-badge__status" aria-live="polite">전달 완료</span>
+        <button type="button" class="delivery-badge__refresh" aria-label="상태 새로고침">새로고침</button>
+      </div>
+      <p class="note">조회 성공 응답</p>
+    </div>
+
+    <div class="cell">
+      <div class="cap">state = failed · --color-status-failed #dc2626</div>
+      <div class="delivery-badge state-failed">
+        <span class="badge-dot" aria-hidden="true"></span>
+        <span class="delivery-badge__status" aria-live="polite">전달 실패</span>
+        <button type="button" class="delivery-badge__refresh" aria-label="상태 새로고침">새로고침</button>
+      </div>
+      <p class="note">조회 실패 응답 → 재조회 가능</p>
+    </div>
+  </div>
+
+  <h2>2. 새로고침 control 인터랙션 상태</h2>
+  <div class="grid">
+    <div class="cell"><div class="cap">default</div>
+      <button type="button" class="delivery-badge__refresh" aria-label="상태 새로고침">새로고침</button></div>
+    <div class="cell"><div class="cap">:hover (배경 톤 다운)</div>
+      <button type="button" class="delivery-badge__refresh" aria-label="상태 새로고침" style="background:#e5e7eb">새로고침</button></div>
+    <div class="cell"><div class="cap">:focus-visible (2px outline)</div>
+      <button type="button" class="delivery-badge__refresh" aria-label="상태 새로고침" style="outline:2px solid var(--color-status-loading);outline-offset:2px">새로고침</button></div>
+    <div class="cell"><div class="cap">:disabled (loading 중)</div>
+      <button type="button" class="delivery-badge__refresh" aria-label="상태 새로고침" disabled>새로고침</button></div>
+  </div>
+
+  <h2>3. 색상 비의존 검증 (grayscale — 상태 텍스트만으로 식별)</h2>
+  <div class="grid" style="filter:grayscale(1)">
+    <div class="cell"><div class="delivery-badge state-idle"><span class="badge-dot"></span><span class="delivery-badge__status">대기 중</span></div></div>
+    <div class="cell"><div class="delivery-badge state-loading"><span class="badge-dot"></span><span class="delivery-badge__status">조회 중…</span></div></div>
+    <div class="cell"><div class="delivery-badge state-delivered"><span class="badge-dot"></span><span class="delivery-badge__status">전달 완료</span></div></div>
+    <div class="cell"><div class="delivery-badge state-failed"><span class="badge-dot"></span><span class="delivery-badge__status">전달 실패</span></div></div>
+  </div>
+  <p class="note">색상을 제거해도 4개 상태가 화면 텍스트로 구분됨 (E-4 / 접근성 요구 충족).</p>
+
+  <h2>4. 반응형 — 320px 뷰포트 (overflow 0건)</h2>
+  <div class="frame">
+    <div class="delivery-badge state-failed">
+      <span class="badge-dot" aria-hidden="true"></span>
+      <span class="delivery-badge__status" aria-live="polite">전달 실패</span>
+      <button type="button" class="delivery-badge__refresh" aria-label="상태 새로고침">새로고침</button>
+    </div>
+  </div>
+  <p class="note">320px 폭 프레임 안에서 가장 긴 상태 라벨 + control 이 overflow 없이 표시 (US-5 / E-5). 우측 하단 드래그로 폭 조절 가능.</p>
+
+  <h2>5. frozen 계약 매핑 요약</h2>
+  <table>
+    <tr><th>항목</th><th>frozen 값</th></tr>
+    <tr><td>DOM ID</td><td>delivery-badge-root / delivery-badge-status / delivery-badge-refresh</td></tr>
+    <tr><td>CSS class</td><td>delivery-badge / delivery-badge__status / delivery-badge__refresh</td></tr>
+    <tr><td>상태 텍스트</td><td>대기 중 / 조회 중… / 전달 완료 / 전달 실패</td></tr>
+    <tr><td>token</td><td>--color-status-delivered #16a34a / --color-status-failed #dc2626 / --space-badge-gap 8px</td></tr>
+    <tr><td>접근성</td><td>status aria-live="polite" · refresh aria-label="상태 새로고침" · 색상 비의존</td></tr>
+    <tr><td>반응형</td><td>320px 이상 overflow 없음</td></tr>
+  </table>
+</body>
+</html>
