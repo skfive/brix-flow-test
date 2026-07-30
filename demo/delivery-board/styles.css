@@ -1,0 +1,140 @@
+/* 전달 상태 보드 스타일 — frozen ui-contract@v1 design token */
+:root {
+  --color-status-done: #16a34a;
+  --color-status-active: #2563eb;
+  --color-status-pending: #94a3b8;
+  --space-board-gap: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-board-gap);
+}
+
+/* 보드 루트 */
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-board-gap);
+  padding: var(--space-board-gap);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.board__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-board-gap);
+}
+
+.board__title {
+  margin: 0;
+  font-size: 1.25rem;
+  flex: 1 1 auto;
+}
+
+.board__revision {
+  margin: 0;
+  color: #475569;
+  font-size: 0.875rem;
+}
+
+.board__refresh {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.board__refresh:hover {
+  background: #1d4ed8;
+}
+
+.board__refresh:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.board__message {
+  margin: 0;
+  color: #475569;
+  font-size: 0.875rem;
+}
+
+.board[data-state="error"] .board__message {
+  color: #b91c1c;
+}
+
+/* 역할 상태 목록 */
+.board__role-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-board-gap);
+}
+
+.board__role {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-board-gap);
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.board__role-name {
+  font-weight: 600;
+}
+
+/* 상태 배지 — 색상 + 텍스트 라벨 동시 노출 */
+.board__status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.board__status[data-status="done"] {
+  background: var(--color-status-done);
+}
+
+.board__status[data-status="active"] {
+  background: var(--color-status-active);
+}
+
+.board__status[data-status="pending"] {
+  background: var(--color-status-pending);
+  color: #1f2937;
+}
+
+/* 반응형: 320px 이상 overflow 없음, 480px 미만 역할 항목 세로 스택 */
+@media (max-width: 479.98px) {
+  .board__role {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
