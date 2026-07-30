@@ -1,0 +1,145 @@
+/* 전달 상태 보드 v3 — frozen design token 기반 스타일 (ui-contract@v1) */
+:root {
+  --color-status-verified: #16a34a;
+  --color-status-pending: #f59e0b;
+  --color-status-failed: #dc2626;
+  --space-board-gap: 16px;
+  --font-board-label: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--space-board-gap);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #111827;
+  background: #f9fafb;
+}
+
+.delivery-board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-board-gap);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.delivery-board__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-board-gap);
+}
+
+.delivery-board__header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.delivery-board__revision {
+  margin: 0;
+  font-size: var(--font-board-label);
+  color: #4b5563;
+}
+
+.delivery-board__refresh {
+  font-size: var(--font-board-label);
+  padding: 8px 16px;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+.delivery-board__refresh:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.delivery-board__refresh:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.delivery-board__status {
+  margin: 0;
+  font-size: var(--font-board-label);
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* 진행 표시(loading): frozen selector 범위 안에서 시각 표시 */
+.delivery-board[data-state="loading"] .delivery-board__status::after {
+  content: " ⏳";
+}
+
+.delivery-board__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-board-gap);
+}
+
+.delivery-board__role {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-board-gap);
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.delivery-board__role-name {
+  font-size: var(--font-board-label);
+  font-weight: 600;
+}
+
+.delivery-board__badge {
+  font-size: var(--font-board-label);
+  font-weight: 600;
+  padding: 2px 12px;
+  border-radius: 999px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.delivery-board__badge[data-status="verified"] {
+  background: var(--color-status-verified);
+}
+
+.delivery-board__badge[data-status="pending"] {
+  background: var(--color-status-pending);
+  color: #1f2937;
+}
+
+.delivery-board__badge[data-status="failed"] {
+  background: var(--color-status-failed);
+}
+
+/* >=320px: board-role-list 세로 스택, content overflow 없음 */
+@media (min-width: 320px) {
+  .delivery-board__list {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* >=768px: board-role-list 다열 grid */
+@media (min-width: 768px) {
+  .delivery-board__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
