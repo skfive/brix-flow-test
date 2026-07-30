@@ -1,12 +1,14 @@
 # 전달 상태 배지 — 구현 실행 설계 (BF-1306)
 
-> 본 문서는 planner가 먼저 작성하고 **designer(BF-1304) / developer(BF-1305) / tester(BF-1308)** 가 그대로 따르는
+> 본 문서는 planner가 먼저 작성하고 **designer(BF-1304) / developer(BF-1305) / reviewer / tester(BF-1308)** 가 그대로 따르는
 > 실행 설계(`planning-contract@v1`)이자 동결 UI 계약(`ui-contract@v1`)의 렌더링본입니다.
 > **selector·상태 텍스트·token은 아래 값이 유일한 권위**이며 후속 페르소나는 이를 변경·재정의하지 않습니다.
 > 본 문서는 frozen blueprint의 파일·소유자·상태·후조건을 설명할 뿐, 새 파일이나 새 역할을 추가하지 않습니다.
 
 - Jira: BF-1306 (planner)
 - Epic 형제 Task: BF-1304(designer) · BF-1305(developer) · BF-1308(tester)
+- Frozen Execution Blueprint v2 RoleWorkPacket(5): `plan/planner` · `design/designer` · `develop/developer` · `review/reviewer` · `test/tester` (packetKey/assigneeRole/dependencies/ownedPaths/acceptanceCriteria/testSpecRefs를 Blueprint와 1:1 복제)
+- reviewer 패킷 선행 의존성 = `design`(designer) + `develop`(developer) producer 패킷만 참조하며, tester를 선행 의존성으로 넣지 않는다.
 - executionProfile: `implementation-strict`
 - 대상 저장소: backend (vanilla-static / esm / serve_root=`.`)
 
@@ -43,6 +45,7 @@
 | `apps/delivery-status-badge/src/badge.js` | developer (BF-1305) | additive | 상태 전이·렌더링 로직 (ESM) |
 | `docs/design/delivery-status-badge-BF-1303.md` | designer (BF-1304) | additive | 시각 설계·상태별 스타일 명세 |
 | `apps/delivery-status-badge/tests/badge.test.js` | tester (BF-1308) | (read-only for planner) | 상태·접근성·반응형 검증 |
+| (파일 산출물 없음 — review_verdict Decision 경로) | reviewer | — | 계약 준수·산출물 리뷰 판정 (선행: design·develop) |
 | `docs/plans/implementation-plan.md` | planner (BF-1306, 본 문서) | — | 실행 설계 + RTM |
 
 > 위 소유권과 상태 계약의 유일한 권위는 frozen blueprint이며 본 planner 문서는 이를 재정의하지 않는다.
@@ -199,5 +202,10 @@
   구현한다. 3장의 DOM ID/class/상태 텍스트/token/접근성/반응형/후조건을 그대로 구현한다.
 - **tester (BF-1308)** — `apps/delivery-status-badge/tests/badge.test.js` 로 상태 전이(4상태), 접근성(aria-live/aria-label/색상 비의존),
   반응형(320px), 후조건 복귀(E-2/E-3)를 검증한다.
+- **reviewer** — designer/developer 산출물이 3장 exact UI 계약과 RTM(7장)을 준수하는지 리뷰하고 `review_verdict` Decision
+  경로로 판정한다. **선행 의존성은 `design`(designer)·`develop`(developer) producer 패킷뿐이며 tester를 선행 의존성으로 두지 않는다.**
+  별도 파일 산출물은 생성하지 않고 selector·token·상태 텍스트를 재정의하지 않는다.
 
-> 세 페르소나 모두 본 문서 3장의 계약값을 유일 권위로 삼으며 selector·token·상태 텍스트를 재정의하지 않는다.
+> 네 페르소나 모두 본 문서 3장의 계약값을 유일 권위로 삼으며 selector·token·상태 텍스트를 재정의하지 않는다.
+> reviewer는 `review_verdict` Decision 경로를 사용하지만, frozen Execution Blueprint v2 커버리지를 위해 `review/reviewer`
+> RoleWorkPacket을 dossier에 반드시 포함하며 dependencies는 `design`+`develop` producer 패킷을 정확히 참조한다.
