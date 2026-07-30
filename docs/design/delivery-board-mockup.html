@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>전달 상태 보드 mockup — BF-1273</title>
+  <style>
+    /* frozen ui-contract@v1 design token */
+    :root {
+      --color-status-done: #16a34a;
+      --color-status-active: #2563eb;
+      --color-status-pending: #94a3b8;
+      --space-board-gap: 16px;
+
+      /* shell(참고값) — 상태 token 아님 */
+      --bg: #ffffff;
+      --surface: #f8fafc;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --border: #e2e8f0;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #eef2f6;
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.5;
+    }
+
+    .page-note {
+      max-width: 720px;
+      margin: 0 auto 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* #board-root .board */
+    .board {
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: var(--space-board-gap);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-board-gap);
+    }
+
+    .board__header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .board__title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+      flex: 1 1 auto;
+      overflow-wrap: anywhere;
+    }
+
+    /* #board-revision .board__revision */
+    .board__revision {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 10px;
+    }
+
+    /* #board-refresh .board__refresh */
+    .board__refresh {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      background: var(--color-status-active);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    .board__refresh:hover { background: #1d4ed8; }
+    .board__refresh:disabled {
+      background: var(--color-status-pending);
+      cursor: default;
+    }
+
+    /* #board-role-list .board__list */
+    .board__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-board-gap);
+    }
+
+    /* .board__role */
+    .board__role {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .board__role-name {
+      font-size: 15px;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    /* .board__status — 색상 dot + 텍스트 라벨 (색상만으로 구분하지 않음) */
+    .board__status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .board__status::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+      flex: 0 0 auto;
+    }
+    .board__status[data-status="done"] { color: var(--color-status-done); }
+    .board__status[data-status="active"] { color: var(--color-status-active); }
+    .board__status[data-status="pending"] { color: var(--color-status-pending); }
+    /* 라벨 텍스트는 기본 본문 대비색으로 유지, dot 만 상태색 */
+    .board__status .board__status-label { color: var(--text); }
+
+    .caption {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 4px 0 0;
+    }
+
+    /* frozen responsive: 480px 미만에서 역할 항목 세로 스택 */
+    @media (max-width: 479.98px) {
+      .board__role {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    /* 명세 참조용 상태·인터랙션 카탈로그 */
+    .catalog {
+      max-width: 720px;
+      margin: 28px auto 0;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .catalog h2 { font-size: 15px; margin: 0 0 12px; }
+    .catalog-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .swatch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+    }
+    .swatch .dot { width: 14px; height: 14px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <p class="page-note">
+    시각 mockup — BF-1273. frozen ui-contract@v1 의 selector·token·상태 텍스트(완료/진행 중/대기)를
+    시각화한 self-contained HTML(외부 의존성 0건). 실제 런타임 산출물은 developer 가 구현.
+  </p>
+
+  <!-- #board-root .board (ready 상태 예시) -->
+  <div id="board-root" class="board" data-state="ready">
+    <header class="board__header">
+      <h1 class="board__title">전달 상태 보드</h1>
+      <span id="board-revision" class="board__revision">rev 1</span>
+      <button id="board-refresh" class="board__refresh" type="button"
+        aria-label="전달 상태 새로고침">새로고침</button>
+    </header>
+
+    <!-- #board-role-list — aria-live="polite" -->
+    <ul id="board-role-list" class="board__list" aria-live="polite">
+      <li class="board__role">
+        <span class="board__role-name">기획 (planner)</span>
+        <span class="board__status" data-status="done">
+          <span class="board__status-label">완료</span>
+        </span>
+      </li>
+      <li class="board__role">
+        <span class="board__role-name">디자인 (designer)</span>
+        <span class="board__status" data-status="active">
+          <span class="board__status-label">진행 중</span>
+        </span>
+      </li>
+      <li class="board__role">
+        <span class="board__role-name">개발 (developer)</span>
+        <span class="board__status" data-status="pending">
+          <span class="board__status-label">대기</span>
+        </span>
+      </li>
+      <li class="board__role">
+        <span class="board__role-name">테스트 (tester)</span>
+        <span class="board__status" data-status="pending">
+          <span class="board__status-label">대기</span>
+        </span>
+      </li>
+    </ul>
+    <p class="caption">
+      상태는 색상 dot 과 함께 텍스트 라벨(완료 / 진행 중 / 대기)을 항상 노출합니다.
+    </p>
+  </div>
+
+  <!-- 명세 참조: 상태 토큰 및 refresh control 인터랙션 -->
+  <section class="catalog" aria-label="상태·인터랙션 카탈로그">
+    <h2>상태 토큰 (frozen)</h2>
+    <div class="catalog-row">
+      <span class="swatch"><span class="dot" style="background:var(--color-status-done)"></span>완료 · --color-status-done · #16a34a</span>
+      <span class="swatch"><span class="dot" style="background:var(--color-status-active)"></span>진행 중 · --color-status-active · #2563eb</span>
+      <span class="swatch"><span class="dot" style="background:var(--color-status-pending)"></span>대기 · --color-status-pending · #94a3b8</span>
+    </div>
+
+    <h2 style="margin-top:16px;">refresh control 상태</h2>
+    <div class="catalog-row">
+      <button class="board__refresh" type="button" aria-label="전달 상태 새로고침">새로고침 (기본)</button>
+      <button class="board__refresh" type="button" aria-label="전달 상태 새로고침" disabled>갱신 중… (loading)</button>
+    </div>
+    <p class="caption">
+      초기화·취소·실패 뒤에는 상태와 진행 표시를 초기값으로 되돌리고 refresh control 을 다시 사용할 수 있어야 합니다.
+    </p>
+  </section>
+</body>
+</html>
