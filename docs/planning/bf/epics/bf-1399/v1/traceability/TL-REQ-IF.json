@@ -1,0 +1,1 @@
+{"artifactId":"TL-REQ-IF","artifactType":"TraceLink","relation":"realized_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-RETRY-DELAY","status":"active","targetRef":"IF-RETRY-DELAY","title":"요구사항→인터페이스","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
