@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-PACKET-BBC3DAE0F5BC478B","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"PKT-TEST","status":"active","targetRef":"TS-RETRY-DELAY","title":"Verify PKT-TEST with TS-RETRY-DELAY","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
