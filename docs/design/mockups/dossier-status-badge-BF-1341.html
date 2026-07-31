@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dossier 근거 상태 배지 — 시각 mockup (BF-1341)</title>
+  <style>
+    /* frozen ui-contract@v1 token (재정의 없음) */
+    :root {
+      --color-evidence-sufficient: #16a34a;
+      --color-evidence-insufficient: #dc2626;
+      --space-badge-gap: 8px;
+
+      /* mockup 보조 (계약 아님 — 시각화용) */
+      --page-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --neutral-bg: #f1f5f9;
+      --font-stack: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-stack);
+      background: var(--page-bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .doc-header { max-width: 880px; margin: 0 auto 24px; }
+    .doc-header h1 { font-size: 20px; margin: 0 0 4px; }
+    .doc-header p { margin: 0; color: var(--text-muted); font-size: 13px; }
+
+    .grid {
+      max-width: 880px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .state-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .state-card h2 {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-muted); margin: 0 0 12px;
+    }
+    .state-note { margin: 12px 0 0; font-size: 12px; color: var(--text-muted); }
+    .state-note code { background: var(--neutral-bg); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+    /* === frozen selector 계약 (§3.2–3.4) === */
+    .dossier-status {
+      display: flex;
+      align-items: center;
+      gap: var(--space-badge-gap);   /* 8px */
+      flex-wrap: wrap;               /* 320px overflow 방지 */
+    }
+    .dossier-status__badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--neutral-bg);
+      border: 1px solid var(--border);
+    }
+    .dossier-status__label {
+      font-size: 14px; font-weight: 600; line-height: 1.4;
+      color: var(--text);   /* 텍스트 가독성은 중립색 — 색상에 의존하지 않음 */
+    }
+    .dossier-status__detail {
+      font-size: 13px; font-weight: 500; line-height: 1.4;
+      color: var(--color-evidence-insufficient);
+      text-decoration: underline;
+    }
+    .dossier-status__detail:focus-visible {
+      outline: 2px solid var(--color-evidence-insufficient);
+      outline-offset: 2px; border-radius: 3px;
+    }
+
+    /* 상태별 배지 보조 시각 강조 (색상은 보조 신호) — 도트 + 테두리 */
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+    .state--sufficient .dossier-status__badge { border-color: var(--color-evidence-sufficient); }
+    .state--sufficient .dot { background: var(--color-evidence-sufficient); }
+
+    .state--insufficient .dossier-status__badge { border-color: var(--color-evidence-insufficient); }
+    .state--insufficient .dot { background: var(--color-evidence-insufficient); }
+
+    /* loading 진행 표시 (progress indicator) */
+    .spinner {
+      width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid var(--border);
+      border-top-color: var(--text-muted);
+      animation: spin 0.8s linear infinite;
+      flex: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* empty 상태 — 배지 숨김 시각화 */
+    .empty-slot {
+      border: 1px dashed var(--border); border-radius: 8px;
+      padding: 12px; color: var(--text-muted); font-size: 13px;
+      background: var(--neutral-bg);
+    }
+
+    /* error 재시도 버튼 */
+    .retry-btn {
+      font-family: var(--font-stack); font-size: 12px;
+      padding: 3px 10px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--card-bg); color: var(--text); cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header class="doc-header">
+    <h1>Dossier 근거 상태 배지 — 5개 상태 시각 mockup</h1>
+    <p>BF-1341 · route <code>/planning/</code> · frozen token 준수 · 색상 외 화면 텍스트 + aria-label 노출 (시안 시각화 전용, 런타임 산출물 아님)</p>
+  </header>
+
+  <main class="grid">
+
+    <!-- 1. loading -->
+    <section class="state-card state--loading">
+      <h2>1 · loading</h2>
+      <div id="dossier-status-badge" class="dossier-status" aria-label="근거 상태 확인 중">
+        <span class="dossier-status__badge">
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="dossier-status-label" class="dossier-status__label">근거 상태 확인 중</span>
+        </span>
+      </div>
+      <p class="state-note">화면 텍스트 <code>근거 상태 확인 중</code> + 진행 표시. <code>aria-label="근거 상태 확인 중"</code></p>
+    </section>
+
+    <!-- 2. sufficient -->
+    <section class="state-card state--sufficient">
+      <h2>2 · sufficient</h2>
+      <div class="dossier-status" aria-label="근거 충족">
+        <span class="dossier-status__badge">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="dossier-status__label">근거 충족</span>
+        </span>
+      </div>
+      <p class="state-note">텍스트 배지만 노출. 보조 색 <code>--color-evidence-sufficient</code> (#16a34a). <code>aria-label="근거 충족"</code></p>
+    </section>
+
+    <!-- 3. insufficient -->
+    <section class="state-card state--insufficient">
+      <h2>3 · insufficient</h2>
+      <div class="dossier-status" aria-label="근거 부족">
+        <span class="dossier-status__badge">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="dossier-status__label">근거 부족</span>
+        </span>
+        <a id="dossier-status-detail-link" class="dossier-status__detail" href="#" aria-label="근거 상세 보기">상세 보기</a>
+      </div>
+      <p class="state-note">텍스트 배지 + <strong>상세 보기 링크 활성</strong>(키보드 focus 가능, <code>aria-label="근거 상세 보기"</code>). 보조 색 <code>--color-evidence-insufficient</code> (#dc2626).</p>
+    </section>
+
+    <!-- 4. empty -->
+    <section class="state-card state--empty">
+      <h2>4 · empty</h2>
+      <div class="dossier-status" hidden aria-hidden="true">
+        <!-- 배지 숨김 (#dossier-status-badge 미노출) -->
+      </div>
+      <div class="empty-slot">배지 숨김 — 기존 빈 상태 유지 (접근성 트리에서도 제외)</div>
+      <p class="state-note">데이터 없음 → 배지 미노출, 기존 Planning Dossier 빈 상태 그대로.</p>
+    </section>
+
+    <!-- 5. error -->
+    <section class="state-card state--error">
+      <h2>5 · error</h2>
+      <div class="dossier-status" aria-label="상태를 불러오지 못했습니다">
+        <span class="dossier-status__badge">
+          <span class="dossier-status__label">상태를 불러오지 못했습니다</span>
+        </span>
+        <button type="button" class="retry-btn" aria-label="근거 상태 다시 불러오기">재시도</button>
+      </div>
+      <p class="state-note">화면 텍스트 <code>상태를 불러오지 못했습니다</code> + 재시도 가능(→ loading 재진입, 초기값 복구). <code>aria-label</code> 동일.</p>
+    </section>
+
+  </main>
+</body>
+</html>
