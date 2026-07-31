@@ -1,0 +1,1 @@
+{"artifactId":"TL-UI-VERIFY","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"UI-DELIVERY-HEALTH-PANEL","status":"active","targetRef":"TS-DELIVERY-HEALTH-PANEL","title":"UI 계약→테스트 검증","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}

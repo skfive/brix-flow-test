@@ -1,0 +1,1 @@
+{"artifactId":"TL-REQ-UC","artifactType":"TraceLink","relation":"elaborated_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-DELIVERY-HEALTH-PANEL","status":"active","targetRef":"UC-DELIVERY-HEALTH-VIEW","title":"요구사항→유스케이스","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
