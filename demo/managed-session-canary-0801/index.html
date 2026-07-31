@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>관리형 세션 상태 카드</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        /* ui-contract@v1 design tokens (frozen — 재정의 금지) */
+        --color-surface-card: #ffffff;
+        --color-status-pass: #16a34a;
+        --space-card-gap: 16px;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+
+      .session-canary {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .session-canary__header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: var(--space-card-gap);
+      }
+
+      .session-canary__title {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+
+      #session-refresh {
+        padding: 8px 14px;
+        font: inherit;
+        font-weight: 600;
+        color: #ffffff;
+        background: #2563eb;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      #session-refresh:disabled {
+        opacity: 0.6;
+        cursor: progress;
+      }
+      #session-refresh:focus-visible {
+        outline: 3px solid #93c5fd;
+        outline-offset: 2px;
+      }
+
+      /* session-status-root — 상태 텍스트 + 진행 표시 (계약 §3~4) */
+      #session-status-root {
+        margin-bottom: var(--space-card-gap);
+      }
+
+      .session-canary__message {
+        min-height: 1.4em;
+        margin: 0 0 8px;
+        color: #475569;
+      }
+
+      /* loading 상태에서만 노출되는 진행 표시 */
+      .session-canary__progress {
+        display: none;
+        height: 4px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #2563eb, #93c5fd, #2563eb);
+        background-size: 200% 100%;
+        animation: session-canary-progress 1.1s linear infinite;
+      }
+      #session-status-root[data-state="loading"] .session-canary__progress {
+        display: block;
+      }
+      @keyframes session-canary-progress {
+        from {
+          background-position: 200% 0;
+        }
+        to {
+          background-position: 0 0;
+        }
+      }
+
+      /* 320px 이상: 세로 스택, overflow 없음 (계약 §7) */
+      #persona-card-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-card-gap);
+      }
+
+      /* 768px 이상: 다열 그리드 (계약 §7) */
+      @media (min-width: 768px) {
+        #persona-card-list {
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        }
+      }
+
+      .session-card {
+        min-width: 0;
+        padding: 12px 16px;
+        background: var(--color-surface-card);
+        border: 1px solid #e2e8f0;
+        border-left-width: 6px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        overflow-wrap: anywhere;
+      }
+
+      .session-card__persona {
+        font-weight: 600;
+      }
+
+      .session-card__status {
+        font-weight: 600;
+        color: #475569;
+        white-space: nowrap;
+      }
+
+      .session-card__status--pass {
+        color: var(--color-status-pass);
+      }
+      .session-card--pass {
+        border-left-color: var(--color-status-pass);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="session-canary">
+      <div class="session-canary__header">
+        <h1 class="session-canary__title">관리형 세션 상태 카드</h1>
+        <button
+          id="session-refresh"
+          type="button"
+          aria-label="세션 상태 새로고침"
+        >
+          세션 상태 새로고침
+        </button>
+      </div>
+
+      <div id="session-status-root" aria-live="polite" data-state="loading">
+        <p class="session-canary__message" data-role="status-message"></p>
+        <span class="session-canary__progress" aria-hidden="true"></span>
+      </div>
+
+      <ul id="persona-card-list" aria-label="페르소나 상태 카드 목록"></ul>
+    </main>
+
+    <script type="module" src="./src/feature.js"></script>
+  </body>
+</html>
