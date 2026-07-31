@@ -1,0 +1,83 @@
+{
+  "_meta": {
+    "purpose": "전달 상태 배지 시각 명세 + API 응답 데이터 소스 (BF-1371)",
+    "contract": "ui-contract@v1",
+    "spec": "docs/design/delivery-status-BF-1370.md",
+    "plan": "docs/plans/delivery-status-BF-1370.md",
+    "note": "top-level status/label/updatedAt은 GET /api/phase21-validation/delivery-status 기본 응답이며, spec.* 는 재정의가 아닌 frozen 계약의 시각 명세다 (additive)."
+  },
+  "status": "ready",
+  "label": "전달 완료",
+  "updatedAt": "2026-07-31T09:15:00Z",
+  "spec": {
+    "endpoint": "GET /api/phase21-validation/delivery-status",
+    "initialState": "loading",
+    "dom": {
+      "root": { "id": "delivery-status-root", "class": "delivery-status", "ariaLive": "polite" },
+      "badge": { "id": "delivery-status-badge", "class": "delivery-status__badge" },
+      "timestamp": { "id": "delivery-status-timestamp", "class": "delivery-status__timestamp" }
+    },
+    "tokens": {
+      "--color-status-success": "#16a34a",
+      "--color-status-pending": "#f59e0b",
+      "--color-status-error": "#dc2626",
+      "--space-badge-gap": "8px"
+    },
+    "states": {
+      "loading": {
+        "label": "진행 중",
+        "colorToken": "--color-status-pending",
+        "backgroundHex": "#f59e0b",
+        "textHex": "#1f2937",
+        "nonColorIndicator": "텍스트 라벨 '진행 중'",
+        "glyph": "⏳",
+        "timestampVisible": false,
+        "isInitial": true
+      },
+      "ready": {
+        "label": "전달 완료",
+        "colorToken": "--color-status-success",
+        "backgroundHex": "#16a34a",
+        "textHex": "#ffffff",
+        "nonColorIndicator": "텍스트 라벨 '전달 완료'",
+        "glyph": "✓",
+        "timestampVisible": true,
+        "isInitial": false
+      },
+      "error": {
+        "label": "오류",
+        "colorToken": "--color-status-error",
+        "backgroundHex": "#dc2626",
+        "textHex": "#ffffff",
+        "nonColorIndicator": "텍스트 라벨 '오류'",
+        "glyph": "!",
+        "timestampVisible": "conditional",
+        "isInitial": false
+      },
+      "forbidden": {
+        "label": "권한 없음",
+        "colorToken": "--color-status-error",
+        "backgroundHex": "#dc2626",
+        "textHex": "#ffffff",
+        "nonColorIndicator": "텍스트 라벨 '권한 없음' (error와 색 공유 → 라벨이 구분 단서)",
+        "glyph": "⊘",
+        "timestampVisible": false,
+        "isInitial": false
+      }
+    },
+    "responsive": {
+      "wide": { "minWidthPx": 480, "layout": "horizontal", "gap": "--space-badge-gap" },
+      "narrow": { "maxWidthPx": 479, "minWidthPx": 320, "layout": "vertical", "gap": "--space-badge-gap" }
+    },
+    "accessibility": {
+      "ariaLive": "polite",
+      "colorIndependence": "모든 상태는 색상 외에 화면 텍스트 라벨과 접근성 이름으로 노출",
+      "glyphAriaHidden": true
+    },
+    "timestamp": {
+      "sourceFormat": "ISO 8601 UTC (YYYY-MM-DDTHH:mm:ssZ)",
+      "preserveOriginalOn": "#delivery-status-timestamp[datetime]",
+      "hideWhen": "updatedAt=null 또는 파싱 불가"
+    }
+  }
+}
