@@ -1,0 +1,1 @@
+{"artifactId":"TL-V2","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-BACKOFF-ERROR","status":"active","targetRef":"TS-BACKOFF-CONTRACT","title":"에러 요구→테스트 검증","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
