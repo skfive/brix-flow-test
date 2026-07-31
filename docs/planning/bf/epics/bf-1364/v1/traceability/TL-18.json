@@ -1,0 +1,1 @@
+{"artifactId":"TL-18","artifactType":"TraceLink","relation":"allocated_to","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-READINESS-STATUS","status":"active","targetRef":"PKT-TEST","title":"REQ-READINESS-STATUS→test 할당","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
