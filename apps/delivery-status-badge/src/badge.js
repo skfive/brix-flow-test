@@ -98,7 +98,9 @@ export function createBadgeController(refs, options = {}) {
       .then(() => fetchStatus())
       .then((result) => {
         if (token !== requestToken) return currentState; // 취소/재실행으로 무효화된 응답
-        const resolved = isValidState(result) && result !== 'loading' ? result : 'delivered';
+        // 계약 외 값(unknown/null/undefined/'loading' 등)은 성공(delivered)으로 승격하지 않고
+        // idle(INITIAL_STATE)로 안전 복귀시켜 refresh control 을 재활성화한다 (BF-1380).
+        const resolved = isValidState(result) && result !== 'loading' ? result : INITIAL_STATE;
         return render(resolved);
       })
       .catch(() => {
