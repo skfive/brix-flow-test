@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>전달 상태 배지 시각 mockup — BF-1371</title>
+    <style>
+      /* frozen ui-contract@v1 design tokens (재정의 아님) */
+      :root {
+        --color-status-success: #16a34a;
+        --color-status-pending: #f59e0b;
+        --color-status-error: #dc2626;
+        --space-badge-gap: 8px;
+
+        --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --line: #e5e7eb;
+        --panel: #f9fafb;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 32px 20px 56px;
+        font-family: var(--font-system);
+        color: var(--ink);
+        background: #ffffff;
+      }
+      .page { max-width: 860px; margin: 0 auto; }
+      h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+      .sub { color: var(--muted); font-size: 0.875rem; margin: 0 0 28px; }
+      h2 {
+        font-size: 1.05rem; font-weight: 700; margin: 32px 0 12px;
+        padding-bottom: 6px; border-bottom: 1px solid var(--line);
+      }
+      .caption { color: var(--muted); font-size: 0.8125rem; margin: 4px 0 14px; }
+
+      /* ---- frozen component: delivery-status ---- */
+      .delivery-status {
+        display: flex;
+        align-items: center;
+        gap: var(--space-badge-gap);
+        flex-wrap: wrap;
+      }
+      .delivery-status__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1.2;
+        color: #ffffff;
+        white-space: nowrap;
+      }
+      .delivery-status__badge .glyph { font-size: 0.9em; }
+      .delivery-status__timestamp {
+        font-size: 0.75rem;
+        font-weight: 400;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+
+      /* 상태 훅 (additive, 권장) */
+      .is-loading   { background: var(--color-status-pending); color: #1f2937; }
+      .is-ready     { background: var(--color-status-success); }
+      .is-error     { background: var(--color-status-error); }
+      .is-forbidden { background: var(--color-status-error); }
+
+      /* mockup 표현용 그리드 (실제 산출물 아님) */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        background: var(--panel);
+      }
+      .card h3 { margin: 0 0 4px; font-size: 0.9rem; }
+      .card p.meta { margin: 0 0 12px; color: var(--muted); font-size: 0.75rem; }
+
+      /* 반응형 시뮬레이션 프레임 (mockup 전용) */
+      .frames { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+      .frame {
+        border: 1px dashed var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        background: #ffffff;
+      }
+      .frame .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 10px; }
+      .frame-wide { width: 520px; max-width: 100%; }
+      .frame-narrow { width: 320px; }
+      /* narrow 프레임 안에서는 세로 재배치 시뮬레이션 */
+      .frame-narrow .delivery-status {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <h1>전달 상태 배지 — 시각 mockup</h1>
+      <p class="sub">
+        BF-1371 · frozen <code>ui-contract@v1</code> 시각화 · 시안 참조용(픽셀 일치 의무 없음)
+      </p>
+
+      <!-- ============ 상태별 배지 ============ -->
+      <h2>1. 상태별 배지 (loading / ready / error / forbidden)</h2>
+      <p class="caption">
+        색상 + 텍스트 라벨을 함께 노출. <code>error</code>와 <code>forbidden</code>은 같은 색
+        (<code>--color-status-error</code>)을 쓰므로 라벨 텍스트가 구분 단서.
+      </p>
+      <div class="grid">
+        <div class="card">
+          <h3>loading (초기값)</h3>
+          <p class="meta">--color-status-pending · #f59e0b · aria-live="polite"</p>
+          <section
+            id="delivery-status-root"
+            class="delivery-status"
+            aria-live="polite"
+            aria-label="전달 상태"
+          >
+            <span class="delivery-status__badge is-loading">
+              <span class="glyph" aria-hidden="true">⏳</span>진행 중
+            </span>
+            <!-- loading: 갱신 시각 미표시 -->
+          </section>
+        </div>
+
+        <div class="card">
+          <h3>ready</h3>
+          <p class="meta">--color-status-success · #16a34a</p>
+          <section class="delivery-status" aria-live="polite" aria-label="전달 상태">
+            <span class="delivery-status__badge is-ready">
+              <span class="glyph" aria-hidden="true">✓</span>전달 완료
+            </span>
+            <time class="delivery-status__timestamp" datetime="2026-07-31T09:15:00Z">
+              2026-07-31 09:15 UTC
+            </time>
+          </section>
+        </div>
+
+        <div class="card">
+          <h3>error</h3>
+          <p class="meta">--color-status-error · #dc2626</p>
+          <section class="delivery-status" aria-live="polite" aria-label="전달 상태">
+            <span class="delivery-status__badge is-error">
+              <span class="glyph" aria-hidden="true">!</span>오류
+            </span>
+            <time class="delivery-status__timestamp" datetime="2026-07-31T09:15:00Z">
+              2026-07-31 09:15 UTC
+            </time>
+          </section>
+        </div>
+
+        <div class="card">
+          <h3>forbidden</h3>
+          <p class="meta">--color-status-error · #dc2626 · updatedAt=null → 시각 미표시</p>
+          <section class="delivery-status" aria-live="polite" aria-label="전달 상태">
+            <span class="delivery-status__badge is-forbidden">
+              <span class="glyph" aria-hidden="true">⊘</span>권한 없음
+            </span>
+            <!-- forbidden: 갱신 시각 미표시 -->
+          </section>
+        </div>
+      </div>
+
+      <!-- ============ 반응형 ============ -->
+      <h2>2. 반응형 재배치</h2>
+      <p class="caption">
+        ≥480px: 가로 1행 · 320~479px: 세로 재배치(<code>--space-badge-gap</code> 간격 유지) · overflow 0건.
+      </p>
+      <div class="frames">
+        <div class="frame frame-wide">
+          <div class="label">≥ 480px — 가로 배치</div>
+          <section class="delivery-status" aria-live="polite" aria-label="전달 상태">
+            <span class="delivery-status__badge is-ready">
+              <span class="glyph" aria-hidden="true">✓</span>전달 완료
+            </span>
+            <time class="delivery-status__timestamp" datetime="2026-07-31T09:15:00Z">
+              2026-07-31 09:15 UTC
+            </time>
+          </section>
+        </div>
+
+        <div class="frame frame-narrow">
+          <div class="label">320px — 세로 재배치</div>
+          <section class="delivery-status" aria-live="polite" aria-label="전달 상태">
+            <span class="delivery-status__badge is-ready">
+              <span class="glyph" aria-hidden="true">✓</span>전달 완료
+            </span>
+            <time class="delivery-status__timestamp" datetime="2026-07-31T09:15:00Z">
+              2026-07-31 09:15 UTC
+            </time>
+          </section>
+        </div>
+      </div>
+
+      <!-- ============ 토큰 범례 ============ -->
+      <h2>3. Design token 범례 (frozen)</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>--color-status-success</h3>
+          <p class="meta">#16a34a · ready</p>
+          <div style="height:28px;border-radius:6px;background:#16a34a"></div>
+        </div>
+        <div class="card">
+          <h3>--color-status-pending</h3>
+          <p class="meta">#f59e0b · loading</p>
+          <div style="height:28px;border-radius:6px;background:#f59e0b"></div>
+        </div>
+        <div class="card">
+          <h3>--color-status-error</h3>
+          <p class="meta">#dc2626 · error / forbidden</p>
+          <div style="height:28px;border-radius:6px;background:#dc2626"></div>
+        </div>
+        <div class="card">
+          <h3>--space-badge-gap</h3>
+          <p class="meta">8px · 배지 ↔ 갱신 시각 간격</p>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:44px;height:20px;border-radius:6px;background:#16a34a"></span>
+            <span style="width:80px;height:12px;border-radius:6px;background:var(--line)"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
