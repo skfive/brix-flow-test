@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "personaId": "planner-01",
+      "personaName": "기획자-베타",
+      "status": "pass"
+    },
+    {
+      "personaId": "developer-01",
+      "personaName": "개발자-알파",
+      "status": "pass"
+    },
+    {
+      "personaId": "reviewer-01",
+      "personaName": "리뷰어-감마",
+      "status": "pending"
+    },
+    {
+      "personaId": "tester-01",
+      "personaName": "테스터-델타",
+      "status": "fail"
+    }
+  ]
+}
