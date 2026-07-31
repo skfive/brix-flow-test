@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-PACKET-CD00BB3AA5B89208","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"PKT-TEST","status":"active","targetRef":"TEST-BF1424-1","title":"Verify PKT-TEST with TEST-BF1424-1","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
