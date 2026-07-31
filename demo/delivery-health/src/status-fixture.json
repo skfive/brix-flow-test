@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "id": "d-1",
+      "title": "결제 모듈 배포",
+      "status": "progress",
+      "nextAction": "스테이징 스모크 확인"
+    },
+    {
+      "id": "d-2",
+      "title": "정산 리포트 전달",
+      "status": "waiting",
+      "nextAction": "데이터 팀 응답 대기"
+    },
+    {
+      "id": "d-3",
+      "title": "보안 패치 롤아웃",
+      "status": "action",
+      "nextAction": "핫픽스 브랜치 머지 필요"
+    }
+  ]
+}
