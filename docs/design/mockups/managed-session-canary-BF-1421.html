@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리형 세션 상태 카드 — 시각 mockup (BF-1421)</title>
+  <style>
+    :root {
+      /* frozen design tokens (ui-contract@v1 — 변경 금지) */
+      --color-surface-card: #ffffff;
+      --color-status-pass: #16a34a;
+      --space-card-gap: 16px;
+      /* vanilla-static 자체 정의 토큰 (외부 의존성 0건) */
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      --color-text: #0f172a;
+      --color-text-muted: #475569;
+      --color-border: #e2e8f0;
+      --color-page-bg: #f1f5f9;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--color-text);
+      background: var(--color-page-bg);
+      line-height: 1.5;
+      padding: 24px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+    .page-note {
+      font-size: 13px;
+      color: var(--color-text-muted);
+      margin: 0 0 24px;
+    }
+
+    .state-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      max-width: 1080px;
+    }
+    @media (min-width: 900px) {
+      .state-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .state-frame {
+      background: var(--color-surface-card);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .state-frame__label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      background: var(--color-page-bg);
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    /* ── 실제 화면 계약 (frozen selector) ── */
+    .session-canary {
+      padding: 16px;
+      background: var(--color-surface-card);
+    }
+    .session-canary__heading {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 0 0 16px;
+    }
+
+    #session-status-root[data-state] {
+      /* aria-live="polite" 영역 — 상태별 콘텐츠만 교체 */
+    }
+
+    .status-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      padding: 20px 8px;
+      text-align: center;
+    }
+    .status-text--error { color: var(--color-text); font-weight: 600; }
+
+    .status-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 8px;
+    }
+
+    .progress-indicator {
+      width: 100%;
+      max-width: 220px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--color-border);
+      overflow: hidden;
+    }
+    .progress-indicator::after {
+      content: "";
+      display: block;
+      width: 40%;
+      height: 100%;
+      background: var(--color-text-muted);
+      border-radius: 999px;
+      animation: progress-slide 1.2s ease-in-out infinite;
+    }
+    @keyframes progress-slide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(250%); }
+    }
+
+    #persona-card-list.persona-card-list {
+      display: grid;
+      grid-template-columns: 1fr; /* 320px+ 세로 스택 */
+      gap: var(--space-card-gap);
+    }
+    @media (min-width: 768px) {
+      #persona-card-list.persona-card-list { grid-template-columns: repeat(2, 1fr); } /* 768px+ 다열 grid */
+    }
+
+    .session-card {
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 16px;
+      background: var(--color-surface-card);
+      min-width: 0;
+    }
+    .session-card:hover { background: var(--color-page-bg); }
+    .session-card__persona {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin: 0 0 6px;
+      word-break: break-word;
+    }
+    .session-card__status {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--color-text);
+    }
+    .session-card__status--pass { color: var(--color-status-pass); }
+
+    .refresh-btn {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      background: var(--color-surface-card);
+      color: var(--color-text);
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    .refresh-btn:hover { background: var(--color-page-bg); }
+    .refresh-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    /* 반응형 데모 프레임 */
+    .viewport-demo {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      max-width: 1080px;
+      margin-top: 24px;
+    }
+    @media (min-width: 900px) {
+      .viewport-demo { grid-template-columns: 320px 1fr; align-items: start; }
+    }
+    .viewport-demo .frame-320 { width: 320px; }
+    .viewport-demo .frame-320 .persona-card-list { grid-template-columns: 1fr; }
+    .viewport-demo .frame-768 .persona-card-list { grid-template-columns: repeat(2, 1fr); }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 32px 0 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">관리형 세션 상태 카드 — 시각 mockup</h1>
+  <p class="page-note">
+    BF-1421 · 시안 시각화 전용(런타임 산출물 아님). frozen ui-contract@v1(docs/plans/managed-session-canary-BF-1421.md) 기준.
+  </p>
+
+  <div class="state-grid">
+    <!-- STATE: loading -->
+    <section class="state-frame">
+      <div class="state-frame__label">state · loading</div>
+      <div class="session-canary">
+        <h2 class="session-canary__heading">관리형 세션 상태</h2>
+        <div class="session-status-root" data-state="loading" aria-live="polite">
+          <div class="status-block">
+            <p class="status-text">세션 데이터를 불러오는 중…</p>
+            <div class="progress-indicator" role="progressbar" aria-label="세션 데이터 로딩 진행률"></div>
+          </div>
+        </div>
+        <button type="button" class="refresh-btn" aria-label="세션 상태 새로고침" disabled>새로고침</button>
+      </div>
+    </section>
+
+    <!-- STATE: ready -->
+    <section class="state-frame">
+      <div class="state-frame__label">state · ready</div>
+      <div class="session-canary">
+        <h2 class="session-canary__heading">관리형 세션 상태</h2>
+        <div id="session-status-root" data-state="ready" aria-live="polite">
+          <div id="persona-card-list" class="persona-card-list">
+            <article class="session-card">
+              <p class="session-card__persona">planner</p>
+              <p class="session-card__status session-card__status--pass">통과</p>
+            </article>
+            <article class="session-card">
+              <p class="session-card__persona">developer</p>
+              <p class="session-card__status session-card__status--pass">통과</p>
+            </article>
+            <article class="session-card">
+              <p class="session-card__persona">designer</p>
+              <p class="session-card__status">대기</p>
+            </article>
+            <article class="session-card">
+              <p class="session-card__persona">reviewer</p>
+              <p class="session-card__status">실패</p>
+            </article>
+          </div>
+        </div>
+        <button type="button" id="session-refresh" class="refresh-btn" aria-label="세션 상태 새로고침">새로고침</button>
+      </div>
+    </section>
+
+    <!-- STATE: empty -->
+    <section class="state-frame">
+      <div class="state-frame__label">state · empty</div>
+      <div class="session-canary">
+        <h2 class="session-canary__heading">관리형 세션 상태</h2>
+        <div class="session-status-root" data-state="empty" aria-live="polite">
+          <p class="status-text">표시할 세션이 없습니다</p>
+        </div>
+        <button type="button" class="refresh-btn" aria-label="세션 상태 새로고침">새로고침</button>
+      </div>
+    </section>
+
+    <!-- STATE: error -->
+    <section class="state-frame">
+      <div class="state-frame__label">state · error (재시도 후 loading으로 복귀 + 새로고침 재활성화)</div>
+      <div class="session-canary">
+        <h2 class="session-canary__heading">관리형 세션 상태</h2>
+        <div class="session-status-root" data-state="error" aria-live="polite">
+          <div class="status-block">
+            <p class="status-text status-text--error">데이터를 불러오지 못했습니다. 다시 시도하세요</p>
+          </div>
+        </div>
+        <button type="button" class="refresh-btn" aria-label="세션 상태 새로고침">새로고침</button>
+      </div>
+    </section>
+  </div>
+
+  <h2 class="section-title">반응형 — 320px 세로 스택 vs 768px+ 다열 grid</h2>
+  <div class="viewport-demo">
+    <section class="state-frame frame-320">
+      <div class="state-frame__label">≥ 320px · 1열 스택</div>
+      <div class="session-canary">
+        <div class="persona-card-list">
+          <article class="session-card">
+            <p class="session-card__persona">planner</p>
+            <p class="session-card__status session-card__status--pass">통과</p>
+          </article>
+          <article class="session-card">
+            <p class="session-card__persona">designer</p>
+            <p class="session-card__status">대기</p>
+          </article>
+          <article class="session-card">
+            <p class="session-card__persona">reviewer</p>
+            <p class="session-card__status">실패</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="state-frame frame-768">
+      <div class="state-frame__label">≥ 768px · 다열 grid</div>
+      <div class="session-canary">
+        <div class="persona-card-list">
+          <article class="session-card">
+            <p class="session-card__persona">planner</p>
+            <p class="session-card__status session-card__status--pass">통과</p>
+          </article>
+          <article class="session-card">
+            <p class="session-card__persona">developer</p>
+            <p class="session-card__status session-card__status--pass">통과</p>
+          </article>
+          <article class="session-card">
+            <p class="session-card__persona">designer</p>
+            <p class="session-card__status">대기</p>
+          </article>
+          <article class="session-card">
+            <p class="session-card__persona">reviewer</p>
+            <p class="session-card__status">실패</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
