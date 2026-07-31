@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planning Dossier</title>
+    <style>
+      :root {
+        /* frozen design token (docs/plans/planning-dossier-status-plan.md §3.4) */
+        --color-evidence-sufficient: #16a34a;
+        --color-evidence-insufficient: #dc2626;
+        --space-badge-gap: 8px;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f9fafb;
+      }
+
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 24px 16px;
+      }
+
+      /* 최상위 wrapper (frozen §3.3) */
+      .dossier-status {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-badge-gap);
+        margin: 12px 0;
+      }
+      .dossier-status[hidden] {
+        display: none;
+      }
+
+      .dossier-status__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-badge-gap);
+        min-width: 0;
+        max-width: 100%;
+        padding: 4px 10px;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        font-weight: 600;
+      }
+
+      .dossier-status__label {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .dossier-status__detail {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .dossier-status__detail[hidden] {
+        display: none;
+      }
+
+      /* 상태별 색상 — 텍스트로도 상태를 구분하므로 색상은 보조 표시 (frozen §3.5) */
+      .dossier-status[data-state="sufficient"] .dossier-status__badge {
+        color: var(--color-evidence-sufficient);
+      }
+      .dossier-status[data-state="insufficient"] .dossier-status__badge {
+        color: var(--color-evidence-insufficient);
+      }
+      .dossier-status[data-state="error"] .dossier-status__badge {
+        color: #b45309;
+      }
+
+      /* loading 진행 표시 — loading 상태에서만 노출 */
+      .dossier-status__spinner {
+        display: none;
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: dossier-status-spin 0.8s linear infinite;
+      }
+      .dossier-status[data-state="loading"] .dossier-status__spinner {
+        display: inline-block;
+      }
+
+      @keyframes dossier-status-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .dossier-status__spinner {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Planning Dossier</h1>
+
+      <!-- 기존 Planning Dossier 화면 영역. 배지는 이 영역 위에 additive 로 얹히며,
+           배지가 숨김(empty)이면 기존 빈 상태가 그대로 유지된다. -->
+      <section id="planning-dossier" aria-labelledby="planning-dossier-heading">
+        <h2 id="planning-dossier-heading" class="sr-only" hidden>근거 상태</h2>
+
+        <!-- === BF-1342 additive: Dossier 근거 상태 배지 (frozen §3.2 DOM ID) === -->
+        <div
+          id="dossier-status-badge"
+          class="dossier-status"
+          role="status"
+          aria-live="polite"
+          data-state="loading"
+          hidden
+        >
+          <span class="dossier-status__badge">
+            <span class="dossier-status__spinner" aria-hidden="true"></span>
+            <span id="dossier-status-label" class="dossier-status__label"></span>
+          </span>
+          <a
+            id="dossier-status-detail-link"
+            class="dossier-status__detail"
+            href="#planning-dossier"
+            aria-label="근거 상세 보기"
+            tabindex="-1"
+            aria-disabled="true"
+            hidden
+            >상세 보기</a
+          >
+        </div>
+        <!-- === /BF-1342 additive === -->
+
+        <p id="planning-dossier-empty">표시할 근거가 없습니다.</p>
+      </section>
+    </main>
+
+    <script type="module" src="./src/dossier-status-badge.js"></script>
+  </body>
+</html>
