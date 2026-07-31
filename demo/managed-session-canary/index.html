@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>관리형 세션 상태 카드 — canary</title>
+    <style>
+      :root {
+        /* ui-contract@v1 design tokens (재정의 금지) */
+        --color-status-active: #16a34a;
+        --color-status-idle: #64748b;
+        --color-status-error: #dc2626;
+        --space-card-gap: 16px;
+        --radius-card: 8px;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+
+      .session-canary {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px 16px;
+      }
+
+      .session-canary__title {
+        font-size: 1.25rem;
+        margin: 0 0 16px;
+      }
+
+      .session-canary__filter {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .session-canary__filter label {
+        font-weight: 600;
+      }
+
+      #status-filter {
+        padding: 6px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font: inherit;
+      }
+
+      #status-filter:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .session-canary__status {
+        min-height: 1.4em;
+        margin: 0 0 8px;
+        color: #475569;
+      }
+
+      #status-summary {
+        margin: 0 0 16px;
+        font-weight: 600;
+      }
+
+      /* 320px 이상: 세로 스택으로 overflow 없이 렌더 */
+      #persona-card-list {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-card-gap);
+      }
+
+      /* 640px 이상: 2열 grid */
+      @media (min-width: 640px) {
+        #persona-card-list {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .persona-card {
+        border: 1px solid #e2e8f0;
+        border-left-width: 6px;
+        border-radius: var(--radius-card);
+        padding: 12px 16px;
+        background: #ffffff;
+      }
+
+      .persona-card__name {
+        margin: 0 0 4px;
+        font-size: 1rem;
+      }
+
+      .persona-card__status {
+        margin: 0;
+        font-weight: 600;
+      }
+
+      .persona-card--active {
+        border-left-color: var(--color-status-active);
+      }
+      .persona-card--active .persona-card__status {
+        color: var(--color-status-active);
+      }
+
+      .persona-card--idle {
+        border-left-color: var(--color-status-idle);
+      }
+      .persona-card--idle .persona-card__status {
+        color: var(--color-status-idle);
+      }
+
+      .persona-card--error {
+        border-left-color: var(--color-status-error);
+      }
+      .persona-card--error .persona-card__status {
+        color: var(--color-status-error);
+      }
+
+      .session-canary__control {
+        padding: 6px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #ffffff;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .session-canary__control[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="session-canary-root" class="session-canary">
+      <h1 class="session-canary__title">관리형 세션 상태 카드</h1>
+
+      <div class="session-canary__filter">
+        <label for="status-filter">상태 필터</label>
+        <select id="status-filter" aria-label="상태 필터" disabled>
+          <option value="all">전체</option>
+          <option value="active">활성</option>
+          <option value="idle">유휴</option>
+          <option value="error">오류</option>
+        </select>
+        <button
+          type="button"
+          class="session-canary__control"
+          data-role="restore"
+          hidden
+        >
+          전체 보기
+        </button>
+        <button
+          type="button"
+          class="session-canary__control"
+          data-role="retry"
+          hidden
+        >
+          다시 시도
+        </button>
+      </div>
+
+      <p class="session-canary__status" data-role="status-text" role="status" aria-live="polite"></p>
+      <p id="status-summary"></p>
+
+      <div id="persona-card-list"></div>
+    </main>
+
+    <script type="module" src="./src/feature.js"></script>
+  </body>
+</html>
