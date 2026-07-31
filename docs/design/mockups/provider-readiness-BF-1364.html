@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider 준비 상태 카드 — 시안 mockup (BF-1365 / Epic BF-1364)</title>
+  <style>
+    /* ── frozen design token (계약값 그대로, 변경 금지) ── */
+    :root {
+      --color-status-ready: #16a34a;
+      --color-status-blocked: #dc2626;
+      --color-status-unset: #6b7280;
+      --space-card-gap: 12px;
+      --radius-card: 8px;
+
+      /* 비-토큰 참조 색상 (mockup 시각화용 제안 — 계약 아님) */
+      --c-card-bg: #ffffff;
+      --c-card-border: #e5e7eb;
+      --c-text: #111827;
+      --c-muted: #6b7280;
+      --c-page-bg: #f9fafb;
+      --c-accent: #2563eb;
+
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 20px 64px;
+      background: var(--c-page-bg);
+      color: var(--c-text);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+    }
+
+    .page-head { max-width: 960px; margin: 0 auto 28px; }
+    .page-head h1 { font-size: 1.375rem; margin: 0 0 6px; }
+    .page-head p { margin: 4px 0; color: var(--c-muted); font-size: 0.875rem; }
+    .badge {
+      display: inline-block; font-size: 0.75rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3;
+    }
+
+    .section-title {
+      max-width: 960px; margin: 40px auto 14px;
+      font-size: 1rem; font-weight: 600; color: var(--c-text);
+      border-bottom: 1px solid var(--c-card-border); padding-bottom: 6px;
+    }
+
+    .card-grid {
+      max-width: 960px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .state-label {
+      font-size: 0.75rem; font-weight: 700; letter-spacing: .04em;
+      text-transform: uppercase; color: var(--c-muted); margin: 0 0 8px;
+    }
+
+    /* ── 상태 카드 (frozen selector) ── */
+    .readiness-card {
+      background: var(--c-card-bg);
+      border: 1px solid var(--c-card-border);
+      border-radius: var(--radius-card);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-card-gap);
+      box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+
+    .readiness-card__title {
+      font-size: 1rem; font-weight: 600; margin: 0;
+    }
+
+    .readiness-card__row {
+      display: flex; align-items: baseline; gap: 8px;
+      flex-wrap: wrap;
+    }
+    .readiness-card__label {
+      font-size: 0.8125rem; font-weight: 500; color: var(--c-muted);
+      min-width: 76px;
+    }
+    .readiness-card__mode,
+    .readiness-card__provider {
+      font-size: 0.9375rem; font-weight: 400; color: var(--c-text);
+      word-break: break-word; overflow-wrap: anywhere;
+    }
+
+    /* 상태 텍스트 (색상 + 굵기로 강조, 텍스트로도 구분) */
+    .readiness-card__status {
+      font-size: 0.9375rem; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 8px;
+      word-break: break-word; overflow-wrap: anywhere;
+    }
+    .readiness-card__status::before {
+      content: ""; width: 10px; height: 10px; border-radius: 50%;
+      background: currentColor; flex: 0 0 auto;
+    }
+    .readiness-card__status--loading { color: var(--c-muted); }
+    .readiness-card__status--ready   { color: var(--color-status-ready); }
+    .readiness-card__status--blocked { color: var(--color-status-blocked); }
+    .readiness-card__status--unset   { color: var(--color-status-unset); }
+    .readiness-card__status--error   { color: var(--color-status-blocked); }
+
+    /* 조건부 control */
+    #readiness-settings-link {
+      align-self: flex-start;
+      font-size: 0.8125rem; font-weight: 500;
+      color: var(--c-accent); text-decoration: none;
+      border: 1px solid transparent; border-radius: 6px; padding: 4px 2px;
+    }
+    #readiness-settings-link:hover { text-decoration: underline; }
+    #readiness-settings-link:focus-visible {
+      outline: 2px solid var(--c-accent); outline-offset: 2px; border-radius: 4px;
+    }
+
+    #readiness-retry {
+      align-self: flex-start;
+      font-family: inherit; font-size: 0.8125rem; font-weight: 500;
+      color: #fff; background: var(--color-status-blocked);
+      border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer;
+    }
+    #readiness-retry:hover { background: #b91c1c; }
+    #readiness-retry:focus-visible {
+      outline: 2px solid var(--color-status-blocked); outline-offset: 2px;
+    }
+
+    .note {
+      max-width: 960px; margin: 12px auto 0; font-size: 0.8125rem; color: var(--c-muted);
+    }
+
+    /* ── 반응형 (frozen §5.7): 480px 미만 mode/provider/status 세로 stack ── */
+    @media (max-width: 479px) {
+      .readiness-card__row { flex-direction: column; gap: 2px; }
+      .readiness-card__label { min-width: 0; }
+    }
+
+    /* 반응형 프리뷰 (고정 폭 iframe 유사 프레임) */
+    .responsive-previews {
+      max-width: 960px; margin: 0 auto;
+      display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;
+    }
+    .viewport-frame {
+      border: 1px dashed #cbd5e1; border-radius: 10px; padding: 10px;
+      background: #fff;
+    }
+    .viewport-frame .vp-caption {
+      font-size: 0.75rem; font-weight: 600; color: var(--c-muted); margin-bottom: 8px;
+    }
+    .vp-320 { width: 320px; }
+    .vp-479 { width: 360px; } /* 479px 미만을 대표하는 좁은 폭 */
+    .vp-768 { width: 420px; }
+
+    /* 프리뷰 프레임 안에서는 좁은 폭 규칙을 강제 시연 */
+    .vp-320 .readiness-card__row,
+    .vp-479 .readiness-card__row {
+      flex-direction: column; gap: 2px;
+    }
+    .vp-320 .readiness-card__label,
+    .vp-479 .readiness-card__label { min-width: 0; }
+    .vp-768 .readiness-card__row { flex-direction: row; }
+
+    /* a11y 주석 박스 */
+    .a11y-box {
+      max-width: 960px; margin: 0 auto;
+      background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;
+      padding: 16px 18px; font-size: 0.875rem;
+    }
+    .a11y-box h3 { margin: 0 0 8px; font-size: 0.9375rem; }
+    .a11y-box ul { margin: 6px 0 0; padding-left: 18px; }
+    .a11y-box li { margin: 4px 0; }
+    code { background: #eef2f7; padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <header class="page-head">
+    <span class="badge">시안 mockup · 시각 시뮬레이션</span>
+    <h1>Provider 준비 상태 카드</h1>
+    <p>Task <strong>BF-1365</strong> · Epic Provider Execution Readiness (BF-1364) · 소비 계약 <code>ui-contract@v1</code></p>
+    <p>frozen selector·상태 텍스트·design token 값을 <strong>그대로</strong> 시각화한 참조 mockup입니다. 실제 구현은 developer가 <code>provider-readiness/**</code>에 작성하며, 픽셀 일치 의무는 없습니다. placeholder 텍스트만 사용(인증·secret·cookie 비노출).</p>
+  </header>
+
+  <!-- ══════════ 다섯 상태 시연 ══════════ -->
+  <div class="section-title">1. 다섯 상태 (frozen 상태 모델 §5.4)</div>
+  <div class="card-grid">
+
+    <!-- loading -->
+    <div>
+      <p class="state-label">state: loading</p>
+      <section id="readiness-card" class="readiness-card" role="region" aria-label="실행 모드 및 Provider 준비 상태">
+        <h2 class="readiness-card__title">실행 준비 상태</h2>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">실행 모드</span>
+          <span id="readiness-mode" class="readiness-card__mode">—</span>
+        </div>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">Provider</span>
+          <span id="readiness-provider" class="readiness-card__provider">—</span>
+        </div>
+        <span id="readiness-status" class="readiness-card__status readiness-card__status--loading" aria-live="polite">확인 중…</span>
+      </section>
+    </div>
+
+    <!-- ready -->
+    <div>
+      <p class="state-label">state: ready</p>
+      <section class="readiness-card" role="region" aria-label="실행 모드 및 Provider 준비 상태">
+        <h2 class="readiness-card__title">실행 준비 상태</h2>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">실행 모드</span>
+          <span class="readiness-card__mode">자동 실행</span>
+        </div>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">Provider</span>
+          <span class="readiness-card__provider">샘플 Provider</span>
+        </div>
+        <span class="readiness-card__status readiness-card__status--ready" aria-live="polite">준비됨</span>
+      </section>
+    </div>
+
+    <!-- blocked -->
+    <div>
+      <p class="state-label">state: blocked</p>
+      <section class="readiness-card" role="region" aria-label="실행 모드 및 Provider 준비 상태">
+        <h2 class="readiness-card__title">실행 준비 상태</h2>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">실행 모드</span>
+          <span class="readiness-card__mode">자동 실행</span>
+        </div>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">Provider</span>
+          <span class="readiness-card__provider">샘플 Provider</span>
+        </div>
+        <span class="readiness-card__status readiness-card__status--blocked" aria-live="polite">차단됨 — 설정 필요</span>
+        <a id="readiness-settings-link" href="#" aria-label="Provider 설정으로 이동">Provider 설정으로 이동 →</a>
+      </section>
+    </div>
+
+    <!-- unset -->
+    <div>
+      <p class="state-label">state: unset</p>
+      <section class="readiness-card" role="region" aria-label="실행 모드 및 Provider 준비 상태">
+        <h2 class="readiness-card__title">실행 준비 상태</h2>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">실행 모드</span>
+          <span class="readiness-card__mode">자동 실행</span>
+        </div>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">Provider</span>
+          <span class="readiness-card__provider">—</span>
+        </div>
+        <span class="readiness-card__status readiness-card__status--unset" aria-live="polite">설정되지 않음</span>
+        <a id="readiness-settings-link" href="#" aria-label="Provider 설정으로 이동">Provider 설정으로 이동 →</a>
+      </section>
+    </div>
+
+    <!-- error -->
+    <div>
+      <p class="state-label">state: error</p>
+      <section class="readiness-card" role="region" aria-label="실행 모드 및 Provider 준비 상태">
+        <h2 class="readiness-card__title">실행 준비 상태</h2>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">실행 모드</span>
+          <span class="readiness-card__mode">—</span>
+        </div>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">Provider</span>
+          <span class="readiness-card__provider">—</span>
+        </div>
+        <span class="readiness-card__status readiness-card__status--error" aria-live="polite">상태를 불러오지 못했습니다</span>
+        <button id="readiness-retry" type="button" aria-label="상태 다시 불러오기">다시 시도</button>
+      </section>
+    </div>
+
+  </div>
+
+  <p class="note">※ 각 상태는 <strong>색상만이 아니라 화면 텍스트</strong>('확인 중…' / '준비됨' / '차단됨 — 설정 필요' / '설정되지 않음' / '상태를 불러오지 못했습니다')로도 구분됩니다 — 색상 비의존 접근성(frozen §5.6).</p>
+
+  <!-- ══════════ 반응형 프리뷰 ══════════ -->
+  <div class="section-title">2. 반응형 (frozen §5.7 — 320px overflow 없음 · 480px 미만 세로 stack)</div>
+  <div class="responsive-previews">
+
+    <div class="viewport-frame vp-320">
+      <div class="vp-caption">320px — 최소 폭 (overflow 없음, 세로 stack)</div>
+      <section class="readiness-card" role="region" aria-label="실행 모드 및 Provider 준비 상태">
+        <h2 class="readiness-card__title">실행 준비 상태</h2>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">실행 모드</span>
+          <span class="readiness-card__mode">자동 실행 (긴 이름 예시 텍스트)</span>
+        </div>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">Provider</span>
+          <span class="readiness-card__provider">샘플 Provider very-long-placeholder-name</span>
+        </div>
+        <span class="readiness-card__status readiness-card__status--blocked" aria-live="polite">차단됨 — 설정 필요</span>
+        <a id="readiness-settings-link" href="#" aria-label="Provider 설정으로 이동">Provider 설정으로 이동 →</a>
+      </section>
+    </div>
+
+    <div class="viewport-frame vp-479">
+      <div class="vp-caption">&lt; 480px — 세로 stack 유지</div>
+      <section class="readiness-card" role="region" aria-label="실행 모드 및 Provider 준비 상태">
+        <h2 class="readiness-card__title">실행 준비 상태</h2>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">실행 모드</span>
+          <span class="readiness-card__mode">자동 실행</span>
+        </div>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">Provider</span>
+          <span class="readiness-card__provider">샘플 Provider</span>
+        </div>
+        <span class="readiness-card__status readiness-card__status--ready" aria-live="polite">준비됨</span>
+      </section>
+    </div>
+
+    <div class="viewport-frame vp-768">
+      <div class="vp-caption">≥ 480px — 라벨-값 가로 정렬</div>
+      <section class="readiness-card" role="region" aria-label="실행 모드 및 Provider 준비 상태">
+        <h2 class="readiness-card__title">실행 준비 상태</h2>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">실행 모드</span>
+          <span class="readiness-card__mode">자동 실행</span>
+        </div>
+        <div class="readiness-card__row">
+          <span class="readiness-card__label">Provider</span>
+          <span class="readiness-card__provider">샘플 Provider</span>
+        </div>
+        <span class="readiness-card__status readiness-card__status--ready" aria-live="polite">준비됨</span>
+      </section>
+    </div>
+
+  </div>
+
+  <!-- ══════════ 접근성 주석 ══════════ -->
+  <div class="section-title">3. 접근성 계약 (frozen §5.6)</div>
+  <div class="a11y-box">
+    <h3>스크린리더 · 키보드 동작</h3>
+    <ul>
+      <li><code>#readiness-card</code> → <code>role="region"</code> + <code>aria-label="실행 모드 및 Provider 준비 상태"</code></li>
+      <li><code>#readiness-status</code> → <code>aria-live="polite"</code> — 상태 변화를 스크린리더가 자동 알림</li>
+      <li><code>#readiness-settings-link</code> / <code>#readiness-retry</code> → 명시적 <code>aria-label</code> + 키보드 focus 가능(<code>:focus-visible</code> ring)</li>
+      <li>모든 상태는 색상만이 아니라 <strong>상태명 화면 텍스트</strong>로 구분되어 색맹·저시력·스크린리더 사용자도 판별 가능</li>
+      <li>Provider secret·인증 토큰·세션 cookie 값은 화면·mockup 어디에도 표시하지 않음 (placeholder만)</li>
+    </ul>
+  </div>
+
+</body>
+</html>
