@@ -1,0 +1,84 @@
+/* Provider 실행 준비 상태 카드 런타임 스타일.
+   design token 값은 frozen UI 계약(implementation-plan §5.5)의 exact 값이며 재정의하지 않는다. */
+:root {
+  --color-status-ready: #16a34a;
+  --color-status-blocked: #dc2626;
+  --color-status-unset: #6b7280;
+  --space-card-gap: 12px;
+  --radius-card: 8px;
+}
+
+.readiness-card {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-card-gap);
+  padding: var(--space-card-gap);
+  border: 1px solid var(--color-status-unset);
+  border-radius: var(--radius-card);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.readiness-card__label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-status-unset);
+}
+
+/* 긴 mode/provider 문자열이 320px 에서 overflow 되지 않도록 줄바꿈 허용 */
+.readiness-card__mode,
+.readiness-card__provider,
+.readiness-card__status {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.readiness-card__status {
+  margin: 0;
+  font-weight: 600;
+}
+
+.readiness-card__status--ready {
+  color: var(--color-status-ready);
+}
+
+.readiness-card__status--blocked {
+  color: var(--color-status-blocked);
+}
+
+.readiness-card__status--unset {
+  color: var(--color-status-unset);
+}
+
+.readiness-card__status.is-loading {
+  color: var(--color-status-unset);
+}
+
+.readiness-card__settings-link,
+.readiness-card__retry {
+  font: inherit;
+  cursor: pointer;
+}
+
+.readiness-card__retry {
+  padding: 6px 12px;
+  border: 1px solid var(--color-status-unset);
+  border-radius: var(--radius-card);
+  background: transparent;
+}
+
+.readiness-card__retry:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* 480px 미만: mode/provider/status 항목을 세로로 stack */
+@media (max-width: 479px) {
+  .readiness-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
