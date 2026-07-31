@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>관리형 세션 상태 카드 — 시각 mockup (BF-1416)</title>
+  <style>
+    :root {
+      /* frozen design tokens (ui-contract@v1 — 변경 금지) */
+      --color-status-active: #16a34a;
+      --color-status-idle: #64748b;
+      --color-status-error: #dc2626;
+      --space-card-gap: 16px;
+      --radius-card: 8px;
+      /* vanilla-static 자체 정의 토큰 (외부 의존성 0건) */
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      --color-bg: #ffffff;
+      --color-surface: #f1f5f9;
+      --color-text: #0f172a;
+      --color-text-2: #475569;
+      --color-border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--color-text);
+      background: #e9eef4;
+      line-height: 1.5;
+      padding: 24px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+    .page-note {
+      font-size: 13px;
+      color: var(--color-text-2);
+      margin: 0 0 24px;
+    }
+
+    .state-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      max-width: 1080px;
+    }
+    @media (min-width: 900px) {
+      .state-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .state-frame {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .state-frame__label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-text-2);
+      background: var(--color-surface);
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    /* ── 실제 화면 계약 (#session-canary-root / .session-canary) ── */
+    .session-canary {
+      padding: 16px;
+      background: var(--color-bg);
+    }
+    .session-canary__heading {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 0 0 16px;
+    }
+
+    .session-canary__filter {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-card);
+      padding: 10px 12px;
+      margin-bottom: 16px;
+    }
+    .session-canary__filter label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .session-canary__filter select {
+      font-family: inherit;
+      font-size: 14px;
+      padding: 6px 10px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    .session-canary__filter select:disabled {
+      background: #e2e8f0;
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    #status-summary,
+    .status-summary {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-2);
+      margin-bottom: 16px;
+    }
+
+    .persona-card-list {
+      display: grid;
+      grid-template-columns: 1fr; /* 320px+ 세로 스택 */
+      gap: var(--space-card-gap);
+    }
+    @media (min-width: 640px) {
+      .persona-card-list { grid-template-columns: repeat(2, 1fr); } /* 640px+ 2열 */
+    }
+
+    .persona-card {
+      border: 1px solid var(--color-border);
+      border-left-width: 4px;
+      border-radius: var(--radius-card);
+      padding: 16px;
+      background: var(--color-bg);
+    }
+    .persona-card:hover { background: var(--color-surface); }
+    .persona-card__name {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin: 0 0 6px;
+    }
+    .persona-card__status {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.5;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .persona-card__status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .persona-card--active { border-left-color: var(--color-status-active); }
+    .persona-card--active .persona-card__status { color: var(--color-status-active); }
+    .persona-card--idle { border-left-color: var(--color-status-idle); }
+    .persona-card--idle .persona-card__status { color: var(--color-status-idle); }
+    .persona-card--error { border-left-color: var(--color-status-error); }
+    .persona-card--error .persona-card__status { color: var(--color-status-error); }
+
+    /* loading / empty / error 상태 블록 */
+    .state-text {
+      font-size: 14px;
+      color: var(--color-text-2);
+      padding: 24px 8px;
+      text-align: center;
+    }
+    .state-text--error { color: var(--color-status-error); font-weight: 600; }
+
+    .state-action {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      cursor: pointer;
+    }
+    .state-action:hover { background: var(--color-surface); }
+    .state-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 8px;
+    }
+
+    /* 반응형 데모 프레임 */
+    .viewport-demo {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      max-width: 1080px;
+      margin-top: 24px;
+    }
+    @media (min-width: 900px) {
+      .viewport-demo { grid-template-columns: 320px 1fr; align-items: start; }
+    }
+    .viewport-demo .frame-320 { width: 320px; }
+    .viewport-demo .frame-320 .persona-card-list { grid-template-columns: 1fr; }
+    .viewport-demo .frame-640 .persona-card-list { grid-template-columns: repeat(2, 1fr); }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 32px 0 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">관리형 세션 상태 카드 — 시각 mockup</h1>
+  <p class="page-note">
+    BF-1416 · Epic BF-1415 · 시안 시각화 전용(런타임 산출물 아님). frozen ui-contract@v1 기준.
+  </p>
+
+  <div class="state-grid">
+    <!-- STATE: loading -->
+    <section class="state-frame">
+      <div class="state-frame__label">state · loading</div>
+      <div id="session-canary-root">
+        <div class="session-canary">
+          <h2 class="session-canary__heading">관리형 세션 상태</h2>
+          <div class="session-canary__filter">
+            <label for="status-filter-loading">상태 필터</label>
+            <select id="status-filter-loading" aria-label="상태 필터" disabled>
+              <option>전체</option>
+            </select>
+          </div>
+          <div class="state-text">세션 상태를 불러오는 중…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATE: loaded -->
+    <section class="state-frame">
+      <div class="state-frame__label">state · loaded</div>
+      <div>
+        <div class="session-canary">
+          <h2 class="session-canary__heading">관리형 세션 상태</h2>
+          <div class="session-canary__filter">
+            <label for="status-filter-loaded">상태 필터</label>
+            <select id="status-filter-loaded" aria-label="상태 필터">
+              <option>전체</option>
+              <option>active</option>
+              <option>idle</option>
+              <option>error</option>
+            </select>
+          </div>
+          <div class="status-summary" id="status-summary">활성 2 · 유휴 1 · 오류 1</div>
+          <div class="persona-card-list" id="persona-card-list">
+            <article class="persona-card persona-card--active">
+              <p class="persona-card__name">planner</p>
+              <span class="persona-card__status">활성</span>
+            </article>
+            <article class="persona-card persona-card--active">
+              <p class="persona-card__name">developer</p>
+              <span class="persona-card__status">활성</span>
+            </article>
+            <article class="persona-card persona-card--idle">
+              <p class="persona-card__name">designer</p>
+              <span class="persona-card__status">유휴</span>
+            </article>
+            <article class="persona-card persona-card--error">
+              <p class="persona-card__name">reviewer</p>
+              <span class="persona-card__status">오류</span>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATE: empty -->
+    <section class="state-frame">
+      <div class="state-frame__label">state · empty (필터 결과 0건)</div>
+      <div>
+        <div class="session-canary">
+          <h2 class="session-canary__heading">관리형 세션 상태</h2>
+          <div class="session-canary__filter">
+            <label for="status-filter-empty">상태 필터</label>
+            <select id="status-filter-empty" aria-label="상태 필터">
+              <option>전체</option>
+              <option selected>error</option>
+            </select>
+          </div>
+          <div class="state-block">
+            <div class="state-text">해당 상태의 페르소나가 없습니다</div>
+            <button type="button" class="state-action">전체 보기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATE: error -->
+    <section class="state-frame">
+      <div class="state-frame__label">state · error</div>
+      <div>
+        <div class="session-canary">
+          <h2 class="session-canary__heading">관리형 세션 상태</h2>
+          <div class="session-canary__filter">
+            <label for="status-filter-error">상태 필터</label>
+            <select id="status-filter-error" aria-label="상태 필터" disabled>
+              <option>전체</option>
+            </select>
+          </div>
+          <div class="state-block">
+            <div class="state-text state-text--error">상태를 불러오지 못했습니다</div>
+            <button type="button" class="state-action">다시 시도</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <h2 class="section-title">반응형 — 320px 세로 스택 vs 640px+ 2열 grid</h2>
+  <div class="viewport-demo">
+    <section class="state-frame frame-320">
+      <div class="state-frame__label">≥ 320px · 1열 스택</div>
+      <div class="session-canary">
+        <div class="persona-card-list">
+          <article class="persona-card persona-card--active">
+            <p class="persona-card__name">planner</p>
+            <span class="persona-card__status">활성</span>
+          </article>
+          <article class="persona-card persona-card--idle">
+            <p class="persona-card__name">designer</p>
+            <span class="persona-card__status">유휴</span>
+          </article>
+          <article class="persona-card persona-card--error">
+            <p class="persona-card__name">reviewer</p>
+            <span class="persona-card__status">오류</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="state-frame frame-640">
+      <div class="state-frame__label">≥ 640px · 2열 grid</div>
+      <div class="session-canary">
+        <div class="persona-card-list">
+          <article class="persona-card persona-card--active">
+            <p class="persona-card__name">planner</p>
+            <span class="persona-card__status">활성</span>
+          </article>
+          <article class="persona-card persona-card--active">
+            <p class="persona-card__name">developer</p>
+            <span class="persona-card__status">활성</span>
+          </article>
+          <article class="persona-card persona-card--idle">
+            <p class="persona-card__name">designer</p>
+            <span class="persona-card__status">유휴</span>
+          </article>
+          <article class="persona-card persona-card--error">
+            <p class="persona-card__name">reviewer</p>
+            <span class="persona-card__status">오류</span>
+          </article>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
