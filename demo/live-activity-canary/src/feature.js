@@ -62,19 +62,25 @@ export function getStatusText(state) {
   return STATUS_TEXT[state.status];
 }
 
+function isStartActive(state) {
+  return state.status === STATUS.IDLE || state.status === STATUS.COMPLETE;
+}
+
 function mount(doc) {
   const root = doc.getElementById('activity-stream-root');
   const list = doc.getElementById('activity-list');
   const progressEl = doc.getElementById('token-progress');
   const progressBar = progressEl ? progressEl.querySelector('.token-progress__bar') : null;
   const statusEl = doc.getElementById('activity-status');
+  const startBtn = doc.getElementById('activity-start');
   const retryBtn = doc.getElementById('activity-retry');
 
-  if (!root || !list || !progressEl || !statusEl || !retryBtn) return null;
+  if (!root || !list || !progressEl || !statusEl || !startBtn || !retryBtn) return null;
 
   let state = createInitialState();
   let attempt = 0;
   let timers = [];
+  let renderedCount = 0;
 
   function clearTimers() {
     timers.forEach((id) => clearTimeout(id));
@@ -94,14 +100,20 @@ function mount(doc) {
     progressEl.setAttribute('aria-valuenow', String(state.progress));
     if (progressBar) progressBar.style.width = `${state.progress}%`;
 
-    list.innerHTML = '';
-    state.activities.forEach((activity) => {
+    if (state.activities.length < renderedCount) {
+      list.innerHTML = '';
+      renderedCount = 0;
+    }
+    for (let index = renderedCount; index < state.activities.length; index += 1) {
+      const activity = state.activities[index];
       const item = doc.createElement('li');
       item.className = 'activity-stream__item';
       item.textContent = `${activity.tool} — ${activity.detail}`;
       list.appendChild(item);
-    });
+    }
+    renderedCount = state.activities.length;
 
+    startBtn.disabled = !isStartActive(state);
     retryBtn.disabled = !isRetryActive(state);
   }
 
@@ -130,6 +142,13 @@ function mount(doc) {
     });
   }
 
+  startBtn.addEventListener('click', () => {
+    if (!isStartActive(state)) return;
+    clearTimers();
+    attempt = 0;
+    runStream();
+  });
+
   retryBtn.addEventListener('click', () => {
     if (!isRetryActive(state)) return;
     clearTimers();
@@ -140,7 +159,6 @@ function mount(doc) {
   });
 
   render();
-  schedule(runStream, 600);
 
   return { render, runStream };
 }
