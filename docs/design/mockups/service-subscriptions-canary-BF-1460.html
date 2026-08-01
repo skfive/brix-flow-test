@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>구독 관리 시각 mockup — BF-1460 (service-subscriptions-canary)</title>
+<style>
+  :root {
+    /* frozen design token — docs/plans/service-subscriptions-canary-plan.md §UI 계약 원문과 동일, 변경 금지 */
+    --color-action-primary: #2563eb;
+    --color-status-active: #16a34a;
+    --space-control-gap: 12px;
+
+    /* 보조 컬러 (designer 추가 — frozen 계약 아님) */
+    --color-page-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-border: #e2e8f0;
+    --color-text-primary: #0f172a;
+    --color-text-muted: #64748b;
+    --color-status-error: #dc2626;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 20px 64px;
+    background: #eef2f7;
+    color: var(--color-text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    line-height: 1.5;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .page-sub {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin: 0 0 40px;
+  }
+
+  section.mockup-section {
+    max-width: 1080px;
+    margin: 0 auto 48px;
+  }
+
+  section.mockup-section h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .section-desc {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin: 8px 0 20px;
+    word-break: keep-all;
+  }
+
+  /* ---- 실제 계약 selector: 구독 관리 패널 공통 스타일 ---- */
+  .subscription {
+    width: 100%;
+    max-width: 640px;
+    background: var(--color-page-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  .subscription__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    word-break: keep-all;
+  }
+
+  #subscription-add-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  #subscription-service-select,
+  #subscription-filter-status {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+  }
+
+  #subscription-service-select:focus-visible,
+  #subscription-filter-status:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+    border-color: var(--color-action-primary);
+  }
+
+  .subscription__submit {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    background: var(--color-action-primary);
+    color: #ffffff;
+  }
+
+  .subscription__submit:disabled {
+    cursor: not-allowed;
+    background: var(--color-border);
+    color: var(--color-text-muted);
+  }
+
+  .subscription__submit:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 2px;
+  }
+
+  /* 480px 이상: 추가 폼 가로 배치 — frozen 반응형 계약 */
+  @media (min-width: 480px) {
+    #subscription-add-form {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    #subscription-service-select {
+      flex: 1 1 auto;
+    }
+
+    .subscription__submit {
+      width: auto;
+      flex: 0 0 auto;
+      min-width: 96px;
+    }
+  }
+
+  .subscription__filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .subscription__filter-row label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+
+  /* designer 보조 요소 — frozen 아님: subscribed/removed/error 안내 */
+  .subscription__status {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    padding: 8px 10px;
+    border-radius: 4px;
+    word-break: keep-all;
+    color: var(--color-text-primary);
+    background: var(--color-surface);
+  }
+
+  .subscription__status[data-state="subscribed"] {
+    border-left: 4px solid var(--color-status-active);
+  }
+
+  .subscription__status[data-state="removed"] {
+    border-left: 4px solid var(--color-text-muted);
+  }
+
+  .subscription__status[data-state="error"] {
+    border-left: 4px solid var(--color-status-error);
+  }
+
+  .subscription__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .subscription__item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    font-size: 14px;
+    color: var(--color-text-primary);
+  }
+
+  .subscription__item:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: -2px;
+  }
+
+  .subscription__item-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-control-gap);
+  }
+
+  .subscription__item-name {
+    font-weight: 500;
+  }
+
+  .subscription__item-status {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .subscription__item-status[data-status="active"] {
+    color: var(--color-status-active);
+  }
+
+  .subscription__item-status[data-status="inactive"] {
+    color: var(--color-text-muted);
+  }
+
+  .subscription__item-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-control-gap);
+  }
+
+  .subscription__item-saved-at {
+    color: var(--color-text-muted);
+    font-size: 12px;
+  }
+
+  .subscription__item-remove {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+  }
+
+  .subscription__item-remove:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+  }
+
+  /* 480px 이상: 항목 내부 가로 배치 — frozen 반응형 계약 */
+  @media (min-width: 480px) {
+    .subscription__item {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .subscription__item-main {
+      flex: 1 1 auto;
+    }
+
+    .subscription__item-meta {
+      flex: 0 0 auto;
+    }
+  }
+
+  #subscription-empty {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    padding: 10px 12px;
+    margin: 0;
+  }
+
+  .live-demo-wrap {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .live-demo-callouts {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    max-width: 320px;
+    padding: 12px 14px;
+    border: 1px dashed var(--color-border);
+    border-radius: 6px;
+    background: #ffffff;
+  }
+
+  .live-demo-callouts p { margin: 0 0 8px; }
+  .live-demo-callouts p:last-child { margin-bottom: 0; }
+  .live-demo-callouts code {
+    background: #e2e8f0;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  /* ---- 2. 상태 갤러리 ---- */
+  .state-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .state-gallery .subscription { max-width: none; }
+
+  .state-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    margin: 0 0 -2px;
+  }
+
+  /* ---- 3. 반응형 프레임 프리뷰 ---- */
+  .frame-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .frame {
+    border: 1px dashed var(--color-border);
+    border-radius: 6px;
+    padding: 16px;
+    background: #ffffff;
+  }
+
+  .frame__label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 0 0 10px;
+    font-weight: 600;
+  }
+
+  .frame--320 { width: 320px; }
+  .frame--desktop { width: 640px; }
+
+  .frame--320 .subscription,
+  .frame--desktop .subscription { max-width: none; }
+
+  .frame-note {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>구독 관리 시각 mockup — BF-1460</h1>
+<p class="page-sub">docs/design/service-subscriptions-canary-contract.md 명세의 시각 참조용 정적 mockup. 실제 구현 아님 — 픽셀 단위 일치 의무 없음.</p>
+
+<section class="mockup-section">
+  <h2>1. 실 사용 데모 (frozen selector, idle 고정)</h2>
+  <p class="section-desc">브라우저 창 폭을 480px 미만으로 줄이면 아래 폼·목록 항목이 실제로 세로 스택된다 (frozen 반응형 계약 실동작 확인용). mockup은 정적 파일이므로 상태 전이 자체는 JS 없이 아래 "2. 상태 갤러리"에서 6개 상태를 모두 확인한다.</p>
+  <div class="live-demo-wrap">
+    <div id="subscription-root" class="subscription">
+      <p class="subscription__title">구독 관리</p>
+      <form id="subscription-add-form">
+        <select id="subscription-service-select" aria-label="구독할 서비스 선택">
+          <option value="">서비스 선택</option>
+          <option value="svc-report">리포트 배포</option>
+          <option value="svc-alert">알림 센터</option>
+        </select>
+        <button id="subscription-add-submit" type="submit" class="subscription__submit" aria-label="구독 추가">구독 추가</button>
+      </form>
+      <div class="subscription__filter-row">
+        <label for="subscription-filter-status">상태 필터</label>
+        <select id="subscription-filter-status" class="subscription__filter">
+          <option value="all">전체</option>
+          <option value="active">활성</option>
+          <option value="inactive">비활성</option>
+        </select>
+      </div>
+      <ul id="subscription-list" class="subscription__list">
+        <li class="subscription__item" tabindex="0">
+          <div class="subscription__item-main">
+            <span class="subscription__item-name">리포트 배포</span>
+            <span class="subscription__item-status" data-status="active">활성</span>
+          </div>
+          <div class="subscription__item-meta">
+            <span class="subscription__item-saved-at">2026-07-28 구독</span>
+            <button class="subscription__item-remove" aria-label="리포트 배포 구독 해제">해제</button>
+          </div>
+        </li>
+        <li class="subscription__item" tabindex="0">
+          <div class="subscription__item-main">
+            <span class="subscription__item-name">알림 센터</span>
+            <span class="subscription__item-status" data-status="inactive">비활성</span>
+          </div>
+          <div class="subscription__item-meta">
+            <span class="subscription__item-saved-at">2026-06-02 구독</span>
+            <button class="subscription__item-remove" aria-label="알림 센터 구독 해제">해제</button>
+          </div>
+        </li>
+      </ul>
+      <p id="subscription-empty" style="display:none">표시할 구독이 없습니다</p>
+    </div>
+    <div class="live-demo-callouts">
+      <p><code>#subscription-add-submit</code>은 <code>aria-label="구독 추가"</code>를 갖는다. <code>adding</code> 상태에서도 이 라벨은 고정되고 표시 텍스트만 "추가 중…"으로 바뀐다.</p>
+      <p><code>#subscription-filter-status</code>는 연결된 <code>&lt;label&gt;</code> 텍스트 "상태 필터"를 갖는다.</p>
+      <p><code>.subscription__item</code>은 <code>tabindex="0"</code>으로 <code>Tab</code> 순회 가능하다. 해제 control(<code>.subscription__item-remove</code>, 비-frozen 보조 class)은 서비스명이 포함된 <code>aria-label</code>을 갖는다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mockup-section">
+  <h2>2. 상태 갤러리 (6개 상태 시각 참조)</h2>
+  <p class="section-desc">idle → adding → (subscribed | error). 해제 시 idle → removed(→ empty). 색상뿐 아니라 상태명이 화면 텍스트에 포함되어 색맹 사용자도 텍스트로 상태를 구분할 수 있다. subscribed/removed/error 문구는 designer 보조 요소인 <code>.subscription__status</code>(<code>aria-live="polite"</code>, 참조용 스냅샷이므로 <code>data-state</code> 속성으로 구분)에 표시된다.</p>
+  <div class="state-gallery">
+
+    <div class="subscription">
+      <span class="state-label">idle</span>
+      <p class="subscription__title">구독 관리</p>
+      <form>
+        <select aria-label="구독할 서비스 선택 (참조)">
+          <option>서비스 선택</option>
+        </select>
+        <button class="subscription__submit" aria-label="구독 추가 (참조)">구독 추가</button>
+      </form>
+      <div class="subscription__filter-row">
+        <label>상태 필터</label>
+        <select class="subscription__filter">
+          <option>전체</option>
+        </select>
+      </div>
+      <ul class="subscription__list">
+        <li class="subscription__item">
+          <div class="subscription__item-main">
+            <span class="subscription__item-name">리포트 배포</span>
+            <span class="subscription__item-status" data-status="active">활성</span>
+          </div>
+          <div class="subscription__item-meta">
+            <span class="subscription__item-saved-at">2026-07-28 구독</span>
+            <button class="subscription__item-remove" aria-label="리포트 배포 구독 해제 (참조)">해제</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="subscription">
+      <span class="state-label">adding</span>
+      <p class="subscription__title">구독 관리</p>
+      <form>
+        <select aria-label="구독할 서비스 선택 (참조)">
+          <option>알림 센터</option>
+        </select>
+        <button class="subscription__submit" aria-label="구독 추가 (참조)" disabled>추가 중…</button>
+      </form>
+      <div class="subscription__filter-row">
+        <label>상태 필터</label>
+        <select class="subscription__filter">
+          <option>전체</option>
+        </select>
+      </div>
+      <ul class="subscription__list">
+        <li class="subscription__item">
+          <div class="subscription__item-main">
+            <span class="subscription__item-name">리포트 배포</span>
+            <span class="subscription__item-status" data-status="active">활성</span>
+          </div>
+          <div class="subscription__item-meta">
+            <span class="subscription__item-saved-at">2026-07-28 구독</span>
+            <button class="subscription__item-remove" aria-label="리포트 배포 구독 해제 (참조)">해제</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="subscription">
+      <span class="state-label">subscribed</span>
+      <p class="subscription__title">구독 관리</p>
+      <form>
+        <select aria-label="구독할 서비스 선택 (참조)">
+          <option>서비스 선택</option>
+        </select>
+        <button class="subscription__submit" aria-label="구독 추가 (참조)">구독 추가</button>
+      </form>
+      <div class="subscription__filter-row">
+        <label>상태 필터</label>
+        <select class="subscription__filter">
+          <option>전체</option>
+        </select>
+      </div>
+      <p class="subscription__status" data-state="subscribed">구독이 추가되었습니다</p>
+      <ul class="subscription__list">
+        <li class="subscription__item">
+          <div class="subscription__item-main">
+            <span class="subscription__item-name">알림 센터</span>
+            <span class="subscription__item-status" data-status="active">활성</span>
+          </div>
+          <div class="subscription__item-meta">
+            <span class="subscription__item-saved-at">방금 구독</span>
+            <button class="subscription__item-remove" aria-label="알림 센터 구독 해제 (참조)">해제</button>
+          </div>
+        </li>
+        <li class="subscription__item">
+          <div class="subscription__item-main">
+            <span class="subscription__item-name">리포트 배포</span>
+            <span class="subscription__item-status" data-status="active">활성</span>
+          </div>
+          <div class="subscription__item-meta">
+            <span class="subscription__item-saved-at">2026-07-28 구독</span>
+            <button class="subscription__item-remove" aria-label="리포트 배포 구독 해제 (참조)">해제</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="subscription">
+      <span class="state-label">removed</span>
+      <p class="subscription__title">구독 관리</p>
+      <form>
+        <select aria-label="구독할 서비스 선택 (참조)">
+          <option>서비스 선택</option>
+        </select>
+        <button class="subscription__submit" aria-label="구독 추가 (참조)">구독 추가</button>
+      </form>
+      <div class="subscription__filter-row">
+        <label>상태 필터</label>
+        <select class="subscription__filter">
+          <option>전체</option>
+        </select>
+      </div>
+      <p class="subscription__status" data-state="removed">구독이 해제되었습니다</p>
+      <ul class="subscription__list">
+        <li class="subscription__item">
+          <div class="subscription__item-main">
+            <span class="subscription__item-name">리포트 배포</span>
+            <span class="subscription__item-status" data-status="active">활성</span>
+          </div>
+          <div class="subscription__item-meta">
+            <span class="subscription__item-saved-at">2026-07-28 구독</span>
+            <button class="subscription__item-remove" aria-label="리포트 배포 구독 해제 (참조)">해제</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="subscription">
+      <span class="state-label">empty</span>
+      <p class="subscription__title">구독 관리</p>
+      <form>
+        <select aria-label="구독할 서비스 선택 (참조)">
+          <option>서비스 선택</option>
+        </select>
+        <button class="subscription__submit" aria-label="구독 추가 (참조)">구독 추가</button>
+      </form>
+      <div class="subscription__filter-row">
+        <label>상태 필터</label>
+        <select class="subscription__filter">
+          <option>전체</option>
+        </select>
+      </div>
+      <p id="subscription-empty">표시할 구독이 없습니다</p>
+    </div>
+
+    <div class="subscription">
+      <span class="state-label">error</span>
+      <p class="subscription__title">구독 관리</p>
+      <form>
+        <select aria-label="구독할 서비스 선택 (참조)">
+          <option>알림 센터</option>
+        </select>
+        <button class="subscription__submit" aria-label="구독 추가 (참조)">구독 추가</button>
+      </form>
+      <div class="subscription__filter-row">
+        <label>상태 필터</label>
+        <select class="subscription__filter">
+          <option>전체</option>
+        </select>
+      </div>
+      <p class="subscription__status" data-state="error">구독을 저장하지 못했습니다</p>
+      <ul class="subscription__list">
+        <li class="subscription__item">
+          <div class="subscription__item-main">
+            <span class="subscription__item-name">리포트 배포</span>
+            <span class="subscription__item-status" data-status="active">활성</span>
+          </div>
+          <div class="subscription__item-meta">
+            <span class="subscription__item-saved-at">2026-07-28 구독</span>
+            <button class="subscription__item-remove" aria-label="리포트 배포 구독 해제 (참조)">해제</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<section class="mockup-section">
+  <h2>3. 반응형 동작 (320px / 480px 이상 비교)</h2>
+  <p class="section-desc">고정 폭 프레임으로 breakpoint 전후 레이아웃을 나란히 비교한다. 320px에서도 폼과 목록 항목이 overflow 없이 세로로 스택된다.</p>
+  <div class="frame-row">
+    <div>
+      <div class="frame frame--320">
+        <p class="frame__label">320px 뷰포트 — 세로 스택</p>
+        <div class="subscription">
+          <p class="subscription__title">구독 관리</p>
+          <form>
+            <select aria-label="구독할 서비스 선택 (참조)">
+              <option>서비스 선택</option>
+            </select>
+            <button class="subscription__submit" aria-label="구독 추가 (참조)">구독 추가</button>
+          </form>
+          <div class="subscription__filter-row">
+            <label>상태 필터</label>
+            <select class="subscription__filter">
+              <option>전체</option>
+            </select>
+          </div>
+          <ul class="subscription__list">
+            <li class="subscription__item">
+              <div class="subscription__item-main">
+                <span class="subscription__item-name">리포트 배포</span>
+                <span class="subscription__item-status" data-status="active">활성</span>
+              </div>
+              <div class="subscription__item-meta">
+                <span class="subscription__item-saved-at">2026-07-28 구독</span>
+                <button class="subscription__item-remove" aria-label="리포트 배포 구독 해제 (참조)">해제</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p class="frame-note">&lt;480px: <code>#subscription-add-form</code>, <code>.subscription__item</code> 모두 flex-direction: column</p>
+    </div>
+    <div>
+      <div class="frame frame--desktop">
+        <p class="frame__label">480px 이상 뷰포트 — 가로 배치</p>
+        <div class="subscription">
+          <p class="subscription__title">구독 관리</p>
+          <form style="flex-direction:row;align-items:center;">
+            <select style="flex:1 1 auto;" aria-label="구독할 서비스 선택 (참조)">
+              <option>서비스 선택</option>
+            </select>
+            <button class="subscription__submit" style="width:auto;flex:0 0 auto;min-width:96px;" aria-label="구독 추가 (참조)">구독 추가</button>
+          </form>
+          <div class="subscription__filter-row">
+            <label>상태 필터</label>
+            <select class="subscription__filter">
+              <option>전체</option>
+            </select>
+          </div>
+          <ul class="subscription__list">
+            <li class="subscription__item" style="flex-direction:row;align-items:center;justify-content:space-between;">
+              <div class="subscription__item-main" style="flex:1 1 auto;">
+                <span class="subscription__item-name">리포트 배포</span>
+                <span class="subscription__item-status" data-status="active">활성</span>
+              </div>
+              <div class="subscription__item-meta" style="flex:0 0 auto;">
+                <span class="subscription__item-saved-at">2026-07-28 구독</span>
+                <button class="subscription__item-remove" aria-label="리포트 배포 구독 해제 (참조)">해제</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p class="frame-note">≥480px: <code>#subscription-add-form</code>, <code>.subscription__item</code> 모두 flex-direction: row</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
