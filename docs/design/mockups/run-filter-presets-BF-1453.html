@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>필터 프리셋 시각 mockup — BF-1454 (run-filter-presets)</title>
+<style>
+  :root {
+    /* frozen design token — docs/plans/run-filter-presets-BF-1453.md §3.4 원문과 동일, 변경 금지 */
+    --color-surface-dark: #0f172a;
+    --color-action-primary: #2563eb;
+    --color-text-primary: #e2e8f0;
+    --space-control-gap: 12px;
+
+    /* 보조 컬러 (designer 추가 — frozen 계약 아님) */
+    --color-panel-border: #1e293b;
+    --color-input-bg: #1e293b;
+    --color-input-border: #334155;
+    --color-text-caption: #94a3b8;
+    --color-status-success-accent: #16a34a;
+    --color-status-error-accent: #dc2626;
+    --color-page-bg: #020617;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 20px 64px;
+    background: var(--color-page-bg);
+    color: var(--color-text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    line-height: 1.5;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .page-sub {
+    font-size: 13px;
+    color: var(--color-text-caption);
+    margin: 0 0 40px;
+  }
+
+  section.mockup-section {
+    max-width: 1080px;
+    margin: 0 auto 48px;
+  }
+
+  section.mockup-section h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-panel-border);
+  }
+
+  .section-desc {
+    font-size: 13px;
+    color: var(--color-text-caption);
+    margin: 8px 0 20px;
+    word-break: keep-all;
+  }
+
+  /* ---- 실제 계약 selector: 프리셋 패널 공통 스타일 ---- */
+  .preset-panel {
+    width: 100%;
+    max-width: 640px;
+    background: var(--color-surface-dark);
+    border: 1px solid var(--color-panel-border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  .preset-panel__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    word-break: keep-all;
+  }
+
+  .preset-panel__row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  .preset-panel__row input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    background: var(--color-input-bg);
+    border: 1px solid var(--color-input-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+  }
+
+  .preset-panel__row input:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+    border-color: var(--color-action-primary);
+  }
+
+  .preset-panel__row input::placeholder {
+    color: var(--color-text-caption);
+  }
+
+  .preset-panel__save,
+  .preset-panel__reset {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .preset-panel__save {
+    border: none;
+    background: var(--color-action-primary);
+    color: var(--color-text-primary);
+  }
+
+  .preset-panel__save:disabled {
+    cursor: not-allowed;
+    background: var(--color-panel-border);
+    color: #64748b;
+  }
+
+  .preset-panel__reset {
+    border: 1px solid var(--color-input-border);
+    background: transparent;
+    color: var(--color-text-caption);
+  }
+
+  .preset-panel__reset:disabled {
+    cursor: not-allowed;
+    border-color: var(--color-panel-border);
+    color: #475569;
+  }
+
+  /* 데스크톱(≥1024px): 입력행 가로 배치 — frozen 반응형 계약 */
+  @media (min-width: 1024px) {
+    .preset-panel__row {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .preset-panel__row input {
+      flex: 1 1 auto;
+    }
+
+    .preset-panel__save,
+    .preset-panel__reset {
+      width: auto;
+      flex: 0 0 auto;
+      min-width: 88px;
+    }
+  }
+
+  .preset-panel__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .preset-panel__item {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-control-gap);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    cursor: pointer;
+  }
+
+  .preset-panel__item:hover,
+  .preset-panel__item:focus-visible {
+    background: var(--color-input-bg);
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: -2px;
+  }
+
+  .preset-panel__item-saved-at {
+    color: var(--color-text-caption);
+    font-size: 12px;
+  }
+
+  .preset-panel__empty {
+    font-size: 14px;
+    color: var(--color-text-caption);
+    padding: 10px 12px;
+  }
+
+  .preset-panel__status {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    padding: 8px 10px;
+    border-radius: 4px;
+    word-break: keep-all;
+  }
+
+  .preset-panel__status[data-state="idle"],
+  .preset-panel__status[data-state="saving"] {
+    color: var(--color-text-primary);
+  }
+
+  .preset-panel__status[data-state="empty"] {
+    color: var(--color-text-caption);
+  }
+
+  .preset-panel__status[data-state="applied"] {
+    color: var(--color-text-primary);
+    border-left: 4px solid var(--color-status-success-accent);
+  }
+
+  .preset-panel__status[data-state="error"] {
+    color: var(--color-text-primary);
+    border-left: 4px solid var(--color-status-error-accent);
+  }
+
+  /* ---- 1. 실 사용 데모 (frozen id 적용, idle 고정) ---- */
+  .live-demo-wrap {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .live-demo-callouts {
+    font-size: 12px;
+    color: var(--color-text-caption);
+    max-width: 320px;
+    padding: 12px 14px;
+    border: 1px dashed var(--color-input-border);
+    border-radius: 6px;
+    background: var(--color-surface-dark);
+  }
+
+  .live-demo-callouts p { margin: 0 0 8px; }
+  .live-demo-callouts p:last-child { margin-bottom: 0; }
+  .live-demo-callouts code {
+    background: #1e293b;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  #preset-status {
+    outline: 2px dashed var(--color-action-primary);
+    outline-offset: 4px;
+  }
+
+  /* ---- 2. 상태 갤러리 (참조용 — id는 실제 구현에서 단일 인스턴스에만 부여되므로 data-state로 표현) ---- */
+  .state-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .state-gallery .preset-panel { max-width: none; }
+
+  .state-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-text-caption);
+    text-transform: uppercase;
+    margin: 0 0 -2px;
+  }
+
+  /* ---- 3. 반응형 프레임 프리뷰 (고정 폭으로 360px / 데스크톱 비교 시연) ---- */
+  .frame-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .frame {
+    border: 1px dashed var(--color-input-border);
+    border-radius: 6px;
+    padding: 16px;
+    background: #000000;
+  }
+
+  .frame__label {
+    font-size: 12px;
+    color: var(--color-text-caption);
+    margin: 0 0 10px;
+    font-weight: 600;
+  }
+
+  .frame--360 { width: 360px; }
+  .frame--desktop { width: 680px; }
+
+  .frame--360 .preset-panel { max-width: none; }
+  .frame--desktop .preset-panel { max-width: none; }
+
+  .frame--360 .preset-panel__row { flex-direction: column; }
+  .frame--360 .preset-panel__save,
+  .frame--360 .preset-panel__reset { width: 100%; }
+
+  .frame--desktop .preset-panel__row { flex-direction: row; align-items: center; }
+  .frame--desktop .preset-panel__row input { flex: 1 1 auto; }
+  .frame--desktop .preset-panel__save,
+  .frame--desktop .preset-panel__reset { width: auto; flex: 0 0 auto; min-width: 88px; }
+
+  .frame-note {
+    font-size: 12px;
+    color: var(--color-text-caption);
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>필터 프리셋 시각 mockup — BF-1454</h1>
+<p class="page-sub">docs/design/run-filter-presets-BF-1453.md 명세의 시각 참조용 정적 mockup. 실제 구현 아님 — 픽셀 단위 일치 의무 없음.</p>
+
+<section class="mockup-section">
+  <h2>1. 실 사용 데모 (frozen selector, idle 고정)</h2>
+  <p class="section-desc">브라우저 창 폭을 1024px 미만으로 줄이면 아래 패널의 입력행이 실제로 세로 스택된다 (frozen 반응형 계약 실동작 확인용). mockup은 정적 파일이므로 상태 전이 자체는 JS 없이 아래 "2. 상태 갤러리"에서 5개 상태를 모두 확인한다.</p>
+  <div class="live-demo-wrap">
+    <div id="preset-root" class="preset-panel">
+      <p class="preset-panel__title">필터 프리셋</p>
+      <div class="preset-panel__row">
+        <input id="preset-name-input" type="text" placeholder="프리셋 이름 입력">
+        <button id="preset-save-button" class="preset-panel__save" aria-label="프리셋 저장">저장</button>
+        <button id="preset-reset-button" class="preset-panel__reset" aria-label="필터 초기화">초기화</button>
+      </div>
+      <ul id="preset-list" class="preset-panel__list">
+        <li class="preset-panel__item" tabindex="0">
+          <span>성공만 · planner</span>
+          <span class="preset-panel__item-saved-at">5분 전</span>
+        </li>
+        <li class="preset-panel__item" tabindex="0">
+          <span>실패+경고 · developer, reviewer</span>
+          <span class="preset-panel__item-saved-at">어제</span>
+        </li>
+      </ul>
+      <p id="preset-status" class="preset-panel__status" data-state="idle" aria-live="polite">저장된 프리셋을 선택하거나 새로 저장하세요</p>
+    </div>
+    <div class="live-demo-callouts">
+      <p>◀ 점선 강조 영역이 <code>#preset-status</code> (<code>aria-live="polite"</code>). 상태 전이마다 textContent가 바뀌며 스크린리더가 자동으로 발화한다.</p>
+      <p>위치: <code>#preset-list</code> 바로 아래, 패널 하단 — 저장/초기화/적용 조작 직후 시선이 이동하는 자리에 배치.</p>
+      <p><code>#preset-save-button</code> / <code>#preset-reset-button</code>은 각각 <code>aria-label="프리셋 저장"</code> / <code>aria-label="필터 초기화"</code>를 갖는다. <code>#preset-list</code> 항목은 <code>tabindex="0"</code>으로 <code>Tab</code> 순회, <code>Enter</code>로 적용된다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mockup-section">
+  <h2>2. 상태 갤러리 (5개 상태 시각 참조)</h2>
+  <p class="section-desc">idle → saving → (applied | error). 저장된 프리셋이 0건이면 empty. 색상뿐 아니라 상태명이 화면 텍스트에 포함되어 색맹 사용자도 텍스트로 상태를 구분할 수 있다. (참조용 스냅샷이므로 frozen id 대신 <code>data-state</code> 속성으로 구분 — 실제 구현은 단일 <code>#preset-status</code> 인스턴스가 텍스트만 교체한다.)</p>
+  <div class="state-gallery">
+
+    <div class="preset-panel">
+      <span class="state-label">idle</span>
+      <p class="preset-panel__title">필터 프리셋</p>
+      <div class="preset-panel__row">
+        <input type="text" placeholder="프리셋 이름 입력" aria-label="프리셋 이름 입력 (참조)">
+        <button class="preset-panel__save" aria-label="프리셋 저장 (참조)">저장</button>
+        <button class="preset-panel__reset" aria-label="필터 초기화 (참조)">초기화</button>
+      </div>
+      <ul class="preset-panel__list">
+        <li class="preset-panel__item">
+          <span>성공만 · planner</span>
+          <span class="preset-panel__item-saved-at">5분 전</span>
+        </li>
+      </ul>
+      <p class="preset-panel__status" data-state="idle">저장된 프리셋을 선택하거나 새로 저장하세요</p>
+    </div>
+
+    <div class="preset-panel">
+      <span class="state-label">saving</span>
+      <p class="preset-panel__title">필터 프리셋</p>
+      <div class="preset-panel__row">
+        <input type="text" value="야간 배치 점검" aria-label="프리셋 이름 입력 (참조)">
+        <button class="preset-panel__save" aria-label="프리셋 저장 (참조)" disabled>저장</button>
+        <button class="preset-panel__reset" aria-label="필터 초기화 (참조)" disabled>초기화</button>
+      </div>
+      <ul class="preset-panel__list">
+        <li class="preset-panel__item">
+          <span>성공만 · planner</span>
+          <span class="preset-panel__item-saved-at">5분 전</span>
+        </li>
+      </ul>
+      <p class="preset-panel__status" data-state="saving">프리셋 저장 중…</p>
+    </div>
+
+    <div class="preset-panel">
+      <span class="state-label">applied</span>
+      <p class="preset-panel__title">필터 프리셋</p>
+      <div class="preset-panel__row">
+        <input type="text" placeholder="프리셋 이름 입력" aria-label="프리셋 이름 입력 (참조)">
+        <button class="preset-panel__save" aria-label="프리셋 저장 (참조)">저장</button>
+        <button class="preset-panel__reset" aria-label="필터 초기화 (참조)">초기화</button>
+      </div>
+      <ul class="preset-panel__list">
+        <li class="preset-panel__item">
+          <span>야간 배치 점검 · developer</span>
+          <span class="preset-panel__item-saved-at">방금</span>
+        </li>
+      </ul>
+      <p class="preset-panel__status" data-state="applied">프리셋이 적용되었습니다</p>
+    </div>
+
+    <div class="preset-panel">
+      <span class="state-label">empty</span>
+      <p class="preset-panel__title">필터 프리셋</p>
+      <div class="preset-panel__row">
+        <input type="text" placeholder="프리셋 이름 입력" aria-label="프리셋 이름 입력 (참조)">
+        <button class="preset-panel__save" aria-label="프리셋 저장 (참조)">저장</button>
+        <button class="preset-panel__reset" aria-label="필터 초기화 (참조)">초기화</button>
+      </div>
+      <p class="preset-panel__empty">저장된 프리셋이 없습니다</p>
+      <p class="preset-panel__status" data-state="empty">저장된 프리셋이 없습니다</p>
+    </div>
+
+    <div class="preset-panel">
+      <span class="state-label">error</span>
+      <p class="preset-panel__title">필터 프리셋</p>
+      <div class="preset-panel__row">
+        <input type="text" value="야간 배치 점검" aria-label="프리셋 이름 입력 (참조)">
+        <button class="preset-panel__save" aria-label="프리셋 저장 (참조)">저장</button>
+        <button class="preset-panel__reset" aria-label="필터 초기화 (참조)">초기화</button>
+      </div>
+      <ul class="preset-panel__list">
+        <li class="preset-panel__item">
+          <span>성공만 · planner</span>
+          <span class="preset-panel__item-saved-at">5분 전</span>
+        </li>
+      </ul>
+      <p class="preset-panel__status" data-state="error">프리셋 저장에 실패했습니다. 다시 시도하세요</p>
+    </div>
+
+  </div>
+</section>
+
+<section class="mockup-section">
+  <h2>3. 반응형 동작 (360px / 데스크톱 ≥1024px 비교)</h2>
+  <p class="section-desc">고정 폭 프레임으로 breakpoint 전후 레이아웃을 나란히 비교한다. 360px에서도 패널 콘텐츠가 overflow 없이 세로로 스택된다.</p>
+  <div class="frame-row">
+    <div>
+      <div class="frame frame--360">
+        <p class="frame__label">360px 뷰포트 — 입력행 세로 스택</p>
+        <div class="preset-panel">
+          <p class="preset-panel__title">필터 프리셋</p>
+          <div class="preset-panel__row">
+            <input type="text" placeholder="프리셋 이름 입력" aria-label="프리셋 이름 입력 (참조)">
+            <button class="preset-panel__save" aria-label="프리셋 저장 (참조)">저장</button>
+            <button class="preset-panel__reset" aria-label="필터 초기화 (참조)">초기화</button>
+          </div>
+          <ul class="preset-panel__list">
+            <li class="preset-panel__item">
+              <span>성공만 · planner</span>
+              <span class="preset-panel__item-saved-at">5분 전</span>
+            </li>
+          </ul>
+          <p class="preset-panel__status" data-state="idle">저장된 프리셋을 선택하거나 새로 저장하세요</p>
+        </div>
+      </div>
+      <p class="frame-note">&lt;1024px: <code>.preset-panel__row</code> flex-direction: column</p>
+    </div>
+    <div>
+      <div class="frame frame--desktop">
+        <p class="frame__label">데스크톱(≥1024px) 뷰포트 — 입력행 가로 배치</p>
+        <div class="preset-panel">
+          <p class="preset-panel__title">필터 프리셋</p>
+          <div class="preset-panel__row">
+            <input type="text" placeholder="프리셋 이름 입력" aria-label="프리셋 이름 입력 (참조)">
+            <button class="preset-panel__save" aria-label="프리셋 저장 (참조)">저장</button>
+            <button class="preset-panel__reset" aria-label="필터 초기화 (참조)">초기화</button>
+          </div>
+          <ul class="preset-panel__list">
+            <li class="preset-panel__item">
+              <span>성공만 · planner</span>
+              <span class="preset-panel__item-saved-at">5분 전</span>
+            </li>
+          </ul>
+          <p class="preset-panel__status" data-state="idle">저장된 프리셋을 선택하거나 새로 저장하세요</p>
+        </div>
+      </div>
+      <p class="frame-note">≥1024px: <code>.preset-panel__row</code> flex-direction: row</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
