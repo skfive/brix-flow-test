@@ -14,7 +14,15 @@ const BADGE_MODIFIER_CLASS = Object.freeze({
   failed: 'delivery-status__badge--failed',
 });
 
+// loading/error는 frozen modifier class 목록(§UI 계약) 밖이므로 badgeModifierClass는 그대로 null을
+// 반환한다 — 이 두 상태만 구분하는 additive 표시 class를 별도로 둔다 (design §2.2/§5.3 제안).
+const STATE_ONLY_BADGE_CLASS = Object.freeze({
+  loading: 'delivery-status__badge--loading',
+  error: 'delivery-status__badge--error',
+});
+
 const ALL_BADGE_MODIFIER_CLASSES = Object.values(BADGE_MODIFIER_CLASS);
+const ALL_STATE_ONLY_BADGE_CLASSES = Object.values(STATE_ONLY_BADGE_CLASS);
 
 // vanilla-static 환경: 실제 API 서버가 없으므로 plan §4 응답 계약(normal/warning/failed,
 // updatedAt ISO 8601)을 만족하는 delivery-status.json 고정 응답을 모듈 기준 상대 경로로 fetch한다.
@@ -73,9 +81,11 @@ function renderState(elements, state, updatedAt = '') {
   const meta = STATUS_META[state] || STATUS_META.error;
   const modifierClass = badgeModifierClass(state);
 
-  elements.badge.classList.remove(...ALL_BADGE_MODIFIER_CLASSES);
+  elements.badge.classList.remove(...ALL_BADGE_MODIFIER_CLASSES, ...ALL_STATE_ONLY_BADGE_CLASSES);
   if (modifierClass) {
     elements.badge.classList.add(modifierClass);
+  } else {
+    elements.badge.classList.add(STATE_ONLY_BADGE_CLASS[state] || STATE_ONLY_BADGE_CLASS.error);
   }
   elements.badge.textContent = meta.icon;
   elements.badge.setAttribute('aria-label', meta.label);
@@ -101,8 +111,9 @@ function createLoader(elements, fetchImpl, endpoint) {
     const controller = new AbortController();
     activeController = controller;
 
+    // frozen 계약(plan §3.6/§6-7, design §5.4): 어떤 상태에서도 delivery-status-refresh를
+    // disabled 처리하지 않는다 — loading 중에도 즉시 재사용 가능해야 한다.
     renderState(elements, 'loading', '');
-    elements.refresh.disabled = true;
 
     const result = await fetchDeliveryStatus(endpoint, { fetchImpl, signal: controller.signal });
 
@@ -111,7 +122,6 @@ function createLoader(elements, fetchImpl, endpoint) {
     }
 
     renderState(elements, result.status, result.updatedAt);
-    elements.refresh.disabled = false;
   };
 }
 

@@ -213,7 +213,7 @@ test('initDeliveryStatus: warning/failed 상태도 대응 modifier class와 한�
   }
 });
 
-test('initDeliveryStatus: 로딩 중에는 새로고침 버튼이 비활성화되고 완료 후 재활성화된다 (AC3)', async () => {
+test('initDeliveryStatus: loading 중에도 새로고침 버튼은 disabled 되지 않는다 (frozen 계약: 즉시 재사용 가능, plan §3.6/§6-7)', async () => {
   const { doc, elements } = createFakeDom();
   let resolveFetch;
   const pending = new Promise((r) => {
@@ -223,7 +223,8 @@ test('initDeliveryStatus: 로딩 중에는 새로고침 버튼이 비활성화�
   initDeliveryStatus(doc, { fetchImpl, endpoint: 'x' });
   await flushAll();
 
-  assert.equal(elements['delivery-status-refresh'].disabled, true);
+  assert.equal(elements['delivery-status-label'].textContent, STATUS_META.loading.label);
+  assert.equal(elements['delivery-status-refresh'].disabled, false);
 
   resolveFetch(fakeResponse({ body: { status: 'normal', updatedAt: '2026-08-01T09:00:00Z' } }));
   await flushAll();
@@ -250,6 +251,27 @@ test('initDeliveryStatus: 새로고침 클릭 시 loading으로 리셋 후 새 �
   assert.equal(elements['delivery-status-badge'].classList.contains('delivery-status__badge--failed'), true);
   assert.equal(elements['delivery-status-label'].textContent, '실패');
   assert.equal(call, 2);
+});
+
+test('initDeliveryStatus: loading과 error는 서로 다른 additive 배지 class로 구분된다 (design §2.2/§5.3)', async () => {
+  const { doc, elements } = createFakeDom();
+  let resolveFetch;
+  const pending = new Promise((r) => {
+    resolveFetch = r;
+  });
+  const fetchImpl = async () => pending;
+  initDeliveryStatus(doc, { fetchImpl, endpoint: 'x' });
+  await flushAll();
+
+  const badge = elements['delivery-status-badge'];
+  assert.equal(badge.classList.contains('delivery-status__badge--loading'), true);
+  assert.equal(badge.classList.contains('delivery-status__badge--error'), false);
+
+  resolveFetch({ ok: false, status: 500, json: async () => ({}) });
+  await flushAll();
+
+  assert.equal(badge.classList.contains('delivery-status__badge--loading'), false);
+  assert.equal(badge.classList.contains('delivery-status__badge--error'), true);
 });
 
 test('initDeliveryStatus: 조회 실패(error) 후에도 새로고침으로 재시도 가능하다 (AC4)', async () => {
@@ -335,6 +357,12 @@ test('index.html: frozen CSS 클래스와 디자인 토큰이 존재한다', () 
   ]) {
     assert.ok(html.includes(token), `missing token: ${token}`);
   }
+});
+
+test('index.html: additive --color-status-loading 토큰과 loading/error 배지 class가 존재한다 (design §2.2/§5.3)', () => {
+  assert.ok(html.includes('--color-status-loading'), 'missing token: --color-status-loading');
+  assert.match(html, /delivery-status__badge--loading/);
+  assert.match(html, /delivery-status__badge--error/);
 });
 
 test('index.html: 접근성 속성과 runtime 모듈 진입점이 존재한다 (AC5)', () => {

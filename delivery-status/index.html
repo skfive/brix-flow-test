@@ -11,6 +11,8 @@
         --color-status-warning: #d97706;
         --color-status-failed: #dc2626;
         --color-status-error: #6b7280;
+        /* additive 토큰 (design §2.2/§5.3 제안, non-frozen) — loading을 error와 시각적으로 구분 */
+        --color-status-loading: #94a3b8;
         --space-card-gap: 16px;
       }
 
@@ -57,6 +59,13 @@
       }
       .delivery-status__badge--failed {
         background: var(--color-status-failed);
+      }
+      /* additive 표시 class (frozen modifier 목록 밖) — loading/error 배지 색상 구분 */
+      .delivery-status__badge--loading {
+        background: var(--color-status-loading);
+      }
+      .delivery-status__badge--error {
+        background: var(--color-status-error);
       }
 
       #delivery-status-label {
