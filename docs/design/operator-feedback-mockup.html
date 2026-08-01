@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>피드백 카드 시각 mockup — BF-1448 (operator-feedback)</title>
+<style>
+  :root {
+    /* frozen design token — docs/plans/operator-feedback-BF-1446.md 원문과 동일, 변경 금지 */
+    --color-action-primary: #2563eb;
+    --color-status-success: #16a34a;
+    --color-status-warning: #d97706;
+    --color-status-failure: #dc2626;
+    --space-card-gap: 12px;
+
+    /* 보조 컬러 (designer 추가 — frozen 계약 아님) */
+    --color-card-bg: #ffffff;
+    --color-card-border: #e2e8f0;
+    --color-text-body: #1e293b;
+    --color-text-caption: #64748b;
+    --color-page-bg: #f8fafc;
+    --color-btn-disabled-bg: #e2e8f0;
+    --color-btn-disabled-text: #94a3b8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 20px 64px;
+    background: var(--color-page-bg);
+    color: var(--color-text-body);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    line-height: 1.5;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .page-sub {
+    font-size: 13px;
+    color: var(--color-text-caption);
+    margin: 0 0 40px;
+  }
+
+  section.mockup-section {
+    max-width: 960px;
+    margin: 0 auto 48px;
+  }
+
+  section.mockup-section h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-card-border);
+  }
+
+  .section-desc {
+    font-size: 13px;
+    color: var(--color-text-caption);
+    margin: 8px 0 20px;
+  }
+
+  /* ---- 실제 계약 selector: 카드 컴포넌트 공통 스타일 ---- */
+  .feedback-card {
+    max-width: 360px;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--color-card-border);
+    background: var(--color-card-bg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-card-gap);
+  }
+
+  .feedback-card__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    word-break: keep-all;
+  }
+
+  .feedback-card__actions {
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-card-gap);
+  }
+
+  .feedback-card__actions button {
+    flex: 1 1 0;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: var(--color-action-primary);
+    color: #ffffff;
+  }
+
+  .feedback-card__actions button:disabled {
+    cursor: not-allowed;
+    background: var(--color-btn-disabled-bg);
+    color: var(--color-btn-disabled-text);
+  }
+
+  .feedback-card__status {
+    min-height: 20px;
+  }
+
+  .feedback-card__message {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+
+  /* 480px 미만: 액션 버튼 세로 스택 — frozen 반응형 계약 */
+  @media (max-width: 479px) {
+    .feedback-card__actions {
+      flex-direction: column;
+    }
+  }
+
+  /* ---- 1. 실 사용 데모 (frozen id 적용, 브라우저 폭 조절 시 실제 반응형 동작 확인 가능) ---- */
+  .live-demo-wrap {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .live-demo-callouts {
+    font-size: 12px;
+    color: var(--color-text-caption);
+    max-width: 320px;
+    padding: 12px 14px;
+    border: 1px dashed #94a3b8;
+    border-radius: 6px;
+    background: #ffffff;
+  }
+
+  .live-demo-callouts p { margin: 0 0 8px; }
+  .live-demo-callouts p:last-child { margin-bottom: 0; }
+  .live-demo-callouts code {
+    background: #f1f5f9;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  #feedback-status-live {
+    outline: 2px dashed var(--color-action-primary);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+
+  /* ---- 2. 상태 갤러리 (참조용 — id는 실제 구현에서 단일 인스턴스에만 부여되므로 여기서는 data-state로 표현) ---- */
+  .state-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .state-gallery .feedback-card { max-width: none; }
+
+  .feedback-card[data-state="idle"] .feedback-card__message { color: var(--color-text-caption); font-weight: 400; }
+  .feedback-card[data-state="confirming"] .feedback-card__message { color: var(--color-text-body); }
+  .feedback-card[data-state="submitting"] .feedback-card__message { color: var(--color-text-body); }
+  .feedback-card[data-state="success"] .feedback-card__message { color: var(--color-status-success); }
+  .feedback-card[data-state="warning"] .feedback-card__message { color: var(--color-status-warning); }
+  .feedback-card[data-state="failure"] .feedback-card__message { color: var(--color-status-failure); }
+
+  .state-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-text-caption);
+    text-transform: uppercase;
+    margin: 0 0 -2px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    border: 2px solid var(--color-btn-disabled-bg);
+    border-top-color: var(--color-text-caption);
+    border-radius: 50%;
+    vertical-align: -1px;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ---- 3. 반응형 프레임 프리뷰 (고정 폭으로 320px / 480px 비교 시연) ---- */
+  .frame-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .frame {
+    border: 1px dashed #94a3b8;
+    border-radius: 6px;
+    padding: 16px;
+    background: #ffffff;
+  }
+
+  .frame__label {
+    font-size: 12px;
+    color: var(--color-text-caption);
+    margin: 0 0 10px;
+    font-weight: 600;
+  }
+
+  .frame--320 { width: 320px; }
+  .frame--480 { width: 480px; }
+
+  .frame--320 .feedback-card { max-width: none; }
+  .frame--320 .feedback-card__actions { flex-direction: column; }
+
+  .frame--480 .feedback-card { max-width: none; }
+  .frame--480 .feedback-card__actions { flex-direction: row; }
+
+  .frame-note {
+    font-size: 12px;
+    color: var(--color-text-caption);
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>피드백 카드 시각 mockup — BF-1448</h1>
+<p class="page-sub">docs/design/operator-feedback-BF-1446.md 명세의 시각 참조용 정적 mockup. 실제 구현 아님 — 픽셀 단위 일치 의무 없음.</p>
+
+<section class="mockup-section">
+  <h2>1. 실 사용 데모 (frozen selector, idle 고정)</h2>
+  <p class="section-desc">브라우저 창 폭을 480px 미만으로 줄이면 아래 카드의 액션 버튼이 실제로 세로 스택된다 (frozen 반응형 계약 실동작 확인용). mockup은 정적 파일이므로 상태 전이 자체는 JS 없이 아래 "2. 상태 갤러리"에서 6개 상태를 모두 확인한다.</p>
+  <div class="live-demo-wrap">
+    <div id="feedback-card-root" class="feedback-card">
+      <p class="feedback-card__title">피드백 카드</p>
+      <div class="feedback-card__actions">
+        <button id="feedback-confirm-btn" aria-label="피드백 확인">확인</button>
+        <button id="feedback-submit-btn" aria-label="피드백 제출" disabled>제출</button>
+      </div>
+      <div class="feedback-card__status">
+        <p id="feedback-status-live" class="feedback-card__message" aria-live="polite">피드백을 확인해 주세요</p>
+      </div>
+    </div>
+    <div class="live-demo-callouts">
+      <p>◀ 점선 강조 영역이 <code>#feedback-status-live</code> (<code>aria-live="polite"</code>). 상태 전이마다 textContent가 바뀌며 스크린리더가 자동으로 발화한다.</p>
+      <p>위치: <code>.feedback-card__actions</code> 바로 아래, 카드 하단 — 버튼 조작 직후 시선이 이동하는 자리에 배치.</p>
+      <p><code>#feedback-confirm-btn</code> / <code>#feedback-submit-btn</code>은 각각 <code>aria-label="피드백 확인"</code> / <code>aria-label="피드백 제출"</code>을 갖는다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mockup-section">
+  <h2>2. 상태 갤러리 (6개 상태 시각 참조)</h2>
+  <p class="section-desc">idle → confirming → submitting → success | warning | failure. 색상뿐 아니라 상태명이 화면 텍스트에 포함되어 색맹 사용자도 텍스트로 상태를 구분할 수 있다. (참조용 스냅샷이므로 frozen id 대신 <code>data-state</code> 속성으로 구분 — 실제 구현은 단일 <code>#feedback-status-live</code> 인스턴스가 텍스트만 교체한다.)</p>
+  <div class="state-gallery">
+
+    <div class="feedback-card" data-state="idle">
+      <span class="state-label">idle</span>
+      <p class="feedback-card__title">피드백 카드</p>
+      <div class="feedback-card__actions">
+        <button aria-label="피드백 확인 (참조)">확인</button>
+        <button aria-label="피드백 제출 (참조)" disabled>제출</button>
+      </div>
+      <div class="feedback-card__status">
+        <p class="feedback-card__message">피드백을 확인해 주세요</p>
+      </div>
+    </div>
+
+    <div class="feedback-card" data-state="confirming">
+      <span class="state-label">confirming</span>
+      <p class="feedback-card__title">피드백 카드</p>
+      <div class="feedback-card__actions">
+        <button aria-label="피드백 확인 (참조)" disabled>확인</button>
+        <button aria-label="피드백 제출 (참조)">제출</button>
+      </div>
+      <div class="feedback-card__status">
+        <p class="feedback-card__message">확인됨 — 제출을 눌러주세요</p>
+      </div>
+    </div>
+
+    <div class="feedback-card" data-state="submitting">
+      <span class="state-label">submitting</span>
+      <p class="feedback-card__title">피드백 카드</p>
+      <div class="feedback-card__actions">
+        <button aria-label="피드백 확인 (참조)" disabled>확인</button>
+        <button aria-label="피드백 제출 (참조)" disabled>제출 중...</button>
+      </div>
+      <div class="feedback-card__status">
+        <p class="feedback-card__message"><span class="spinner" aria-hidden="true"></span>제출 중...</p>
+      </div>
+    </div>
+
+    <div class="feedback-card" data-state="success">
+      <span class="state-label">success</span>
+      <p class="feedback-card__title">피드백 카드</p>
+      <div class="feedback-card__actions">
+        <button aria-label="피드백 확인 (참조)">확인</button>
+        <button aria-label="피드백 제출 (참조)" disabled>제출</button>
+      </div>
+      <div class="feedback-card__status">
+        <p class="feedback-card__message">성공: 처리 완료</p>
+      </div>
+    </div>
+
+    <div class="feedback-card" data-state="warning">
+      <span class="state-label">warning</span>
+      <p class="feedback-card__title">피드백 카드</p>
+      <div class="feedback-card__actions">
+        <button aria-label="피드백 확인 (참조)">확인</button>
+        <button aria-label="피드백 제출 (참조)" disabled>제출</button>
+      </div>
+      <div class="feedback-card__status">
+        <p class="feedback-card__message">경고: 확인이 필요합니다</p>
+      </div>
+    </div>
+
+    <div class="feedback-card" data-state="failure">
+      <span class="state-label">failure</span>
+      <p class="feedback-card__title">피드백 카드</p>
+      <div class="feedback-card__actions">
+        <button aria-label="피드백 확인 (참조)">확인</button>
+        <button aria-label="피드백 제출 (참조)" disabled>제출</button>
+      </div>
+      <div class="feedback-card__status">
+        <p class="feedback-card__message">실패: 다시 시도해주세요</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="mockup-section">
+  <h2>3. 반응형 동작 (320px / 480px 비교)</h2>
+  <p class="section-desc">고정 폭 프레임으로 breakpoint 전후 레이아웃을 나란히 비교한다. 320px에서도 카드 콘텐츠가 overflow 없이 세로로 스택된다.</p>
+  <div class="frame-row">
+    <div>
+      <div class="frame frame--320">
+        <p class="frame__label">320px 뷰포트 — 세로 스택</p>
+        <div class="feedback-card">
+          <p class="feedback-card__title">피드백 카드</p>
+          <div class="feedback-card__actions">
+            <button aria-label="피드백 확인 (참조)">확인</button>
+            <button aria-label="피드백 제출 (참조)" disabled>제출</button>
+          </div>
+          <div class="feedback-card__status">
+            <p class="feedback-card__message">피드백을 확인해 주세요</p>
+          </div>
+        </div>
+      </div>
+      <p class="frame-note">&lt;480px: <code>.feedback-card__actions</code> flex-direction: column</p>
+    </div>
+    <div>
+      <div class="frame frame--480">
+        <p class="frame__label">480px 이상 뷰포트 — 가로 배치</p>
+        <div class="feedback-card">
+          <p class="feedback-card__title">피드백 카드</p>
+          <div class="feedback-card__actions">
+            <button aria-label="피드백 확인 (참조)">확인</button>
+            <button aria-label="피드백 제출 (참조)" disabled>제출</button>
+          </div>
+          <div class="feedback-card__status">
+            <p class="feedback-card__message">피드백을 확인해 주세요</p>
+          </div>
+        </div>
+      </div>
+      <p class="frame-note">≥480px: <code>.feedback-card__actions</code> flex-direction: row</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
