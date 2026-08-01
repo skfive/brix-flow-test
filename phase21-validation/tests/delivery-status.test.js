@@ -222,6 +222,27 @@ test('initDeliveryStatus: 재시도 클릭 시 진행 표시 복원 후 refresh 
   assert.equal(elements['delivery-status-refresh'].disabled, false);
 });
 
+test('initDeliveryStatus: delivery-status.json 고정 응답을 상대 경로로 fetch (AC-2, plan §4)', async () => {
+  const { doc } = createFakeDom();
+  let seenUrl = '';
+  const fetchImpl = async (url) => {
+    seenUrl = String(url);
+    return fakeResponse({ body: { status: 'delivered', updatedAt: '2026-08-01T03:12:00Z' } });
+  };
+
+  initDeliveryStatus(doc, fetchImpl);
+  await flush();
+
+  assert.ok(
+    seenUrl.endsWith('/delivery-status.json'),
+    `ENDPOINT는 delivery-status.json 고정 응답을 가리켜야 함 (got: ${seenUrl})`,
+  );
+  assert.ok(
+    !seenUrl.includes('/api/'),
+    'ENDPOINT는 존재하지 않는 절대 API 경로를 사용하면 안 됨 (AC-2)',
+  );
+});
+
 test('initDeliveryStatus: 필수 DOM 요소 누락 시 안전하게 null 반환', () => {
   const doc = { getElementById: () => null };
   assert.equal(initDeliveryStatus(doc, async () => fakeResponse({})), null);

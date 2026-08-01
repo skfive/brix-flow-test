@@ -18,7 +18,9 @@ const ROOT_MODIFIER_CLASSES = Object.freeze([
   'delivery-status--error',
 ]);
 
-const ENDPOINT = '/api/phase21-validation/delivery-status';
+// vanilla-static 환경: 실제 API 서버가 없으므로 plan §4 지시대로
+// delivery-status.json 고정 응답 fixture를 app.js 기준 상대 경로로 fetch한다.
+const ENDPOINT = new URL('./delivery-status.json', import.meta.url).href;
 
 export { STATUS_TEXT };
 
