@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-PACKET-A1FC13AD194B1DFE","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"PACKET-DEVELOP","status":"active","targetRef":"TEST-DELIVERY-STATUS","title":"Verify PACKET-DEVELOP with TEST-DELIVERY-STATUS","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}

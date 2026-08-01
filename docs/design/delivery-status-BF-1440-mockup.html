@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전달 상태 배지 — 시각 mockup (BF-1440)</title>
+<style>
+  :root {
+    /* frozen tokens (ui-contract@v1 — 변경 금지) */
+    --color-status-normal: #16a34a;
+    --color-status-warning: #d97706;
+    --color-status-failed: #dc2626;
+    --color-status-error: #6b7280;
+    --space-card-gap: 16px;
+
+    /* additive tokens (designer 정의 — frozen 미침범) */
+    --color-card-surface: #ffffff;
+    --color-card-border: #e2e8f0;
+    --color-text-primary: #1e293b;
+    --color-text-muted: #64748b;
+    --color-status-loading: #94a3b8;
+
+    --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: #f1f5f9;
+    font-family: var(--font-family-base);
+    color: var(--color-text-primary);
+  }
+
+  h1 {
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+
+  p.intro {
+    color: var(--color-text-muted);
+    font-size: 14px;
+    margin: 0 0 32px;
+    max-width: 640px;
+    line-height: 1.5;
+  }
+
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    max-width: 960px;
+  }
+
+  .demo-cell h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 8px;
+  }
+
+  /* ---- frozen selectors ---- */
+
+  .delivery-status {
+    display: block;
+  }
+
+  .delivery-status__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-card-gap);
+    background: var(--color-card-surface);
+    border: 1px solid var(--color-card-border);
+    border-radius: 12px;
+    padding: 16px;
+    max-width: 100%;
+  }
+
+  .delivery-status__title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 0;
+    color: var(--color-text-primary);
+  }
+
+  .delivery-status__badge {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--color-status-loading);
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .delivery-status__badge--normal {
+    background: var(--color-status-normal);
+  }
+
+  .delivery-status__badge--warning {
+    background: var(--color-status-warning);
+  }
+
+  .delivery-status__badge--failed {
+    background: var(--color-status-failed);
+  }
+
+  .delivery-status__badge[data-state="error"] {
+    background: var(--color-status-error);
+  }
+
+  .delivery-status__badge .mock-label {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .mock-updated {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  .delivery-status__refresh {
+    align-self: flex-start;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-card-border);
+    background: #f8fafc;
+    color: var(--color-text-primary);
+    cursor: pointer;
+  }
+
+  .delivery-status__refresh:hover {
+    background: #eef2f7;
+    border-color: #cbd5e1;
+  }
+
+  .delivery-status__refresh:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  /* ---- 480px 미만: 단일 컬럼 세로 배치 (frozen 반응형 계약) ---- */
+  @media (max-width: 479px) {
+    .delivery-status__card {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .delivery-status__badge,
+    .delivery-status__refresh {
+      align-self: stretch;
+      justify-content: center;
+      text-align: center;
+    }
+  }
+
+  /* ---- 320px 반응형 시뮬레이션 프레임 ---- */
+  .viewport-frame {
+    width: 320px;
+    max-width: 100%;
+    border: 1px dashed #94a3b8;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+  }
+
+  .viewport-frame-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 0 0 8px;
+  }
+
+  section {
+    margin-bottom: 48px;
+  }
+
+  section > h2.section-title {
+    font-size: 15px;
+    font-weight: 700;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 8px;
+    margin: 0 0 16px;
+  }
+</style>
+</head>
+<body>
+
+<h1>전달 상태 배지 — 시각 mockup</h1>
+<p class="intro">
+  BF-1440 frozen ui-contract@v1 을 그대로 반영한 정적 mockup 입니다.
+  DOM ID · CSS 클래스 · 토큰 · 접근성 속성은 selector 변경 없이 재현했습니다.
+  이 파일은 시각 시뮬레이션 전용이며 실제 dev 산출물은 <code>delivery-status/</code> 에서 구현됩니다.
+</p>
+
+<section>
+  <h2 class="section-title">1. 상태별 표현 (loading / normal / warning / failed / error)</h2>
+  <div class="demo-grid">
+
+    <div class="demo-cell">
+      <h2>loading</h2>
+      <div class="delivery-status">
+        <div class="delivery-status__card">
+          <h3 class="delivery-status__title">전달 상태</h3>
+          <span class="delivery-status__badge" data-state="loading" aria-live="polite">
+            <span class="mock-label">확인 중…</span>
+          </span>
+          <span class="mock-updated"></span>
+          <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-cell">
+      <h2>normal <span style="text-transform:none;font-weight:400;">(frozen selector 원본)</span></h2>
+      <div id="delivery-status-root" class="delivery-status">
+        <div class="delivery-status__card">
+          <h3 class="delivery-status__title">전달 상태</h3>
+          <span id="delivery-status-badge" class="delivery-status__badge delivery-status__badge--normal" aria-live="polite">
+            <span id="delivery-status-label" class="mock-label">정상</span>
+          </span>
+          <span id="delivery-status-updated" class="mock-updated">갱신: 2026-08-01T09:00:00Z</span>
+          <button id="delivery-status-refresh" class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-cell">
+      <h2>warning</h2>
+      <div class="delivery-status">
+        <div class="delivery-status__card">
+          <h3 class="delivery-status__title">전달 상태</h3>
+          <span class="delivery-status__badge delivery-status__badge--warning" aria-live="polite">
+            <span class="mock-label">경고</span>
+          </span>
+          <span class="mock-updated">갱신: 2026-08-01T08:47:12Z</span>
+          <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-cell">
+      <h2>failed</h2>
+      <div class="delivery-status">
+        <div class="delivery-status__card">
+          <h3 class="delivery-status__title">전달 상태</h3>
+          <span class="delivery-status__badge delivery-status__badge--failed" aria-live="polite">
+            <span class="mock-label">실패</span>
+          </span>
+          <span class="mock-updated">갱신: 2026-08-01T08:12:03Z</span>
+          <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-cell">
+      <h2>error</h2>
+      <div class="delivery-status">
+        <div class="delivery-status__card">
+          <h3 class="delivery-status__title">전달 상태</h3>
+          <span class="delivery-status__badge" data-state="error" aria-live="polite">
+            <span class="mock-label">오류</span>
+          </span>
+          <span class="mock-updated"></span>
+          <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침 (재시도)</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2 class="section-title">2. 새로고침 control 인터랙션 (hover / focus-visible)</h2>
+  <p class="intro" style="margin-bottom:16px;">
+    아래 버튼에 마우스를 올리거나(hover) Tab 으로 포커스하면(focus-visible) 정적으로 그려둔 상태와 동일한 스타일이 실제로 적용됩니다.
+    모든 상태(loading 포함)에서 <code>disabled</code> 를 사용하지 않고 항상 재사용 가능합니다.
+  </p>
+  <div class="demo-grid">
+    <div class="demo-cell">
+      <h2>기본</h2>
+      <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+    </div>
+    <div class="demo-cell">
+      <h2>hover (마우스로 확인)</h2>
+      <button class="delivery-status__refresh" aria-label="전달 상태 새로고침" style="background:#eef2f7;border-color:#cbd5e1;">새로고침</button>
+    </div>
+    <div class="demo-cell">
+      <h2>focus-visible (Tab 으로 확인)</h2>
+      <button class="delivery-status__refresh" aria-label="전달 상태 새로고침" style="outline:2px solid #2563eb;outline-offset:2px;">새로고침</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2 class="section-title">3. 반응형 — 320px / 480px 미만 단일 컬럼</h2>
+  <p class="intro" style="margin-bottom:16px;">
+    아래 프레임은 320px 폭 컨테이너를 시뮬레이션합니다. 카드 콘텐츠가 overflow 없이 표시되고,
+    480px 미만에서는 배지 · 라벨 · 갱신시각 · 새로고침 버튼이 단일 컬럼으로 세로 배치됩니다.
+  </p>
+  <div class="viewport-frame">
+    <p class="viewport-frame-label">viewport 320px 시뮬레이션</p>
+    <div class="delivery-status">
+      <div class="delivery-status__card">
+        <h3 class="delivery-status__title">전달 상태</h3>
+        <span class="delivery-status__badge delivery-status__badge--warning" aria-live="polite">
+          <span class="mock-label">경고</span>
+        </span>
+        <span class="mock-updated">갱신: 2026-08-01T08:47:12Z</span>
+        <button class="delivery-status__refresh" aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
