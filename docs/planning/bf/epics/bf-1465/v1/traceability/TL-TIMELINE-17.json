@@ -1,0 +1,1 @@
+{"artifactId":"TL-TIMELINE-17","artifactType":"TraceLink","relation":"allocated_to","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-TIMELINE-1","status":"active","targetRef":"PACKET-TEST","title":"REQ-TIMELINE-1 → PACKET-TEST","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
