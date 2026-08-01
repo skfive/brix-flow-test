@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'service-subscriptions-canary:v1';
 
-export const SERVICES = [
+const SERVICES = [
   { id: 'svc-email-digest', name: '이메일 다이제스트' },
   { id: 'svc-sms-alert', name: 'SMS 알림' },
   { id: 'svc-push-notice', name: '푸시 알림' },
@@ -49,7 +49,7 @@ function saveSubscriptions(storage, list) {
   storage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
-export function initSubscriptionApp(root, options = {}) {
+function initSubscriptionApp(root, options = {}) {
   const storage = options.storage || window.localStorage;
   const idFactory = options.idFactory || defaultIdFactory;
 
@@ -181,6 +181,10 @@ export function initSubscriptionApp(root, options = {}) {
   return {
     getSubscriptions: () => subscriptions.slice(),
   };
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.SubscriptionCanary = { initSubscriptionApp, SERVICES };
 }
 
 if (typeof document !== 'undefined') {
