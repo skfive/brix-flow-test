@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>실행 타임라인 카드 — execution-timeline-canary</title>
+  <style>
+    :root {
+      --color-action-primary: #2563eb;
+      --space-control-gap: 12px;
+      --color-status-done: #16a34a;
+      --color-status-waiting: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      min-width: 320px;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-control-gap);
+      max-width: 960px;
+      margin: 0 auto;
+      overflow-wrap: break-word;
+    }
+
+    .timeline__refresh {
+      align-self: flex-start;
+      background: var(--color-action-primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .timeline__refresh:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .timeline__status {
+      font-size: 14px;
+      color: #475569;
+    }
+
+    .timeline__list {
+      list-style: none;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: var(--space-control-gap);
+      margin: 0;
+      padding: 0;
+    }
+
+    .timeline__card {
+      flex: 1 1 200px;
+      min-width: 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .timeline__card-status {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .timeline__card[data-status="done"] .timeline__card-status {
+      color: var(--color-status-done);
+    }
+
+    .timeline__card[data-status="in-progress"] .timeline__card-status {
+      color: var(--color-action-primary);
+    }
+
+    .timeline__card[data-status="waiting"] .timeline__card-status {
+      color: var(--color-status-waiting);
+    }
+
+    @media (max-width: 479.98px) {
+      .timeline__list {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="timeline" id="timeline-root">
+    <button
+      type="button"
+      id="timeline-refresh"
+      class="timeline__refresh"
+      aria-label="타임라인 새로고침"
+    >새로고침</button>
+    <p class="timeline__status" id="timeline-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <script type="module" src="./src/feature.js"></script>
+</body>
+</html>
