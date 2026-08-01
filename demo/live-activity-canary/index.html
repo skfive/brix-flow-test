@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>실시간 활동 스트림 카나리</title>
+  <style>
+    :root {
+      --color-activity-accent: #2563eb;
+      --color-activity-error: #dc2626;
+      --space-activity-gap: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .activity-stream {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-activity-gap);
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+      overflow-x: hidden;
+    }
+
+    #activity-status {
+      margin: 0;
+      font-weight: 600;
+    }
+
+    #activity-status.activity-status--error {
+      color: var(--color-activity-error);
+    }
+
+    .token-progress {
+      width: 100%;
+      height: 12px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .token-progress__bar {
+      height: 100%;
+      width: 0%;
+      background: var(--color-activity-accent);
+      transition: width 0.2s ease;
+    }
+
+    #activity-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .activity-stream__item {
+      padding: 8px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .activity-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    #activity-start {
+      align-self: flex-start;
+      border: 1px solid var(--color-activity-accent);
+      background: #ffffff;
+      color: var(--color-activity-accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #activity-retry {
+      align-self: flex-start;
+      border: 1px solid var(--color-activity-error);
+      background: #ffffff;
+      color: var(--color-activity-error);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #activity-start:disabled,
+    #activity-retry:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 479px) {
+      .activity-stream {
+        flex-direction: column;
+      }
+
+      .token-progress,
+      #activity-list {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="activity-stream-root" class="activity-stream" aria-live="polite">
+    <h1>실시간 활동 스트림 카나리</h1>
+    <p id="activity-status">대기 중</p>
+    <div
+      id="token-progress"
+      class="token-progress"
+      role="progressbar"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+      aria-label="토큰 진행률"
+    >
+      <div class="token-progress__bar"></div>
+    </div>
+    <ul id="activity-list" aria-label="tool 활동 목록"></ul>
+    <div class="activity-controls">
+      <button id="activity-start" type="button" aria-label="활동 스트림 시작">시작</button>
+      <button id="activity-retry" type="button" aria-label="활동 스트림 다시 시도" disabled>다시 시도</button>
+    </div>
+  </main>
+  <script type="module" src="./src/feature.js"></script>
+</body>
+</html>
