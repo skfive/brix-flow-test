@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>종료 준비 상태 안내 영역 — 시각 mockup (BF-1329 / 계약 BF-1328)</title>
+  <style>
+    /* frozen 디자인 토큰 (planner §3.4 — 정확값, 재정의 금지) */
+    :root {
+      --color-status-ready:   #16a34a;
+      --color-status-blocked: #dc2626;
+      --color-status-neutral: #64748b;
+      --space-panel-gap:      12px;
+
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      --text-strong: #0f172a;
+      --text-muted:  #475569;
+      --surface:     #ffffff;
+      --surface-alt: #f8fafc;
+      --border:      #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-stack);
+      color: var(--text-strong);
+      background: var(--surface-alt);
+      margin: 0;
+      padding: 32px 20px 56px;
+      line-height: 1.5;
+    }
+
+    .page { max-width: 880px; margin: 0 auto; }
+
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    .page__sub { color: var(--text-muted); font-size: 13px; margin: 0 0 28px; }
+
+    h2 { font-size: 15px; margin: 32px 0 12px; color: var(--text-muted); font-weight: 600; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .demo {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .demo__caption { font-size: 12px; color: var(--text-muted); margin: 0 0 10px; }
+
+    /* ── frozen 컴포넌트: 상태 안내 영역 ─────────────────────────── */
+    /* #planning-closure-status (aria-live) > .planning-closure(컨테이너) */
+    .planning-closure {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-panel-gap);
+      min-width: 0;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left-width: 3px;
+      border-left-color: var(--color-status-neutral);
+      border-radius: 8px;
+    }
+    /* 상태 색상은 좌측 보더 + 상태 점에만 적용 (배경 fill 아님 → 색맹 대비 텍스트 유지) */
+    .planning-closure[data-state="ready"]                 { border-left-color: var(--color-status-ready); }
+    .planning-closure[data-state="blocked"],
+    .planning-closure[data-state="needs-operator-action"],
+    .planning-closure[data-state="error"]                 { border-left-color: var(--color-status-blocked); }
+    .planning-closure[data-state="loading"],
+    .planning-closure[data-state="empty"]                 { border-left-color: var(--color-status-neutral); }
+
+    .planning-closure__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+      min-width: 0;
+    }
+    .planning-closure__dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      flex: 0 0 auto;
+      background: var(--color-status-neutral);
+    }
+    [data-state="ready"] .planning-closure__dot                 { background: var(--color-status-ready); }
+    [data-state="blocked"] .planning-closure__dot,
+    [data-state="needs-operator-action"] .planning-closure__dot,
+    [data-state="error"] .planning-closure__dot                 { background: var(--color-status-blocked); }
+    [data-state="loading"] .planning-closure__dot,
+    [data-state="empty"] .planning-closure__dot                 { background: var(--color-status-neutral); }
+
+    .planning-closure__label { min-width: 0; word-break: keep-all; }
+
+    .planning-closure__count {
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--text-muted);
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .planning-closure__count[hidden] { display: none; }
+
+    .planning-closure__action {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #1d4ed8;
+      text-decoration: underline;
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    .planning-closure__action:hover { color: #1e40af; }
+    .planning-closure__action:focus-visible {
+      outline: 2px solid #1d4ed8;
+      outline-offset: 2px;
+    }
+    .planning-closure__action[aria-disabled="true"] {
+      color: var(--text-muted);
+      text-decoration: none;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* 320px 시뮬레이션 프레임 (overflow 없음 확인용) */
+    .frame320 {
+      width: 320px;
+      max-width: 100%;
+      border: 1px dashed #94a3b8;
+      border-radius: 10px;
+      padding: 12px;
+      background: var(--surface-alt);
+    }
+    .frame320__label { font-size: 11px; color: var(--text-muted); margin: 0 0 8px; }
+
+    .legend { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+    .legend code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
+
+    /* 인터랙션 상태 데모 */
+    .istate { display: flex; flex-direction: column; gap: 10px; }
+    .istate__row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted); }
+    .btn-demo {
+      font-size: 14px; font-weight: 600; color: #1d4ed8;
+      text-decoration: underline; padding: 4px 6px; border-radius: 4px;
+      border: none; background: none; cursor: pointer;
+    }
+    .btn-demo--hover { color: #1e40af; background: #eff6ff; }
+    .btn-demo--focus { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>종료 준비 상태 안내 영역 — 시각 mockup</h1>
+    <p class="page__sub">
+      BF-1329 · frozen UI 계약(ui-contract@v1) 시각 구현 · 명세: docs/design/planning-closure-status-BF-1328.md<br>
+      ※ 시안 시각화 전용 — developer 실제 산출물(planning/*) 아님. 픽셀 일치 의무 없음.
+    </p>
+
+    <h2>1. 6개 상태 (frozen state 모델 · 색상 외 화면 텍스트로 상태명 노출)</h2>
+    <div class="grid">
+
+      <!-- loading -->
+      <div class="demo">
+        <p class="demo__caption">state: loading — 초기값</p>
+        <div id="planning-closure-status" class="planning-closure" data-state="loading" aria-live="polite">
+          <span class="planning-closure__badge">
+            <span class="planning-closure__dot" aria-hidden="true"></span>
+            <span class="planning-closure__label">상태 확인 중</span>
+          </span>
+          <span class="planning-closure__count" hidden></span>
+          <a class="planning-closure__action" aria-disabled="true" aria-label="상태 조회 중" tabindex="-1">대기</a>
+        </div>
+      </div>
+
+      <!-- ready -->
+      <div class="demo">
+        <p class="demo__caption">state: ready — 종료 가능</p>
+        <div class="planning-closure" data-state="ready" aria-live="polite">
+          <span class="planning-closure__badge">
+            <span class="planning-closure__dot" aria-hidden="true"></span>
+            <span class="planning-closure__label">종료 준비 완료</span>
+          </span>
+          <span class="planning-closure__count" hidden></span>
+          <a class="planning-closure__action" href="#" aria-label="Planning 종료 진행" tabindex="0">종료 진행</a>
+        </div>
+      </div>
+
+      <!-- blocked -->
+      <div class="demo">
+        <p class="demo__caption">state: blocked — blocker 존재 (count 노출)</p>
+        <div class="planning-closure" data-state="blocked" aria-live="polite">
+          <span class="planning-closure__badge">
+            <span class="planning-closure__dot" aria-hidden="true"></span>
+            <span class="planning-closure__label">종료 불가 — blocker 3건</span>
+          </span>
+          <span id="planning-closure-blocker-count" class="planning-closure__count">blocker 3건</span>
+          <a class="planning-closure__action" href="#" aria-label="blocker 목록으로 이동" tabindex="0">blocker 보기</a>
+        </div>
+      </div>
+
+      <!-- needs-operator-action -->
+      <div class="demo">
+        <p class="demo__caption">state: needs-operator-action — 운영자 조치 필요</p>
+        <div class="planning-closure" data-state="needs-operator-action" aria-live="polite">
+          <span class="planning-closure__badge">
+            <span class="planning-closure__dot" aria-hidden="true"></span>
+            <span class="planning-closure__label">운영자 조치 필요</span>
+          </span>
+          <span class="planning-closure__count" hidden></span>
+          <a class="planning-closure__action" href="#" aria-label="운영자 조치 화면으로 이동" tabindex="0">조치하기</a>
+        </div>
+      </div>
+
+      <!-- empty -->
+      <div class="demo">
+        <p class="demo__caption">state: empty — 대상 데이터 없음</p>
+        <div class="planning-closure" data-state="empty" aria-live="polite">
+          <span class="planning-closure__badge">
+            <span class="planning-closure__dot" aria-hidden="true"></span>
+            <span class="planning-closure__label">표시할 항목 없음</span>
+          </span>
+          <span class="planning-closure__count" hidden></span>
+          <a class="planning-closure__action" aria-disabled="true" aria-label="조치 대상 없음" tabindex="-1">—</a>
+        </div>
+      </div>
+
+      <!-- error -->
+      <div class="demo">
+        <p class="demo__caption">state: error — 조회 실패</p>
+        <div class="planning-closure" data-state="error" aria-live="polite">
+          <span class="planning-closure__badge">
+            <span class="planning-closure__dot" aria-hidden="true"></span>
+            <span class="planning-closure__label">상태를 불러오지 못함</span>
+          </span>
+          <span class="planning-closure__count" hidden></span>
+          <a class="planning-closure__action" href="#" aria-label="상태 다시 불러오기" tabindex="0">다시 시도</a>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="legend">
+      상태 색상 토큰: <code>--color-status-ready #16a34a</code>,
+      <code>--color-status-blocked #dc2626</code>,
+      <code>--color-status-neutral #64748b</code> ·
+      상태는 좌측 보더 + 상태 점에만 색상 적용, <strong>상태명은 항상 배지 텍스트로 노출</strong>(색상 비의존).
+    </p>
+
+    <h2>2. 320px 반응형 (content overflow 없음)</h2>
+    <div class="frame320">
+      <p class="frame320__label">뷰포트 하한 320px — 배지·blocker 수·조치 링크가 wrap으로 흡수, 가로 스크롤/절단 없음</p>
+      <div class="planning-closure" data-state="blocked" aria-live="polite">
+        <span class="planning-closure__badge">
+          <span class="planning-closure__dot" aria-hidden="true"></span>
+          <span class="planning-closure__label">종료 불가 — blocker 12건</span>
+        </span>
+        <span class="planning-closure__count">blocker 12건</span>
+        <a class="planning-closure__action" href="#" aria-label="blocker 목록으로 이동" tabindex="0">blocker 보기</a>
+      </div>
+    </div>
+
+    <h2>3. 조치 링크 인터랙션 상태 (정적 표현)</h2>
+    <div class="demo istate">
+      <div class="istate__row"><button class="btn-demo">기본(default)</button><span>밑줄 · 파랑</span></div>
+      <div class="istate__row"><button class="btn-demo btn-demo--hover">hover</button><span>진한 파랑 · 옅은 배경</span></div>
+      <div class="istate__row"><button class="btn-demo btn-demo--focus">focus-visible</button><span>2px 포커스 링(키보드 포커스 + Enter 활성화)</span></div>
+      <div class="istate__row"><button class="btn-demo" style="color:#64748b;text-decoration:none;cursor:default;">disabled</button><span>중립색 · 밑줄 없음 · 비활성(loading/empty)</span></div>
+    </div>
+
+    <p class="legend">
+      접근성: 상태 영역 <code>aria-live="polite"</code> · 조치 control은 상태별 <code>aria-label</code> 보유 ·
+      키보드 포커스 가능 + <code>Enter</code> 활성화 · 모든 상태는 색상 외 화면 텍스트로 상태명 노출.
+    </p>
+  </div>
+</body>
+</html>
