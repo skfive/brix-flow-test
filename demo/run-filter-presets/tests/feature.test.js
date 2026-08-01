@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import {
   RUN_FILTER_PRESETS_KEY,
@@ -317,4 +318,154 @@ test('AC — 새로고침 후 복원: 동일 storage로 재생성한 패널이 �
 
   assert.equal(second.list._children.length, 1);
   assert.equal(second.list._children[0].textContent, '복원 확인');
+});
+
+// ---------------------------------------------------------------------------
+// 실 브라우저 E2E (BF-1458) — fake DOM 으로 검증 불가한 실제 클릭/새로고침 흐름
+// ---------------------------------------------------------------------------
+
+const _BRIX_STATIC_MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+};
+
+function startStaticServer(serveRoot) {
+  const root = path.resolve(serveRoot);
+  const server = http.createServer((req, res) => {
+    const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
+    const resolved = path.resolve(root, `.${urlPath}`);
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+      res.writeHead(403).end('forbidden');
+      return;
+    }
+    const target = urlPath.endsWith('/') ? path.join(resolved, 'index.html') : resolved;
+    fs.readFile(target, (err, buf) => {
+      if (err) {
+        res.writeHead(404).end('not found');
+        return;
+      }
+      // module script strict MIME 체크 통과를 위해 확장자 기반 Content-Type 필수 (BF-1458)
+      const contentType = _BRIX_STATIC_MIME_TYPES[path.extname(target)] ?? 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': contentType }).end(buf);
+    });
+  });
+  return new Promise((resolve) => {
+    server.listen(0, '0.0.0.0', () => resolve({ server, port: server.address().port }));
+  });
+}
+
+let _brixE2eAvailable = true;
+let _brixE2eSkipReason = null;
+
+test.before(async () => {
+  if (_brixOutOfScope) {
+    _brixE2eAvailable = false;
+    _brixE2eSkipReason = 'focused scope — 다른 module';
+    return;
+  }
+  if (process.env.BRIX_E2E_SKIP === '1') {
+    _brixE2eAvailable = false;
+    _brixE2eSkipReason = 'BRIX_E2E_SKIP=1 — CI 결정성 가드';
+    return;
+  }
+  try {
+    const probe = await fetch('http://e2e-runner:3030/health', {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!probe.ok) {
+      _brixE2eAvailable = false;
+      _brixE2eSkipReason = `e2e-runner unhealthy (${probe.status})`;
+    }
+  } catch (err) {
+    _brixE2eAvailable = false;
+    _brixE2eSkipReason = `e2e-runner 도달 불가 (${err.message})`;
+  }
+});
+
+async function runE2eScenario(t, { label, scriptText }) {
+  if (!_brixE2eAvailable) {
+    t.skip(_brixE2eSkipReason);
+    return;
+  }
+  const { server, port } = await startStaticServer(MODULE_ROOT);
+  t.after(() => server.close());
+
+  const host = process.env.BRIX_PERSONA_HOST || 'worker';
+  const url = `http://${host}:${port}/`;
+
+  const runId = process.env.BRIX_RUN_ID;
+  const jiraKey = process.env.BRIX_JIRA_KEY;
+  if (!runId || !jiraKey) throw new Error('worker-injected run identity missing');
+
+  const res = await fetch('http://e2e-runner:3030/run', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Brix-Run-Id': runId,
+      'X-Brix-Jira-Key': jiraKey,
+    },
+    body: JSON.stringify({ url, label, scriptText, timeoutMs: 30000 }),
+  });
+  const body = await res.json();
+  assert.ok(body.passed, `e2e 시나리오 실패 — ${label}: ${body.errorMessage ?? body.stdout ?? ''}`);
+}
+
+test('E2E — 프리셋 저장 → 목록 반영 → 초기화 → 목록 클릭 재적용', { skip: _brixOutOfScope }, async (t) => {
+  await runE2eScenario(t, {
+    label: '[BF-1458 | run-filter-presets] 저장·초기화·재적용',
+    scriptText: `
+      await page.waitForSelector('#preset-list .preset-panel__item', { timeout: 5000 });
+      await page.locator('#preset-name-input').fill('E2E 프리셋');
+      await page.locator('[name="status-filter"][value="success"]').check();
+      await page.locator('[name="persona-filter"][value="developer"]').check();
+      await page.locator('#preset-save-button').click();
+      await page.waitForFunction(
+        () => ['applied', 'error'].includes(document.getElementById('preset-root')?.dataset.state),
+        null,
+        { timeout: 5000 },
+      );
+      const stateAfterSave = await page.evaluate(() => document.getElementById('preset-root')?.dataset.state);
+      if (stateAfterSave !== 'applied') throw new Error('프리셋 저장 실패 — state=' + stateAfterSave);
+      const itemText = await page.locator('#preset-list .preset-panel__item').first().textContent();
+      if (itemText !== 'E2E 프리셋') throw new Error('저장 후 목록 미반영: ' + itemText);
+
+      await page.locator('#preset-reset-button').click();
+      await page.waitForFunction(() => document.getElementById('preset-root')?.dataset.state === 'idle', null, { timeout: 5000 });
+      const checkedAfterReset = await page.locator('[name="status-filter"][value="success"]').isChecked();
+      if (checkedAfterReset) throw new Error('초기화 후에도 체크박스 유지됨');
+
+      await page.locator('#preset-list .preset-panel__item').first().click();
+      await page.waitForFunction(() => document.getElementById('preset-root')?.dataset.state === 'applied', null, { timeout: 5000 });
+      const checkedAfterApply = await page.locator('[name="status-filter"][value="success"]').isChecked();
+      if (!checkedAfterApply) throw new Error('목록 클릭 적용 후 필터 미복원');
+    `,
+  });
+});
+
+test('E2E — 프리셋 저장 후 새로고침 시 복원', { skip: _brixOutOfScope }, async (t) => {
+  await runE2eScenario(t, {
+    label: '[BF-1458 | run-filter-presets] 새로고침 후 복원',
+    scriptText: `
+      await page.waitForSelector('#preset-list .preset-panel__item', { timeout: 5000 });
+      await page.locator('#preset-name-input').fill('복원 확인 E2E');
+      await page.locator('[name="status-filter"][value="warning"]').check();
+      await page.locator('#preset-save-button').click();
+      await page.waitForFunction(
+        () => ['applied', 'error'].includes(document.getElementById('preset-root')?.dataset.state),
+        null,
+        { timeout: 5000 },
+      );
+      const stateAfterSave = await page.evaluate(() => document.getElementById('preset-root')?.dataset.state);
+      if (stateAfterSave !== 'applied') throw new Error('프리셋 저장 실패 — state=' + stateAfterSave);
+
+      await page.reload();
+      await page.waitForSelector('#preset-list .preset-panel__item');
+      const itemText = await page.locator('#preset-list .preset-panel__item').first().textContent();
+      if (itemText !== '복원 확인 E2E') throw new Error('새로고침 후 프리셋 유실: ' + itemText);
+      const state = await page.evaluate(() => document.getElementById('preset-root')?.dataset.state);
+      if (state !== 'idle') throw new Error('새로고침 후 idle 상태 아님: ' + state);
+    `,
+  });
 });
