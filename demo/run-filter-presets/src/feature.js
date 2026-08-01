@@ -5,6 +5,16 @@
 
 export const RUN_FILTER_PRESETS_KEY = 'runFilterPresets.v1';
 
+// crypto.randomUUID()는 secure context(HTTPS/localhost)에서만 노출된다.
+// plain HTTP로 서빙되는 환경에서도 저장이 항상 동작하도록 폴백 id를 사용한다.
+function defaultIdFactory() {
+  const cryptoObj = globalThis.crypto;
+  if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
+    return cryptoObj.randomUUID();
+  }
+  return `preset-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 // 상태별 화면 텍스트 (계약 §3.3) — preset-status 영역, empty는 preset-list 영역에 노출
 export const PRESET_STATUS_TEXT = {
   idle: '저장된 프리셋을 선택하거나 새로 저장하세요',
@@ -33,7 +43,7 @@ export function savePresets(storage, presets) {
 
 // RunFilterPreset 생성 (계약 §4 타입)
 export function buildPreset({ name, statusFilter, personaFilter }, options = {}) {
-  const idFactory = options.idFactory ?? (() => globalThis.crypto.randomUUID());
+  const idFactory = options.idFactory ?? defaultIdFactory;
   const now = options.now ?? (() => new Date().toISOString());
   return {
     id: idFactory(),
@@ -74,7 +84,7 @@ export function createPresetPanel(options = {}) {
     throw new Error('createPresetPanel: storage를 사용할 수 없습니다.');
   }
 
-  const idFactory = options.idFactory ?? (() => globalThis.crypto.randomUUID());
+  const idFactory = options.idFactory ?? defaultIdFactory;
   const now = options.now ?? (() => new Date().toISOString());
 
   function setState(state) {
