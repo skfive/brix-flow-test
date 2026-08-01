@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-6","artifactType":"TraceLink","relation":"allocated_to","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-1","status":"active","targetRef":"PKT-PLAN","title":"REQ-1 allocated_to PKT-PLAN","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
