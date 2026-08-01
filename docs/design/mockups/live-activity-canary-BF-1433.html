@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>실시간 활동 스트림 카나리 — 시각 mockup (BF-1434)</title>
+<style>
+  :root {
+    --color-activity-accent: #2563eb;
+    --color-activity-error: #dc2626;
+    --space-activity-gap: 12px;
+
+    --color-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-text: #0f172a;
+    --color-text-muted: #64748b;
+    --color-border: #e2e8f0;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  .page-title {
+    max-width: 960px;
+    margin: 0 auto 8px;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .page-note {
+    max-width: 960px;
+    margin: 0 auto 32px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+
+  .mockup-grid {
+    max-width: 960px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  @media (min-width: 720px) {
+    .mockup-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .state-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+  }
+
+  /* ---- .activity-stream (frozen class, root container) ---- */
+  .activity-stream {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-activity-gap);
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .activity-stream__heading {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .activity-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-activity-gap);
+    flex-wrap: wrap;
+  }
+
+  #activity-status,
+  [id^="activity-status-"] {
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: var(--color-text);
+    padding: 4px 0;
+  }
+
+  /* activity-status--error : frozen modifier class */
+  .activity-status--error {
+    color: var(--color-activity-error);
+    border-left: 3px solid var(--color-activity-error);
+    padding-left: 8px;
+  }
+
+  .activity-primary-action {
+    appearance: none;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--color-activity-accent);
+    cursor: pointer;
+  }
+
+  .activity-primary-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* activity-retry : frozen id target, styled here via shared class */
+  .activity-retry-btn {
+    appearance: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--color-activity-error);
+    color: var(--color-activity-error);
+    background: #fff;
+  }
+
+  .activity-retry-btn[disabled] {
+    display: none;
+  }
+
+  /* responsive wrapper: >=480px row / <480px column stack (contract 5.6) */
+  .activity-body {
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-activity-gap);
+    align-items: flex-start;
+  }
+
+  @media (max-width: 479px) {
+    .activity-body {
+      flex-direction: column;
+    }
+  }
+
+  /* token-progress : frozen class, role="progressbar" container */
+  .token-progress {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .token-progress__label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+  }
+
+  .token-progress__track {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--color-border);
+    overflow: hidden;
+  }
+
+  /* token-progress__bar : frozen class, fill width == aria-valuenow */
+  .token-progress__bar {
+    height: 100%;
+    background: var(--color-activity-accent);
+    border-radius: 999px;
+    transition: width 0.2s ease;
+  }
+
+  .token-progress__bar--error {
+    background: var(--color-text-muted);
+  }
+
+  /* activity-list : frozen id target */
+  .activity-list-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  .activity-list-empty {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    padding: 8px 0;
+  }
+
+  /* activity-stream__item : frozen class */
+  .activity-stream__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .activity-stream__item-meta {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+
+  .viewport-note {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <h1 class="page-title">실시간 활동 스트림 카나리 — 상태별 시각 mockup</h1>
+  <p class="page-note">
+    idle / streaming / complete / error 4개 상태를 정적으로 시뮬레이션한 시안입니다.
+    DOM ID·class·상태 텍스트·토큰 값은 <code>docs/plans/live-activity-canary-BF-1433.md</code> 5장 frozen 계약 그대로이며,
+    실제 dev 산출물은 <code>demo/live-activity-canary/</code>에서 별도로 구현됩니다.
+  </p>
+
+  <div class="mockup-grid">
+
+    <!-- ============ idle ============ -->
+    <section aria-labelledby="idle-heading">
+      <div class="state-label">state: idle</div>
+      <div id="activity-stream-root-idle" class="activity-stream" aria-live="polite">
+        <h2 id="idle-heading" class="activity-stream__heading">활동 스트림</h2>
+        <div class="activity-status-row">
+          <span id="activity-status-idle">대기 중</span>
+          <button type="button" class="activity-primary-action">실행 시작</button>
+        </div>
+        <div class="activity-body">
+          <div id="token-progress-idle" class="token-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="token-progress__label">
+              <span>진행률</span>
+              <span>0%</span>
+            </div>
+            <div class="token-progress__track">
+              <div class="token-progress__bar" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div class="activity-list-wrap">
+            <ul id="activity-list-idle" class="activity-list">
+              <li class="activity-list-empty">아직 활동이 없습니다</li>
+            </ul>
+          </div>
+        </div>
+        <button id="activity-retry-idle" class="activity-retry-btn" disabled aria-label="활동 스트림 다시 시도">다시 시도</button>
+      </div>
+    </section>
+
+    <!-- ============ streaming ============ -->
+    <section aria-labelledby="streaming-heading">
+      <div class="state-label">state: streaming</div>
+      <div id="activity-stream-root-streaming" class="activity-stream" aria-live="polite">
+        <h2 id="streaming-heading" class="activity-stream__heading">활동 스트림</h2>
+        <div class="activity-status-row">
+          <span id="activity-status-streaming">실행 중 — tool 활동 수신</span>
+          <button type="button" class="activity-primary-action" disabled>실행 시작</button>
+        </div>
+        <div class="activity-body">
+          <div id="token-progress-streaming" class="token-progress" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100">
+            <div class="token-progress__label">
+              <span>진행률</span>
+              <span>45%</span>
+            </div>
+            <div class="token-progress__track">
+              <div class="token-progress__bar" style="width: 45%;"></div>
+            </div>
+          </div>
+          <div class="activity-list-wrap">
+            <ul id="activity-list-streaming" class="activity-list">
+              <li class="activity-stream__item">
+                <span>tool: search 실행</span>
+                <span class="activity-stream__item-meta">10:02:11</span>
+              </li>
+              <li class="activity-stream__item">
+                <span>tool: read_file 실행</span>
+                <span class="activity-stream__item-meta">10:02:14</span>
+              </li>
+              <li class="activity-stream__item">
+                <span>tool: analyze 실행 중…</span>
+                <span class="activity-stream__item-meta">10:02:17</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <button id="activity-retry-streaming" class="activity-retry-btn" disabled aria-label="활동 스트림 다시 시도">다시 시도</button>
+      </div>
+    </section>
+
+    <!-- ============ complete ============ -->
+    <section aria-labelledby="complete-heading">
+      <div class="state-label">state: complete</div>
+      <div id="activity-stream-root-complete" class="activity-stream" aria-live="polite">
+        <h2 id="complete-heading" class="activity-stream__heading">활동 스트림</h2>
+        <div class="activity-status-row">
+          <span id="activity-status-complete">완료</span>
+          <button type="button" class="activity-primary-action">다시 실행</button>
+        </div>
+        <div class="activity-body">
+          <div id="token-progress-complete" class="token-progress" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+            <div class="token-progress__label">
+              <span>진행률</span>
+              <span>100%</span>
+            </div>
+            <div class="token-progress__track">
+              <div class="token-progress__bar" style="width: 100%;"></div>
+            </div>
+          </div>
+          <div class="activity-list-wrap">
+            <ul id="activity-list-complete" class="activity-list">
+              <li class="activity-stream__item">
+                <span>tool: search 실행</span>
+                <span class="activity-stream__item-meta">10:02:11</span>
+              </li>
+              <li class="activity-stream__item">
+                <span>tool: read_file 실행</span>
+                <span class="activity-stream__item-meta">10:02:14</span>
+              </li>
+              <li class="activity-stream__item">
+                <span>tool: analyze 완료</span>
+                <span class="activity-stream__item-meta">10:02:19</span>
+              </li>
+              <li class="activity-stream__item">
+                <span>실행 완료</span>
+                <span class="activity-stream__item-meta">10:02:20</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <button id="activity-retry-complete" class="activity-retry-btn" disabled aria-label="활동 스트림 다시 시도">다시 시도</button>
+      </div>
+    </section>
+
+    <!-- ============ error ============ -->
+    <section aria-labelledby="error-heading">
+      <div class="state-label">state: error</div>
+      <div id="activity-stream-root-error" class="activity-stream" aria-live="polite">
+        <h2 id="error-heading" class="activity-stream__heading">활동 스트림</h2>
+        <div class="activity-status-row">
+          <span id="activity-status-error" class="activity-status--error">실패 — 다시 시도</span>
+          <button type="button" class="activity-primary-action" disabled>실행 시작</button>
+        </div>
+        <div class="activity-body">
+          <div id="token-progress-error" class="token-progress" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100">
+            <div class="token-progress__label">
+              <span>진행률 (직전 값 유지)</span>
+              <span>45%</span>
+            </div>
+            <div class="token-progress__track">
+              <div class="token-progress__bar token-progress__bar--error" style="width: 45%;"></div>
+            </div>
+          </div>
+          <div class="activity-list-wrap">
+            <ul id="activity-list-error" class="activity-list">
+              <li class="activity-stream__item">
+                <span>tool: search 실행</span>
+                <span class="activity-stream__item-meta">10:02:11</span>
+              </li>
+              <li class="activity-stream__item">
+                <span>tool: read_file 실행</span>
+                <span class="activity-stream__item-meta">10:02:14</span>
+              </li>
+              <li class="activity-stream__item">
+                <span>tool: analyze 실패 — 네트워크 오류</span>
+                <span class="activity-stream__item-meta">10:02:18</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <button id="activity-retry-error" class="activity-retry-btn" aria-label="활동 스트림 다시 시도">다시 시도</button>
+      </div>
+    </section>
+
+  </div>
+
+  <p class="viewport-note">
+    참고: 실제 구현에서 각 상태는 동일한 <code>#activity-stream-root</code> / <code>#activity-status</code> /
+    <code>#token-progress</code> / <code>#activity-list</code> / <code>#activity-retry</code> 단일 인스턴스가 상태 전이에 따라
+    텍스트·값·활성화 여부만 갱신합니다. 이 mockup은 4개 상태를 나란히 비교하기 위해 상태별로 별도 섹션 id를 부여했습니다
+    (id 접미사는 mockup 전용이며 frozen 계약의 실제 DOM ID는 접미사 없는 원본입니다).
+  </p>
+
+</body>
+</html>
