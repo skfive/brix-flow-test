@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>전달 상태 배지</title>
+    <style>
+      /* frozen 디자인 토큰 (plan §3.4) — selector/token 재정의 금지 */
+      :root {
+        --color-status-normal: #16a34a;
+        --color-status-warning: #d97706;
+        --color-status-failed: #dc2626;
+        --color-status-error: #6b7280;
+        /* additive 토큰 (design §2.2/§5.3 제안, non-frozen) — loading을 error와 시각적으로 구분 */
+        --color-status-loading: #94a3b8;
+        --space-card-gap: 16px;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 24px;
+      }
+
+      .delivery-status {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* 카드: 배지 + 라벨 + 갱신시각 + 새로고침. 480px 미만은 단일 컬럼 (plan §3.6, AC-6) */
+      .delivery-status__card {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-card-gap);
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      /* 배지: 색상+아이콘. 색상만으로 상태를 구분하지 않는다 (label이 한글 텍스트 담당) */
+      .delivery-status__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 9999px;
+        font-size: 1rem;
+        line-height: 1;
+        color: #fff;
+        background: var(--color-status-error);
+        flex-shrink: 0;
+      }
+      .delivery-status__badge--normal {
+        background: var(--color-status-normal);
+      }
+      .delivery-status__badge--warning {
+        background: var(--color-status-warning);
+      }
+      .delivery-status__badge--failed {
+        background: var(--color-status-failed);
+      }
+      /* additive 표시 class (frozen modifier 목록 밖) — loading/error 배지 색상 구분 */
+      .delivery-status__badge--loading {
+        background: var(--color-status-loading);
+      }
+      .delivery-status__badge--error {
+        background: var(--color-status-error);
+      }
+
+      #delivery-status-label {
+        font-weight: 600;
+      }
+
+      #delivery-status-updated {
+        color: #475569;
+        font-size: 0.875rem;
+      }
+
+      .delivery-status__refresh {
+        padding: 4px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+      }
+      .delivery-status__refresh:disabled {
+        opacity: 0.6;
+        cursor: progress;
+      }
+
+      @media (max-width: 480px) {
+        .delivery-status__card {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>전달 상태</h1>
+      <!-- frozen DOM 계약 (plan §3.1): root > card > badge, label, updated, refresh -->
+      <section id="delivery-status-root" class="delivery-status" aria-label="전달 상태">
+        <div class="delivery-status__card">
+          <span
+            id="delivery-status-badge"
+            class="delivery-status__badge"
+            role="status"
+            aria-live="polite"
+          ></span>
+          <span id="delivery-status-label">상태 확인 중…</span>
+          <time id="delivery-status-updated"></time>
+          <button
+            type="button"
+            id="delivery-status-refresh"
+            class="delivery-status__refresh"
+            aria-label="전달 상태 새로고침"
+          >새로고침</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./src/delivery-status.js"></script>
+  </body>
+</html>
