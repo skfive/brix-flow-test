@@ -28,6 +28,12 @@ function defaultIdFactory() {
   return `sub-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function formatSubscribedAt(isoString) {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('ko-KR');
+}
+
 function loadSubscriptions(storage) {
   try {
     const raw = storage.getItem(STORAGE_KEY);
@@ -82,6 +88,7 @@ export function initSubscriptionApp(root, options = {}) {
       const li = document.createElement('li');
       li.className = 'subscription__item';
       li.dataset.id = item.id;
+      li.tabIndex = 0;
 
       const name = document.createElement('span');
       name.textContent = item.serviceName;
@@ -90,13 +97,17 @@ export function initSubscriptionApp(root, options = {}) {
       statusLabel.textContent = STATUS_LABEL[item.status] || item.status;
       statusLabel.className = `subscription__status--${item.status}`;
 
+      const subscribedAt = document.createElement('span');
+      subscribedAt.className = 'subscription__subscribed-at';
+      subscribedAt.textContent = formatSubscribedAt(item.subscribedAt);
+
       const removeButton = document.createElement('button');
       removeButton.type = 'button';
       removeButton.textContent = '해제';
       removeButton.setAttribute('aria-label', `${item.serviceName} 구독 해제`);
       removeButton.addEventListener('click', () => removeSubscription(item.id));
 
-      li.append(name, statusLabel, removeButton);
+      li.append(name, statusLabel, subscribedAt, removeButton);
       list.append(li);
     });
 
