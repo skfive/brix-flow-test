@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Phase21 전달 상태 배지 — 시각 mockup (BF-1428)</title>
+<style>
+  :root {
+    --color-status-delivered: #16a34a;
+    --color-status-pending: #f59e0b;
+    --color-status-error: #dc2626;
+    --space-badge-gap: 8px;
+
+    /* 아래는 mockup 시각화용 예시 값이며 frozen 계약 토큰이 아님 (§2 4개 토큰만 계약) */
+    --mockup-bg: #f8fafc;
+    --mockup-surface: #ffffff;
+    --mockup-border: #e2e8f0;
+    --mockup-text: #0f172a;
+    --mockup-text-muted: #64748b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 24px 64px;
+    background: var(--mockup-bg);
+    color: var(--mockup-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
+  }
+
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 40px 0 12px; padding-top: 16px; border-top: 1px solid var(--mockup-border); }
+  p.lede { color: var(--mockup-text-muted); font-size: 13px; margin: 0 0 32px; }
+  p.desc { color: var(--mockup-text-muted); font-size: 12px; margin: 8px 0 0; }
+
+  .panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .panel-item {
+    background: var(--mockup-surface);
+    border: 1px solid var(--mockup-border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .panel-item .label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--mockup-text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* ---- frozen 컴포넌트: .delivery-status 루트 ---- */
+  .delivery-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-badge-gap);
+    flex-wrap: wrap;
+  }
+
+  .delivery-status__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .delivery-status__timestamp {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--mockup-text-muted);
+  }
+
+  .delivery-status button {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--mockup-border);
+    background: var(--mockup-surface);
+    color: var(--mockup-text);
+    cursor: pointer;
+  }
+
+  .delivery-status button:hover:not(:disabled) {
+    background: #f1f5f9;
+  }
+
+  .delivery-status button:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  .delivery-status button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* 상태 modifier — 루트에 적용, 색상은 이 modifier로만 전환 (frozen) */
+  .delivery-status--pending .delivery-status__badge {
+    background: color-mix(in srgb, var(--color-status-pending) 16%, white);
+    color: #92400e;
+  }
+  .delivery-status--pending .delivery-status__badge::before {
+    content: "●";
+    color: var(--color-status-pending);
+    margin-right: 6px;
+    font-size: 10px;
+  }
+
+  .delivery-status--delivered .delivery-status__badge {
+    background: color-mix(in srgb, var(--color-status-delivered) 16%, white);
+    color: #14532d;
+  }
+  .delivery-status--delivered .delivery-status__badge::before {
+    content: "●";
+    color: var(--color-status-delivered);
+    margin-right: 6px;
+    font-size: 10px;
+  }
+
+  .delivery-status--error .delivery-status__badge {
+    background: color-mix(in srgb, var(--color-status-error) 16%, white);
+    color: #7f1d1d;
+  }
+  .delivery-status--error .delivery-status__badge::before {
+    content: "●";
+    color: var(--color-status-error);
+    margin-right: 6px;
+    font-size: 10px;
+  }
+
+  /* loading 진행 표시 (mockup 시각화 — 계약 토큰 아님) */
+  .delivery-status--loading .delivery-status__badge::after {
+    content: "";
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 8px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: mockup-spin 0.8s linear infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes mockup-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* 전이 흐름 다이어그램 */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    background: var(--mockup-surface);
+    border: 1px solid var(--mockup-border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .flow-step { display: flex; align-items: center; gap: 8px; }
+  .flow-arrow { color: var(--mockup-text-muted); font-size: 14px; }
+  .flow-caption {
+    font-size: 11px;
+    color: var(--mockup-text-muted);
+    flex-basis: 100%;
+    margin-top: 4px;
+  }
+
+  /* 반응형 프레임 시연 */
+  .frame-demo { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .frame {
+    border: 1px dashed var(--mockup-border);
+    border-radius: 8px;
+    padding: 16px;
+    background: var(--mockup-surface);
+  }
+  .frame .frame-label { font-size: 11px; color: var(--mockup-text-muted); margin-bottom: 10px; }
+  .frame-320 { width: 320px; }
+  .frame-479 { width: 300px; }
+
+  /* 480px 미만: 배지·갱신시각 세로 stack (frozen invariant) */
+  .frame-479 .delivery-status {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  table.mapping {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: var(--mockup-surface);
+    border: 1px solid var(--mockup-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table.mapping th, table.mapping td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--mockup-border);
+  }
+  table.mapping th { background: #f1f5f9; font-weight: 600; }
+  table.mapping tr:last-child td { border-bottom: none; }
+
+  .token-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+  <h1>전달 상태 배지 — 시각 mockup</h1>
+  <p class="lede">BF-1428 · frozen ui-contract 기반 정적 시각 시뮬레이션 (개발 산출물 아님, 픽셀 단위 일치 의무 없음)</p>
+
+  <h2>1. 상태 4종 (idle / loading / delivered / error)</h2>
+  <div class="panel">
+
+    <div class="panel-item">
+      <div class="label">idle</div>
+      <div id="delivery-status-root-idle" class="delivery-status delivery-status--pending">
+        <span id="delivery-status-badge-idle" class="delivery-status__badge" aria-live="polite">상태 확인 대기</span>
+        <span id="delivery-status-timestamp-idle" class="delivery-status__timestamp"></span>
+        <button id="delivery-status-refresh-idle" aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+      <p class="desc">최초 진입 · 초기화/취소/실패 후 복귀 지점. refresh 활성.</p>
+    </div>
+
+    <div class="panel-item">
+      <div class="label">loading</div>
+      <div id="delivery-status-root-loading" class="delivery-status delivery-status--pending delivery-status--loading">
+        <span id="delivery-status-badge-loading" class="delivery-status__badge" aria-live="polite">전달 상태 확인 중…</span>
+        <span id="delivery-status-timestamp-loading" class="delivery-status__timestamp"></span>
+        <button id="delivery-status-refresh-loading" aria-label="전달 상태 새로고침" disabled>새로고침</button>
+      </div>
+      <p class="desc">진행 표시 노출. refresh 비활성(중복 실행 방지).</p>
+    </div>
+
+    <div class="panel-item">
+      <div class="label">delivered</div>
+      <div id="delivery-status-root-delivered" class="delivery-status delivery-status--delivered">
+        <span id="delivery-status-badge-delivered" class="delivery-status__badge" aria-live="polite">전달 완료</span>
+        <span id="delivery-status-timestamp-delivered" class="delivery-status__timestamp">2026-08-01T03:12:00Z</span>
+        <button id="delivery-status-refresh-delivered" aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+      <p class="desc">ISO 8601(UTC) 갱신 시각 표시. refresh 활성.</p>
+    </div>
+
+    <div class="panel-item">
+      <div class="label">error</div>
+      <div id="delivery-status-root-error" class="delivery-status delivery-status--error">
+        <span id="delivery-status-badge-error" class="delivery-status__badge" aria-live="polite">전달 상태를 불러오지 못했습니다</span>
+        <span id="delivery-status-timestamp-error" class="delivery-status__timestamp"></span>
+        <button id="delivery-status-refresh-error" aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+      <p class="desc">API 실패(5xx/네트워크)·403 권한 거부 공통 문구. refresh 재활성.</p>
+    </div>
+
+  </div>
+
+  <h2>2. 상태 전이 &amp; 복원 흐름</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <span class="delivery-status delivery-status--pending"><span class="delivery-status__badge">상태 확인 대기</span></span>
+    </div>
+    <span class="flow-arrow">새로고침 클릭/Enter/Space →</span>
+    <div class="flow-step">
+      <span class="delivery-status delivery-status--pending delivery-status--loading"><span class="delivery-status__badge">전달 상태 확인 중…</span></span>
+    </div>
+    <span class="flow-arrow">응답 성공 →</span>
+    <div class="flow-step">
+      <span class="delivery-status delivery-status--delivered"><span class="delivery-status__badge">전달 완료</span></span>
+    </div>
+    <span class="flow-caption">정상 흐름: idle → loading(refresh 비활성) → delivered(갱신 시각 표시, refresh 재활성)</span>
+  </div>
+
+  <div class="flow" style="margin-top:16px;">
+    <div class="flow-step">
+      <span class="delivery-status delivery-status--pending delivery-status--loading"><span class="delivery-status__badge">전달 상태 확인 중…</span></span>
+    </div>
+    <span class="flow-arrow">5xx / 네트워크 / 403 →</span>
+    <div class="flow-step">
+      <span class="delivery-status delivery-status--error"><span class="delivery-status__badge">전달 상태를 불러오지 못했습니다</span></span>
+    </div>
+    <span class="flow-arrow">새로고침 재시도 가능 →</span>
+    <div class="flow-step">
+      <span class="delivery-status delivery-status--pending"><span class="delivery-status__badge">상태 확인 대기</span></span>
+    </div>
+    <span class="flow-caption">실패 흐름: loading → error(refresh 즉시 재활성, 거부 사유 미노출) → 재시도 시 idle 경유 후 재조회</span>
+  </div>
+
+  <div class="flow" style="margin-top:16px;">
+    <div class="flow-step">
+      <span class="delivery-status delivery-status--pending delivery-status--loading"><span class="delivery-status__badge">전달 상태 확인 중…</span></span>
+    </div>
+    <span class="flow-arrow">조회 취소(abort) →</span>
+    <div class="flow-step">
+      <span class="delivery-status delivery-status--pending"><span class="delivery-status__badge">상태 확인 대기</span></span>
+    </div>
+    <span class="flow-caption">취소 흐름: loading 중 abort → 진행 표시 중단 → idle 복귀, refresh 즉시 재활성화 (frozen invariant)</span>
+  </div>
+
+  <h2>3. 반응형 (320px 이상 / 480px 미만 stack)</h2>
+  <div class="frame-demo">
+    <div class="frame frame-320">
+      <div class="frame-label">320px — overflow 없이 가로 배치</div>
+      <div class="delivery-status delivery-status--delivered">
+        <span class="delivery-status__badge">전달 완료</span>
+        <span class="delivery-status__timestamp">2026-08-01T03:12:00Z</span>
+        <button aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+    </div>
+    <div class="frame frame-479">
+      <div class="frame-label">480px 미만 — 배지·갱신시각 세로 stack</div>
+      <div class="delivery-status delivery-status--delivered">
+        <span class="delivery-status__badge">전달 완료</span>
+        <span class="delivery-status__timestamp">2026-08-01T03:12:00Z</span>
+        <button aria-label="전달 상태 새로고침">새로고침</button>
+      </div>
+    </div>
+  </div>
+
+  <h2>4. 컬러 토큰 (frozen — 4개, 재정의 금지)</h2>
+  <table class="mapping">
+    <thead>
+      <tr><th>토큰</th><th>값</th><th>적용 상태</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="token-swatch" style="background:#16a34a;"></span><code>--color-status-delivered</code></td><td>#16a34a</td><td>delivered</td></tr>
+      <tr><td><span class="token-swatch" style="background:#f59e0b;"></span><code>--color-status-pending</code></td><td>#f59e0b</td><td>idle, loading</td></tr>
+      <tr><td><span class="token-swatch" style="background:#dc2626;"></span><code>--color-status-error</code></td><td>#dc2626</td><td>error</td></tr>
+      <tr><td><code>--space-badge-gap</code></td><td>8px</td><td>루트 항목 간격</td></tr>
+    </tbody>
+  </table>
+
+</body>
+</html>
