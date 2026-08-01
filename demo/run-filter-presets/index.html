@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>실행 이력 필터 프리셋</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+
+      /* frozen design token (계약 §3.4) */
+      .preset-panel {
+        --color-surface-dark: #0f172a;
+        --color-action-primary: #2563eb;
+        --color-text-primary: #e2e8f0;
+        --space-control-gap: 12px;
+
+        max-width: 640px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 20px;
+        color: var(--color-text-primary);
+        background: var(--color-surface-dark);
+        border-radius: 12px;
+      }
+
+      .preset-panel__title {
+        margin: 0 0 var(--space-control-gap);
+        font-size: 1.25rem;
+      }
+
+      .run-filter__group {
+        margin: 0 0 var(--space-control-gap);
+        padding: 10px;
+        border: 1px solid #334155;
+        border-radius: 8px;
+      }
+      .run-filter__group legend {
+        padding: 0 4px;
+        font-size: 0.85rem;
+        color: #94a3b8;
+      }
+      .run-filter__group label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin: 4px 8px 4px 0;
+      }
+
+      .preset-panel__controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-control-gap);
+        margin: 0 0 var(--space-control-gap);
+      }
+
+      #preset-name-input {
+        flex: 1 1 160px;
+        min-width: 0;
+        padding: 8px 10px;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        background: #1e293b;
+        color: var(--color-text-primary);
+      }
+
+      .preset-panel__save {
+        padding: 8px 14px;
+        font-size: 0.95rem;
+        color: #ffffff;
+        background: var(--color-action-primary);
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .preset-panel__save:disabled {
+        opacity: 0.6;
+        cursor: progress;
+      }
+      .preset-panel__save:focus-visible,
+      .preset-panel__reset:focus-visible {
+        outline: 3px solid #93c5fd;
+        outline-offset: 2px;
+      }
+
+      .preset-panel__reset {
+        padding: 8px 14px;
+        font-size: 0.95rem;
+        color: var(--color-text-primary);
+        background: transparent;
+        border: 1px solid #475569;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      #preset-status {
+        min-height: 1.4em;
+        margin: 0 0 var(--space-control-gap);
+        color: #cbd5e1;
+      }
+
+      #preset-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .preset-panel__item {
+        padding: 10px 12px;
+        overflow-wrap: anywhere;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .preset-panel__item:focus-visible {
+        outline: 3px solid #93c5fd;
+        outline-offset: 2px;
+      }
+      .preset-panel__item--empty {
+        color: #94a3b8;
+        text-align: center;
+        cursor: default;
+        border-style: dashed;
+      }
+
+      /* 360px 폭 overflow 방지 (계약 §3.6) */
+      @media (max-width: 479px) {
+        body {
+          padding: 12px;
+        }
+        .preset-panel__controls {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .preset-panel__save,
+        .preset-panel__reset {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section id="preset-root" class="preset-panel" data-state="idle">
+        <h1 class="preset-panel__title">실행 이력 필터 프리셋</h1>
+
+        <fieldset id="run-status-filter" class="run-filter__group">
+          <legend>상태 필터</legend>
+          <label
+            ><input type="checkbox" name="status-filter" value="success" />
+            성공</label
+          >
+          <label
+            ><input type="checkbox" name="status-filter" value="warning" />
+            경고</label
+          >
+          <label
+            ><input type="checkbox" name="status-filter" value="failed" />
+            실패</label
+          >
+        </fieldset>
+
+        <fieldset id="run-persona-filter" class="run-filter__group">
+          <legend>페르소나 필터</legend>
+          <label
+            ><input type="checkbox" name="persona-filter" value="planner" />
+            planner</label
+          >
+          <label
+            ><input type="checkbox" name="persona-filter" value="designer" />
+            designer</label
+          >
+          <label
+            ><input type="checkbox" name="persona-filter" value="developer" />
+            developer</label
+          >
+          <label
+            ><input type="checkbox" name="persona-filter" value="reviewer" />
+            reviewer</label
+          >
+          <label
+            ><input type="checkbox" name="persona-filter" value="tester" />
+            tester</label
+          >
+        </fieldset>
+
+        <div class="preset-panel__controls">
+          <input
+            id="preset-name-input"
+            type="text"
+            aria-label="프리셋 이름"
+            placeholder="프리셋 이름"
+          />
+          <button
+            id="preset-save-button"
+            type="button"
+            class="preset-panel__save"
+            aria-label="프리셋 저장"
+          >
+            저장
+          </button>
+          <button
+            id="preset-reset-button"
+            type="button"
+            class="preset-panel__reset"
+            aria-label="필터 초기화"
+          >
+            초기화
+          </button>
+        </div>
+
+        <p id="preset-status" role="status" aria-live="polite"></p>
+
+        <ul id="preset-list" aria-label="저장된 프리셋 목록"></ul>
+      </section>
+    </main>
+
+    <script type="module" src="./src/feature.js"></script>
+  </body>
+</html>
