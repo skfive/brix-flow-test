@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>에이전트 큐 상태 범례</title>
+  <style>
+    :root {
+      --color-status-waiting: #f59e0b;
+      --color-status-running: #2563eb;
+      --color-status-action: #dc2626;
+      --space-legend-gap: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+    }
+
+    #queue-legend-root.legend {
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-legend-gap);
+      min-width: 0;
+    }
+
+    .legend__refresh {
+      align-self: flex-start;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: #1e293b;
+      color: #f1f5f9;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .legend__refresh:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #queue-legend-status {
+      margin: 0;
+      font-size: 14px;
+      min-height: 1.4em;
+    }
+
+    #queue-legend-items {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-legend-gap);
+      min-width: 0;
+    }
+
+    .legend__item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #1e293b;
+      max-width: 100%;
+      overflow-wrap: break-word;
+      min-width: 0;
+    }
+
+    .legend__item-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend__item-label {
+      font-size: 14px;
+      overflow-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div id="queue-legend-root" class="legend">
+    <button
+      id="queue-legend-refresh"
+      class="legend__refresh"
+      type="button"
+      aria-label="상태 범례 새로고침"
+    >새로고침</button>
+    <p id="queue-legend-status" role="status" aria-live="polite">새로고침을 눌러 상태를 불러오세요</p>
+    <ul id="queue-legend-items"></ul>
+  </div>
+  <script type="module">
+    import { mountQueueLegend } from './src/feature.js';
+
+    mountQueueLegend(document.getElementById('queue-legend-root'));
+  </script>
+</body>
+</html>
