@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>피드백 카드 — Operator Feedback</title>
+  <style>
+    :root {
+      --color-action-primary: #2563eb;
+      --color-status-success: #16a34a;
+      --color-status-warning: #d97706;
+      --color-status-failure: #dc2626;
+      --space-card-gap: 12px;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f8fafc;
+      padding: var(--space-card-gap);
+    }
+    .feedback-card {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-card-gap);
+      padding: var(--space-card-gap);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #ffffff;
+      overflow-wrap: break-word;
+    }
+    .feedback-card__actions {
+      display: flex;
+      gap: var(--space-card-gap);
+    }
+    .feedback-card__actions button {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #feedback-confirm-btn {
+      background: var(--color-action-primary);
+      color: #ffffff;
+    }
+    #feedback-submit-btn {
+      background: #ffffff;
+      color: var(--color-action-primary);
+      border-color: var(--color-action-primary);
+    }
+    .feedback-card__actions button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .feedback-card__status {
+      padding: var(--space-card-gap);
+      border-radius: 6px;
+      background: #f1f5f9;
+    }
+    .feedback-card__status[data-state="success"] {
+      background: #f0fdf4;
+      border: 1px solid var(--color-status-success);
+    }
+    .feedback-card__status[data-state="warning"] {
+      background: #fffbeb;
+      border: 1px solid var(--color-status-warning);
+    }
+    .feedback-card__status[data-state="failure"] {
+      background: #fef2f2;
+      border: 1px solid var(--color-status-failure);
+    }
+    .feedback-card__message {
+      margin: 0;
+      font-size: 14px;
+      color: #1e293b;
+    }
+    @media (max-width: 479px) {
+      .feedback-card__actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="feedback-card-root" class="feedback-card" data-state="idle">
+    <div class="feedback-card__actions">
+      <button id="feedback-confirm-btn" type="button" aria-label="피드백 확인">확인</button>
+      <button id="feedback-submit-btn" type="button" aria-label="피드백 제출" disabled>제출</button>
+    </div>
+    <div
+      id="feedback-status-live"
+      class="feedback-card__status"
+      data-state="idle"
+      aria-live="polite"
+      aria-busy="false"
+    >
+      <p class="feedback-card__message">대기 중입니다. 확인 버튼을 눌러 시작하세요.</p>
+    </div>
+  </div>
+  <script type="module" src="./operator-feedback.js"></script>
+</body>
+</html>
