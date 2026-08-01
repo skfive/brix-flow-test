@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>구독 관리</title>
+  <style>
+    :root {
+      --color-action-primary: #2563eb;
+      --color-status-active: #16a34a;
+      --space-control-gap: 12px;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-width: 320px;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .subscription {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+    .subscription__form {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-control-gap);
+      margin-bottom: var(--space-control-gap);
+    }
+    .subscription__filter {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: var(--space-control-gap);
+    }
+    .subscription__submit {
+      background: var(--color-action-primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    .subscription__submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .subscription__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-control-gap);
+    }
+    .subscription__item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-control-gap);
+      max-width: 100%;
+      padding: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: #fff;
+    }
+    .subscription__status--active {
+      color: var(--color-status-active);
+      font-weight: 600;
+    }
+    .subscription__status--inactive {
+      color: #64748b;
+      font-weight: 600;
+    }
+    #subscription-empty {
+      color: #64748b;
+      padding: 12px 0;
+    }
+    #subscription-status {
+      min-height: 1.2em;
+      color: #334155;
+    }
+    @media (max-width: 480px) {
+      .subscription__item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="subscription-root" class="subscription">
+    <h1>구독 관리</h1>
+    <form id="subscription-add-form" class="subscription__form">
+      <label for="subscription-service-select">서비스 선택</label>
+      <select id="subscription-service-select" name="service">
+        <option value="">서비스를 선택하세요</option>
+      </select>
+      <button id="subscription-add-submit" type="submit" class="subscription__submit" aria-label="구독 추가">구독 추가</button>
+    </form>
+    <div class="subscription__filter">
+      <label for="subscription-filter-status">상태 필터</label>
+      <select id="subscription-filter-status" name="filter-status">
+        <option value="all">전체</option>
+        <option value="active">활성</option>
+        <option value="inactive">비활성</option>
+      </select>
+    </div>
+    <p id="subscription-status" role="status" aria-live="polite"></p>
+    <ul id="subscription-list" class="subscription__list"></ul>
+    <p id="subscription-empty" hidden></p>
+  </main>
+  <script type="module" src="./src/feature.js"></script>
+</body>
+</html>
