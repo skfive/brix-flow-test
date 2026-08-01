@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>에이전트 상태 범례</title>
+<style>
+  :root {
+    --color-surface-card: #1e293b;
+    --color-status-running: #3b82f6;
+    --color-status-waiting: #eab308;
+    --color-status-action: #f97316;
+    --color-status-stalled: #ef4444;
+    --color-status-done: #22c55e;
+    --space-card-gap: 16px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: var(--space-card-gap);
+    background: #0f172a;
+    color: #f1f5f9;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  .legend {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-card-gap);
+  }
+
+  .legend h1 {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  #legend-status-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-card-gap);
+  }
+
+  .legend__item {
+    min-width: 0;
+  }
+
+  .legend__badge {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--color-surface-card);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 12px;
+    color: #f1f5f9;
+    font-size: 1rem;
+    cursor: pointer;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .legend__badge:focus-visible {
+    outline: 2px solid #f1f5f9;
+    outline-offset: 2px;
+  }
+
+  .legend__badge[aria-pressed="true"] {
+    border-color: #f1f5f9;
+  }
+
+  .legend__badge-dot {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+  }
+
+  .legend__badge[data-status="running"] .legend__badge-dot { background: var(--color-status-running); }
+  .legend__badge[data-status="waiting"] .legend__badge-dot { background: var(--color-status-waiting); }
+  .legend__badge[data-status="action-needed"] .legend__badge-dot { background: var(--color-status-action); }
+  .legend__badge[data-status="stalled"] .legend__badge-dot { background: var(--color-status-stalled); }
+  .legend__badge[data-status="done"] .legend__badge-dot { background: var(--color-status-done); }
+
+  .legend__badge-label {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  .legend__item--hidden {
+    display: none;
+  }
+
+  .legend__detail {
+    background: var(--color-surface-card);
+    border-radius: 8px;
+    padding: 16px;
+    min-width: 0;
+  }
+
+  .legend__detail dt {
+    font-weight: 600;
+    margin-top: 12px;
+  }
+
+  .legend__detail dt:first-child {
+    margin-top: 0;
+  }
+
+  .legend__detail dd {
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
+  }
+
+  .legend__reset {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    color: #f1f5f9;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+
+  .legend__reset:focus-visible {
+    outline: 2px solid #f1f5f9;
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 480px) {
+    .legend__badge {
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <div id="legend-root" class="legend">
+    <h1>에이전트 상태 범례</h1>
+    <ul id="legend-status-list"></ul>
+    <div id="legend-detail-panel" class="legend__detail"></div>
+    <button id="legend-reset" class="legend__reset" aria-label="범례 초기화">전체 보기로 초기화</button>
+  </div>
+  <script type="module" src="./src/feature.js"></script>
+</body>
+</html>
