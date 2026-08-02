@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>네온 스네이크 · 반응형 전체화면 스테이지 시각 mockup (BF-1495)</title>
+<style>
+  /* ===== Frozen 디자인 토큰 (BF-1495 · 값·이름 변경 금지) ===== */
+  :root {
+    --neon-primary: #39ff14;               /* 뱀 몸통·주 강조·버튼 채움 */
+    --neon-bg: #050510;                    /* 스테이지/캔버스 배경(네온 야간) */
+    --hud-gap: 12px;                       /* HUD 항목 간격 */
+    --overlay-bg: rgba(5, 5, 16, 0.72);    /* overlay 스크림 배경 */
+    --safe-area-top: env(safe-area-inset-top); /* HUD safe-area inset */
+
+    /* ===== 표현용 권고 값 (frozen 위에 얹음 · frozen 덮어쓰지 않음) ===== */
+    --neon-head: #00e5ff;
+    --neon-food: #ff2d95;
+    --text-primary: #eafcff;
+    --text-secondary: #8ea9bf;
+    --grid-line: rgba(0, 229, 255, 0.06);
+    --bg-glow-top: rgba(0, 229, 255, 0.10);
+    --bg-glow-bottom: rgba(57, 255, 20, 0.06);
+    --gameover-tint: rgba(255, 45, 149, 0.16);
+    --focus-ring: rgba(0, 229, 255, 0.6);
+    --hud-panel: rgba(5, 5, 16, 0.55);
+
+    --font-sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    background: var(--neon-bg);
+    background-image:
+      radial-gradient(120% 80% at 50% 0%, var(--bg-glow-top), transparent 60%),
+      radial-gradient(120% 80% at 50% 100%, var(--bg-glow-bottom), transparent 60%);
+    line-height: 1.5;
+    padding: 32px clamp(16px, 4vw, 48px) 64px;
+  }
+
+  .doc-head { max-width: 1100px; margin: 0 auto 28px; }
+  .doc-head h1 {
+    font-size: clamp(22px, 4vw, 32px);
+    margin: 0 0 6px;
+    letter-spacing: 0.01em;
+  }
+  .doc-head p { color: var(--text-secondary); margin: 4px 0; font-size: 14px; }
+  .doc-head code {
+    font-family: var(--font-mono);
+    color: var(--neon-head);
+    background: rgba(0, 229, 255, 0.08);
+    padding: 1px 6px; border-radius: 5px; font-size: 13px;
+  }
+
+  /* ===== 토큰 스와치 ===== */
+  .tokens {
+    max-width: 1100px; margin: 0 auto 40px;
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+  .token {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--hud-panel);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .token .chip {
+    width: 34px; height: 34px; border-radius: 8px; flex: none;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .token .meta { min-width: 0; }
+  .token .name { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); }
+  .token .val { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+  .token.frozen .name::after { content: " · frozen"; color: var(--neon-primary); }
+
+  /* ===== 상태 프레임 그리드 ===== */
+  .states {
+    max-width: 1100px; margin: 0 auto;
+    display: grid; gap: 22px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+  .state-block h2 {
+    font-size: 15px; margin: 0 0 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .state-block h2 .status-tag {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--neon-bg); background: var(--neon-head);
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .state-block .note { color: var(--text-secondary); font-size: 12px; margin: 8px 2px 0; }
+
+  /* 전체화면 반응형 의도를 나타내는 넓은 스테이지 프레임 (정사각 아님) */
+  .stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;            /* 넓은 전체화면 비율 — 고정 정사각 카드 아님 */
+    background: var(--neon-bg);
+    background-image:
+      radial-gradient(120% 90% at 50% 0%, var(--bg-glow-top), transparent 55%),
+      radial-gradient(120% 90% at 50% 100%, var(--bg-glow-bottom), transparent 55%);
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  /* stage__canvas — 스테이지 전체를 채우는 격자(정적 렌더) */
+  .stage__canvas {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+
+  /* 뱀·먹이 정적 표현 (canvas 대신 CSS) */
+  .cell {
+    position: absolute; width: 24px; height: 24px; border-radius: 6px;
+  }
+  .snake-body { background: var(--neon-primary); box-shadow: 0 0 8px rgba(57, 255, 20, 0.7); }
+  .snake-head {
+    background: var(--neon-head); box-shadow: 0 0 12px rgba(0, 229, 255, 0.85);
+    border-radius: 8px;
+  }
+  .food {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--neon-food); box-shadow: 0 0 14px rgba(255, 45, 149, 0.85);
+  }
+
+  /* HUD — 상단 오버레이(비침습) */
+  .hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; gap: var(--hud-gap);
+    padding: calc(10px + var(--safe-area-top)) 12px 10px;
+    z-index: 3; pointer-events: none;
+  }
+  .hud__item {
+    background: var(--hud-panel);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px; padding: 6px 10px; min-width: 74px;
+  }
+  .hud__item .label {
+    font-size: 10px; color: var(--text-secondary);
+    letter-spacing: 0.04em; font-weight: 600;
+  }
+  .hud__item .value {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-weight: 700; font-size: clamp(15px, 4vw, 20px); color: var(--text-primary);
+  }
+
+  /* overlay — 단일 #game-overlay (상태 종속) */
+  .overlay {
+    position: absolute; inset: 0; z-index: 4;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; text-align: center; padding: 16px;
+    background: var(--overlay-bg);
+  }
+  .overlay .title {
+    font-size: clamp(22px, 7vw, 34px); font-weight: 700; line-height: 1.15;
+    margin: 0; color: var(--text-primary);
+  }
+  .overlay .desc { color: var(--text-secondary); font-size: 14px; margin: 0; max-width: 30ch; }
+  .overlay .stats {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    font-weight: 700; font-size: 18px; color: var(--text-primary); margin: 0;
+  }
+  .overlay .card-ring--ready { box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.35); }
+  .overlay--gameover { background: linear-gradient(var(--gameover-tint), var(--gameover-tint)), var(--overlay-bg); }
+  .overlay--gameover .title { color: var(--neon-food); text-shadow: 0 0 12px rgba(255, 45, 149, 0.5); }
+
+  /* restart-button — 주 control */
+  .restart-button {
+    font-family: var(--font-sans); font-size: 15px; font-weight: 700;
+    color: var(--neon-bg); background: var(--neon-primary);
+    border: none; border-radius: 10px; min-height: 44px; padding: 0 22px;
+    cursor: pointer; box-shadow: 0 0 16px rgba(57, 255, 20, 0.45);
+  }
+  .restart-button:hover { filter: brightness(1.08); }
+  .restart-button:focus-visible {
+    outline: 2px solid var(--neon-head); outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--focus-ring), 0 0 16px rgba(57, 255, 20, 0.45);
+  }
+
+  /* touch-controls — 하단 오버레이 (모바일 방향 입력) */
+  .touch-controls {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: grid; justify-content: center; align-items: end;
+    grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px);
+    gap: 6px; padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+  .touch-pad {
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(16px, 5vw, 22px); font-weight: 700;
+    color: var(--neon-primary);
+    background: var(--hud-panel);
+    border: 1px solid rgba(57, 255, 20, 0.5); border-radius: 10px;
+    min-width: 44px; min-height: 44px; cursor: pointer;
+  }
+  .touch-pad:active { box-shadow: 0 0 10px rgba(57, 255, 20, 0.5); }
+  .pad-up    { grid-column: 2; grid-row: 1; }
+  .pad-left  { grid-column: 1; grid-row: 2; }
+  .pad-down  { grid-column: 2; grid-row: 2; }
+  .pad-right { grid-column: 3; grid-row: 2; }
+
+  /* 상태별 뱀 이동 표현: playing 은 먹이 맥동 */
+  @keyframes food-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.18); opacity: 0.85; } }
+  .food.pulsing { animation: food-pulse 1.1s ease-in-out infinite; }
+
+  .legend {
+    max-width: 1100px; margin: 40px auto 0;
+    color: var(--text-secondary); font-size: 13px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px;
+  }
+  .legend strong { color: var(--text-primary); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .food.pulsing { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <header class="doc-head">
+    <h1>네온 스네이크 · 반응형 전체화면 스테이지 시각 mockup</h1>
+    <p>BF-1495 · designer 시각 시뮬레이션 (런타임 산출물 아님) · 명세: <code>docs/design/neon-snake-fullscreen-BF-1495.md</code></p>
+    <p>스테이지는 고정 정사각 카드 없이 <code>100dvw × 100dvh</code> 를 채운다. 아래 프레임은 넓은 전체화면 비율(16:10)로 그 의도를 시각화한다. 상태는 색 + 화면 텍스트 + 접근성 이름 3중 채널로 구분한다.</p>
+  </header>
+
+  <!-- ===== Frozen 토큰 스와치 ===== -->
+  <section class="tokens" aria-label="frozen 디자인 토큰">
+    <div class="token frozen"><span class="chip" style="background:#39ff14"></span><span class="meta"><div class="name">--neon-primary</div><div class="val">#39ff14</div></span></div>
+    <div class="token frozen"><span class="chip" style="background:#050510"></span><span class="meta"><div class="name">--neon-bg</div><div class="val">#050510</div></span></div>
+    <div class="token frozen"><span class="chip" style="background:linear-gradient(90deg,#39ff14 12px,transparent 12px)"></span><span class="meta"><div class="name">--hud-gap</div><div class="val">12px</div></span></div>
+    <div class="token frozen"><span class="chip" style="background:rgba(5,5,16,0.72)"></span><span class="meta"><div class="name">--overlay-bg</div><div class="val">rgba(5,5,16,0.72)</div></span></div>
+    <div class="token frozen"><span class="chip" style="background:repeating-linear-gradient(45deg,#1a1a2e 0 6px,#0b0b18 6px 12px)"></span><span class="meta"><div class="name">--safe-area-top</div><div class="val">env(safe-area-inset-top)</div></span></div>
+    <div class="token"><span class="chip" style="background:#00e5ff"></span><span class="meta"><div class="name">--neon-head</div><div class="val">#00e5ff · 권고</div></span></div>
+    <div class="token"><span class="chip" style="background:#ff2d95"></span><span class="meta"><div class="name">--neon-food</div><div class="val">#ff2d95 · 권고</div></span></div>
+    <div class="token"><span class="chip" style="background:#eafcff"></span><span class="meta"><div class="name">--text-primary</div><div class="val">#eafcff · 권고</div></span></div>
+  </section>
+
+  <!-- ===== 4개 상태 병렬 배치 ===== -->
+  <div class="states">
+
+    <!-- READY -->
+    <section class="state-block" aria-label="ready 상태">
+      <h2>준비 <span class="status-tag">ready</span></h2>
+      <div class="stage">
+        <div class="stage__canvas"></div>
+        <div class="cell snake-body" style="left:46%; top:50%"></div>
+        <div class="cell snake-body" style="left:40%; top:50%"></div>
+        <div class="cell snake-head" style="left:52%; top:50%"></div>
+        <div class="hud">
+          <div class="hud__item"><div class="label">점수</div><div class="value">0</div></div>
+          <div class="hud__item"><div class="label">최고</div><div class="value">200</div></div>
+        </div>
+        <div class="overlay card-ring--ready" role="group" aria-live="polite">
+          <p class="title">준비</p>
+          <p class="desc">시작을 눌러 플레이 · 방향키/WASD·화면 방향 버튼으로 이동</p>
+          <button class="restart-button" aria-label="게임 시작">시작</button>
+        </div>
+      </div>
+      <p class="note">overlay 노출 · 제목 "준비"(frozen) · 정지된 뱀 + 버튼 형태가 색 외 신호 · aria-live 안내.</p>
+    </section>
+
+    <!-- PLAYING -->
+    <section class="state-block" aria-label="playing 상태">
+      <h2>진행 중 <span class="status-tag">playing</span></h2>
+      <div class="stage">
+        <div class="stage__canvas"></div>
+        <div class="cell food pulsing" style="left:22%; top:32%"></div>
+        <div class="cell snake-body" style="left:58%; top:60%"></div>
+        <div class="cell snake-body" style="left:64%; top:60%"></div>
+        <div class="cell snake-body" style="left:64%; top:48%"></div>
+        <div class="cell snake-head" style="left:64%; top:36%"></div>
+        <div class="hud">
+          <div class="hud__item"><div class="label">점수</div><div class="value">120</div></div>
+          <div class="hud__item"><div class="label">최고</div><div class="value">200</div></div>
+        </div>
+        <!-- overlay 숨김: 방해 없는 플레이 -->
+        <div class="touch-controls" aria-label="터치 방향 컨트롤">
+          <button class="touch-pad pad-up" aria-label="위로">▲</button>
+          <button class="touch-pad pad-left" aria-label="왼쪽으로">◀</button>
+          <button class="touch-pad pad-down" aria-label="아래로">▼</button>
+          <button class="touch-pad pad-right" aria-label="오른쪽으로">▶</button>
+        </div>
+      </div>
+      <p class="note">overlay 숨김 · 뱀 이동 + 점수 증가 + 먹이 맥동이 색 외 진행 신호 · 하단 터치 컨트롤(모바일).</p>
+    </section>
+
+    <!-- PAUSED -->
+    <section class="state-block" aria-label="paused 상태">
+      <h2>일시정지 <span class="status-tag">paused</span></h2>
+      <div class="stage">
+        <div class="stage__canvas"></div>
+        <div class="cell food" style="left:22%; top:32%"></div>
+        <div class="cell snake-body" style="left:58%; top:60%"></div>
+        <div class="cell snake-body" style="left:64%; top:60%"></div>
+        <div class="cell snake-body" style="left:64%; top:48%"></div>
+        <div class="cell snake-head" style="left:64%; top:36%"></div>
+        <div class="hud">
+          <div class="hud__item"><div class="label">점수</div><div class="value">120</div></div>
+          <div class="hud__item"><div class="label">최고</div><div class="value">200</div></div>
+        </div>
+        <div class="overlay" role="group" aria-live="polite">
+          <p class="title">일시정지</p>
+          <p class="desc">Space 또는 P 로 재개</p>
+        </div>
+      </div>
+      <p class="note">overlay 노출 · 제목 "일시정지"(frozen) · 뱀/먹이 정지(움직임 없음)가 색 외 신호 · 진행 위치 보존.</p>
+    </section>
+
+    <!-- GAMEOVER -->
+    <section class="state-block" aria-label="gameover 상태">
+      <h2>게임오버 <span class="status-tag">gameover</span></h2>
+      <div class="stage">
+        <div class="stage__canvas"></div>
+        <div class="cell snake-body" style="left:8%; top:60%"></div>
+        <div class="cell snake-body" style="left:8%; top:48%"></div>
+        <div class="cell snake-head" style="left:2%; top:48%"></div>
+        <div class="hud">
+          <div class="hud__item"><div class="label">점수</div><div class="value">120</div></div>
+          <div class="hud__item"><div class="label">최고</div><div class="value">200</div></div>
+        </div>
+        <div class="overlay overlay--gameover" role="group" aria-live="polite">
+          <p class="title">게임오버</p>
+          <p class="stats">점수 120 · 최고 점수 200</p>
+          <p class="desc">벽 또는 몸에 부딪혔어요</p>
+          <button class="restart-button" aria-label="게임 다시 시작">다시 시작</button>
+        </div>
+      </div>
+      <p class="note">overlay 노출 + <code>overlay--gameover</code> · 제목 "게임오버"(frozen) · 핑크 색조는 통계 텍스트와 병기 · 다시 시작 버튼.</p>
+    </section>
+
+  </div>
+
+  <footer class="legend">
+    <p><strong>비침습 오버레이:</strong> HUD(상단)·overlay(중앙)·터치 컨트롤(하단)은 모두 <code>position:absolute</code> 로 스테이지 위에 얹혀 canvas 렌더 영역을 축소하지 않는다. HUD 는 <code>--safe-area-top</code>, 터치 컨트롤은 <code>safe-area-inset-bottom</code> 을 반영한다.</p>
+    <p><strong>반응형:</strong> 스테이지는 320px~1920px+ 에서 <code>100dvw × 100dvh</code> 를 채우고 잘림/겹침 없이 배치된다. resize/orientationchange/fullscreenchange 시 상태·좌표를 보존한 채 새 크기로 리렌더한다.</p>
+    <p><strong>접근성:</strong> 모든 상태는 색만이 아니라 화면 텍스트 + <code>aria-live</code> + 버튼 <code>aria-label</code> 로 노출된다. <code>prefers-reduced-motion</code> 에서 먹이 맥동 등 장식 연출은 정지한다(이 mockup 도 존중).</p>
+  </footer>
+</body>
+</html>
