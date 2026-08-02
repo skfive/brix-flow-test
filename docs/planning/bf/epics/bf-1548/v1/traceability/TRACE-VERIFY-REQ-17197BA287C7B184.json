@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-REQ-17197BA287C7B184","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-STATES","status":"active","targetRef":"TS-RANKING","title":"Verify REQ-STATES with TS-RANKING","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
