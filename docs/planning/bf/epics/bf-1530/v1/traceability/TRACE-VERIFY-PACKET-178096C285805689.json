@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-PACKET-178096C285805689","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"PKT-DEVELOP-API","status":"active","targetRef":"TS-API-TOPLIST","title":"Verify PKT-DEVELOP-API with TS-API-TOPLIST","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}

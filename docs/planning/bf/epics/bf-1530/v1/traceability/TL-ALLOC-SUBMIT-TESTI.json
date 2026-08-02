@@ -1,0 +1,1 @@
+{"artifactId":"TL-ALLOC-SUBMIT-TESTI","artifactType":"TraceLink","relation":"allocated_to","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-SUBMIT","status":"active","targetRef":"PKT-TEST-INFRA","title":"REQ-SUBMIT→PKT-TEST-INFRA","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
