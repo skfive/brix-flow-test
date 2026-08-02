@@ -560,8 +560,8 @@
         formatCurrentText,
       } from './highscore.js';
       // frozen ui-contract@v1 §6 · 랭킹 보드 (BF-1550, additive)
-      import { createScoresStore } from './src/scores-api.js';
-      import { createLocalClient, createRankingBoard } from './src/ranking.js';
+      import { createScoresStore, createStoreFetch } from './src/scores-api.js';
+      import { createRankingBoard } from './src/ranking.js';
 
       const doc = document;
       const win = window;
@@ -597,16 +597,17 @@
       const newRecordBadge = doc.getElementById('snake-newrecord-badge');
 
       // ---- 랭킹 보드 (frozen ui-contract@v1 §6, planning-contract §7 hook) ----
-      // 정적 데모라 원격 서버가 없으므로 in-process 저장소를 클라이언트로 주입해
-      // 등록/조회가 클라이언트 단독으로 동작한다(결정론적, 네트워크 무의존).
-      const RANK_MODE = 'single';
+      // frozen §3.1 네트워크 계층(fetchScores/submitScore)에 fetchImpl 을 주입한다. 정적 데모라
+      // 원격 서버가 없으므로 §5 계약을 구현하는 인메모리 저장소를 createStoreFetch 로 백킹하며,
+      // 실제 게임 모드('local'/'cpu')를 등록/조회에 전달해 모드별 랭킹을 격리한다(frozen §4).
+      const rankFetch = createStoreFetch(createScoresStore());
       const rankPanel = doc.querySelector('.snake-rank__panel');
       const rankingBoard = createRankingBoard({
         boardEl: doc.getElementById('snake-rank-board'),
         nicknameEl: doc.getElementById('snake-rank-nickname'),
         submitEl: doc.getElementById('snake-rank-submit'),
         statusEl: doc.getElementById('snake-rank-status'),
-        client: createLocalClient(createScoresStore()),
+        fetchImpl: rankFetch,
       });
       // 랭킹 보드는 종료 화면에서만 노출한다(플레이/메뉴 중 숨김).
       function showRankPanel(visible) {
@@ -868,7 +869,7 @@
           render();
           // 랭킹 보드 노출 + 상위 랭킹 조회(확정 점수·모드 바인딩). 실패해도 게임 흐름 보존.
           showRankPanel(true);
-          void rankingBoard.open({ score: boardCurrent, mode: RANK_MODE });
+          void rankingBoard.open({ score: boardCurrent, mode });
           if (typeof btnRestart.focus === 'function') {
             btnRestart.focus();
           }
