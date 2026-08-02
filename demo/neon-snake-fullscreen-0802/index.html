@@ -4,15 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a12" />
-    <title>네온 스네이크 · 2인 로컬 멀티플레이</title>
+    <title>네온 스네이크 · 1인 vs CPU / 2인 로컬</title>
     <style>
-      /* frozen §3.5 design token (변경 금지) — index.html이 token을 정의한다 */
+      /* frozen §3.5 design token (2인 로컬 · 변경 금지) — index.html이 token을 정의한다 */
       :root {
         --color-p1: #00e5ff;
         --color-p2: #ff2fb9;
         --color-food: #ffd400;
         --color-bg: #0a0a12;
         --space-hud-gap: 16px;
+
+        /* frozen ui-contract@v1 §6.3 · 1인 vs CPU 신규 token (additive, exact 값) */
+        --color-player1: #39ff14; /* 1P(사람) 뱀 색 */
+        --color-cpu: #ff2bd6; /* CPU(2P) 뱀 색 — 사람과 시각적으로 구분 */
+        --color-menu-focus: #00e5ff; /* 메뉴 포커스 링 */
+        --space-menu-gap: 16px; /* 모드/난이도 메뉴 항목 간격 */
       }
 
       * {
@@ -136,7 +142,7 @@
         outline-offset: 2px;
       }
 
-      /* frozen §3.3/§3.6 결과(승자/무승부) 오버레이 */
+      /* frozen §3.3/§3.6 결과(승자/무승부) 오버레이 (2인 로컬 계약 보존, 신규 런타임은 winner-banner 사용) */
       .result-overlay {
         position: absolute;
         inset: 0;
@@ -155,7 +161,64 @@
         text-shadow: 0 0 18px currentColor;
       }
 
-      /* §3.7 320px 이상에서 overflow 방지 */
+      /* frozen ui-contract@v1 §6.2 · 모드/난이도 선택 메뉴 (신규) */
+      .mode-menu,
+      .difficulty-menu {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-menu-gap);
+        align-items: stretch;
+        max-width: calc(100dvw - 32px);
+        z-index: 5;
+      }
+      .mode-menu[hidden],
+      .difficulty-menu[hidden],
+      .winner-banner[hidden] {
+        display: none;
+      }
+      .mode-menu__option,
+      .difficulty-menu__option {
+        font: inherit;
+        font-weight: 700;
+        padding: 14px 28px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.08);
+        color: #f4f4ff;
+        cursor: pointer;
+        min-width: 220px;
+      }
+      .mode-menu__option:focus-visible,
+      .difficulty-menu__option:focus-visible {
+        outline: 3px solid var(--color-menu-focus);
+        outline-offset: 2px;
+      }
+      /* 현재 선택된 난이도만 강조 (색상 외 테두리/그림자로도 구분) */
+      .difficulty-menu__option--active {
+        border-color: var(--color-menu-focus);
+        box-shadow: 0 0 14px var(--color-menu-focus);
+        background: rgba(0, 229, 255, 0.16);
+      }
+
+      /* frozen ui-contract@v1 §6.2 · 승패 배너 (신규, aria-live 로 결과 텍스트 노출) */
+      .winner-banner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(10, 10, 18, 0.8);
+        font-size: clamp(28px, 8vw, 64px);
+        font-weight: 800;
+        text-shadow: 0 0 18px currentColor;
+        z-index: 6;
+      }
+
+      /* §3.7 / 반응형 320px 이상에서 overflow 방지 */
       @media (max-width: 480px) {
         .hud__score {
           font-size: 18px;
@@ -166,13 +229,27 @@
         .control-btn {
           padding: 8px 12px;
         }
+        .mode-menu__option,
+        .difficulty-menu__option {
+          min-width: 0;
+          padding: 12px 18px;
+        }
       }
     </style>
   </head>
   <body>
-    <main class="snake-stage">
-      <!-- frozen §3.2 snake-board: 풀스크린 게임 보드 -->
-      <canvas id="snake-board" role="img" aria-label="2인 네온 스네이크 게임 보드"></canvas>
+    <main class="snake-stage" data-ui-state="mode-selection">
+      <!--
+        frozen §3.2 snake-board: 풀스크린 게임 보드.
+        src/game.js는 모듈 로드 시 getElementById('snake-board')가 있으면 2인 전용 런타임을
+        자동 부착한다. 본 페이지는 CPU 주입을 포함한 통합 런타임을 직접 구동하므로,
+        보드를 <template>에 담아 game.js 평가 시점에는 DOM에서 감지되지 않게 하고(자동 부착 회피),
+        통합 런타임이 마운트한다. selector(#snake-board)는 그대로 보존된다.
+      -->
+      <template id="board-template">
+        <canvas id="snake-board" role="img" aria-label="네온 스네이크 게임 보드"></canvas>
+      </template>
+      <div id="board-mount"></div>
 
       <!-- frozen §3.2/§3.6 HUD: 색상 외 '1P'/'2P' 텍스트 라벨로도 구분 -->
       <div class="hud-bar">
@@ -186,24 +263,466 @@
         </div>
       </div>
 
-      <!-- frozen §3.4 상태 배너: 현재 상태 텍스트를 항상 노출(접근성 이름 포함) -->
-      <p id="status-banner" class="status-banner" role="status" aria-live="polite">스페이스로 시작</p>
+      <!-- frozen §3.4 상태 배너: 현재 상태명을 항상 텍스트+접근성 이름으로 노출 -->
+      <p id="status-banner" class="status-banner" role="status" aria-live="polite">모드를 선택하세요</p>
 
-      <p class="controls-hint">1P: W A S D · 2P: 방향키 · Space: 시작 / 일시정지 / 재개</p>
+      <!-- frozen ui-contract §6.2 모드 선택 메뉴 (기본값: 2인 로컬) -->
+      <div id="mode-select" class="mode-menu" role="group" aria-label="게임 모드 선택">
+        <button
+          id="btn-mode-local"
+          class="mode-menu__option"
+          type="button"
+          aria-label="2인 로컬 대전 시작"
+        >
+          2인 로컬
+        </button>
+        <button
+          id="btn-mode-cpu"
+          class="mode-menu__option"
+          type="button"
+          aria-label="1인 CPU 대전 시작"
+        >
+          1인 vs CPU
+        </button>
+      </div>
+
+      <!-- frozen ui-contract §6.2 난이도 선택 메뉴 (CPU 모드 한정, 현재 선택만 --active) -->
+      <div id="difficulty-select" class="difficulty-menu" role="group" aria-label="CPU 난이도 선택" hidden>
+        <button
+          class="difficulty-menu__option"
+          type="button"
+          data-value="easy"
+          aria-label="쉬움 난이도 선택"
+        >
+          쉬움
+        </button>
+        <button
+          class="difficulty-menu__option difficulty-menu__option--active"
+          type="button"
+          data-value="normal"
+          aria-label="보통 난이도 선택"
+        >
+          보통
+        </button>
+        <button
+          class="difficulty-menu__option"
+          type="button"
+          data-value="hard"
+          aria-label="어려움 난이도 선택"
+        >
+          어려움
+        </button>
+      </div>
+
+      <p class="controls-hint">
+        메뉴: 방향키/Enter · 1P: W A S D · 2P(로컬): 방향키 · Space: 일시정지 / 재개
+      </p>
 
       <!-- frozen §3.2/§3.6 조작 버튼: 명시적 aria-label, 키보드 조작 가능 -->
       <div class="controls">
-        <button id="btn-start" class="control-btn" type="button" aria-label="게임 시작 또는 재개">시작</button>
+        <button id="btn-start" class="control-btn" type="button" aria-label="선택 확정 또는 재개">시작</button>
         <button id="btn-pause" class="control-btn" type="button" aria-label="게임 일시정지 또는 재개">일시정지</button>
-        <button id="btn-restart" class="control-btn" type="button" aria-label="게임 재시작">재시작</button>
+        <button id="btn-restart" class="control-btn" type="button" aria-label="모드 선택으로 재시작">재시작</button>
       </div>
 
-      <!-- frozen §3.6 결과 오버레이: role="status" + aria-live="polite" 로 승자/무승부 알림 -->
+      <!-- frozen §3.6 결과 오버레이 (2인 로컬 selector 보존, 신규 런타임 미사용) -->
       <div id="result-overlay" class="result-overlay" role="status" aria-live="polite" hidden>
         <p class="result-overlay__text">무승부</p>
       </div>
+
+      <!-- frozen ui-contract §6.2 승패 배너: aria-live="polite" 로 승/패/무승부 텍스트 노출 -->
+      <div id="winner-banner" class="winner-banner" role="status" aria-live="polite" hidden></div>
     </main>
 
-    <script type="module" src="./src/game.js"></script>
+    <script type="module">
+      // 통합 런타임 (1인 vs CPU / 2인 로컬). 순수 규칙은 src/game.js, CPU 의사결정은 cpu.js에서 가져온다.
+      // src/game.js는 import 시 snake-board가 template 안이라 자동 부착되지 않는다(위 주석 참조).
+      import {
+        createMultiplayerState,
+        startMultiplayer,
+        setPlayerDirection,
+        pauseMultiplayer,
+        resumeMultiplayer,
+        restartMultiplayer,
+        stepMultiplayer,
+        computeBoardMetrics,
+        bindingForKey,
+        MP_TICK_MS,
+        MP_DEFAULT_COLS,
+        MP_DEFAULT_ROWS,
+      } from './src/game.js';
+      import { chooseCpuDirection, createSeededRng } from './cpu.js';
+
+      const doc = document;
+      const win = window;
+
+      // ---- 보드 마운트 (game.js 자동 부착 회피 후 template를 실제 DOM으로) ----
+      doc.getElementById('board-mount').appendChild(
+        doc.getElementById('board-template').content.cloneNode(true),
+      );
+      const board = doc.getElementById('snake-board');
+      const ctx = board.getContext('2d');
+
+      // ---- DOM 참조 ----
+      const stage = doc.querySelector('.snake-stage');
+      const scoreP1 = doc.getElementById('score-p1');
+      const scoreP2 = doc.getElementById('score-p2');
+      const statusBanner = doc.getElementById('status-banner');
+      const modeSelect = doc.getElementById('mode-select');
+      const btnModeLocal = doc.getElementById('btn-mode-local');
+      const btnModeCpu = doc.getElementById('btn-mode-cpu');
+      const difficultySelect = doc.getElementById('difficulty-select');
+      const difficultyButtons = Array.from(
+        difficultySelect.querySelectorAll('.difficulty-menu__option'),
+      );
+      const winnerBanner = doc.getElementById('winner-banner');
+      const btnStart = doc.getElementById('btn-start');
+      const btnPause = doc.getElementById('btn-pause');
+      const btnRestart = doc.getElementById('btn-restart');
+
+      // ---- 색상: 로컬은 기존 계약(p1/p2), CPU는 신규 token(player1/cpu) ----
+      const COLORS = {
+        bg: '#0a0a12',
+        food: '#ffd400',
+        local: { p1: '#00e5ff', p2: '#ff2fb9' },
+        cpu: { p1: '#39ff14', p2: '#ff2bd6' },
+      };
+
+      const GAMEOVER = new Set(['p1-win', 'p2-win', 'draw']);
+      const CPU_SEED = 0x1a2b3c4d; // 브라우저 CPU rng 고정 시드(재현 가능)
+
+      const UI_STATE_TEXT = {
+        'mode-selection': '모드를 선택하세요',
+        'difficulty-selection': '난이도를 선택하세요',
+        playing: '게임 진행 중',
+        paused: '일시정지 — Space로 재개',
+        'game-over': '게임 종료',
+      };
+
+      // ---- 뷰모델 (엔진 state 밖, 런타임 로컬) ----
+      let uiState = 'mode-selection';
+      let mode = 'local'; // 기본값: 2인 로컬
+      let difficulty = 'normal';
+      let modeIndex = 0; // 0=local, 1=cpu
+      let state = null; // 엔진 멀티플레이 state (플레이 시작 시 생성)
+      let rng = createSeededRng(CPU_SEED);
+      let metrics = boardMetrics();
+
+      function activeCols() {
+        return state ? state.cols : MP_DEFAULT_COLS;
+      }
+      function activeRows() {
+        return state ? state.rows : MP_DEFAULT_ROWS;
+      }
+      function boardMetrics() {
+        return computeBoardMetrics(win.innerWidth || 1, win.innerHeight || 1, activeCols(), activeRows());
+      }
+
+      // ---- 렌더 ----
+      function applyMetrics() {
+        metrics = boardMetrics();
+        const dpr = win.devicePixelRatio || 1;
+        board.width = Math.max(1, Math.round(metrics.boardWidth * dpr));
+        board.height = Math.max(1, Math.round(metrics.boardHeight * dpr));
+        board.style.width = `${metrics.boardWidth}px`;
+        board.style.height = `${metrics.boardHeight}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        render();
+      }
+
+      function drawCell(cell, color) {
+        const size = metrics.cellPx;
+        const pad = Math.max(1, Math.floor(size * 0.08));
+        ctx.fillStyle = color;
+        ctx.fillRect(cell.x * size + pad, cell.y * size + pad, size - pad * 2, size - pad * 2);
+      }
+
+      function render() {
+        ctx.fillStyle = COLORS.bg;
+        ctx.fillRect(0, 0, metrics.boardWidth, metrics.boardHeight);
+        if (metrics.cellPx <= 0 || !state) {
+          return;
+        }
+        const pal = COLORS[mode];
+        if (state.food) {
+          drawCell(state.food, COLORS.food);
+        }
+        state.p1.body.forEach((cell) => drawCell(cell, pal.p1));
+        state.p2.body.forEach((cell) => drawCell(cell, pal.p2));
+      }
+
+      // ---- 승패 텍스트 ----
+      function winnerText() {
+        if (mode === 'cpu') {
+          if (state.state === 'p1-win') return '당신 승리';
+          if (state.state === 'p2-win') return 'CPU 승리';
+          return '무승부';
+        }
+        if (state.state === 'p1-win') return '1P 승리';
+        if (state.state === 'p2-win') return '2P 승리';
+        return '무승부';
+      }
+
+      // ---- 뷰 동기화 ----
+      function syncView() {
+        scoreP1.textContent = state ? String(state.p1.score) : '0';
+        scoreP2.textContent = state ? String(state.p2.score) : '0';
+        statusBanner.textContent = UI_STATE_TEXT[uiState];
+        stage.setAttribute('data-ui-state', uiState);
+
+        modeSelect.hidden = uiState !== 'mode-selection';
+        difficultySelect.hidden = uiState !== 'difficulty-selection';
+
+        if (uiState === 'game-over') {
+          winnerBanner.textContent = winnerText();
+          winnerBanner.hidden = false;
+        } else {
+          winnerBanner.textContent = '';
+          winnerBanner.hidden = true;
+        }
+
+        // 후조건(INV-5): 메뉴/종료 상태에서 주 실행 control 재활성, 진행 중에는 start 비활성.
+        btnStart.disabled = uiState === 'playing';
+        btnPause.disabled = !(uiState === 'playing' || uiState === 'paused');
+      }
+
+      // ---- 난이도 메뉴 active 표시 ----
+      function setDifficulty(value) {
+        difficulty = value;
+        difficultyButtons.forEach((btn) => {
+          btn.classList.toggle('difficulty-menu__option--active', btn.dataset.value === value);
+        });
+      }
+
+      // ---- 상태 전이 ----
+      function goModeSelection() {
+        uiState = 'mode-selection';
+        state = null;
+        modeIndex = mode === 'cpu' ? 1 : 0;
+        syncView();
+        applyMetrics();
+        focusModeOption();
+      }
+
+      function goDifficultySelection() {
+        mode = 'cpu';
+        uiState = 'difficulty-selection';
+        syncView();
+        focusActiveDifficulty();
+      }
+
+      function startLocal() {
+        mode = 'local';
+        state = startMultiplayer(createMultiplayerState());
+        uiState = 'playing';
+        syncView();
+        applyMetrics();
+        focusBoard();
+      }
+
+      function startCpu() {
+        mode = 'cpu';
+        state = startMultiplayer(createMultiplayerState());
+        rng = createSeededRng(CPU_SEED);
+        uiState = 'playing';
+        syncView();
+        applyMetrics();
+        focusBoard();
+      }
+
+      function togglePause() {
+        if (uiState === 'playing') {
+          state = pauseMultiplayer(state);
+          uiState = 'paused';
+        } else if (uiState === 'paused') {
+          state = resumeMultiplayer(state);
+          uiState = 'playing';
+        }
+        syncView();
+        render();
+      }
+
+      function restartToMenu() {
+        if (state) {
+          state = restartMultiplayer(state);
+        }
+        state = null;
+        goModeSelection();
+      }
+
+      function handleGameOver() {
+        if (uiState === 'playing' && GAMEOVER.has(state.state)) {
+          uiState = 'game-over';
+          syncView();
+          render();
+          if (typeof btnRestart.focus === 'function') {
+            btnRestart.focus();
+          }
+        }
+      }
+
+      // ---- 포커스 ----
+      function focusBoard() {
+        board.setAttribute('tabindex', '-1');
+        if (typeof board.focus === 'function') {
+          board.focus();
+        }
+      }
+      function focusModeOption() {
+        const btn = modeIndex === 1 ? btnModeCpu : btnModeLocal;
+        if (typeof btn.focus === 'function') {
+          btn.focus();
+        }
+      }
+      function focusActiveDifficulty() {
+        const btn = difficultyButtons.find((b) => b.dataset.value === difficulty) || difficultyButtons[0];
+        if (typeof btn.focus === 'function') {
+          btn.focus();
+        }
+      }
+
+      // ---- 메뉴 확정 (btn-start / Enter 공통) ----
+      function confirmModeSelection() {
+        if (modeIndex === 1) {
+          goDifficultySelection();
+        } else {
+          startLocal();
+        }
+      }
+
+      function primaryAction() {
+        if (uiState === 'mode-selection') {
+          confirmModeSelection();
+        } else if (uiState === 'difficulty-selection') {
+          startCpu();
+        } else if (uiState === 'paused') {
+          togglePause();
+        } else if (uiState === 'game-over') {
+          restartToMenu();
+        }
+      }
+
+      // ---- 게임 루프 (고정 tick 누적, CPU는 §5.4대로 step 직전 방향 주입) ----
+      let last = null;
+      let acc = 0;
+      function loop(now) {
+        if (last == null) {
+          last = now;
+        }
+        acc += now - last;
+        last = now;
+        if (uiState === 'playing' && state && state.state === 'running') {
+          while (acc >= MP_TICK_MS && state.state === 'running') {
+            acc -= MP_TICK_MS;
+            if (mode === 'cpu') {
+              const dir = chooseCpuDirection(state, { difficulty, rng });
+              state = setPlayerDirection(state, 'p2', dir);
+            }
+            state = stepMultiplayer(state);
+          }
+          handleGameOver();
+        } else {
+          acc = 0;
+        }
+        syncView();
+        render();
+        win.requestAnimationFrame(loop);
+      }
+
+      // ---- 입력 ----
+      function moveMenu(delta) {
+        if (uiState === 'mode-selection') {
+          modeIndex = (modeIndex + delta + 2) % 2;
+          focusModeOption();
+        } else if (uiState === 'difficulty-selection') {
+          const order = ['easy', 'normal', 'hard'];
+          const idx = (order.indexOf(difficulty) + delta + order.length) % order.length;
+          setDifficulty(order[idx]);
+          focusActiveDifficulty();
+        }
+      }
+
+      function onKeyDown(event) {
+        const key = event.key;
+
+        // 메뉴 상태: 방향키 이동 / Enter 확정
+        if (uiState === 'mode-selection' || uiState === 'difficulty-selection') {
+          if (key === 'ArrowUp' || key === 'ArrowLeft') {
+            event.preventDefault();
+            moveMenu(-1);
+            return;
+          }
+          if (key === 'ArrowDown' || key === 'ArrowRight') {
+            event.preventDefault();
+            moveMenu(1);
+            return;
+          }
+          if (key === 'Enter') {
+            event.preventDefault();
+            primaryAction();
+            return;
+          }
+          return;
+        }
+
+        // 게임오버: Enter로 모드 선택 복귀
+        if (uiState === 'game-over') {
+          if (key === 'Enter') {
+            event.preventDefault();
+            restartToMenu();
+          }
+          return;
+        }
+
+        // 일시정지/재개
+        if (key === ' ' || key === 'Spacebar' || key === 'Space') {
+          if (uiState === 'playing' || uiState === 'paused') {
+            event.preventDefault();
+            togglePause();
+          }
+          return;
+        }
+
+        // 진행 중 방향 입력: 1P WASD 항상, 2P 방향키는 로컬 모드에서만(입력 경로 대체, INV-1)
+        if (uiState === 'playing') {
+          const binding = bindingForKey(key);
+          if (!binding) {
+            return;
+          }
+          if (binding.player === 'p2' && mode === 'cpu') {
+            return; // CPU 모드에서 사람은 2P를 조작하지 않는다
+          }
+          event.preventDefault();
+          state = setPlayerDirection(state, binding.player, binding.dir);
+        }
+      }
+
+      // ---- 배선 ----
+      btnModeLocal.addEventListener('click', () => {
+        modeIndex = 0;
+        startLocal();
+      });
+      btnModeCpu.addEventListener('click', () => {
+        modeIndex = 1;
+        goDifficultySelection();
+      });
+      difficultyButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          setDifficulty(btn.dataset.value);
+          startCpu();
+        });
+      });
+      btnStart.addEventListener('click', primaryAction);
+      btnPause.addEventListener('click', togglePause);
+      btnRestart.addEventListener('click', restartToMenu);
+      win.addEventListener('keydown', onKeyDown);
+      win.addEventListener('resize', applyMetrics);
+      win.addEventListener('orientationchange', applyMetrics);
+
+      // ---- 초기화 ----
+      setDifficulty(difficulty);
+      goModeSelection();
+      win.requestAnimationFrame(loop);
+    </script>
   </body>
 </html>
