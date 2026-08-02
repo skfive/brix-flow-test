@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>별빛 수집가 — 시각 mockup (BF-1483 / BF-1484)</title>
+<style>
+  :root {
+    /* frozen (값 변경 금지) */
+    --sc-color-bg: #0b1026;
+    --sc-color-star: #ffd54a;
+    --sc-color-action-primary: #5b8cff;
+    --sc-space-hud-gap: 16px;
+    --sc-radius-control: 8px;
+
+    /* designer 확장 (신규 정의, frozen과 이름 충돌 없음) */
+    --sc-color-bg-elevated: #141b3d;
+    --sc-color-surface-border: #2a3363;
+    --sc-color-text-primary: #f5f3ff;
+    --sc-color-text-muted: #9aa3c7;
+    --sc-color-status-idle: #9aa3c7;
+    --sc-color-status-running: #5be0a0;
+    --sc-color-status-paused: #f5c945;
+    --sc-color-status-ended: #8f9bff;
+    --sc-color-status-missed: #ff7a90;
+    --sc-color-focus-ring: #ffd54a;
+    --sc-color-catch-line: rgba(255, 213, 74, 0.35);
+
+    --sc-font-family: "Apple SD Gothic Neo", "Malgun Gothic", -apple-system,
+      BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 20px 80px;
+    background: #050714;
+    color: var(--sc-color-text-primary);
+    font-family: var(--sc-font-family);
+    line-height: 1.5;
+  }
+
+  h1 { font-size: clamp(1.4rem, 4vw, 1.9rem); margin: 0 0 4px; }
+  h2 { font-size: 1.05rem; margin: 0 0 16px; color: var(--sc-color-text-primary); }
+  .doc-note {
+    color: var(--sc-color-text-muted);
+    font-size: 0.85rem;
+    max-width: 720px;
+    margin: 0 0 40px;
+  }
+
+  main { max-width: 1040px; margin: 0 auto; }
+  section { margin-bottom: 56px; }
+
+  /* ---------- 2. 컬러 토큰 스와치 ---------- */
+  .swatch-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .swatch {
+    width: 132px;
+    border: 1px solid var(--sc-color-surface-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--sc-color-bg-elevated);
+  }
+  .swatch__color { height: 56px; }
+  .swatch__meta { padding: 8px 10px; }
+  .swatch__name {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    word-break: break-all;
+    display: block;
+  }
+  .swatch__hex {
+    font-size: 0.68rem;
+    color: var(--sc-color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .swatch--frozen { border-color: var(--sc-color-star); }
+  .swatch--frozen .swatch__name::after {
+    content: " (frozen)";
+    color: var(--sc-color-star);
+  }
+
+  /* ---------- 3. 타이포그래피 스케일 ---------- */
+  .type-sample { margin-bottom: 18px; }
+  .type-sample__label {
+    font-size: 0.7rem;
+    color: var(--sc-color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .type-display {
+    font-weight: 700;
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .type-body { font-weight: 600; font-size: 1rem; }
+  .type-caption {
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sc-color-text-muted);
+  }
+
+  /* ---------- star-catcher 공통 컴포넌트 스타일 ---------- */
+  .star-catcher {
+    background: var(--sc-color-bg);
+    border-radius: 20px;
+    padding: clamp(12px, 3vw, 24px);
+    border: 1px solid var(--sc-color-surface-border);
+    position: relative;
+  }
+  .star-catcher__layout {
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: 20px;
+  }
+  .star-catcher__board {
+    position: relative;
+    background: var(--sc-color-bg);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    min-height: clamp(280px, 60vh, 420px);
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+  }
+  .star-catcher__catch-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 85%;
+    border-top: 1px dashed var(--sc-color-catch-line);
+    pointer-events: none;
+  }
+  .star-catcher__catch-line::after {
+    content: "포집선 (y ≥ 85%)";
+    position: absolute;
+    right: 6px;
+    top: 4px;
+    font-size: 0.6rem;
+    color: var(--sc-color-catch-line);
+    letter-spacing: 0.03em;
+  }
+  .star-catcher__star {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: var(--sc-color-star);
+    box-shadow: 0 0 8px var(--sc-color-star);
+    clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
+  }
+  .star-catcher__star--twinkle {
+    animation: sc-twinkle 2.4s ease-in-out infinite;
+  }
+  @keyframes sc-twinkle {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+  }
+
+  .star-catcher__catcher {
+    position: absolute;
+    bottom: 6%;
+    width: clamp(28px, 8vw, 40px);
+    height: clamp(28px, 8vw, 40px);
+    border-radius: 50%;
+    background: var(--sc-color-action-primary);
+    box-shadow: 0 0 10px rgba(91, 140, 255, 0.6);
+    transform: translateX(-50%);
+  }
+  .star-catcher__catcher::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: 11px;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--sc-color-bg);
+  }
+
+  .star-catcher__hud {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sc-space-hud-gap);
+    background: var(--sc-color-bg-elevated);
+    border: 1px solid var(--sc-color-surface-border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .star-catcher__hud--row {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .star-catcher__stat { display: flex; flex-direction: column; gap: 2px; min-width: 76px; }
+  .star-catcher__stat-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sc-color-text-muted);
+  }
+  .star-catcher__stat-value {
+    font-weight: 700;
+    font-size: clamp(1.3rem, 4vw, 1.8rem);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .star-catcher__stat-value--missed { color: var(--sc-color-status-missed); }
+
+  .star-catcher__status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding-top: 4px;
+    border-top: 1px solid var(--sc-color-surface-border);
+  }
+  .sc-glyph { flex: none; width: 14px; height: 14px; position: relative; }
+  .sc-glyph--idle {
+    border-radius: 50%;
+    border: 2px solid var(--sc-color-status-idle);
+  }
+  .sc-glyph--running {
+    border-radius: 50%;
+    background: var(--sc-color-status-running);
+    animation: sc-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes sc-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.82); }
+  }
+  .sc-glyph--paused::before,
+  .sc-glyph--paused::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 4px;
+    height: 14px;
+    background: var(--sc-color-status-paused);
+  }
+  .sc-glyph--paused::before { left: 2px; }
+  .sc-glyph--paused::after { right: 2px; }
+  .sc-glyph--ended {
+    background: var(--sc-color-status-ended);
+    clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
+  }
+
+  .star-catcher__controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .star-catcher__control {
+    min-height: 44px;
+    padding: 10px 20px;
+    border-radius: var(--sc-radius-control);
+    font-family: var(--sc-font-family);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .star-catcher__control--primary {
+    background: var(--sc-color-action-primary);
+    color: #fff;
+    border: 1px solid var(--sc-color-action-primary);
+  }
+  .star-catcher__control--ghost-primary {
+    background: transparent;
+    color: var(--sc-color-action-primary);
+    border: 1px solid var(--sc-color-action-primary);
+  }
+  .star-catcher__control--ghost-neutral {
+    background: transparent;
+    color: var(--sc-color-text-primary);
+    border: 1px solid var(--sc-color-surface-border);
+  }
+  .star-catcher__control[aria-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .star-catcher__control:focus-visible,
+  .sc-focus-demo:focus-visible {
+    outline: 3px solid var(--sc-color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* ---------- 상태 snapshot 카드 ---------- */
+  .state-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+  .state-card {
+    background: var(--sc-color-bg);
+    border: 1px solid var(--sc-color-surface-border);
+    border-radius: 16px;
+    padding: 18px;
+  }
+  .state-card__title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sc-color-text-muted);
+    margin-bottom: 10px;
+  }
+  .state-card .star-catcher__board {
+    aspect-ratio: 16 / 9;
+    min-height: 140px;
+    margin-bottom: 14px;
+  }
+  .state-card .star-catcher__hud { flex-direction: row; flex-wrap: wrap; }
+  .state-card .star-catcher__controls { margin-top: 14px; }
+
+  /* ---------- glyph 범례 ---------- */
+  .glyph-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+  .glyph-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--sc-color-bg-elevated);
+    border: 1px solid var(--sc-color-surface-border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+
+  /* ---------- focus demo ---------- */
+  .focus-demo-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .sc-focus-demo {
+    display: inline-block;
+    background: transparent;
+    color: var(--sc-color-text-primary);
+    border: 1px solid var(--sc-color-surface-border);
+    border-radius: var(--sc-radius-control);
+    padding: 10px 20px;
+    font-family: var(--sc-font-family);
+    font-weight: 600;
+    outline: 3px solid var(--sc-color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* ---------- 모바일 프레임 ---------- */
+  .mobile-frame {
+    width: 375px;
+    max-width: 100%;
+    border: 2px solid var(--sc-color-surface-border);
+    border-radius: 28px;
+    padding: 16px 12px;
+    background: #000;
+  }
+  .mobile-frame .star-catcher__layout {
+    display: block;
+  }
+  .mobile-frame .star-catcher__hud {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .mobile-frame .star-catcher__stat { min-width: 42%; }
+  .mobile-frame .star-catcher__board {
+    aspect-ratio: 3 / 4;
+    min-height: 220px;
+  }
+  .mobile-frame .star-catcher__controls { flex-direction: column; }
+  .mobile-frame .star-catcher__control { width: 100%; }
+
+  .field-note {
+    font-size: 0.72rem;
+    color: var(--sc-color-text-muted);
+    margin-top: 10px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .star-catcher__star--twinkle,
+    .sc-glyph--running {
+      animation: none;
+    }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>별빛 수집가 — 시각 mockup</h1>
+    <p class="doc-note">
+      BF-1483(ui-contract) · BF-1484(designer) 정적 시각 mockup입니다.
+      외부 프로젝트 UI를 참조하지 않고 이 문서 안에서 새로 정의한 초승달
+      채집자 + 다이아몬드 별빛 컨셉을 보여줍니다. 실제 타이머·낙하·클릭
+      로직은 구현하지 않으며, 모든 카드는 상태별 정적 snapshot입니다.
+      상세 명세는 <code>docs/design/star-catcher-BF-1483.md</code> 참조.
+    </p>
+  </header>
+
+  <section aria-labelledby="tokens-h">
+    <h2 id="tokens-h">1. 컬러 토큰</h2>
+    <div class="swatch-grid">
+      <div class="swatch swatch--frozen">
+        <div class="swatch__color" style="background:var(--sc-color-bg)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-bg</span><span class="swatch__hex">#0b1026</span></div>
+      </div>
+      <div class="swatch swatch--frozen">
+        <div class="swatch__color" style="background:var(--sc-color-star)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-star</span><span class="swatch__hex">#ffd54a</span></div>
+      </div>
+      <div class="swatch swatch--frozen">
+        <div class="swatch__color" style="background:var(--sc-color-action-primary)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-action-primary</span><span class="swatch__hex">#5b8cff</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-bg-elevated)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-bg-elevated</span><span class="swatch__hex">#141b3d</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-surface-border)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-surface-border</span><span class="swatch__hex">#2a3363</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-text-primary)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-text-primary</span><span class="swatch__hex">#f5f3ff</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-text-muted)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-text-muted</span><span class="swatch__hex">#9aa3c7</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-status-running)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-status-running</span><span class="swatch__hex">#5be0a0</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-status-paused)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-status-paused</span><span class="swatch__hex">#f5c945</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-status-ended)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-status-ended</span><span class="swatch__hex">#8f9bff</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-status-missed)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-status-missed</span><span class="swatch__hex">#ff7a90</span></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch__color" style="background:var(--sc-color-focus-ring)"></div>
+        <div class="swatch__meta"><span class="swatch__name">--sc-color-focus-ring</span><span class="swatch__hex">#ffd54a</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="type-h">
+    <h2 id="type-h">2. 타이포그래피 스케일</h2>
+    <div class="type-sample">
+      <div class="type-sample__label">Display — HUD 숫자 (tabular-nums)</div>
+      <div class="type-display">0128</div>
+    </div>
+    <div class="type-sample">
+      <div class="type-sample__label">Body — game-status / control 라벨</div>
+      <div class="type-body">수집 중 · 일시정지 · 다시 시작</div>
+    </div>
+    <div class="type-sample">
+      <div class="type-sample__label">Caption — HUD 라벨</div>
+      <div class="type-caption">점수 · 콤보 · 놓침 · 시간</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="canonical-h">
+    <h2 id="canonical-h">3. Canonical 예시 — idle 상태 (frozen id/class 실사용, desktop 레이아웃)</h2>
+    <div class="star-catcher" id="game-root" data-status="idle">
+      <div class="star-catcher__layout">
+        <div class="star-catcher__board" id="game-board">
+          <div class="star-catcher__catch-line"></div>
+          <div class="star-catcher__catcher" style="left:50%"></div>
+        </div>
+        <div class="star-catcher__hud">
+          <div class="star-catcher__stat">
+            <span class="star-catcher__stat-label">점수</span>
+            <span class="star-catcher__stat-value" id="score-value">0</span>
+          </div>
+          <div class="star-catcher__stat">
+            <span class="star-catcher__stat-label">콤보</span>
+            <span class="star-catcher__stat-value" id="combo-value">×0</span>
+          </div>
+          <div class="star-catcher__stat">
+            <span class="star-catcher__stat-label">놓침</span>
+            <span class="star-catcher__stat-value star-catcher__stat-value--missed" id="missed-value">0</span>
+          </div>
+          <div class="star-catcher__stat">
+            <span class="star-catcher__stat-label">시간</span>
+            <span class="star-catcher__stat-value" id="timer-value">0:30</span>
+          </div>
+          <div class="star-catcher__status" id="game-status" aria-live="polite">
+            <span class="sc-glyph sc-glyph--idle" aria-hidden="true"></span>
+            대기 중 — 시작을 누르면 별빛 수집이 시작됩니다
+          </div>
+        </div>
+      </div>
+      <div class="star-catcher__controls">
+        <button id="start-btn" class="star-catcher__control star-catcher__control--primary" aria-label="별빛 수집 시작">시작</button>
+        <button id="pause-btn" class="star-catcher__control star-catcher__control--ghost-primary" aria-label="게임 일시정지" aria-disabled="true">일시정지</button>
+        <button id="restart-btn" class="star-catcher__control star-catcher__control--ghost-neutral" aria-label="게임 다시 시작">다시 시작</button>
+      </div>
+    </div>
+    <p class="field-note">
+      위 카드는 실제 화면과 동일한 frozen id(<code>game-root</code>,
+      <code>game-board</code>, <code>score-value</code> 등)와 class를
+      그대로 사용한 구조 예시입니다. 아래 §4 상태 카드는 여러 상태를 한
+      페이지에서 동시에 보여주기 위해 id 중복을 피하고 class만 재사용합니다.
+    </p>
+  </section>
+
+  <section aria-labelledby="states-h">
+    <h2 id="states-h">4. 상태별 스냅샷 — running / paused / ended</h2>
+    <div class="state-grid">
+      <div class="state-card">
+        <div class="state-card__title">running</div>
+        <div class="star-catcher__board">
+          <div class="star-catcher__catch-line"></div>
+          <div class="star-catcher__star star-catcher__star--twinkle" style="left:20%;top:30%"></div>
+          <div class="star-catcher__star star-catcher__star--twinkle" style="left:50%;top:60%"></div>
+          <div class="star-catcher__star star-catcher__star--twinkle" style="left:75%;top:15%"></div>
+          <div class="star-catcher__catcher" style="left:50%"></div>
+        </div>
+        <div class="star-catcher__hud">
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">점수</span><span class="star-catcher__stat-value">128</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">콤보</span><span class="star-catcher__stat-value" style="color:var(--sc-color-star)">×4</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">놓침</span><span class="star-catcher__stat-value star-catcher__stat-value--missed">1</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">시간</span><span class="star-catcher__stat-value">0:18</span></div>
+          <div class="star-catcher__status">
+            <span class="sc-glyph sc-glyph--running" aria-hidden="true"></span>
+            수집 중
+          </div>
+        </div>
+        <div class="star-catcher__controls">
+          <button class="star-catcher__control star-catcher__control--primary" aria-disabled="true">시작</button>
+          <button class="star-catcher__control star-catcher__control--ghost-primary">일시정지</button>
+          <button class="star-catcher__control star-catcher__control--ghost-neutral">다시 시작</button>
+        </div>
+      </div>
+
+      <div class="state-card">
+        <div class="state-card__title">paused</div>
+        <div class="star-catcher__board">
+          <div class="star-catcher__catch-line"></div>
+          <div class="star-catcher__star" style="left:35%;top:45%"></div>
+          <div class="star-catcher__star" style="left:80%;top:70%"></div>
+          <div class="star-catcher__catcher" style="left:36%"></div>
+        </div>
+        <div class="star-catcher__hud">
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">점수</span><span class="star-catcher__stat-value">128</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">콤보</span><span class="star-catcher__stat-value">×4</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">놓침</span><span class="star-catcher__stat-value star-catcher__stat-value--missed">1</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">시간</span><span class="star-catcher__stat-value">0:18</span></div>
+          <div class="star-catcher__status">
+            <span class="sc-glyph sc-glyph--paused" aria-hidden="true"></span>
+            일시정지 — 계속하기를 누르면 이어집니다
+          </div>
+        </div>
+        <div class="star-catcher__controls">
+          <button class="star-catcher__control star-catcher__control--primary" aria-disabled="true">시작</button>
+          <button class="star-catcher__control star-catcher__control--ghost-primary">계속하기</button>
+          <button class="star-catcher__control star-catcher__control--ghost-neutral">다시 시작</button>
+        </div>
+      </div>
+
+      <div class="state-card">
+        <div class="state-card__title">ended</div>
+        <div class="star-catcher__board">
+          <div class="star-catcher__catch-line"></div>
+          <div class="star-catcher__catcher" style="left:50%"></div>
+        </div>
+        <div class="star-catcher__hud">
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">점수</span><span class="star-catcher__stat-value">212</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">콤보</span><span class="star-catcher__stat-value">×0</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">놓침</span><span class="star-catcher__stat-value star-catcher__stat-value--missed">3</span></div>
+          <div class="star-catcher__stat"><span class="star-catcher__stat-label">시간</span><span class="star-catcher__stat-value">0:00</span></div>
+          <div class="star-catcher__status">
+            <span class="sc-glyph sc-glyph--ended" aria-hidden="true"></span>
+            종료 — 최종 점수 212점
+          </div>
+        </div>
+        <div class="star-catcher__controls">
+          <button class="star-catcher__control star-catcher__control--primary" aria-disabled="true">시작</button>
+          <button class="star-catcher__control star-catcher__control--ghost-primary" aria-disabled="true">일시정지</button>
+          <button class="star-catcher__control star-catcher__control--ghost-neutral">다시 시작</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="glyph-h">
+    <h2 id="glyph-h">5. 상태 glyph 범례 (색상 외 구분 수단)</h2>
+    <div class="glyph-legend">
+      <div class="glyph-legend__item"><span class="sc-glyph sc-glyph--idle"></span> idle — 속 빈 원</div>
+      <div class="glyph-legend__item"><span class="sc-glyph sc-glyph--running"></span> running — 찬 원 + pulse</div>
+      <div class="glyph-legend__item"><span class="sc-glyph sc-glyph--paused"></span> paused — 막대 2개</div>
+      <div class="glyph-legend__item"><span class="sc-glyph sc-glyph--ended"></span> ended — 미니 별</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="focus-h">
+    <h2 id="focus-h">6. 키보드 포커스 표시 (정적 재현)</h2>
+    <div class="focus-demo-row">
+      <span class="sc-focus-demo">다시 시작</span>
+      <span class="field-note">실제 구현에서는 :focus-visible 시에만 위와 같은 3px outline이 나타납니다.</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="mobile-h">
+    <h2 id="mobile-h">7. 모바일 세로 레이아웃 (375px, HUD → board → control 세로 재배치)</h2>
+    <div class="mobile-frame">
+      <div class="star-catcher" data-status="running" style="border:none;padding:0;background:transparent">
+        <div class="star-catcher__layout">
+          <div class="star-catcher__hud">
+            <div class="star-catcher__stat"><span class="star-catcher__stat-label">점수</span><span class="star-catcher__stat-value">128</span></div>
+            <div class="star-catcher__stat"><span class="star-catcher__stat-label">콤보</span><span class="star-catcher__stat-value">×4</span></div>
+            <div class="star-catcher__stat"><span class="star-catcher__stat-label">놓침</span><span class="star-catcher__stat-value star-catcher__stat-value--missed">1</span></div>
+            <div class="star-catcher__stat"><span class="star-catcher__stat-label">시간</span><span class="star-catcher__stat-value">0:18</span></div>
+            <div class="star-catcher__status" style="flex-basis:100%">
+              <span class="sc-glyph sc-glyph--running" aria-hidden="true"></span>
+              수집 중
+            </div>
+          </div>
+          <div class="star-catcher__board">
+            <div class="star-catcher__catch-line"></div>
+            <div class="star-catcher__star star-catcher__star--twinkle" style="left:28%;top:40%"></div>
+            <div class="star-catcher__catcher" style="left:36%"></div>
+          </div>
+        </div>
+        <div class="star-catcher__controls">
+          <button class="star-catcher__control star-catcher__control--primary" aria-disabled="true">시작</button>
+          <button class="star-catcher__control star-catcher__control--ghost-primary">일시정지</button>
+          <button class="star-catcher__control star-catcher__control--ghost-neutral">다시 시작</button>
+        </div>
+      </div>
+    </div>
+    <p class="field-note">320px 이상에서 가로 스크롤 없이 HUD(2열 wrap) → board → control 순으로 쌓입니다.</p>
+  </section>
+</main>
+</body>
+</html>
