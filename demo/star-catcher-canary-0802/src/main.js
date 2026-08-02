@@ -45,6 +45,8 @@ function init() {
   }
 
   function render() {
+    const focusedControl = document.activeElement;
+
     scoreValue.textContent = String(state.score);
     comboValue.textContent = String(state.combo);
     missedValue.textContent = String(state.missed);
@@ -58,6 +60,13 @@ function init() {
       'aria-label',
       state.status === 'paused' ? '게임 재개' : '게임 일시정지'
     );
+
+    if (
+      (focusedControl === startBtn || focusedControl === pauseBtn || focusedControl === restartBtn) &&
+      document.activeElement === document.body
+    ) {
+      gameRoot.focus();
+    }
 
     gameBoard.innerHTML = '';
     for (const star of state.stars) {
