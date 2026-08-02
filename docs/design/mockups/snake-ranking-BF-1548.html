@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>랭킹 등록/보드 시각 mockup — BF-1549 (snake-ranking)</title>
+  <style>
+    /* frozen ui-contract@v1 §6.3 design token (exact — 재정의 금지) */
+    :root {
+      --snake-rank-accent: #39ff14;
+      --snake-rank-bg: #0a0f0a;
+      --snake-rank-gap: 8px;
+      --snake-rank-radius: 6px;
+
+      /* 보조 렌더 색상(비 frozen) — 기존 neon-snake styles.css 계승 */
+      --page-bg: #050510;
+      --overlay-bg: rgba(5, 5, 16, 0.72);
+      --text: #eef2ff;
+      --text-dim: rgba(238, 242, 255, 0.7);
+      --rank-border: rgba(57, 255, 20, 0.3);
+      --error: #ff6b6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: radial-gradient(circle at 50% 30%, #0b0b20 0%, var(--page-bg) 70%);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+
+    .page-title {
+      text-align: center;
+      color: var(--snake-rank-accent);
+      text-shadow: 0 0 16px rgba(57, 255, 20, 0.5);
+      margin: 0 0 4px;
+      font-size: 1.4rem;
+    }
+    .page-sub {
+      text-align: center;
+      color: var(--text-dim);
+      margin: 0 0 28px;
+      font-size: 0.85rem;
+    }
+
+    /* 4개 상태를 나란히 비교하는 갤러리 */
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .state-card { width: 320px; }
+    .state-card__label {
+      margin: 0 0 8px;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--snake-rank-accent);
+    }
+    .state-card__label small { color: var(--text-dim); text-transform: none; letter-spacing: 0; }
+
+    /* 종료 화면 오버레이 패널 재현 (기존 .overlay__panel 톤) */
+    .overlay__panel {
+      max-width: 320px;
+      padding: 24px 20px;
+      border-radius: 18px;
+      background: var(--overlay-bg);
+      border: 1px solid rgba(57, 255, 20, 0.3);
+      box-shadow: 0 0 32px rgba(57, 255, 20, 0.2);
+      text-align: center;
+    }
+    .overlay__text {
+      margin: 0 0 12px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--snake-rank-accent);
+      text-shadow: 0 0 16px rgba(57, 255, 20, 0.7);
+    }
+    /* 기존 최고 기록 보드(BF-1513) 자리 표시 — 랭킹 보드는 이 아래에 additive */
+    .scoreboard {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+      color: var(--text-dim);
+    }
+    .overlay__button {
+      appearance: none;
+      cursor: pointer;
+      padding: 10px 28px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--page-bg);
+      background: var(--snake-rank-accent);
+      border: none;
+      border-radius: 999px;
+      box-shadow: 0 0 20px rgba(57, 255, 20, 0.5);
+    }
+
+    /* ── frozen 랭킹 보드 (#snake-rank-board / .snake-rank) ─────────────── */
+    .snake-rank {
+      display: flex;
+      flex-direction: column;
+      gap: var(--snake-rank-gap);
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--snake-rank-bg);
+      border: 1px solid var(--rank-border);
+      border-radius: var(--snake-rank-radius);
+      text-align: left;
+    }
+    .snake-rank__title {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--snake-rank-accent);
+    }
+
+    .snake-rank__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--snake-rank-gap);
+      max-height: 40vh;        /* 좁은 화면: 세로 스크롤로 상위 10 모두 노출 */
+      overflow-y: auto;
+    }
+    .snake-rank__row {
+      display: flex;
+      align-items: center;
+      gap: var(--snake-rank-gap);
+      padding: 6px 10px;
+      border-radius: var(--snake-rank-radius);
+      background: rgba(57, 255, 20, 0.06);
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .snake-rank__row--me {           /* 내 등록 행 강조 (비 frozen, 선택) */
+      background: rgba(57, 255, 20, 0.16);
+      outline: 1px solid var(--rank-border);
+    }
+    .snake-rank__pos { width: 2ch; color: var(--snake-rank-accent); font-weight: 700; }
+    .snake-rank__name {
+      flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .snake-rank__score { color: var(--snake-rank-accent); font-weight: 700; }
+
+    .snake-rank__form { display: flex; flex-wrap: wrap; gap: var(--snake-rank-gap); }
+    #snake-rank-nickname,
+    .snake-rank__nickname {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 10px;
+      font-size: 1rem;             /* 16px 이상 — 모바일 확대 방지 */
+      color: var(--text);
+      background: rgba(5, 5, 16, 0.6);
+      border: 1px solid var(--rank-border);
+      border-radius: var(--snake-rank-radius);
+    }
+    .snake-rank__nickname::placeholder { color: var(--text-dim); }
+    .snake-rank__nickname:focus-visible {
+      outline: 3px solid var(--snake-rank-accent);
+      outline-offset: 2px;
+    }
+
+    .snake-rank__submit {
+      padding: 8px 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--snake-rank-bg);
+      background: var(--snake-rank-accent);
+      border: none;
+      border-radius: var(--snake-rank-radius);
+      cursor: pointer;
+    }
+    .snake-rank__submit:disabled { opacity: 0.5; cursor: default; }
+
+    .snake-rank__status {
+      margin: 0;
+      min-height: 1.3em;           /* idle(빈 텍스트)에서도 레이아웃 흔들림 방지 */
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .snake-rank__status--success { color: var(--snake-rank-accent); }
+    .snake-rank__status--error { color: var(--error); }   /* 색상은 보조 — 텍스트 병기 */
+
+    .note {
+      max-width: 720px;
+      margin: 32px auto 0;
+      padding: 16px 20px;
+      border: 1px dashed var(--rank-border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    .note code { color: var(--snake-rank-accent); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .overlay__text, .page-title, .overlay__button { text-shadow: none; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">랭킹 등록/보드 — 시각 mockup</h1>
+  <p class="page-sub">BF-1549 · frozen ui-contract@v1 §6 (selector·token·상태 텍스트·접근성·반응형) 시각 시뮬레이션 — 실제 dev 산출물 아님</p>
+
+  <div class="gallery">
+
+    <!-- ── idle ─────────────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">idle <small>· 버튼 활성 · 상태 텍스트 비어 있음</small></p>
+      <div class="overlay__panel overlay--gameover">
+        <p class="overlay__text">게임 종료</p>
+        <div class="scoreboard"><span>이번 점수 120</span><span>최고 기록 320</span></div>
+        <button class="overlay__button" type="button">재시작</button>
+
+        <section id="snake-rank-board" class="snake-rank" aria-label="랭킹 보드">
+          <h3 class="snake-rank__title">랭킹</h3>
+          <ol class="snake-rank__list">
+            <li class="snake-rank__row"><span class="snake-rank__pos">1</span><span class="snake-rank__name">goat</span><span class="snake-rank__score">320</span></li>
+            <li class="snake-rank__row"><span class="snake-rank__pos">2</span><span class="snake-rank__name">ace</span><span class="snake-rank__score">210</span></li>
+            <li class="snake-rank__row"><span class="snake-rank__pos">3</span><span class="snake-rank__name">네온스네이크플레이어</span><span class="snake-rank__score">180</span></li>
+            <li class="snake-rank__row"><span class="snake-rank__pos">4</span><span class="snake-rank__name">viper</span><span class="snake-rank__score">150</span></li>
+          </ol>
+          <div class="snake-rank__form">
+            <input class="snake-rank__nickname" type="text" aria-label="닉네임 입력" placeholder="닉네임" maxlength="12" />
+            <button class="snake-rank__submit" type="button" aria-label="랭킹 등록">랭킹 등록</button>
+          </div>
+          <p class="snake-rank__status" role="status" aria-live="polite"><!-- idle: 비어 있음 --></p>
+        </section>
+      </div>
+    </div>
+
+    <!-- ── submitting ───────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">submitting <small>· 버튼 비활성 · "등록 중…"</small></p>
+      <div class="overlay__panel overlay--gameover">
+        <p class="overlay__text">게임 종료</p>
+        <div class="scoreboard"><span>이번 점수 120</span><span>최고 기록 320</span></div>
+        <button class="overlay__button" type="button">재시작</button>
+
+        <section class="snake-rank" aria-label="랭킹 보드">
+          <h3 class="snake-rank__title">랭킹</h3>
+          <ol class="snake-rank__list">
+            <li class="snake-rank__row"><span class="snake-rank__pos">1</span><span class="snake-rank__name">goat</span><span class="snake-rank__score">320</span></li>
+            <li class="snake-rank__row"><span class="snake-rank__pos">2</span><span class="snake-rank__name">ace</span><span class="snake-rank__score">210</span></li>
+            <li class="snake-rank__row"><span class="snake-rank__pos">3</span><span class="snake-rank__name">네온스네이크플레이어</span><span class="snake-rank__score">180</span></li>
+            <li class="snake-rank__row"><span class="snake-rank__pos">4</span><span class="snake-rank__name">viper</span><span class="snake-rank__score">150</span></li>
+          </ol>
+          <div class="snake-rank__form">
+            <input class="snake-rank__nickname" type="text" aria-label="닉네임 입력" value="플레이어1" disabled />
+            <button class="snake-rank__submit" type="button" aria-label="랭킹 등록" disabled>랭킹 등록</button>
+          </div>
+          <p class="snake-rank__status" role="status" aria-live="polite">등록 중…</p>
+        </section>
+      </div>
+    </div>
+
+    <!-- ── success ──────────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">success <small>· "등록 완료 · 내 순위 3위" · 보드 갱신</small></p>
+      <div class="overlay__panel overlay--gameover">
+        <p class="overlay__text">게임 종료</p>
+        <div class="scoreboard"><span>이번 점수 120</span><span>최고 기록 320</span></div>
+        <button class="overlay__button" type="button">재시작</button>
+
+        <section class="snake-rank" aria-label="랭킹 보드">
+          <h3 class="snake-rank__title">랭킹</h3>
+          <ol class="snake-rank__list">
+            <li class="snake-rank__row"><span class="snake-rank__pos">1</span><span class="snake-rank__name">goat</span><span class="snake-rank__score">320</span></li>
+            <li class="snake-rank__row"><span class="snake-rank__pos">2</span><span class="snake-rank__name">ace</span><span class="snake-rank__score">210</span></li>
+            <li class="snake-rank__row snake-rank__row--me"><span class="snake-rank__pos">3</span><span class="snake-rank__name">플레이어1</span><span class="snake-rank__score">120</span></li>
+            <li class="snake-rank__row"><span class="snake-rank__pos">4</span><span class="snake-rank__name">viper</span><span class="snake-rank__score">100</span></li>
+          </ol>
+          <div class="snake-rank__form">
+            <input class="snake-rank__nickname" type="text" aria-label="닉네임 입력" value="플레이어1" />
+            <button class="snake-rank__submit" type="button" aria-label="랭킹 등록">랭킹 등록</button>
+          </div>
+          <p class="snake-rank__status snake-rank__status--success" role="status" aria-live="polite">등록 완료 · 내 순위 3위</p>
+        </section>
+      </div>
+    </div>
+
+    <!-- ── error ────────────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">error <small>· "랭킹을 불러올 수 없습니다" · 게임 유지</small></p>
+      <div class="overlay__panel overlay--gameover">
+        <p class="overlay__text">게임 종료</p>
+        <div class="scoreboard"><span>이번 점수 120</span><span>최고 기록 320</span></div>
+        <button class="overlay__button" type="button">재시작</button>
+
+        <section class="snake-rank" aria-label="랭킹 보드">
+          <h3 class="snake-rank__title">랭킹</h3>
+          <ol class="snake-rank__list">
+            <!-- 조회 실패: 보드는 비어 있고 상태 텍스트로 안내 -->
+          </ol>
+          <div class="snake-rank__form">
+            <input class="snake-rank__nickname" type="text" aria-label="닉네임 입력" placeholder="닉네임" maxlength="12" />
+            <button class="snake-rank__submit" type="button" aria-label="랭킹 등록">랭킹 등록</button>
+          </div>
+          <p class="snake-rank__status snake-rank__status--error" role="status" aria-live="polite">랭킹을 불러올 수 없습니다</p>
+        </section>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="note">
+    <strong>frozen 계약 반영</strong> — DOM id <code>snake-rank-board</code> /
+    <code>snake-rank-nickname</code> / <code>snake-rank-submit</code> /
+    <code>snake-rank-status</code>, CSS class <code>snake-rank</code> /
+    <code>snake-rank__row</code> / <code>snake-rank__form</code> /
+    <code>snake-rank__submit</code>, token <code>--snake-rank-accent #39ff14</code> ·
+    <code>--snake-rank-bg #0a0f0a</code> · <code>--snake-rank-gap 8px</code> ·
+    <code>--snake-rank-radius 6px</code>, 상태 텍스트 4종(빈값 / "등록 중…" /
+    "등록 완료 · 내 순위 N위" / "랭킹을 불러올 수 없습니다"), 접근성
+    <code>aria-label</code> · <code>role="status"</code> · <code>aria-live="polite"</code> 을
+    그대로 표현했다. 상태는 색상만이 아니라 <strong>화면 텍스트</strong>로 구분된다.
+    갤러리에서는 상태 비교를 위해 id 를 첫 카드(idle)에만 부착했다(1문서 1 id) —
+    나머지 카드는 동일 구조를 class 로 복제한다. 실제 런타임에서는 단일
+    <code>#snake-rank-board</code> 가 상태에 따라 위 4가지 모습으로 전환된다.
+  </p>
+</body>
+</html>
