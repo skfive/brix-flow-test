@@ -15,6 +15,19 @@ export const SCORES_API_BASE = '/api/scores';
 // 보드 노출 상위 개수(기본).
 export const DEFAULT_LIMIT = 10;
 
+// BF-1554 · 랭킹 기간 필터(additive) — 허용 값. period 미지정 호출은 'all' 과 동일(기존 호환).
+export const RANKING_PERIODS = ['all', '7d'];
+
+// BF-1554 · 7d 필터 시간 창(ms): 요청 시점 기준 7일. 경계값 정확히 7일은 포함(<=), 초과는 제외.
+export const PERIOD_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+// BF-1554 · period 정규화/검증: 미지정(undefined)은 'all' 로 호환한다. 'all'|'7d' 만 허용하고
+// 그 외(빈 문자열·오타 등)는 null 을 반환하여 저장소가 400 으로 거부하도록 한다.
+export function normalizePeriod(period) {
+  if (period === undefined) return 'all';
+  return period === 'all' || period === '7d' ? period : null;
+}
+
 // 서버측 닉네임 규칙: 한글/영문/숫자 2~12자 (work packet acceptance-criteria).
 // NB: 클라이언트 방어용 isValidNickname(trim 후 비어있지 않음, frozen §3.2)은 ranking.js 소유이며
 //     이것과 별개다(2계층 방어: 클라이언트는 빈값 방어, 서버는 전체 규칙 검증 → 400).
@@ -39,10 +52,14 @@ export function isValidScore(score) {
 
 // 상위 랭킹 조회: GET ${SCORES_API_BASE}?mode=&limit=.
 // response.ok 가 false 이거나 fetch 가 reject 하면 throw 한다. 성공 시 { entries } 반환.
-export async function fetchScores(fetchImpl, { mode, limit = DEFAULT_LIMIT }) {
-  const url = `${SCORES_API_BASE}?mode=${encodeURIComponent(mode)}&limit=${encodeURIComponent(
+export async function fetchScores(fetchImpl, { mode, limit = DEFAULT_LIMIT, period }) {
+  let url = `${SCORES_API_BASE}?mode=${encodeURIComponent(mode)}&limit=${encodeURIComponent(
     limit,
   )}`;
+  // BF-1554 · period 는 additive. 미지정이면 쿼리에 추가하지 않아 기존 호출과 URL 이 동일하다(호환).
+  if (period !== undefined) {
+    url += `&period=${encodeURIComponent(period)}`;
+  }
   const res = await fetchImpl(url, { method: 'GET', headers: { Accept: 'application/json' } });
   if (!res.ok) {
     throw new Error(`랭킹 조회 실패: ${res.status}`);
@@ -136,15 +153,27 @@ export function createScoresStore({ now } = {}) {
     };
   }
 
-  // GET /api/scores?mode=&limit= — 상위 랭킹 조회.
+  // GET /api/scores?mode=&limit=&period= — 상위 랭킹 조회.
   // { status: 200, body: { entries: Array<{ rank, nickname, score, recordedAt }> } }.
+  // BF-1554 · period(additive): 미지정/all 은 전체, 7d 는 요청 시점 기준 7일 이내(<=)만 대상.
+  // 잘못된 period 는 400 으로 거부한다(응답 형식은 기존과 동일).
   function get(query) {
     const q = query || {};
+    const period = normalizePeriod(q.period);
+    if (period === null) {
+      return { status: 400, body: { error: 'period 는 all 또는 7d 여야 합니다' } };
+    }
     const mode = normalizeMode(q.mode);
     const limit = isValidScore(q.limit) && q.limit > 0 ? q.limit : DEFAULT_LIMIT;
-    const entries = byMode.has(mode)
-      ? rankEntries(Array.from(byMode.get(mode).values())).slice(0, limit)
-      : [];
+    let rows = byMode.has(mode) ? Array.from(byMode.get(mode).values()) : [];
+    if (period === '7d') {
+      const nowMs = Date.parse(clock());
+      rows = rows.filter((row) => {
+        const recordedMs = Date.parse(row.recordedAt);
+        return Number.isFinite(recordedMs) && nowMs - recordedMs <= PERIOD_WINDOW_MS;
+      });
+    }
+    const entries = rankEntries(rows).slice(0, limit);
     return { status: 200, body: { entries } };
   }
 
