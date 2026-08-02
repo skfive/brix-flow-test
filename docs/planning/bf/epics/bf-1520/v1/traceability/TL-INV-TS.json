@@ -1,0 +1,1 @@
+{"artifactId":"TL-INV-TS","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-SPEED-INVARIANT","status":"active","targetRef":"TS-SPEED-REGRESSION","title":"REQ-SPEED-INVARIANT → TS-SPEED-REGRESSION","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
