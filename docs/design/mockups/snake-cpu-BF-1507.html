@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>네온 스네이크 · 모드 선택·난이도·승패 배너 시각 mockup — BF-1508 (Epic BF-1507)</title>
+  <style>
+    /* ── frozen 신규 additive 토큰 (값·이름 변경 금지 — planner ui-contract@v1 §6.3) ── */
+    :root {
+      --color-player1: #39ff14;   /* 1P(사람) 뱀 */
+      --color-cpu: #ff2bd6;       /* CPU(2P) 뱀 */
+      --color-menu-focus: #00e5ff;/* 메뉴 포커스 링 */
+      --space-menu-gap: 16px;     /* 모드/난이도 메뉴 항목 간격 */
+
+      /* ── 보존되는 기존 2인 로컬 토큰(재정의 금지) ── */
+      --color-p1: #00e5ff;
+      --color-p2: #ff2fb9;
+      --color-food: #ffd400;
+      --color-bg: #0a0a12;
+
+      /* ── 표현용 보조 값(frozen 토큰 아님 · dev 픽셀 일치 의무 없음) ── */
+      --text-primary: #f4f4ff;
+      --text-secondary: rgba(244, 244, 255, 0.72);
+      --menu-scrim: rgba(10, 10, 18, 0.72);
+      --menu-border: rgba(255, 255, 255, 0.16);
+      --grid-line: rgba(0, 229, 255, 0.06);
+      --bg-glow-top: rgba(0, 229, 255, 0.10);
+      --bg-glow-bottom: rgba(57, 255, 20, 0.06);
+
+      --font-sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--text-primary);
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .doc-head { max-width: 1100px; margin: 0 auto 28px; }
+    .doc-head h1 { font-size: clamp(20px, 4vw, 28px); margin: 0 0 6px; text-shadow: 0 0 12px rgba(0, 229, 255, 0.4); }
+    .doc-head p { margin: 4px 0; color: var(--text-secondary); font-size: 14px; }
+    .doc-head code { font-family: var(--font-mono); color: var(--text-primary); }
+
+    /* ── 토큰 스와치 ── */
+    .swatches { max-width: 1100px; margin: 0 auto 32px; display: flex; flex-wrap: wrap; gap: 12px; }
+    .swatch {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px; padding: 10px 14px;
+    }
+    .swatch .chip { width: 28px; height: 28px; border-radius: 6px; flex: none; border: 1px solid rgba(255, 255, 255, 0.15); }
+    .swatch code { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+    .swatch b { font-size: 13px; }
+
+    /* ── 상태 병렬 그리드 ── */
+    .states { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+    @media (max-width: 720px) { .states { grid-template-columns: 1fr; } }
+
+    .state-card h2 { font-size: 15px; margin: 0 0 8px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
+    .state-card h2 b { color: var(--text-primary); }
+
+    /* ── stage (전체화면 축소 시뮬레이션) ── */
+    .stage {
+      position: relative; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden;
+      background:
+        radial-gradient(120% 80% at 50% -10%, var(--bg-glow-top), transparent 60%),
+        radial-gradient(120% 80% at 50% 110%, var(--bg-glow-bottom), transparent 60%),
+        var(--color-bg);
+      border: 1px solid rgba(0, 229, 255, 0.12);
+    }
+
+    /* canvas(격자) 자리 — 중앙 레터박스 */
+    .board {
+      position: absolute; inset: 0; margin: auto; width: 78%; aspect-ratio: 1 / 1;
+      background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 8.5% 8.5%;
+    }
+    .cell { position: absolute; width: 8.5%; height: 8.5%; border-radius: 22%; }
+    .p1-body { background: var(--color-player1); box-shadow: 0 0 8px rgba(57, 255, 20, 0.7); }
+    .p1-head { background: var(--color-player1); box-shadow: 0 0 12px rgba(57, 255, 20, 0.9); border-radius: 34% 34% 20% 20%; }
+    .cpu-body { background: var(--color-cpu); box-shadow: 0 0 8px rgba(255, 43, 214, 0.7); }
+    .cpu-head { background: var(--color-cpu); box-shadow: 0 0 12px rgba(255, 43, 214, 0.9); border-radius: 34% 34% 20% 20%; }
+    .food { background: var(--color-food); border-radius: 50%; box-shadow: 0 0 14px rgba(255, 212, 0, 0.85); animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.14); opacity: 0.82; } }
+
+    /* ── HUD (겹침, 격자 축소 안 함) — 색 + '당신'/'CPU' 텍스트 이중 구분 ── */
+    .hud { position: absolute; top: 12px; left: 0; right: 0; display: flex; justify-content: center; gap: var(--space-menu-gap); z-index: 2; pointer-events: none; }
+    .hud__metric { background: var(--menu-scrim); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 6px 12px; text-align: center; min-width: 78px; }
+    .hud__metric .label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .hud__metric.is-p1 .label { color: var(--color-player1); }
+    .hud__metric.is-cpu .label { color: var(--color-cpu); }
+    .hud__metric .value { display: block; font-family: var(--font-mono); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+
+    /* ── 메뉴 오버레이 (mode-menu / difficulty-menu 공통 뼈대) ── */
+    .menu-overlay { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; background: rgba(10, 10, 18, 0.5); }
+    .menu-card {
+      background: var(--menu-scrim); border: 1px solid var(--menu-border);
+      border-radius: 16px; padding: 24px; width: min(82%, 320px);
+      display: flex; flex-direction: column; gap: var(--space-menu-gap);
+      box-shadow: 0 0 28px rgba(0, 0, 0, 0.4);
+    }
+    .menu-card__title { margin: 0; font-size: clamp(20px, 5vw, 26px); font-weight: 700; line-height: 1.2; text-align: center; }
+    .menu-card__hint { margin: -6px 0 0; font-size: 12px; color: var(--text-secondary); text-align: center; }
+
+    /* 메뉴 항목 공통 (mode-menu__option / difficulty-menu__option) */
+    .menu-option {
+      font: inherit; font-weight: 700; font-size: clamp(16px, 3.5vw, 20px);
+      min-height: 48px; padding: 12px 16px; border-radius: 10px;
+      border: 1px solid var(--menu-border); background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary); cursor: pointer; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .menu-option small { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+    .menu-option:hover { background: rgba(255, 255, 255, 0.09); }
+    /* frozen 접근성: 포커스 링 = --color-menu-focus */
+    .menu-option:focus-visible,
+    .menu-option.is-focus { outline: 2px solid var(--color-menu-focus); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(0, 229, 255, 0.25); }
+    /* difficulty-menu__option--active : 단일 활성(색+테두리+굵기 이중 표기) */
+    .menu-option.is-active {
+      border-color: var(--color-menu-focus);
+      background: rgba(0, 229, 255, 0.14);
+      box-shadow: inset 0 0 0 1px var(--color-menu-focus);
+    }
+    .menu-option.is-active::after { content: "● 선택됨"; font-size: 11px; font-weight: 600; color: var(--color-menu-focus); }
+
+    /* ── 승패 배너 (winner-banner) ── */
+    .winner-banner {
+      position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px; text-align: center;
+      background: rgba(10, 10, 18, 0.8); padding: 20px;
+    }
+    .winner-banner__result { margin: 0; font-size: clamp(28px, 8vw, 52px); font-weight: 800; line-height: 1.15; text-shadow: 0 0 18px currentColor; }
+    .winner-banner__result.is-p1 { color: var(--color-player1); }
+    .winner-banner__result.is-cpu { color: var(--color-cpu); }
+    .winner-banner__result.is-draw { color: var(--text-primary); }
+    .winner-banner__sub { margin: 0; font-size: 14px; color: var(--text-secondary); }
+    .winner-banner__restart {
+      margin-top: 4px; font: inherit; font-weight: 700; font-size: 15px; min-height: 44px; padding: 0 22px;
+      border: 1px solid var(--menu-border); border-radius: 10px; background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary); cursor: pointer;
+    }
+    .winner-banner__restart:focus-visible { outline: 2px solid var(--color-menu-focus); outline-offset: 2px; }
+
+    .running-badge { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--text-secondary); background: var(--menu-scrim); padding: 4px 10px; border-radius: 999px; z-index: 2; }
+
+    .caption { max-width: 1100px; margin: 8px auto 0; font-size: 13px; color: var(--text-secondary); }
+    .state-card .caption { margin-top: 8px; }
+    .caption code { font-family: var(--font-mono); color: var(--text-primary); }
+
+    /* 승패 3형태 병렬 */
+    .banner-variants { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 480px) { .banner-variants { grid-template-columns: 1fr; } }
+    .banner-variants .stage { aspect-ratio: 3 / 3.4; }
+
+    .legend { max-width: 1100px; margin: 32px auto 0; font-size: 13px; color: var(--text-secondary); border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px; }
+    .legend code { font-family: var(--font-mono); color: var(--text-primary); }
+    .legend p { margin: 6px 0; }
+
+    @media (prefers-reduced-motion: reduce) { .food { animation: none; } }
+  </style>
+</head>
+<body>
+  <header class="doc-head">
+    <h1>네온 스네이크 · 모드 선택·난이도·승패 배너 — 시각 mockup</h1>
+    <p>[이디자인] · BF-1508 (Epic BF-1507) · 라우트 <code>/demo/neon-snake-fullscreen-0802</code></p>
+    <p>planner 가 동결한 selector·상태·token 을 그대로 표현한 시각 시뮬레이션. 실제 dev 산출물 아님 · 픽셀 일치 의무 없음.</p>
+  </header>
+
+  <!-- frozen 신규 additive 토큰 스와치 -->
+  <section class="swatches" aria-label="frozen 신규 디자인 토큰 스와치">
+    <div class="swatch"><span class="chip" style="background:#39ff14"></span><span><b>--color-player1</b><br><code>#39ff14</code></span></div>
+    <div class="swatch"><span class="chip" style="background:#ff2bd6"></span><span><b>--color-cpu</b><br><code>#ff2bd6</code></span></div>
+    <div class="swatch"><span class="chip" style="background:#00e5ff"></span><span><b>--color-menu-focus</b><br><code>#00e5ff</code></span></div>
+    <div class="swatch"><span class="chip" style="background:#1a1a2e;color:#f4f4ff;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px">16</span><span><b>--space-menu-gap</b><br><code>16px</code></span></div>
+    <div class="swatch"><span class="chip" style="background:#ffd400"></span><span><b>--color-food</b> <small>(보존)</small><br><code>#ffd400</code></span></div>
+    <div class="swatch"><span class="chip" style="background:#0a0a12"></span><span><b>--color-bg</b> <small>(보존)</small><br><code>#0a0a12</code></span></div>
+  </section>
+
+  <!-- 진입/플레이/일시정지 상태 -->
+  <section class="states">
+
+    <!-- MODE-SELECTION -->
+    <div class="state-card">
+      <h2>상태 1 · <b>mode-selection</b> — 모드 선택</h2>
+      <div class="stage">
+        <div class="board"></div>
+        <div class="menu-overlay">
+          <div id="mode-select" class="menu-card mode-menu">
+            <p class="menu-card__title">모드 선택</p>
+            <p class="menu-card__hint">방향키 ↑ ↓ 이동 · Enter 선택</p>
+            <button class="menu-option mode-menu__option" aria-label="2인 로컬 대전 시작">2인 로컬<small>1P WASD · 2P 방향키</small></button>
+            <button class="menu-option mode-menu__option is-focus" aria-label="1인 CPU 대전 시작">1인 vs CPU<small>당신 vs 컴퓨터</small></button>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><code>#mode-select.mode-menu</code> · <code>#btn-mode-local</code>/<code>#btn-mode-cpu</code>(<code>.mode-menu__option</code>) · 포커스 링 <code>--color-menu-focus</code></p>
+    </div>
+
+    <!-- DIFFICULTY-SELECTION -->
+    <div class="state-card">
+      <h2>상태 2 · <b>difficulty-selection</b> — 난이도 선택(CPU 모드)</h2>
+      <div class="stage">
+        <div class="board"></div>
+        <div class="menu-overlay">
+          <div id="difficulty-select" class="menu-card difficulty-menu">
+            <p class="menu-card__title">난이도 선택</p>
+            <p class="menu-card__hint">방향키 이동 · Enter 확정 · Esc 뒤로</p>
+            <button class="menu-option difficulty-menu__option" data-value="easy" aria-label="쉬움 난이도 선택">쉬움<small>CPU 실수 잦음</small></button>
+            <button class="menu-option difficulty-menu__option is-active" data-value="normal" aria-label="보통 난이도 선택" aria-current="true">보통</button>
+            <button class="menu-option difficulty-menu__option" data-value="hard" aria-label="어려움 난이도 선택">어려움<small>CPU 갇힘 회피</small></button>
+          </div>
+        </div>
+      </div>
+      <p class="caption">3개 <code>.difficulty-menu__option</code> · 현재 선택만 <code>.difficulty-menu__option--active</code>(색+테두리+"선택됨") · <code>aria-current</code></p>
+    </div>
+
+    <!-- PLAYING -->
+    <div class="state-card">
+      <h2>상태 3 · <b>playing</b> — 대전 진행(1P vs CPU)</h2>
+      <div class="stage">
+        <div class="hud">
+          <div class="hud__metric is-p1"><span class="label">당신</span><span class="value">30</span></div>
+          <div class="hud__metric is-cpu"><span class="label">CPU</span><span class="value">20</span></div>
+        </div>
+        <div class="board">
+          <div class="cell food" style="left:68%;top:25.5%"></div>
+          <!-- 1P(사람) 뱀 = --color-player1 -->
+          <div class="cell p1-body" style="left:17%;top:59.5%"></div>
+          <div class="cell p1-body" style="left:25.5%;top:59.5%"></div>
+          <div class="cell p1-head" style="left:34%;top:59.5%"></div>
+          <!-- CPU(2P) 뱀 = --color-cpu -->
+          <div class="cell cpu-body" style="left:83%;top:34%"></div>
+          <div class="cell cpu-body" style="left:74.5%;top:34%"></div>
+          <div class="cell cpu-head" style="left:66%;top:34%"></div>
+        </div>
+        <div class="running-badge">메뉴 숨김 — HUD "당신"/"CPU" 텍스트 + 색으로 이중 구분</div>
+      </div>
+      <p class="caption">1P=<code>--color-player1</code> #39ff14 · CPU=<code>--color-cpu</code> #ff2bd6 · CPU 는 2P 입력 경로 대체(방향키 비활성)</p>
+    </div>
+
+    <!-- PAUSED -->
+    <div class="state-card">
+      <h2>상태 4 · <b>paused</b> — 일시정지</h2>
+      <div class="stage">
+        <div class="hud">
+          <div class="hud__metric is-p1"><span class="label">당신</span><span class="value">30</span></div>
+          <div class="hud__metric is-cpu"><span class="label">CPU</span><span class="value">20</span></div>
+        </div>
+        <div class="board">
+          <div class="cell food" style="left:68%;top:25.5%"></div>
+          <div class="cell p1-body" style="left:17%;top:59.5%"></div>
+          <div class="cell p1-body" style="left:25.5%;top:59.5%"></div>
+          <div class="cell p1-head" style="left:34%;top:59.5%"></div>
+          <div class="cell cpu-body" style="left:83%;top:34%"></div>
+          <div class="cell cpu-body" style="left:74.5%;top:34%"></div>
+          <div class="cell cpu-head" style="left:66%;top:34%"></div>
+        </div>
+        <div class="menu-overlay">
+          <div class="menu-card" style="width:min(70%,260px)">
+            <p class="menu-card__title">일시정지</p>
+            <p class="menu-card__hint">Space 로 재개 · CPU 결정 중단</p>
+          </div>
+        </div>
+      </div>
+      <p class="caption">보드 상태(뱀·점수·먹이) 보존 · 일시정지 동안 <code>chooseCpuDirection</code> 미호출 · 상태명 화면 텍스트 노출</p>
+    </div>
+
+  </section>
+
+  <!-- GAME-OVER : winner-banner 3형태 -->
+  <h2 style="max-width:1100px;margin:32px auto 8px;font-size:15px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em">상태 5 · <b style="color:var(--text-primary)">game-over</b> — 승패 배너 <code style="font-family:var(--font-mono)">#winner-banner</code> (aria-live=polite · 색 아닌 텍스트가 1차)</h2>
+  <section class="banner-variants" style="max-width:1100px;margin:0 auto">
+
+    <!-- 사람 승리 -->
+    <div class="state-card">
+      <div class="stage">
+        <div id="winner-banner" class="winner-banner" role="status" aria-live="polite">
+          <p class="winner-banner__result is-p1">당신 승리</p>
+          <p class="winner-banner__sub">다시 시작하려면 재시작을 누르세요</p>
+          <button class="winner-banner__restart" aria-label="재시작 — 모드 선택으로">재시작</button>
+        </div>
+      </div>
+      <p class="caption">엔진 <code>p1-win</code> → "당신 승리" · 강조색 <code>--color-player1</code></p>
+    </div>
+
+    <!-- CPU 승리 -->
+    <div class="state-card">
+      <div class="stage">
+        <div class="winner-banner" role="status" aria-live="polite">
+          <p class="winner-banner__result is-cpu">CPU 승리</p>
+          <p class="winner-banner__sub">다시 시작하려면 재시작을 누르세요</p>
+          <button class="winner-banner__restart" aria-label="재시작 — 모드 선택으로">재시작</button>
+        </div>
+      </div>
+      <p class="caption">엔진 <code>p2-win</code> → "CPU 승리" · 강조색 <code>--color-cpu</code></p>
+    </div>
+
+    <!-- 무승부 -->
+    <div class="state-card">
+      <div class="stage">
+        <div class="winner-banner" role="status" aria-live="polite">
+          <p class="winner-banner__result is-draw">무승부</p>
+          <p class="winner-banner__sub">다시 시작하려면 재시작을 누르세요</p>
+          <button class="winner-banner__restart" aria-label="재시작 — 모드 선택으로">재시작</button>
+        </div>
+      </div>
+      <p class="caption">엔진 <code>draw</code> → "무승부" · 중립색(색 단독 아님)</p>
+    </div>
+
+  </section>
+
+  <section class="legend">
+    <p><b>접근성·반응형·후조건 요약</b> (frozen 계약 시각 표현):</p>
+    <p>· 모드/난이도 버튼 = 명시적 <code>aria-label</code> · 방향키 ↑ ↓ 이동 + <code>Enter</code> 선택 · 포커스 링 <code>--color-menu-focus</code>(#00e5ff)</p>
+    <p>· <code>#winner-banner</code> = <code>aria-live="polite"</code> → "당신 승리 / CPU 승리 / 무승부" 텍스트를 스크린리더가 읽음(결과를 색만으로 구분하지 않음, WCAG 1.4.1)</p>
+    <p>· 모든 상태는 색 + 화면 텍스트(상태명) + 접근성 이름 3중 채널로 구분 — HUD 는 "당신"/"CPU" 라벨로 두 뱀을 색 없이도 구분</p>
+    <p>· <b>후조건(INV-D)</b>: game-over 재시작 / 난이도 취소(Esc) → <code>#winner-banner</code> 비우고 <code>mode-selection</code> 초기값 복귀 + 메뉴 컨트롤 재활성(키보드 사용 가능)</p>
+    <p>· <b>반응형</b>: 풀스크린 캔버스 ≥320px overflow 0(<code>computeBoardMetrics</code> 재사용) · 세로 화면에서도 메뉴가 잘리지 않고 <code>--space-menu-gap</code>(16px) 세로 간격 유지</p>
+    <p>· <code>prefers-reduced-motion: reduce</code> → 먹이 맥동 비활성(정적 렌더), 게임 이동은 유지</p>
+  </section>
+</body>
+</html>
