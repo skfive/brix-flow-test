@@ -1,0 +1,1 @@
+{"artifactId":"TL-3","artifactType":"TraceLink","relation":"realized_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-UI-TOGGLE","status":"active","targetRef":"UI-SCREEN","title":"REQ-UI-TOGGLE→UI-SCREEN","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
