@@ -1,0 +1,1 @@
+{"artifactId":"TL-V4","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-HIGHSCORE","status":"active","targetRef":"TS-GAME","title":"REQ-HIGHSCORE→TS-GAME","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
