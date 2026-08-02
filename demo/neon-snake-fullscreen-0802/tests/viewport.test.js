@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   createInitialState,
   startGame,
+  step,
   restartGame,
   computeGrid,
   clampCell,
@@ -165,6 +166,44 @@ test('RG-4 · 축소된 grid에서 restartGame은 ready 초기값으로 복귀�
   assert.equal(r.snake.length, INITIAL_SNAKE_LENGTH);
   assert.equal(r.highScore, 90, 'highScore는 보존');
   assert.ok(coordsInBounds(r.snake, r.cols, r.rows), '초기 뱀이 현재 grid 안');
+});
+
+// ---- BF-1497 회귀(tester after-merge): 축소 후 진행 방향 벽 즉시 충돌 금지 ----
+test('BF-1497 · 축소 리사이즈(cols≤15) 후 뱀이 붕괴/즉시 벽 충돌하지 않는다', () => {
+  // 중앙에서 우향으로 진행 중인 뱀(tester 재현: createInitialState→startGame→reprojectState(12,18)→step)
+  let s = createInitialState({ cols: 28, rows: 28 });
+  s = startGame(s, stubRng([0.5]));
+  assert.equal(s.status, 'running');
+
+  const r = reprojectState(s, 12, 18, stubRng([0.5]));
+  assert.equal(r.status, 'running');
+  // 좌표만 클램프되어 단일 셀로 붕괴하지 않고 형태(길이)가 보존된다
+  assert.equal(r.snake.length, s.snake.length, '뱀이 단일 셀로 붕괴하면 안 된다');
+  assert.ok(coordsInBounds(r.snake, 12, 18), '재투영 뱀 좌표가 새 grid 안');
+  // 진행 방향(우) 벽 앞에 여유가 있어 다음 step이 즉시 gameover로 전이되지 않는다
+  const after = step(r, stubRng([0.5]));
+  assert.equal(after.status, 'running', '축소 직후 step이 벽 충돌로 gameover되면 안 된다');
+});
+
+test('BF-1497 · 하향 진행 중 축소 후에도 다음 step이 즉시 gameover되지 않는다', () => {
+  const base = createInitialState({ cols: 40, rows: 40 });
+  const s = {
+    ...base,
+    status: 'running',
+    snake: [
+      { x: 20, y: 30 },
+      { x: 20, y: 29 },
+      { x: 20, y: 28 },
+    ], // 아래로 진행하는 세로 뱀(머리가 y 최대)
+    direction: 'down',
+    nextDirection: 'down',
+    food: { x: 5, y: 5 },
+  };
+  const r = reprojectState(s, 12, 12, stubRng([0.5]));
+  assert.equal(r.snake.length, 3, '뱀 형태 보존(붕괴 금지)');
+  assert.ok(coordsInBounds(r.snake, 12, 12));
+  const after = step(r, stubRng([0.5]));
+  assert.equal(after.status, 'running', '하향 축소 후 즉시 gameover 금지');
 });
 
 // ---- E6: 리렌더 멱등성 ----
