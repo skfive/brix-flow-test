@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-PACKET-2CFFAE4A95212ACF","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"PKT-DEVELOP","status":"active","targetRef":"TS-BOARD-UI","title":"Verify PKT-DEVELOP with TS-BOARD-UI","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}

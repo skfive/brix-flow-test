@@ -1,0 +1,1 @@
+{"artifactId":"TL-PERSIST-ALLOC-TEST","artifactType":"TraceLink","relation":"allocated_to","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-PERSIST","status":"active","targetRef":"PKT-TEST","title":"REQ-PERSIST → PKT-TEST","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
