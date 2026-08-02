@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-PACKET-3ADB5DF349D8CA66","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"PKT-DESIGN","status":"active","targetRef":"TS-FE","title":"Verify PKT-DESIGN with TS-FE","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
