@@ -25,6 +25,12 @@
         --color-newrecord-flash: #ff2e97; /* 신기록 배지 플래시 (네온 핑크) */
         --space-scoreboard-gap: 12px; /* 보드 내부 항목 간격 */
         --font-scoreboard-size: 18px; /* 보드 텍스트 크기 */
+
+        /* frozen ui-contract@v1 §6.3 · 랭킹 보드 token (BF-1550, additive, exact 값) */
+        --snake-rank-accent: #39ff14; /* 랭킹 강조 (네온 그린) */
+        --snake-rank-bg: #0a0f0a; /* 보드 배경 */
+        --snake-rank-gap: 8px; /* 보드 항목 간격 */
+        --snake-rank-radius: 6px; /* 보드/행 모서리 반경 */
       }
 
       * {
@@ -289,6 +295,88 @@
         }
       }
 
+      /* frozen ui-contract@v1 §6 · 랭킹 보드 (BF-1550, additive)
+         종료(game-over) 화면에서만 노출. 상단 중앙 배치로 하단 최고 기록 보드와 겹치지
+         않게 한다. 외곽 패널(.snake-rank__panel)이 위치·배경을 담당하고, 순위 행 목록
+         (#snake-rank-board.snake-rank)이 좁은 화면에서 세로 스크롤로 상위 10개를
+         모두 노출한다(§6.5). 320px 이상 content overflow 없음(§6.5). */
+      .snake-rank__panel {
+        position: absolute;
+        left: 50%;
+        top: 12px;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: var(--snake-rank-gap);
+        width: min(360px, calc(100dvw - 32px));
+        padding: 12px;
+        border-radius: var(--snake-rank-radius);
+        background: var(--snake-rank-bg);
+        border: 1px solid var(--snake-rank-accent);
+        color: #f4f4ff;
+        font-variant-numeric: tabular-nums;
+        z-index: 8;
+      }
+      .snake-rank__panel[hidden] {
+        display: none;
+      }
+      .snake-rank {
+        display: flex;
+        flex-direction: column;
+        gap: var(--snake-rank-gap);
+        max-height: 40dvh;
+        overflow-y: auto;
+      }
+      .snake-rank__row {
+        padding: 6px 10px;
+        border-radius: var(--snake-rank-radius);
+        background: rgba(57, 255, 20, 0.08);
+        color: var(--snake-rank-accent);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .snake-rank__form {
+        display: flex;
+        gap: var(--snake-rank-gap);
+        align-items: center;
+      }
+      .snake-rank__form input {
+        flex: 1 1 auto;
+        min-width: 0;
+        font: inherit;
+        padding: 8px 10px;
+        border-radius: var(--snake-rank-radius);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.06);
+        color: #f4f4ff;
+      }
+      .snake-rank__submit {
+        font: inherit;
+        font-weight: 700;
+        padding: 8px 14px;
+        border-radius: var(--snake-rank-radius);
+        border: 1px solid var(--snake-rank-accent);
+        background: rgba(57, 255, 20, 0.14);
+        color: var(--snake-rank-accent);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .snake-rank__submit:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .snake-rank__submit:focus-visible,
+      .snake-rank__form input:focus-visible {
+        outline: 2px solid var(--snake-rank-accent);
+        outline-offset: 2px;
+      }
+      #snake-rank-status {
+        min-height: 1.2em;
+        font-size: 14px;
+        color: #f4f4ff;
+      }
+
       /* §3.7 / 반응형 320px 이상에서 overflow 방지 */
       @media (max-width: 480px) {
         .hud__score {
@@ -417,6 +505,33 @@
           hidden
         ></span>
       </div>
+
+      <!-- frozen ui-contract@v1 §6 랭킹 보드 (BF-1550, additive): 종료 화면에서만 노출.
+           #snake-rank-board(.snake-rank)는 순위 행(.snake-rank__row)만 담고,
+           등록 폼(.snake-rank__form)과 상태(#snake-rank-status)는 형제로 둔다.
+           색상뿐 아니라 화면 텍스트로 상태를 구분한다(§6.4). -->
+      <div class="snake-rank__panel" hidden>
+        <div id="snake-rank-board" class="snake-rank" role="list" aria-label="랭킹 상위 10"></div>
+        <form class="snake-rank__form" onsubmit="return false">
+          <input
+            id="snake-rank-nickname"
+            type="text"
+            maxlength="12"
+            autocomplete="off"
+            placeholder="닉네임 (한글/영문/숫자 2~12자)"
+            aria-label="닉네임 입력"
+          />
+          <button
+            id="snake-rank-submit"
+            class="snake-rank__submit"
+            type="button"
+            aria-label="랭킹 등록"
+          >
+            랭킹 등록
+          </button>
+        </form>
+        <p id="snake-rank-status" role="status" aria-live="polite"></p>
+      </div>
     </main>
 
     <script type="module">
@@ -444,6 +559,9 @@
         formatBestText,
         formatCurrentText,
       } from './highscore.js';
+      // frozen ui-contract@v1 §6 · 랭킹 보드 (BF-1550, additive)
+      import { createScoresStore, createStoreFetch } from './src/scores-api.js';
+      import { createRankingBoard } from './src/ranking.js';
 
       const doc = document;
       const win = window;
@@ -477,6 +595,24 @@
       const currentScoreEl = doc.getElementById('snake-current-score');
       const bestScoreEl = doc.getElementById('snake-best-score');
       const newRecordBadge = doc.getElementById('snake-newrecord-badge');
+
+      // ---- 랭킹 보드 (frozen ui-contract@v1 §6, planning-contract §7 hook) ----
+      // frozen §3.1 네트워크 계층(fetchScores/submitScore)에 fetchImpl 을 주입한다. 정적 데모라
+      // 원격 서버가 없으므로 §5 계약을 구현하는 인메모리 저장소를 createStoreFetch 로 백킹하며,
+      // 실제 게임 모드('local'/'cpu')를 등록/조회에 전달해 모드별 랭킹을 격리한다(frozen §4).
+      const rankFetch = createStoreFetch(createScoresStore());
+      const rankPanel = doc.querySelector('.snake-rank__panel');
+      const rankingBoard = createRankingBoard({
+        boardEl: doc.getElementById('snake-rank-board'),
+        nicknameEl: doc.getElementById('snake-rank-nickname'),
+        submitEl: doc.getElementById('snake-rank-submit'),
+        statusEl: doc.getElementById('snake-rank-status'),
+        fetchImpl: rankFetch,
+      });
+      // 랭킹 보드는 종료 화면에서만 노출한다(플레이/메뉴 중 숨김).
+      function showRankPanel(visible) {
+        rankPanel.hidden = !visible;
+      }
 
       // localStorage 접근 자체가 실패해도(프라이빗 모드 등) 게임은 정상 시작한다.
       // 조회/저장 예외는 highscore.js 순수 함수가 삼키므로 참조만 안전하게 확보한다.
@@ -663,6 +799,9 @@
         state = null;
         modeIndex = mode === 'cpu' ? 1 : 0;
         refreshStartBoardVars();
+        // 종료→메뉴 복귀·초기화: 랭킹 보드를 idle 초기값으로 되돌리고 숨긴다(후조건 복원).
+        rankingBoard.reset();
+        showRankPanel(false);
         syncView();
         applyMetrics();
         focusModeOption();
@@ -679,6 +818,7 @@
         mode = 'local';
         state = startMultiplayer(createMultiplayerState());
         uiState = 'playing';
+        showRankPanel(false); // 플레이 중 랭킹 보드 숨김
         syncView();
         applyMetrics();
         focusBoard();
@@ -689,6 +829,7 @@
         state = startMultiplayer(createMultiplayerState());
         rng = createSeededRng(CPU_SEED);
         uiState = 'playing';
+        showRankPanel(false); // 플레이 중 랭킹 보드 숨김
         syncView();
         applyMetrics();
         focusBoard();
@@ -726,6 +867,9 @@
           boardBest = loadBest(safeStorage, mode);
           syncView();
           render();
+          // 랭킹 보드 노출 + 상위 랭킹 조회(확정 점수·모드 바인딩). 실패해도 게임 흐름 보존.
+          showRankPanel(true);
+          void rankingBoard.open({ score: boardCurrent, mode });
           if (typeof btnRestart.focus === 'function') {
             btnRestart.focus();
           }
