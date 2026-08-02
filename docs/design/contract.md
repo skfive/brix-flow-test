@@ -281,3 +281,382 @@ planner 문서(`docs/plans/implementation-plan.md`)의 Given/When/Then 시나리
 각 `legend__item`의 dot(●)은 색상뿐 아니라 인접 상태명 텍스트를 항상 함께
 렌더링하여, 색상 인지가 어려운 환경(스크린리더·흑백 렌더링 포함)에서도 상태를
 구분할 수 있게 한다.
+
+---
+---
+
+# 풀스크린 2인 스네이크 시각 명세 — neon-snake-fullscreen-0802 (BF-1502)
+
+## 0. 문서 성격
+
+본 절은 상위 frozen Execution Blueprint(`ui-contract@v1`,
+sha256:eb62d3d773f9ea261de8c0002ee8d4b13eb3d359aaf05c7a6aa69fbd1ebef15c)와
+planner 실행 설계(`docs/plans/implementation-plan.md`, `planning-contract@v1`
+sha256:05c1e465b2894ccede1c9e85f8de09e085c255737db3fd096375447a4b8d1c31)의 §3장
+계약을 **재정의 없이** 시각 명세 형태로 서술한다. selector·상태 텍스트·token 값은
+frozen 목록 그대로이며, 본 절은 신규 selector·상태·역할·token을 추가하지 않는다.
+
+이 task(BF-1502)의 산출물 범위는 본 markdown 절(`docs/design/contract.md`에 추가)
+이며, 런타임 HTML/CSS/JS(`demo/neon-snake-fullscreen-0802/index.html`,
+`demo/neon-snake-fullscreen-0802/src/game.js`,
+`demo/neon-snake-fullscreen-0802/tests/game.test.js`)는 developer(BF-1503)
+소유로 frozen되어 있어 본 task에서 생성하지 않는다. 별도 mockup HTML 파일도
+생성하지 않으며, §9의 와이어프레임으로 시각 mockup을 대체 설명한다(위 BF-1478
+절의 선례와 동일 방식).
+
+> 위 BF-1478(`agent-queue-legend-canary`) 절은 다른 epic의 frozen 산출물이므로
+> `additive` 정책에 따라 변경·삭제 없이 보존하고, 본 BF-1502 절만 추가한다.
+
+## 1. 시안 개요
+
+- 대상 라우트: `/demo/neon-snake-fullscreen-0802`
+- 진입 파일(developer 소유, frozen): `demo/neon-snake-fullscreen-0802/index.html`
+- 성격: 한 화면에서 두 사람이 동시에 조작하는 **풀스크린 네온 스네이크 멀티플레이**.
+  단일 플레이 화면의 풀스크린 시각 품질을 유지하면서, 1P/2P 정보 구조(색상 +
+  텍스트 라벨 + 머리 구분)와 승자/무승부/일시정지 오버레이를 강화한다.
+- 변경 범위: 서버 데이터 모델·API 스키마 변경 없이 클라이언트 게임 상태
+  (`ready`/`running`/`paused`/`p1-win`/`p2-win`/`draw`)의 시각 표현만 명세한다.
+- 테마: 다크 네온 테마. 보드 배경은 frozen `--color-bg`(`#0a0a12`), 두 뱀·HUD
+  강조는 frozen `--color-p1`(`#00e5ff`, 시안)·`--color-p2`(`#ff2fb9`, 마젠타),
+  먹이는 frozen `--color-food`(`#ffd400`).
+- 사용자 경험 목표:
+  1. 1P/2P를 **색상만이 아니라 텍스트 라벨(`1P`/`2P`)과 머리 구분**으로 명확히
+     식별해 색약·흑백 환경에서도 두 플레이어를 혼동하지 않게 한다.
+  2. 상태 배너와 결과 오버레이로 현재 진행/일시정지/승패/무승부를 텍스트로
+     즉시 노출해 색상 인지 없이도 게임 상태를 파악할 수 있게 한다.
+  3. 풀스크린 보드로 몰입감을 유지하되 320px 이상 전 구간에서 HUD·조작 안내가
+     겹치거나 넘치지 않게 한다.
+
+## 2. 컬러 팔레트
+
+### 2.1 frozen 토큰 (변경 금지)
+
+| 토큰 | 값 | 용도 |
+| --- | --- | --- |
+| `--color-p1` | `#00e5ff` | 1P 뱀 · `hud--p1` 강조색 |
+| `--color-p2` | `#ff2fb9` | 2P 뱀 · `hud--p2` 강조색 |
+| `--color-food` | `#ffd400` | 공유 먹이 색 |
+| `--color-bg` | `#0a0a12` | 보드(`snake-board`) 배경 |
+| `--space-hud-gap` | `16px` | HUD 요소 간격 |
+
+### 2.2 다크 네온 보조 토큰 (신규 상태 색상 추가 아님 — frozen 목록과 충돌 없음)
+
+frozen 계약은 두 플레이어 강조색·먹이·보드 배경·HUD 간격만 고정하며, 뱀 머리
+하이라이트·격자선·텍스트·오버레이 표면 색은 명시하지 않는다. `vanilla-static`
+스택 규약(외부 의존성 0건, CSS 변수 자체 정의)에 따라 아래 보조 토큰을 권장한다.
+이 토큰들은 §2.1 frozen 색상을 대체하거나 재정의하지 않는다.
+
+| 토큰 | 값 | 용도 |
+| --- | --- | --- |
+| `--color-snake-head` | `#ffffff` | 두 뱀 머리 공통 하이라이트(각 뱀 몸통색 위에 겹쳐 머리 위치를 색상 외로 구분) |
+| `--color-grid-line` | `rgba(255, 255, 255, 0.06)` | 보드 격자선(장식, 저채도) |
+| `--color-text-primary` | `#e6f7ff` | 상태 배너·HUD 텍스트·결과 오버레이 텍스트 1차 색 |
+| `--color-text-muted` | `#8aa0b4` | 조작 안내 보조 문구 |
+| `--color-overlay-scrim` | `rgba(6, 6, 14, 0.72)` | `result-overlay` 반투명 스크림(보드 위 딤 처리) |
+| `--color-btn-surface` | `rgba(255, 255, 255, 0.08)` | `control-btn` 기본 표면 |
+| `--color-focus-ring` | `#e6f7ff` | 버튼 키보드 포커스 outline |
+
+> 머리 구분 원칙: 두 뱀의 머리 칸은 각 플레이어 몸통색(`--color-p1`/`--color-p2`)
+> 위에 `--color-snake-head` 하이라이트(예: 안쪽 흰 사각/테두리)를 겹쳐, 진행
+> 방향과 머리 위치를 **색상 대비만이 아니라 형태 차이**로도 식별할 수 있게 한다.
+
+## 3. 타이포그래피
+
+frozen 계약에 타이포그래피 토큰이 없으므로 system font 기반 권장값을 아래와 같이
+명세한다(신규 색상/상태 토큰이 아니므로 frozen 제약과 충돌하지 않음).
+
+| 용도 | font-family | size | weight | line-height |
+| --- | --- | --- | --- | --- |
+| 결과 오버레이 텍스트 (`result-overlay__text`) | system-ui, -apple-system, "Segoe UI", sans-serif | clamp(28px, 6vw, 56px) | 700 | 1.2 |
+| 상태 배너 (`status-banner`) | system-ui, -apple-system, "Segoe UI", sans-serif | clamp(16px, 2.4vw, 22px) | 600 | 1.3 |
+| HUD 점수 (`hud__score`) | system-ui, -apple-system, "Segoe UI", sans-serif | clamp(18px, 3vw, 28px) | 700 | 1.2 |
+| HUD 라벨 (`1P`/`2P`) · 조작 안내 | system-ui, -apple-system, "Segoe UI", sans-serif | clamp(12px, 1.8vw, 15px) | 500 | 1.4 |
+
+- `clamp()`로 뷰포트에 따라 가변 크기를 권장해 풀스크린~320px 구간에서 overflow
+  없이 가독성을 유지한다(§7 반응형).
+
+## 4. 레이아웃
+
+### 4.1 구조
+
+```
+.snake-stage (풀스크린 래퍼, 100dvw × 100dvh)
+├─ #hud-p1 (.hud .hud--p1)                 ── 좌측 상단, --color-p1 강조
+│   ├─ 라벨 "1P" (색상 외 텍스트 식별)
+│   └─ #score-p1 (.hud__score) 점수 숫자
+├─ #hud-p2 (.hud .hud--p2)                 ── 우측 상단, --color-p2 강조
+│   ├─ 라벨 "2P"
+│   └─ #score-p2 (.hud__score) 점수 숫자
+├─ #snake-board                            ── 풀스크린 보드(격자·두 뱀·먹이 렌더)
+├─ #status-banner (.status-banner)         ── 현재 상태 텍스트(§5.4 6종)
+├─ #result-overlay (.result-overlay)       ── 게임오버 시 노출(승자/무승부)
+│   └─ .result-overlay__text               ── 결과 텍스트
+└─ 조작 control 영역
+    ├─ #btn-start (.control-btn)           ── 시작/재개 (aria-label 필수)
+    ├─ #btn-pause (.control-btn)           ── 일시정지 (aria-label 필수)
+    └─ #btn-restart (.control-btn)         ── 재시작 (aria-label 필수)
+```
+
+- 위 ID/class는 모두 frozen이다(§3.2/§3.3 계약). 배치 순서·wrapper 추가 여부는
+  overflow 금지·풀스크린 규칙을 지키는 선에서 developer 재량이나, selector 자체는
+  변경하지 않는다.
+- 조작 안내(1P: WASD / 2P: 방향키 / Space: 시작·정지·재개)는 화면 하단 또는 각
+  HUD 인접에 텍스트로 노출한다. 별도 frozen selector가 아니므로 배치는 재량이되
+  §7의 320px overflow 금지를 지킨다.
+
+### 4.2 spacing / breakpoint
+
+- HUD 요소 간격: `--space-hud-gap`(`16px`).
+- `snake-board`는 고정 소형 캔버스를 쓰지 않고 브라우저 가용 영역(`100dvw ×
+  100dvh` 내)을 채운다. HUD/배너/버튼은 보드 위에 겹치거나(overlay) 안전 여백을
+  둔 레이어로 배치한다.
+- **320px 이상** 전 뷰포트에서 HUD·조작 안내·상태 배너에 content overflow(가로
+  스크롤)가 발생하지 않는다. 좁은 폭에서는 HUD를 세로 스택하거나 조작 안내를
+  줄바꿈으로 흡수한다.
+- HUD는 상단, 조작 안내/버튼은 하단에 배치해 중앙 보드 가시 영역을 최대화하는
+  것을 권장한다(단일 플레이 풀스크린 품질 유지, AC).
+
+## 5. 컴포넌트 명세
+
+### 5.1 `#snake-board` — 풀스크린 게임 보드
+
+| 속성 | 명세 |
+| --- | --- |
+| 배경 | `--color-bg`(`#0a0a12`), 저채도 격자선 `--color-grid-line` 권장(장식) |
+| 크기 | `100dvw × 100dvh` 내 가용 영역을 채움, 고정 소형 캔버스 금지(§7) |
+| 렌더 요소 | 1P 뱀(몸통 `--color-p1` + 머리 하이라이트), 2P 뱀(몸통 `--color-p2` + 머리 하이라이트), 공유 먹이(`--color-food`) |
+| resize | viewport resize 시 셀/보드 치수 재계산, 진행 중 뱀 위치·점수·먹이 보존(§7) |
+
+### 5.2 `#hud-p1` / `#hud-p2` (.hud, .hud--p1 / .hud--p2) — 플레이어 HUD
+
+| 항목 | 1P (`hud-p1` / `hud--p1`) | 2P (`hud-p2` / `hud--p2`) |
+| --- | --- | --- |
+| 강조색 | `--color-p1`(`#00e5ff`) | `--color-p2`(`#ff2fb9`) |
+| 텍스트 라벨(색상 외 식별) | `1P` | `2P` |
+| 점수 요소 | `#score-p1` (.hud__score) | `#score-p2` (.hud__score) |
+| 초기 점수 | `0` | `0` |
+
+- 각 HUD는 강조색(왼쪽 accent bar/border 등) + **텍스트 라벨(`1P`/`2P`)** +
+  점수를 함께 표시한다. 색상만으로 플레이어를 구분하지 않는다(§6 접근성).
+- 점수는 먹이 획득 tick의 해당 플레이어만 +1(planner §6). `btn-restart` 시 0으로
+  복귀(§5.5, §8 후조건).
+
+### 5.3 `#status-banner` (.status-banner) — 상태 배너
+
+- 현재 `state`에 대응하는 화면 텍스트(§5.4)를 **항상** 노출한다.
+- 텍스트 색 `--color-text-primary`, 게임오버 시(§5.4의 p1-win/p2-win/draw)에는
+  해당 플레이어 강조색으로 텍스트/테두리를 강조할 수 있으나 텍스트 자체가 1차
+  식별 수단이다.
+
+### 5.4 상태(state) 및 화면 텍스트 (frozen — 변경 금지)
+
+| state | 화면 텍스트 | `status-banner` 표현 | `result-overlay` |
+| --- | --- | --- | --- |
+| `ready` | `스페이스로 시작` | 안내 텍스트, `btn-start`/Space 사용 가능 | 숨김 |
+| `running` | `게임 진행 중` | 진행 텍스트, `btn-pause`/Space로 일시정지 | 숨김 |
+| `paused` | `일시정지 — 스페이스로 재개` | 일시정지 텍스트, 보드 위 딤 권장, 뱀/점수/먹이 보존 | 숨김(또는 딤 스크림만) |
+| `p1-win` | `1P 승리` | 1P 강조색 텍스트 | **노출**, `--color-p1` 강조, `result-overlay__text = "1P 승리"` |
+| `p2-win` | `2P 승리` | 2P 강조색 텍스트 | **노출**, `--color-p2` 강조, `result-overlay__text = "2P 승리"` |
+| `draw` | `무승부` | 중립 텍스트 | **노출**, 중립 강조, `result-overlay__text = "무승부"` |
+
+- 화면 텍스트 6종은 frozen이며 문구를 변경하지 않는다.
+- `p1-win`/`p2-win`/`draw`는 게임오버 상태이며 `result-overlay`가 §6 접근성
+  규칙으로 결과를 알린다.
+
+### 5.5 `#result-overlay` (.result-overlay) — 결과 오버레이
+
+| 속성/상태 | 명세 |
+| --- | --- |
+| 표시 조건 | `p1-win` / `p2-win` / `draw` 상태에서만 노출, 그 외 상태에서 숨김 |
+| 표면 | `--color-overlay-scrim` 반투명 스크림으로 보드를 딤 처리(승패 텍스트 가독성) |
+| 텍스트 | `.result-overlay__text` = 해당 상태의 frozen 화면 텍스트(`1P 승리`/`2P 승리`/`무승부`) |
+| 강조 | 승자 색(`--color-p1`/`--color-p2`) 또는 무승부 중립색으로 텍스트 강조 |
+| 접근성 | `role="status"` + `aria-live="polite"`로 결과 텍스트를 알림(§6-1) |
+| 후조건 | `btn-restart` 시 `ready`로 복귀하며 오버레이 숨김(§8) |
+
+### 5.6 `#btn-start` / `#btn-pause` / `#btn-restart` (.control-btn) — 조작 버튼
+
+| 버튼 | 역할 | 권장 `aria-label` | 활성 상태 |
+| --- | --- | --- | --- |
+| `btn-start` (.control-btn) | `ready→running` 시작 / `paused→running` 재개 | `게임 시작 / 재개` | `ready`, `paused`에서 주 실행 control |
+| `btn-pause` (.control-btn) | `running→paused` 일시정지 | `일시정지` | `running`에서 사용 |
+| `btn-restart` (.control-btn) | 어느 상태든 초기값(`ready`, 점수 0, 먹이 재배치)으로 복귀 | `재시작` | 상시(게임오버·일시정지 포함) 사용 |
+
+- 세 버튼 모두 네이티브 `<button>` 권장(Enter/Space 기본 지원). 단, 게임 조작의
+  Space는 상태 전이(시작/정지/재개)에 쓰이므로, 버튼에 포커스가 있을 때의 Space
+  기본 동작과 전역 Space 핸들링이 이중 발동하지 않도록 developer가 처리한다
+  (frozen selector·상태 텍스트 변경 아님, 구현 유의사항).
+- 각 버튼은 명시적 `aria-label`을 가지며 키보드로 조작 가능하다(§6-2).
+- 표면 `--color-btn-surface`, 포커스 시 `--color-focus-ring` outline 권장.
+- 후조건(§8): 초기화·게임오버·취소 뒤에도 주 실행 control(`btn-start`/Space)이
+  즉시 다시 사용 가능해야 하며 비활성 고착 금지.
+
+## 6. 접근성 (frozen)
+
+1. `result-overlay`는 `role="status"` + `aria-live="polite"`로 승자/무승부
+   텍스트(`1P 승리`/`2P 승리`/`무승부`)를 알린다.
+2. `btn-start`/`btn-pause`/`btn-restart`는 명시적 `aria-label`을 가지며 키보드로
+   조작 가능하다.
+3. `hud-p1`/`hud-p2` 점수는 색상 외 텍스트 라벨(`1P`/`2P`)로도 구분된다.
+4. 모든 상태(§5.4 6종)는 색상만으로 구분하지 않고 상태명을 **화면 텍스트와
+   접근성 이름** 양쪽으로 노출한다.
+5. (보강) 두 뱀은 색상(`--color-p1`/`--color-p2`) 외에 머리 하이라이트
+   (`--color-snake-head`) 형태 차이로도 구분되어, 색약·흑백 환경에서 1P/2P·진행
+   방향을 식별할 수 있다.
+
+## 7. 반응형 (frozen)
+
+1. `snake-board`는 브라우저 가용 영역(`100dvw × 100dvh` 내)을 채우고 고정 소형
+   캔버스를 쓰지 않는다.
+2. viewport resize 시 셀/보드 치수를 재계산하되 **진행 중 플레이 상태(뱀 위치·
+   점수·먹이)가 깨지지 않는다.** 재계산은 논리 격자 좌표 유지 + 셀 픽셀 크기만
+   갱신하는 방식을 권장한다(좌표 보존).
+3. `320px` 이상 뷰포트에서 HUD·조작 안내·상태 배너에 content overflow가 발생하지
+   않는다(좁은 폭: HUD 세로 스택, 안내 줄바꿈, `clamp()` 타이포).
+
+## 8. 상태 후조건 / 복구 (frozen)
+
+- 초기화·취소·게임오버 뒤에는 상태와 진행 표시를 **초기값(`ready` /
+  `스페이스로 시작`, `score-p1`/`score-p2` = 0)** 으로 되돌리고, `result-overlay`를
+  숨기며, 먹이를 유효 위치로 재배치한다.
+- 주 실행 control(`btn-start` / Space)이 즉시 다시 사용 가능해야 한다.
+
+## 9. dev 구현 가이드 (BF-1503)
+
+1. `.snake-stage` 래퍼를 `100dvw × 100dvh`로 두고 그 안에 `#snake-board`,
+   `#hud-p1`/`#hud-p2`, `#status-banner`, `#result-overlay`, 세 `control-btn`을
+   배치한다. selector(ID/class)는 §4.1 목록 그대로 사용한다.
+2. `:root`에 frozen 토큰 5개(`--color-p1`, `--color-p2`, `--color-food`,
+   `--color-bg`, `--space-hud-gap`)와 §2.2 보조 토큰만 CSS 커스텀 프로퍼티로
+   정의한다. 하드코딩 색상 금지, 신규 상태/플레이어 색상 토큰 추가 금지.
+3. `#hud-p1`은 `--color-p1`, `#hud-p2`는 `--color-p2` 강조 + 텍스트 라벨
+   `1P`/`2P` + `#score-p1`/`#score-p2`(`.hud__score`, 초기 `0`)를 렌더한다.
+4. 뱀 렌더: 몸통은 각 플레이어 색, 머리 칸은 몸통색 위 `--color-snake-head`
+   하이라이트(안쪽 사각/테두리)를 겹쳐 색상 외로 머리를 구분한다.
+5. `#status-banner`는 `state`에 대응하는 §5.4 화면 텍스트를 항상 노출한다.
+   문구는 frozen 값을 그대로 사용한다.
+6. `#result-overlay`는 `p1-win`/`p2-win`/`draw`에서만 노출하고
+   `role="status"` + `aria-live="polite"`를 부여하며 `.result-overlay__text`에
+   해당 결과 문구(`1P 승리`/`2P 승리`/`무승부`)를 넣는다. 그 외 상태에서 숨긴다.
+7. 세 `control-btn`에 명시적 `aria-label`(§5.6 권장값)을 부여하고 키보드 조작을
+   보장한다. 전역 Space 상태 전이와 버튼 포커스 Space 기본동작의 이중 발동을
+   방지한다.
+8. resize 시 논리 격자 좌표를 보존하고 셀 픽셀 크기만 재계산해 뱀 위치·점수·
+   먹이를 유지한다(§7-2). 320px 이상 overflow 없음을 확인한다(§7-3).
+9. `btn-restart`는 어느 상태에서든 `ready`(점수 0, 먹이 재배치, 오버레이 숨김)로
+   복귀시키고 주 실행 control을 즉시 재사용 가능하게 한다(§8).
+10. 게임 로직(tick·충돌·먹이·상태 전이)은 planner §4~§7을 따르며
+    `demo/neon-snake-fullscreen-0802/src/game.js`(developer 소유, ESM)에서 구현
+    한다. 본 문서는 시각 표현만 명세한다.
+
+## 10. mockup 참조 (와이어프레임)
+
+§0에 따라 본 task는 별도 mockup HTML 파일을 생성하지 않는다(AC #4: 시각 명세
+범위는 `docs/design/contract.md`, 런타임 HTML/CSS/JS 미생성). 아래 와이어프레임
+으로 시각 mockup을 대체 설명한다. 실제 실행 가능한 산출물은
+`demo/neon-snake-fullscreen-0802/index.html` / `src/game.js`(developer, BF-1503
+소유)이다.
+
+### 10.1 `ready` 상태 (초기/재시작 후 대기)
+
+```
+┌─ .snake-stage (100dvw × 100dvh, --color-bg #0a0a12) ───────────────────────┐
+│ ┌─ #hud-p1 .hud--p1 ─────┐                        ┌─ #hud-p2 .hud--p2 ─────┐│
+│ │ ▎1P  (#00e5ff)         │                        │        2P (#ff2fb9) ▎  ││
+│ │  #score-p1: 0          │                        │  0 :#score-p2          ││
+│ └────────────────────────┘   ← --space-hud-gap →  └────────────────────────┘│
+│                                                                              │
+│                        #snake-board (격자, 두 뱀 대기)                       │
+│                                                                              │
+│                    ┌────────────────────────────────┐                       │
+│                    │ #status-banner: 스페이스로 시작 │                       │
+│                    └────────────────────────────────┘                       │
+│                                                                              │
+│  [ #btn-start 시작/재개 ] [ #btn-pause 일시정지 ] [ #btn-restart 재시작 ]     │
+│  1P: W A S D   ·   2P: ↑ ← ↓ →   ·   Space: 시작/정지/재개  (--color-text-muted)│
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 10.2 `running` 상태 (게임 진행 중)
+
+```
+┌─ .snake-stage ─────────────────────────────────────────────────────────────┐
+│ ▎1P  #score-p1: 3                                        #score-p2: 2  2P ▎  │
+│                                                                              │
+│   #snake-board:                                                              │
+│     ■■■□  (1P 뱀: 몸통 #00e5ff, 머리 □=흰 하이라이트)                        │
+│                    ●  (먹이 #ffd400)                                          │
+│               □▓▓▓  (2P 뱀: 몸통 #ff2fb9, 머리 □=흰 하이라이트)              │
+│                                                                              │
+│            ┌────────────────────────────┐                                    │
+│            │ #status-banner: 게임 진행 중 │                                    │
+│            └────────────────────────────┘                                    │
+│  [ 시작/재개 ] [ 일시정지 ] [ 재시작 ]                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 10.3 `paused` 상태 (일시정지 — 뱀/점수/먹이 보존, 보드 딤)
+
+```
+┌─ .snake-stage ─────────────────────────────────────────────────────────────┐
+│ ▎1P  #score-p1: 3                                        #score-p2: 2  2P ▎  │
+│   #snake-board (딤 스크림 --color-overlay-scrim, 뱀·먹이 위치 그대로 보존)   │
+│            ┌────────────────────────────────────────┐                        │
+│            │ #status-banner: 일시정지 — 스페이스로 재개 │                      │
+│            └────────────────────────────────────────┘                        │
+│  [ 시작/재개 ] [ 일시정지 ] [ 재시작 ]                                        │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 10.4 게임오버 오버레이 — `p1-win` / `p2-win` / `draw`
+
+```
+┌─ .snake-stage ─────────────────────────────────────────────────────────────┐
+│ ▎1P  #score-p1: 5                                        #score-p2: 4  2P ▎  │
+│  ┌─ #result-overlay .result-overlay (role="status" aria-live="polite") ────┐ │
+│  │        (보드 위 --color-overlay-scrim 딤)                                 │ │
+│  │                                                                          │ │
+│  │              .result-overlay__text:  1P 승리   (#00e5ff 강조)            │ │
+│  │              └ p2-win → "2P 승리"(#ff2fb9) / draw → "무승부"(중립)        │ │
+│  │                                                                          │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+│  #status-banner: 1P 승리 / 2P 승리 / 무승부                                   │
+│  [ 시작/재개 ] [ 일시정지 ] [ 재시작 ← ready로 복귀 ]                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 10.5 320px 좁은 뷰포트 (HUD 세로 스택, overflow 없음)
+
+```
+┌─ .snake-stage (≥320px) ──────────┐
+│ ┌─ #hud-p1 .hud--p1 ───────────┐ │
+│ │ ▎1P   #score-p1: 0           │ │
+│ └──────────────────────────────┘ │
+│ ┌─ #hud-p2 .hud--p2 ───────────┐ │
+│ │ ▎2P   #score-p2: 0           │ │
+│ └──────────────────────────────┘ │
+│ #snake-board (가용 영역 채움)     │
+│ ┌──────────────────────────────┐ │
+│ │ #status-banner: 스페이스로 시작 │ │
+│ └──────────────────────────────┘ │
+│ [시작/재개][일시정지][재시작]     │
+│ 1P: WASD                          │
+│ 2P: 방향키                        │
+│ Space: 시작/정지/재개             │
+└──────────────────────────────────┘
+```
+
+두 뱀의 머리 칸(□)은 색상뿐 아니라 흰 하이라이트 형태로도 구분되고, 상태·승패는
+색상 외에 항상 화면 텍스트(`status-banner` / `result-overlay__text`)로 노출되어,
+색상 인지가 어려운 환경(스크린리더·흑백 렌더링·색약 포함)에서도 플레이어·진행
+상태·결과를 식별할 수 있다.
+
+## 11. Self-critique (BF-1502)
+
+| # | 점검 항목 | 결과 |
+| --- | --- | --- |
+| 1 | **AC 매핑** | AC1(§2.1/§4.1/§5.4/§6/§7에 frozen domIds·cssClasses·token·상태 텍스트 재정의 없이 반영), AC2(§2.2·§5.2·§5.5·§10.4에 1P/2P 색상 외 텍스트 라벨·머리 구분 + 승자/무승부/일시정지 오버레이 시각 상태 명세), AC3(§1·§4.2·§5.1에 풀스크린 품질 유지 + 2인 정보 구조 강화), AC4(§0·§10에 시각 명세 범위=contract.md, 런타임 HTML/CSS/JS 미생성 명시) 모두 충족. |
+| 2 | **dev 구현 가이드** | §9에 selector/token 매핑·머리 구분 렌더·오버레이 접근성·resize 좌표 보존·후조건 복귀를 단계별로 제시. 로직은 planner §4~§7 참조로 위임. |
+| 3 | **기존 요소 보존** | 상위 BF-1478 절을 `additive` 정책대로 변경·삭제 없이 보존하고 본 BF-1502 절만 추가. developer 소유 `demo/**` 파일 미생성. |
+| 4 | **컴포넌트 매핑** | 10개 DOM ID·9개 CSS class·6개 상태·5개 token을 각각 §4.1/§5/§5.4/§2.1에 1:1 매핑. |
+| 5 | **모호함 flag** | 조작 안내 배치·목록 wrapper는 frozen selector가 아님(재량)임을 명시. 전역 Space와 버튼 포커스 Space 이중 발동 방지를 구현 유의사항으로 flag(§5.6/§9-7). frozen 값 변경 없음. |
