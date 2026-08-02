@@ -260,22 +260,66 @@ export function clampCell(cell, cols, rows) {
 }
 
 /**
+ * 한 축(x 또는 y)에 대한 강체 이동 offset을 구한다.
+ * 축소된 축에서는 뱀을 grid 안으로 밀어 넣되, 진행 방향(dv) 쪽 벽 앞에 한 칸의
+ * 여유를 남겨 재투영 직후 step이 즉시 벽 충돌하지 않게 한다(E1: 전환은 gameover 아님).
+ * 축소되지 않은 축은 offset 0으로 좌표를 그대로 보존한다(RG-2).
+ * @param {number} min 뱀 좌표 최소값
+ * @param {number} max 뱀 좌표 최대값
+ * @param {number} head 머리 좌표
+ * @param {number} dv 진행 방향 성분(-1/0/1)
+ * @param {number} size 새 grid 크기(cols 또는 rows)
+ * @param {boolean} shrunk 이 축이 축소되었는지
+ */
+function axisOffset(min, max, head, dv, size, shrunk) {
+  const lo = -min; // min + off >= 0
+  const hi = size - 1 - max; // max + off <= size - 1
+  const fits = lo <= hi; // 강체가 새 grid 축에 통째로 담기는가
+  // 기본: 현재 위치를 최대한 유지(0에 가장 가까운 offset). 담기지 않으면 0에서 시작해
+  // 아래 여유 로직이 머리를 grid 안으로 당긴다(꼬리는 이후 clamp로 접힘).
+  let off = fits ? Math.min(Math.max(0, lo), hi) : 0;
+  if (shrunk) {
+    if (dv > 0) {
+      // 오른/아래로 진행: 머리를 벽(size-1)에서 한 칸 앞(size-2)까지만 허용
+      off = Math.min(off, size - 2 - head);
+      if (fits) off = Math.max(off, lo);
+    } else if (dv < 0) {
+      // 왼/위로 진행: 머리를 벽(0)에서 한 칸 뒤(1)까지만 허용
+      off = Math.max(off, 1 - head);
+      if (fits) off = Math.min(off, hi);
+    }
+  }
+  return off;
+}
+
+/**
  * §5.3~§5.4 reprojectState — 새 grid(cols/rows)로 상태를 재투영한다.
- * status·score·direction·속도 등 게임 상태는 **보존**하고 좌표만 유효 범위로 클램프한다.
+ * status·score·direction·속도 등 게임 상태는 **보존**하고 좌표만 새 grid에 맞춘다.
  * - grid가 줄지 않으면 좌표는 그대로 유지된다(RG-2).
- * - grid 축소로 좌표가 겹치면 뱀은 머리 우선으로 중복 셀을 제거하고,
- *   먹이가 뱀과 겹치면 유효 빈 칸으로 재배치한다(RG-3, E1).
+ * - grid 축소 시 뱀을 **강체로 이동**해 형태(상대 위치)를 보존하고, 진행 방향 쪽 벽 앞에
+ *   한 칸의 여유를 남겨 재투영 직후 step이 즉시 벽 충돌(gameover)하지 않게 한다(E1).
+ * - 뱀이 grid 축보다 길어 담기지 않는 극단에서는 clampCell로 접고 머리 우선으로
+ *   중복 셀을 제거하며, 먹이가 뱀과 겹치면 유효 빈 칸으로 재배치한다(RG-3, E1).
  * 재초기화 함수가 아니며 이벤트 경로에서 상태를 재생성하지 않는다(RG-1).
  */
 export function reprojectState(state, cols, rows, rng = Math.random) {
+  const vec = DIRECTION_VECTORS[state.direction] ?? { x: 0, y: 0 };
+  const head = state.snake[0] ?? { x: 0, y: 0 };
+  const xs = state.snake.map((c) => c.x);
+  const ys = state.snake.map((c) => c.y);
+  const offX = axisOffset(Math.min(...xs), Math.max(...xs), head.x, vec.x, cols, cols < state.cols);
+  const offY = axisOffset(Math.min(...ys), Math.max(...ys), head.y, vec.y, rows, rows < state.rows);
+
+  // 강체 이동으로 형태를 보존하며 새 grid 안으로 재배치한다. 담기지 않는 극단은
+  // clampCell + 머리 우선 중복 제거로 안전 처리한다.
   const seen = new Set();
   const snake = [];
   for (const cell of state.snake) {
-    const clamped = clampCell(cell, cols, rows);
-    const key = cellKey(clamped);
+    const moved = clampCell({ x: cell.x + offX, y: cell.y + offY }, cols, rows);
+    const key = cellKey(moved);
     if (!seen.has(key)) {
       seen.add(key);
-      snake.push(clamped);
+      snake.push(moved);
     }
   }
   let food = state.food;
