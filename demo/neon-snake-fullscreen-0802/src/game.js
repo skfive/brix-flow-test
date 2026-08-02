@@ -214,3 +214,416 @@ export function restartGame(state) {
     rows: state.rows,
   });
 }
+
+// ===========================================================================
+// BF-1497 · 뷰포트 실시간 확장 · DPR 리렌더 · 상태 보존 (frozen plan §5~§6)
+// 아래 함수는 순수(입력 state 불변)하며 DOM/window에 의존하지 않는다.
+// ===========================================================================
+
+// 뷰포트 → grid 파생 상수 (실시간 확장: 뷰포트가 커지면 grid 열/행 수가 증가)
+export const MIN_GRID_COLS = 12;
+export const MIN_GRID_ROWS = 12;
+export const TARGET_CELL_PX = 26; // 목표 CSS 셀 크기(px). cols/rows는 여기서 파생.
+
+/**
+ * §5 computeGrid — 뷰포트 크기·DPR로부터 grid(cols/rows/cellPx)와 canvas backing 크기를 파생.
+ * 상태 보존과 무관하게 언제든 재계산 가능한 순수 함수.
+ * 셀은 정사각(cellPx 단일 값을 두 축에 공유)이며, cols/rows는 최소 하한을 보장한다.
+ */
+export function computeGrid(viewportWidth, viewportHeight, dpr = 1, cellTarget = TARGET_CELL_PX) {
+  const w = Math.max(1, Math.floor(viewportWidth));
+  const h = Math.max(1, Math.floor(viewportHeight));
+  const cols = Math.max(MIN_GRID_COLS, Math.floor(w / cellTarget));
+  const rows = Math.max(MIN_GRID_ROWS, Math.floor(h / cellTarget));
+  const cellPx = Math.min(w / cols, h / rows);
+  const ratio = dpr > 0 ? dpr : 1;
+  return {
+    cols,
+    rows,
+    cellPx,
+    dpr: ratio,
+    cssWidth: w,
+    cssHeight: h,
+    backingWidth: Math.max(1, Math.round(cols * cellPx * ratio)),
+    backingHeight: Math.max(1, Math.round(rows * cellPx * ratio)),
+  };
+}
+
+/**
+ * 좌표를 [0, cols) × [0, rows) 유효 범위로 클램프한다.
+ */
+export function clampCell(cell, cols, rows) {
+  return {
+    x: Math.min(Math.max(0, Math.round(cell.x)), cols - 1),
+    y: Math.min(Math.max(0, Math.round(cell.y)), rows - 1),
+  };
+}
+
+/**
+ * §5.3~§5.4 reprojectState — 새 grid(cols/rows)로 상태를 재투영한다.
+ * status·score·direction·속도 등 게임 상태는 **보존**하고 좌표만 유효 범위로 클램프한다.
+ * - grid가 줄지 않으면 좌표는 그대로 유지된다(RG-2).
+ * - grid 축소로 좌표가 겹치면 뱀은 머리 우선으로 중복 셀을 제거하고,
+ *   먹이가 뱀과 겹치면 유효 빈 칸으로 재배치한다(RG-3, E1).
+ * 재초기화 함수가 아니며 이벤트 경로에서 상태를 재생성하지 않는다(RG-1).
+ */
+export function reprojectState(state, cols, rows, rng = Math.random) {
+  const seen = new Set();
+  const snake = [];
+  for (const cell of state.snake) {
+    const clamped = clampCell(cell, cols, rows);
+    const key = cellKey(clamped);
+    if (!seen.has(key)) {
+      seen.add(key);
+      snake.push(clamped);
+    }
+  }
+  let food = state.food;
+  if (food != null) {
+    const clampedFood = clampCell(food, cols, rows);
+    const overlaps = snake.some((seg) => seg.x === clampedFood.x && seg.y === clampedFood.y);
+    food = overlaps ? spawnFood(snake, rng, cols, rows) : clampedFood;
+  }
+  return { ...state, cols, rows, snake, food };
+}
+
+/**
+ * §5 resizeGame — 뷰포트 변경(resize/orientationchange/fullscreenchange) 진입점.
+ * grid를 재계산하고 상태를 그 grid로 재투영해 { state, grid }를 반환한다.
+ * 상태(뱀/먹이/점수/status)는 보존되고 DPR/새 grid에 맞춰 렌더 메타(grid)만 갱신된다.
+ */
+export function resizeGame(state, viewportWidth, viewportHeight, dpr = 1, rng = Math.random) {
+  const grid = computeGrid(viewportWidth, viewportHeight, dpr);
+  const next = reprojectState(state, grid.cols, grid.rows, rng);
+  return { state: next, grid };
+}
+
+// ===========================================================================
+// 브라우저 런타임 (frozen UI 계약: game-stage/game-canvas/hud-*/game-overlay/
+// restart-button/touch-controls, states ready/playing/paused/gameover).
+// DOM/window/localStorage 부작용은 이 부트스트랩에만 격리한다.
+// node(테스트/import) 환경에서는 실행되지 않도록 하단에서 가드한다.
+// ===========================================================================
+
+// frozen §4.4: 상태별 화면/overlay 텍스트 (playing은 overlay 숨김)
+const STATUS_TEXT = {
+  ready: '준비',
+  running: '',
+  paused: '일시정지',
+  gameover: '게임오버',
+};
+
+const DIR_KEYS = {
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  w: 'up',
+  a: 'left',
+  s: 'down',
+  d: 'right',
+};
+
+const SWIPE_THRESHOLD = 24;
+
+/**
+ * initSnakeGame — frozen DOM에 게임을 부착한다.
+ * 뷰포트 확장·DPR 리렌더·상태 보존(resize/orientationchange/fullscreenchange)과
+ * 기존 조작(방향키/WASD·일시정지·스와이프·역방향 방지·먹이/속도·localStorage·재시작)을 배선한다.
+ */
+export function initSnakeGame({ document: doc, window: win }) {
+  const stage = doc.getElementById('game-stage');
+  const canvas = doc.getElementById('game-canvas');
+  const hudScore = doc.getElementById('hud-score');
+  const hudHighscore = doc.getElementById('hud-highscore');
+  const overlay = doc.getElementById('game-overlay');
+  const restartButton = doc.getElementById('restart-button');
+  const touchControls = doc.getElementById('touch-controls');
+  const ctx = canvas.getContext('2d');
+
+  const reducedMotion =
+    typeof win.matchMedia === 'function' &&
+    win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function loadHighScore() {
+    try {
+      const raw = win.localStorage.getItem(HIGH_SCORE_STORAGE_KEY);
+      const n = raw == null ? 0 : Number.parseInt(raw, 10);
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    } catch {
+      return 0;
+    }
+  }
+  function saveHighScore(value) {
+    try {
+      win.localStorage.setItem(HIGH_SCORE_STORAGE_KEY, String(value));
+    } catch {
+      /* localStorage 접근 불가 시 무시 */
+    }
+  }
+
+  let state = createInitialState({ highScore: loadHighScore() });
+  let grid = computeGrid(win.innerWidth || 1, win.innerHeight || 1, win.devicePixelRatio || 1);
+  let announcedHighScore = state.highScore;
+
+  // ---- 뷰포트 리렌더: grid 재계산 + 상태 보존(재초기화 아님) ----
+  function applyViewport() {
+    const result = resizeGame(
+      state,
+      win.innerWidth || 1,
+      win.innerHeight || 1,
+      win.devicePixelRatio || 1,
+    );
+    state = result.state;
+    grid = result.grid;
+    canvas.width = grid.backingWidth;
+    canvas.height = grid.backingHeight;
+    ctx.setTransform(grid.dpr, 0, 0, grid.dpr, 0, 0);
+    render();
+  }
+
+  // ---- 렌더 ----
+  function render() {
+    const boardW = grid.cols * grid.cellPx;
+    const boardH = grid.rows * grid.cellPx;
+    ctx.clearRect(0, 0, boardW, boardH);
+    ctx.fillStyle = '#050510'; // --neon-bg
+    ctx.fillRect(0, 0, boardW, boardH);
+    if (grid.cellPx <= 0) {
+      return;
+    }
+    if (state.food) {
+      drawCell(state.food, '#ff2d95', false);
+    }
+    for (let i = state.snake.length - 1; i >= 0; i -= 1) {
+      const color = i === 0 ? '#00e5ff' : '#39ff14'; // --neon-primary
+      drawCell(state.snake[i], color, !reducedMotion && i === 0);
+    }
+  }
+
+  function drawCell(cellPos, color, glow) {
+    const cell = grid.cellPx;
+    const pad = Math.max(1, Math.floor(cell * 0.08));
+    const x = cellPos.x * cell + pad;
+    const y = cellPos.y * cell + pad;
+    const size = cell - pad * 2;
+    ctx.save();
+    if (glow) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = Math.max(4, cell * 0.6);
+    }
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, size, size);
+    ctx.restore();
+  }
+
+  // ---- HUD / overlay / 접근성 텍스트 ----
+  function announce(text) {
+    // #game-overlay(aria-live="polite")의 상태 텍스트 노드만 갱신 (자식 button 보존, §4.6)
+    const node = overlay.querySelector('.overlay__text');
+    if (node) {
+      node.textContent = text;
+    }
+  }
+
+  function syncView() {
+    hudScore.textContent = `점수 ${state.score}`;
+    hudHighscore.textContent = `최고 ${state.highScore}`;
+
+    const playing = state.status === 'running';
+    overlay.classList.toggle('is-hidden', playing);
+    overlay.classList.toggle('overlay--gameover', state.status === 'gameover');
+    // frozen §4.4 상태 어휘 노출(running → playing)
+    overlay.setAttribute('data-status', playing ? 'playing' : state.status);
+
+    if (!playing) {
+      const label =
+        state.status === 'gameover'
+          ? `${STATUS_TEXT.gameover} · 점수 ${state.score} · 최고 ${state.highScore}`
+          : STATUS_TEXT[state.status] || '';
+      announce(label);
+    }
+
+    // AC-5: playing 동안 주 control 비활성, 그 외(ready/paused/gameover) 재활성
+    restartButton.disabled = playing;
+  }
+
+  // ---- 상태 전이 ----
+  function startPlaying() {
+    if (state.status === 'gameover') {
+      state = restartGame(state);
+      announcedHighScore = state.highScore;
+    }
+    if (state.status === 'ready') {
+      state = startGame(state);
+      announce('게임 시작');
+    } else if (state.status === 'paused') {
+      state = resumeGame(state);
+      announce('게임 재개');
+    }
+    syncView();
+    render();
+    focusStage();
+  }
+
+  function togglePause() {
+    if (state.status === 'running') {
+      state = pauseGame(state);
+      announce(STATUS_TEXT.paused);
+    } else if (state.status === 'paused') {
+      state = resumeGame(state);
+      announce('게임 재개');
+    }
+    syncView();
+    render();
+  }
+
+  function handleGameover(prevStatus) {
+    if (prevStatus !== 'gameover' && state.status === 'gameover') {
+      if (state.highScore > announcedHighScore) {
+        saveHighScore(state.highScore);
+        announcedHighScore = state.highScore;
+      }
+      announce(`${STATUS_TEXT.gameover} · 점수 ${state.score} · 최고 ${state.highScore}`);
+      syncView();
+      render();
+      // gameover 후 주 control(restart-button) 재활성 + 포커스 (AC-5)
+      restartButton.disabled = false;
+      if (typeof restartButton.focus === 'function') {
+        restartButton.focus();
+      }
+    }
+  }
+
+  function focusStage() {
+    if (typeof canvas.focus === 'function') {
+      canvas.setAttribute('tabindex', '-1');
+      canvas.focus();
+    }
+  }
+
+  // ---- 게임 루프 ----
+  let lastTime = null;
+  let accumulator = 0;
+  function loop(now) {
+    if (lastTime == null) {
+      lastTime = now;
+    }
+    const dt = now - lastTime;
+    lastTime = now;
+    if (state.status === 'running') {
+      accumulator += dt;
+      while (accumulator >= state.stepMs && state.status === 'running') {
+        accumulator -= state.stepMs;
+        const prevScore = state.score;
+        const prevStatus = state.status;
+        state = step(state);
+        if (state.score !== prevScore) {
+          announce(`점수 ${state.score}`);
+        }
+        handleGameover(prevStatus);
+      }
+    } else {
+      accumulator = 0;
+    }
+    syncView();
+    render();
+    win.requestAnimationFrame(loop);
+  }
+
+  // ---- 입력 ----
+  function onKeyDown(event) {
+    const key = event.key;
+    const lower = typeof key === 'string' ? key.toLowerCase() : key;
+    if (key === ' ' || key === 'Spacebar' || lower === 'p') {
+      if (state.status === 'running' || state.status === 'paused') {
+        event.preventDefault();
+        togglePause();
+      }
+      return;
+    }
+    const dir = DIR_KEYS[key] ?? DIR_KEYS[lower];
+    if (dir) {
+      if (state.status === 'ready') {
+        event.preventDefault();
+        startPlaying();
+        state = setDirection(state, dir);
+        return;
+      }
+      if (state.status === 'running') {
+        event.preventDefault();
+        state = setDirection(state, dir);
+      }
+    }
+  }
+
+  let touchStart = null;
+  function onTouchStart(event) {
+    const t = event.changedTouches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+  }
+  function onTouchEnd(event) {
+    if (!touchStart) {
+      return;
+    }
+    const t = event.changedTouches[0];
+    const dx = t.clientX - touchStart.x;
+    const dy = t.clientY - touchStart.y;
+    touchStart = null;
+    if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) {
+      return;
+    }
+    const dir =
+      Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
+    if (state.status === 'ready') {
+      startPlaying();
+    }
+    if (state.status === 'running') {
+      state = setDirection(state, dir);
+    }
+  }
+
+  function onTouchPad(event) {
+    const target = event.target.closest('[data-dir]');
+    if (!target) {
+      return;
+    }
+    event.preventDefault();
+    const dir = target.getAttribute('data-dir');
+    if (state.status === 'ready') {
+      startPlaying();
+    }
+    if (state.status === 'running') {
+      state = setDirection(state, dir);
+    }
+  }
+
+  // ---- 배선 ----
+  restartButton.addEventListener('click', startPlaying);
+  win.addEventListener('keydown', onKeyDown);
+  stage.addEventListener('touchstart', onTouchStart, { passive: true });
+  stage.addEventListener('touchend', onTouchEnd, { passive: true });
+  if (touchControls) {
+    touchControls.addEventListener('click', onTouchPad);
+  }
+  win.addEventListener('resize', applyViewport);
+  win.addEventListener('orientationchange', applyViewport);
+  doc.addEventListener('fullscreenchange', applyViewport);
+
+  // ---- 초기화 ----
+  applyViewport();
+  syncView();
+  announce('준비');
+  win.requestAnimationFrame(loop);
+
+  return { get state() { return state; }, get grid() { return grid; } };
+}
+
+// node(import/테스트) 환경에서는 실행하지 않고, 브라우저에서 game-stage가 있을 때만 부착
+if (
+  typeof window !== 'undefined' &&
+  typeof document !== 'undefined' &&
+  document.getElementById('game-stage')
+) {
+  initSnakeGame({ document, window });
+}
