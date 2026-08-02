@@ -1,0 +1,1 @@
+{"artifactId":"TL-INV-TEST","artifactType":"TraceLink","relation":"allocated_to","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-SPEED-INVARIANT","status":"active","targetRef":"PKT-TEST","title":"REQ-SPEED-INVARIANT → PKT-TEST","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
