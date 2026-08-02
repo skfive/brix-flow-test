@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>별빛 수집가 — Star Catcher</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main id="game-root" class="star-catcher" tabindex="-1">
+    <h1 class="star-catcher__title">별빛 수집가</h1>
+
+    <div class="star-catcher__hud">
+      <p class="star-catcher__hud-item">
+        <span class="star-catcher__hud-label">점수</span>
+        <span id="score-value" class="star-catcher__hud-value">0</span>
+      </p>
+      <p class="star-catcher__hud-item">
+        <span class="star-catcher__hud-label">콤보</span>
+        <span id="combo-value" class="star-catcher__hud-value">0</span>
+      </p>
+      <p class="star-catcher__hud-item">
+        <span class="star-catcher__hud-label">놓침</span>
+        <span id="missed-value" class="star-catcher__hud-value">0</span>
+      </p>
+      <p class="star-catcher__hud-item">
+        <span class="star-catcher__hud-label">남은 시간</span>
+        <span id="timer-value" class="star-catcher__hud-value">30</span>
+      </p>
+      <p id="game-status" class="star-catcher__status" aria-live="polite">
+        대기 중 — 시작 버튼을 눌러 별빛 수집을 시작하세요
+      </p>
+    </div>
+
+    <div id="game-board" class="star-catcher__board" aria-hidden="true"></div>
+
+    <div class="star-catcher__controls">
+      <button
+        id="start-btn"
+        class="star-catcher__control"
+        type="button"
+        aria-label="게임 시작"
+      >시작</button>
+      <button
+        id="pause-btn"
+        class="star-catcher__control"
+        type="button"
+        aria-label="게임 일시정지"
+        disabled
+      >일시정지</button>
+      <button
+        id="restart-btn"
+        class="star-catcher__control"
+        type="button"
+        aria-label="게임 다시 시작"
+      >다시 시작</button>
+    </div>
+
+    <p class="star-catcher__help">
+      방향키(←/→)로 이동, Space 또는 Enter로 별 수집
+    </p>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
