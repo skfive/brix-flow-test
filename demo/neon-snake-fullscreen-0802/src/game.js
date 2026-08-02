@@ -671,3 +671,410 @@ if (
 ) {
   initSnakeGame({ document, window });
 }
+
+// ===========================================================================
+// BF-1503 · 2인 로컬 멀티플레이 (planner frozen 실행 설계 §3~§7)
+// 아래 순수 규칙 함수는 입력 state를 변경하지 않고(불변) DOM/난수/시간에
+// 의존하지 않는다. 기존 단일 플레이 export는 변경하지 않고 additive로 추가한다.
+// ===========================================================================
+
+// frozen §10 데이터 모델 기본 grid / 초기 길이 / tick
+export const MP_DEFAULT_COLS = 30;
+export const MP_DEFAULT_ROWS = 20;
+export const MP_INITIAL_LENGTH = 3;
+export const MP_TICK_MS = 130;
+
+// frozen §3.4 상태별 화면 텍스트 (변경 금지 — status-banner/result-overlay가 노출)
+export const MP_STATE_TEXT = {
+  ready: '스페이스로 시작',
+  running: '게임 진행 중',
+  paused: '일시정지 — 스페이스로 재개',
+  'p1-win': '1P 승리',
+  'p2-win': '2P 승리',
+  draw: '무승부',
+};
+
+// frozen §3.5 design token 값 (렌더에서 사용 — index.html :root와 동일 값)
+export const MP_COLORS = {
+  p1: '#00e5ff',
+  p2: '#ff2fb9',
+  food: '#ffd400',
+  bg: '#0a0a12',
+};
+
+// frozen §4 키 → { player, dir } 매핑 (1P WASD / 2P 방향키)
+const MP_KEY_BINDINGS = {
+  w: { player: 'p1', dir: 'up' },
+  a: { player: 'p1', dir: 'left' },
+  s: { player: 'p1', dir: 'down' },
+  d: { player: 'p1', dir: 'right' },
+  ArrowUp: { player: 'p2', dir: 'up' },
+  ArrowLeft: { player: 'p2', dir: 'left' },
+  ArrowDown: { player: 'p2', dir: 'down' },
+  ArrowRight: { player: 'p2', dir: 'right' },
+};
+
+/** 키 문자열을 { player, dir }로 해석. 방향키는 정확 매칭, WASD는 대소문자 무시. */
+export function bindingForKey(key) {
+  if (typeof key !== 'string') {
+    return null;
+  }
+  return MP_KEY_BINDINGS[key] ?? MP_KEY_BINDINGS[key.toLowerCase()] ?? null;
+}
+
+/**
+ * §7/§10 createMultiplayerState — ready 상태의 초기 게임 상태.
+ * 두 뱀을 좌/우 대칭으로 배치(1P 왼쪽·오른쪽 진행, 2P 오른쪽·왼쪽 진행), 점수 0, food null.
+ */
+export function createMultiplayerState(options = {}) {
+  const cols = options.cols ?? MP_DEFAULT_COLS;
+  const rows = options.rows ?? MP_DEFAULT_ROWS;
+  const midY = Math.floor(rows / 2);
+  const p1HeadX = Math.floor(cols / 4);
+  const p2HeadX = cols - 1 - Math.floor(cols / 4);
+  const p1Body = [];
+  const p2Body = [];
+  for (let i = 0; i < MP_INITIAL_LENGTH; i += 1) {
+    p1Body.push({ x: p1HeadX - i, y: midY }); // head가 index 0, 몸통은 왼쪽으로
+    p2Body.push({ x: p2HeadX + i, y: midY }); // head가 index 0, 몸통은 오른쪽으로
+  }
+  return {
+    state: 'ready',
+    cols,
+    rows,
+    p1: { body: p1Body, dir: 'right', nextDir: 'right', score: 0 },
+    p2: { body: p2Body, dir: 'left', nextDir: 'left', score: 0 },
+    food: null,
+  };
+}
+
+/** §7 startMultiplayer — ready→running, 첫 먹이 배치. ready가 아니면 no-op. */
+export function startMultiplayer(state, rng = Math.random) {
+  if (state.state !== 'ready') {
+    return state;
+  }
+  const food = spawnFood([...state.p1.body, ...state.p2.body], rng, state.cols, state.rows);
+  return { ...state, state: 'running', food };
+}
+
+/**
+ * §4 setPlayerDirection — running에서만: 지정 player의 nextDir을 갱신하되
+ * 현재 커밋된 dir의 정반대 입력은 무시(자기 목 즉사 방지). 여러 번 호출하면 마지막 유효 입력이 남는다.
+ */
+export function setPlayerDirection(state, player, dir) {
+  if (state.state !== 'running') {
+    return state;
+  }
+  if (player !== 'p1' && player !== 'p2') {
+    return state;
+  }
+  if (!DIRECTION_VECTORS[dir]) {
+    return state;
+  }
+  const snake = state[player];
+  if (dir === OPPOSITE[snake.dir]) {
+    return state;
+  }
+  return { ...state, [player]: { ...snake, nextDir: dir } };
+}
+
+/** §7 pauseMultiplayer — running→paused. 그 외 no-op(상태 보존). */
+export function pauseMultiplayer(state) {
+  if (state.state !== 'running') {
+    return state;
+  }
+  return { ...state, state: 'paused' };
+}
+
+/** §7 resumeMultiplayer — paused→running. 그 외 no-op. */
+export function resumeMultiplayer(state) {
+  if (state.state !== 'paused') {
+    return state;
+  }
+  return { ...state, state: 'running' };
+}
+
+/** §3.8/§7 restartMultiplayer — 어느 상태에서든 ready 초기값(점수 0·먹이 재배치 전)으로 복귀. */
+export function restartMultiplayer(state) {
+  return createMultiplayerState({ cols: state.cols, rows: state.rows });
+}
+
+// --- §5 결정론적 tick 내부 헬퍼 ---
+function mpOutOfBounds(cell, cols, rows) {
+  return cell.x < 0 || cell.x >= cols || cell.y < 0 || cell.y >= rows;
+}
+function mpOccupies(cells, cell) {
+  return cells.some((c) => c.x === cell.x && c.y === cell.y);
+}
+function mpNextHead(snake) {
+  const vec = DIRECTION_VECTORS[snake.dir];
+  const head = snake.body[0];
+  return { x: head.x + vec.x, y: head.y + vec.y };
+}
+function mpBuildBody(oldBody, next, grow) {
+  const body = [next, ...oldBody];
+  if (!grow) {
+    body.pop(); // 성장하지 않으면 꼬리 1칸 제거
+  }
+  return body;
+}
+
+/**
+ * §5 stepMultiplayer — 한 tick을 결정론적으로 처리한다.
+ * 입력 확정 → 다음 head → 먹이 판정 → 이동 후 몸통 구성 → 충돌 판정 → 승패/무승부 산출.
+ * running이 아니면 no-op. 난수는 먹이 재배치에만 쓰이며 충돌/승패 판정은 난수·시간·순서에 의존하지 않는다.
+ */
+export function stepMultiplayer(state, rng = Math.random) {
+  if (state.state !== 'running') {
+    return state;
+  }
+
+  // 1. 입력 확정 — nextDir을 커밋된 dir으로
+  const p1 = { ...state.p1, dir: state.p1.nextDir, nextDir: state.p1.nextDir };
+  const p2 = { ...state.p2, dir: state.p2.nextDir, nextDir: state.p2.nextDir };
+
+  // 2. 다음 head 동시 계산
+  const p1Next = mpNextHead(p1);
+  const p2Next = mpNextHead(p2);
+
+  // §5.5/§6 head-to-head: 두 head가 같은 셀 → 양측 사망, 먹이 획득 없음
+  const headToHead = p1Next.x === p2Next.x && p1Next.y === p2Next.y;
+
+  // 3. 먹이 판정 (head-to-head면 획득 없음)
+  const food = state.food;
+  const p1Eat = !headToHead && food != null && p1Next.x === food.x && p1Next.y === food.y;
+  const p2Eat = !headToHead && food != null && p2Next.x === food.x && p2Next.y === food.y;
+
+  // 4. 이동 후(판정용) 몸통 구성 — 성장 시 꼬리 유지
+  const p1Body = mpBuildBody(p1.body, p1Next, p1Eat);
+  const p2Body = mpBuildBody(p2.body, p2Next, p2Eat);
+
+  // 5. 결정론적 충돌 판정 (자기 몸/상대 몸은 각 head 제외 몸통과 비교)
+  const p1Dead =
+    headToHead ||
+    mpOutOfBounds(p1Next, state.cols, state.rows) ||
+    mpOccupies(p1Body.slice(1), p1Next) ||
+    mpOccupies(p2Body.slice(1), p1Next);
+  const p2Dead =
+    headToHead ||
+    mpOutOfBounds(p2Next, state.cols, state.rows) ||
+    mpOccupies(p2Body.slice(1), p2Next) ||
+    mpOccupies(p1Body.slice(1), p2Next);
+
+  // 득점(먹은 뱀은 §6상 항상 생존하므로 사망 뱀은 이번 tick 미득점)
+  const p1Score = p1.score + (p1Eat ? 1 : 0);
+  const p2Score = p2.score + (p2Eat ? 1 : 0);
+
+  // 6. 승패/무승부 산출
+  let nextState = 'running';
+  if (p1Dead && p2Dead) {
+    nextState = p1Score > p2Score ? 'p1-win' : p2Score > p1Score ? 'p2-win' : 'draw';
+  } else if (p2Dead) {
+    nextState = 'p1-win';
+  } else if (p1Dead) {
+    nextState = 'p2-win';
+  }
+
+  // §6 먹이 재배치 — 진행 중이며 누군가 먹었을 때만. 유효 빈 칸 없으면 이전 위치 유지(E-7).
+  let nextFood = food;
+  if (nextState === 'running' && (p1Eat || p2Eat)) {
+    const respawned = spawnFood([...p1Body, ...p2Body], rng, state.cols, state.rows);
+    nextFood = respawned ?? food;
+  }
+
+  return {
+    ...state,
+    state: nextState,
+    p1: { ...p1, body: p1Body, score: p1Score },
+    p2: { ...p2, body: p2Body, score: p2Score },
+    food: nextFood,
+  };
+}
+
+/**
+ * §3.7 computeBoardMetrics — 뷰포트로부터 셀/보드 픽셀 치수를 재계산한다.
+ * 논리 grid(cols/rows)는 인자로 고정되어 뱀 좌표/점수/먹이가 resize에도 보존된다(E-8).
+ * 정사각 셀(min으로 두 축 공유)로 100dvw×100dvh 안을 채우되 넘치지 않는다.
+ */
+export function computeBoardMetrics(viewportWidth, viewportHeight, cols, rows) {
+  const w = Math.max(1, Math.floor(viewportWidth));
+  const h = Math.max(1, Math.floor(viewportHeight));
+  const cellPx = Math.max(1, Math.floor(Math.min(w / cols, h / rows)));
+  return {
+    cellPx,
+    boardWidth: cellPx * cols,
+    boardHeight: cellPx * rows,
+    viewportWidth: w,
+    viewportHeight: h,
+  };
+}
+
+// ===========================================================================
+// 2인 멀티플레이 브라우저 런타임 (frozen §3 UI 계약 selector/token/상태 텍스트).
+// DOM/window 부작용은 이 부트스트랩에만 격리하며 node(import/테스트)에서는 실행하지 않는다.
+// ===========================================================================
+
+/** initMultiplayerGame — frozen §3 DOM(snake-board/hud/status-banner/result-overlay/제어 버튼)에 2인 게임을 배선한다. */
+export function initMultiplayerGame({ document: doc, window: win }) {
+  const board = doc.getElementById('snake-board');
+  const scoreP1 = doc.getElementById('score-p1');
+  const scoreP2 = doc.getElementById('score-p2');
+  const statusBanner = doc.getElementById('status-banner');
+  const resultOverlay = doc.getElementById('result-overlay');
+  const resultText = resultOverlay ? resultOverlay.querySelector('.result-overlay__text') : null;
+  const btnStart = doc.getElementById('btn-start');
+  const btnPause = doc.getElementById('btn-pause');
+  const btnRestart = doc.getElementById('btn-restart');
+  const ctx = board.getContext('2d');
+
+  let state = createMultiplayerState();
+  let metrics = computeBoardMetrics(win.innerWidth || 1, win.innerHeight || 1, state.cols, state.rows);
+
+  const GAMEOVER = new Set(['p1-win', 'p2-win', 'draw']);
+
+  // --- 렌더 (§3.7 셀/보드 재계산은 픽셀만 갱신, 논리 grid는 불변) ---
+  function applyMetrics() {
+    metrics = computeBoardMetrics(win.innerWidth || 1, win.innerHeight || 1, state.cols, state.rows);
+    const dpr = win.devicePixelRatio || 1;
+    board.width = Math.max(1, Math.round(metrics.boardWidth * dpr));
+    board.height = Math.max(1, Math.round(metrics.boardHeight * dpr));
+    board.style.width = `${metrics.boardWidth}px`;
+    board.style.height = `${metrics.boardHeight}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    render();
+  }
+
+  function drawCell(cell, color) {
+    const size = metrics.cellPx;
+    const pad = Math.max(1, Math.floor(size * 0.08));
+    ctx.fillStyle = color;
+    ctx.fillRect(cell.x * size + pad, cell.y * size + pad, size - pad * 2, size - pad * 2);
+  }
+
+  function render() {
+    ctx.fillStyle = MP_COLORS.bg;
+    ctx.fillRect(0, 0, metrics.boardWidth, metrics.boardHeight);
+    if (metrics.cellPx <= 0) {
+      return;
+    }
+    if (state.food) {
+      drawCell(state.food, MP_COLORS.food);
+    }
+    state.p1.body.forEach((cell) => drawCell(cell, MP_COLORS.p1));
+    state.p2.body.forEach((cell) => drawCell(cell, MP_COLORS.p2));
+  }
+
+  // --- HUD / 상태 배너 / 결과 오버레이 / 제어 버튼 동기화 (§3.4/§3.6/§3.8) ---
+  function syncView() {
+    scoreP1.textContent = String(state.p1.score);
+    scoreP2.textContent = String(state.p2.score);
+    statusBanner.textContent = MP_STATE_TEXT[state.state];
+
+    const over = GAMEOVER.has(state.state);
+    if (resultOverlay) {
+      if (over) {
+        if (resultText) {
+          resultText.textContent = MP_STATE_TEXT[state.state];
+        }
+        resultOverlay.hidden = false;
+      } else {
+        resultOverlay.hidden = true;
+      }
+    }
+
+    // §3.8 후조건: 게임오버/일시정지 후 주 실행 control 재활성. running 중에는 start 비활성.
+    btnStart.disabled = state.state === 'running';
+    btnPause.disabled = !(state.state === 'running' || state.state === 'paused');
+  }
+
+  // --- 상태 전이 ---
+  function primaryAction() {
+    // Space / btn-start: ready→시작, paused→재개
+    if (state.state === 'ready') {
+      state = startMultiplayer(state);
+    } else if (state.state === 'paused') {
+      state = resumeMultiplayer(state);
+    }
+    syncView();
+    render();
+  }
+  function togglePause() {
+    if (state.state === 'running') {
+      state = pauseMultiplayer(state);
+    } else if (state.state === 'paused') {
+      state = resumeMultiplayer(state);
+    }
+    syncView();
+    render();
+  }
+  function restart() {
+    state = restartMultiplayer(state);
+    syncView();
+    render();
+  }
+
+  // --- 게임 루프 (고정 tick 누적) ---
+  let last = null;
+  let acc = 0;
+  function loop(now) {
+    if (last == null) {
+      last = now;
+    }
+    acc += now - last;
+    last = now;
+    if (state.state === 'running') {
+      while (acc >= MP_TICK_MS && state.state === 'running') {
+        acc -= MP_TICK_MS;
+        state = stepMultiplayer(state);
+      }
+    } else {
+      acc = 0;
+    }
+    syncView();
+    render();
+    win.requestAnimationFrame(loop);
+  }
+
+  // --- 입력 (§4 1P WASD / 2P 방향키, Space 시작/일시정지/재개) ---
+  function onKeyDown(event) {
+    const key = event.key;
+    if (key === ' ' || key === 'Spacebar' || key === 'Space') {
+      event.preventDefault();
+      if (state.state === 'ready' || state.state === 'paused') {
+        primaryAction();
+      } else if (state.state === 'running') {
+        togglePause();
+      }
+      return;
+    }
+    const binding = bindingForKey(key);
+    if (binding && state.state === 'running') {
+      event.preventDefault();
+      state = setPlayerDirection(state, binding.player, binding.dir);
+    }
+  }
+
+  // --- 배선 ---
+  btnStart.addEventListener('click', primaryAction);
+  btnPause.addEventListener('click', togglePause);
+  btnRestart.addEventListener('click', restart);
+  win.addEventListener('keydown', onKeyDown);
+  win.addEventListener('resize', applyMetrics);
+  win.addEventListener('orientationchange', applyMetrics);
+
+  // --- 초기화 ---
+  applyMetrics();
+  syncView();
+  win.requestAnimationFrame(loop);
+
+  return { get state() { return state; }, get metrics() { return metrics; } };
+}
+
+// node(import/테스트) 환경에서는 실행하지 않고, 브라우저에서 snake-board가 있을 때만 부착
+if (
+  typeof window !== 'undefined' &&
+  typeof document !== 'undefined' &&
+  document.getElementById('snake-board')
+) {
+  initMultiplayerGame({ document, window });
+}

@@ -300,3 +300,206 @@ test('ready 상태에서 step은 no-op이다', () => {
   const ready = createInitialState();
   assert.deepEqual(step(ready), ready);
 });
+
+// ===========================================================================
+// BF-1503 · 2인 로컬 멀티플레이 규칙 테스트 (planner frozen 실행 설계 §3~§7)
+// 기존 단일 플레이 테스트는 유지하고 아래 계약 테스트를 additive로 추가한다.
+// ===========================================================================
+import {
+  createMultiplayerState,
+  startMultiplayer,
+  setPlayerDirection,
+  stepMultiplayer,
+  pauseMultiplayer,
+  resumeMultiplayer,
+  restartMultiplayer,
+  computeBoardMetrics,
+  bindingForKey,
+  MP_STATE_TEXT,
+} from '../src/game.js';
+
+// 결정론 tick 검증용 running state 헬퍼 (food 기본 null → 먹이 간섭 없음)
+function mpRunning(overrides = {}) {
+  const base = createMultiplayerState({ cols: 12, rows: 12 });
+  return { ...base, state: 'running', food: null, ...overrides };
+}
+const mpSnake = (body, dir, score = 0) => ({ body, dir, nextDir: dir, score });
+
+test('createMultiplayerState는 ready·점수 0·food null·두 뱀 초기값을 반환한다', () => {
+  const s = createMultiplayerState({ cols: 12, rows: 12 });
+  assert.equal(s.state, 'ready');
+  assert.equal(s.food, null);
+  assert.equal(s.p1.score, 0);
+  assert.equal(s.p2.score, 0);
+  assert.equal(s.p1.dir, 'right');
+  assert.equal(s.p2.dir, 'left');
+  assert.equal(s.p1.body.length, 3);
+  assert.equal(s.p2.body.length, 3);
+  // 두 뱀은 서로 겹치지 않는다
+  const p1 = new Set(s.p1.body.map((c) => `${c.x},${c.y}`));
+  assert.ok(s.p2.body.every((c) => !p1.has(`${c.x},${c.y}`)));
+});
+
+test('startMultiplayer는 ready→running 전이 후 먹이를 배치한다', () => {
+  const s = startMultiplayer(createMultiplayerState({ cols: 12, rows: 12 }), () => 0);
+  assert.equal(s.state, 'running');
+  assert.notEqual(s.food, null);
+});
+
+test('startMultiplayer는 ready가 아니면 no-op이다', () => {
+  const running = mpRunning();
+  assert.deepEqual(startMultiplayer(running, () => 0), running);
+});
+
+test('setPlayerDirection은 커밋된 방향의 반대 입력을 무시한다(§4 E-1)', () => {
+  const s = mpRunning({ p1: mpSnake([{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }], 'right') });
+  assert.equal(setPlayerDirection(s, 'p1', 'left').p1.nextDir, 'right');
+  assert.equal(setPlayerDirection(s, 'p1', 'up').p1.nextDir, 'up');
+});
+
+test('setPlayerDirection은 한 tick 다중 입력 중 마지막 유효 입력만 반영한다(§4 E-2)', () => {
+  let s = mpRunning({ p1: mpSnake([{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }], 'right') });
+  s = setPlayerDirection(s, 'p1', 'up');
+  s = setPlayerDirection(s, 'p1', 'down'); // right의 반대 아님 → 채택
+  assert.equal(s.p1.nextDir, 'down');
+});
+
+test('setPlayerDirection은 1P/2P를 독립적으로 조작하고 running이 아니면 no-op이다', () => {
+  let s = mpRunning();
+  s = setPlayerDirection(s, 'p1', 'up');
+  s = setPlayerDirection(s, 'p2', 'up');
+  assert.equal(s.p1.nextDir, 'up');
+  assert.equal(s.p2.nextDir, 'up');
+  const ready = createMultiplayerState({ cols: 12, rows: 12 });
+  assert.deepEqual(setPlayerDirection(ready, 'p1', 'up'), ready);
+});
+
+test('stepMultiplayer는 벽 충돌한 뱀을 사망 처리하고 상대 승리로 전이한다(§5 E-3)', () => {
+  const s = mpRunning({
+    p1: mpSnake([{ x: 11, y: 5 }, { x: 10, y: 5 }, { x: 9, y: 5 }], 'right'), // next x=12 → 벽
+    p2: mpSnake([{ x: 1, y: 1 }, { x: 0, y: 1 }], 'down'),
+  });
+  assert.equal(stepMultiplayer(s, () => 0).state, 'p2-win');
+});
+
+test('stepMultiplayer는 자기 몸 충돌을 사망 처리한다(§5 E-3)', () => {
+  const s = mpRunning({
+    // 왼쪽으로 진행하던 뱀이 down으로 꺾여 몸통 (2,3)에 충돌
+    p1: mpSnake([{ x: 2, y: 2 }, { x: 3, y: 2 }, { x: 3, y: 3 }, { x: 2, y: 3 }, { x: 1, y: 3 }, { x: 1, y: 2 }], 'down'),
+    p2: mpSnake([{ x: 8, y: 8 }, { x: 9, y: 8 }], 'left'),
+  });
+  assert.equal(stepMultiplayer(s, () => 0).state, 'p2-win');
+});
+
+test('stepMultiplayer는 상대 몸 충돌을 사망 처리한다(§5 E-3)', () => {
+  const s = mpRunning({
+    p1: mpSnake([{ x: 2, y: 5 }, { x: 1, y: 5 }], 'right'), // next (3,5) = p2 몸통
+    p2: mpSnake([{ x: 3, y: 5 }, { x: 4, y: 5 }, { x: 5, y: 5 }], 'up'),
+  });
+  assert.equal(stepMultiplayer(s, () => 0).state, 'p2-win');
+});
+
+test('stepMultiplayer head-to-head는 양측 사망·동점이면 무승부다(§5 E-4/US-5)', () => {
+  const s = mpRunning({
+    p1: mpSnake([{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }], 'right'), // next (5,5)
+    p2: mpSnake([{ x: 6, y: 5 }, { x: 7, y: 5 }, { x: 8, y: 5 }], 'left'), // next (5,5)
+  });
+  assert.equal(stepMultiplayer(s, () => 0).state, 'draw');
+});
+
+test('stepMultiplayer 양측 동시 사망은 점수 비교로 승자를 정한다(§5.6)', () => {
+  const s = mpRunning({
+    p1: mpSnake([{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }], 'right', 2),
+    p2: mpSnake([{ x: 6, y: 5 }, { x: 7, y: 5 }, { x: 8, y: 5 }], 'left', 1),
+  });
+  assert.equal(stepMultiplayer(s, () => 0).state, 'p1-win');
+});
+
+test('stepMultiplayer는 먹이 획득 뱀만 성장·득점하고 먹이를 유효 빈 칸으로 재배치한다(§6/US-3)', () => {
+  const s = mpRunning({
+    p1: mpSnake([{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }], 'right'),
+    p2: mpSnake([{ x: 8, y: 8 }, { x: 9, y: 8 }], 'up'),
+    food: { x: 5, y: 5 },
+  });
+  const r = stepMultiplayer(s, () => 0);
+  assert.equal(r.state, 'running');
+  assert.equal(r.p1.score, 1);
+  assert.equal(r.p1.body.length, 4); // 성장(꼬리 유지)
+  assert.equal(r.p2.score, 0);
+  assert.equal(r.p2.body.length, 2); // 2P 변화 없음
+  assert.notEqual(r.food, null);
+  // 재배치된 먹이는 어느 뱀과도 겹치지 않는다
+  const occupied = new Set([...r.p1.body, ...r.p2.body].map((c) => `${c.x},${c.y}`));
+  assert.ok(!occupied.has(`${r.food.x},${r.food.y}`));
+});
+
+test('stepMultiplayer는 running이 아니면 tick을 진행하지 않는다(§7 paused 보존)', () => {
+  const paused = { ...mpRunning(), state: 'paused' };
+  assert.deepEqual(stepMultiplayer(paused, () => 0), paused);
+});
+
+test('stepMultiplayer는 결정론적이다(같은 입력·상태 → 같은 결과)', () => {
+  const build = () => mpRunning({
+    p1: mpSnake([{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }], 'right'),
+    p2: mpSnake([{ x: 6, y: 5 }, { x: 7, y: 5 }, { x: 8, y: 5 }], 'left'),
+    food: { x: 5, y: 9 },
+  });
+  assert.deepEqual(stepMultiplayer(build(), () => 0.5), stepMultiplayer(build(), () => 0.5));
+});
+
+test('pause/resume는 뱀·점수·먹이를 보존하고 대상 상태가 아니면 no-op이다(§7/US-6)', () => {
+  const running = mpRunning({ food: { x: 5, y: 5 } });
+  const paused = pauseMultiplayer(running);
+  assert.equal(paused.state, 'paused');
+  assert.deepEqual(paused.p1, running.p1);
+  assert.deepEqual(paused.food, running.food);
+  const resumed = resumeMultiplayer(paused);
+  assert.equal(resumed.state, 'running');
+  assert.deepEqual(resumeMultiplayer(running), running); // running에서 resume no-op
+  assert.deepEqual(pauseMultiplayer(paused), paused); // paused에서 pause no-op
+});
+
+test('restartMultiplayer는 어느 상태에서든 ready 초기값으로 복귀한다(§3.8/§7/US-7)', () => {
+  const over = { ...mpRunning({ p1: mpSnake([{ x: 1, y: 1 }], 'right', 5) }), state: 'p1-win' };
+  const r = restartMultiplayer(over);
+  assert.equal(r.state, 'ready');
+  assert.equal(r.p1.score, 0);
+  assert.equal(r.p2.score, 0);
+  assert.equal(r.food, null);
+  assert.equal(r.p1.body.length, 3);
+});
+
+test('MP_STATE_TEXT는 frozen §3.4 상태 텍스트와 정확히 일치한다', () => {
+  assert.deepEqual(MP_STATE_TEXT, {
+    ready: '스페이스로 시작',
+    running: '게임 진행 중',
+    paused: '일시정지 — 스페이스로 재개',
+    'p1-win': '1P 승리',
+    'p2-win': '2P 승리',
+    draw: '무승부',
+  });
+});
+
+test('bindingForKey는 1P WASD / 2P 방향키를 매핑한다(§4)', () => {
+  assert.deepEqual(bindingForKey('w'), { player: 'p1', dir: 'up' });
+  assert.deepEqual(bindingForKey('W'), { player: 'p1', dir: 'up' });
+  assert.deepEqual(bindingForKey('d'), { player: 'p1', dir: 'right' });
+  assert.deepEqual(bindingForKey('ArrowUp'), { player: 'p2', dir: 'up' });
+  assert.deepEqual(bindingForKey('ArrowRight'), { player: 'p2', dir: 'right' });
+  assert.equal(bindingForKey('z'), null);
+  assert.equal(bindingForKey(undefined), null);
+});
+
+test('computeBoardMetrics는 grid 좌표계를 바꾸지 않아 resize가 플레이 상태를 깨지 않는다(§3.7 E-8)', () => {
+  const state = mpRunning({ food: { x: 5, y: 5 } });
+  const small = computeBoardMetrics(320, 480, state.cols, state.rows);
+  const large = computeBoardMetrics(1920, 1080, state.cols, state.rows);
+  // 셀/보드 치수는 재계산되지만
+  assert.ok(large.cellPx > small.cellPx);
+  assert.ok(small.boardWidth <= 320 && small.boardHeight <= 480);
+  assert.ok(large.boardWidth <= 1920 && large.boardHeight <= 1080);
+  // 논리 grid(cols/rows)는 불변 → 뱀 좌표/점수/먹이가 그대로 유효하다
+  const after = mpRunning({ food: { x: 5, y: 5 } });
+  assert.deepEqual(after.p1, state.p1);
+  assert.deepEqual(after.food, state.food);
+});

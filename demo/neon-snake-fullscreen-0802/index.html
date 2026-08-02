@@ -3,49 +3,204 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#050510" />
-    <title>네온 스네이크 · 전체화면</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <meta name="theme-color" content="#0a0a12" />
+    <title>네온 스네이크 · 2인 로컬 멀티플레이</title>
+    <style>
+      /* frozen §3.5 design token (변경 금지) — index.html이 token을 정의한다 */
+      :root {
+        --color-p1: #00e5ff;
+        --color-p2: #ff2fb9;
+        --color-food: #ffd400;
+        --color-bg: #0a0a12;
+        --space-hud-gap: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100dvh;
+        background: var(--color-bg);
+        color: #f4f4ff;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+
+      /* frozen §3.3 풀스크린 스테이지 래퍼 (§3.7 100dvw × 100dvh) */
+      .snake-stage {
+        position: relative;
+        width: 100dvw;
+        height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      /* frozen §3.2 게임 보드 — 가용 영역을 채우고 고정 소형 캔버스를 쓰지 않는다(§3.7) */
+      #snake-board {
+        display: block;
+        background: var(--color-bg);
+        max-width: 100dvw;
+        max-height: 100dvh;
+      }
+
+      /* HUD 오버레이 (플레이 영역 위, grid 크기를 줄이지 않음) */
+      .hud-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-hud-gap);
+        padding: 12px 16px;
+        pointer-events: none;
+      }
+      .hud {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-weight: 700;
+        text-shadow: 0 0 8px currentColor;
+      }
+      .hud--p1 {
+        color: var(--color-p1);
+      }
+      .hud--p2 {
+        color: var(--color-p2);
+      }
+      .hud__label {
+        font-size: 14px;
+        letter-spacing: 0.08em;
+      }
+      .hud__score {
+        font-size: 22px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* frozen §3.3/§3.4 상태 배너 — 항상 현재 상태 텍스트를 노출 */
+      .status-banner {
+        position: absolute;
+        top: 52px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: rgba(10, 10, 18, 0.72);
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      .controls-hint {
+        position: absolute;
+        bottom: 68px;
+        left: 50%;
+        transform: translateX(-50%);
+        margin: 0;
+        font-size: 12px;
+        color: rgba(244, 244, 255, 0.72);
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .controls {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: var(--space-hud-gap);
+      }
+      /* frozen §3.3 조작 버튼 공통 */
+      .control-btn {
+        font: inherit;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.06);
+        color: #f4f4ff;
+        cursor: pointer;
+      }
+      .control-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .control-btn:focus-visible {
+        outline: 2px solid var(--color-p1);
+        outline-offset: 2px;
+      }
+
+      /* frozen §3.3/§3.6 결과(승자/무승부) 오버레이 */
+      .result-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(10, 10, 18, 0.78);
+      }
+      .result-overlay[hidden] {
+        display: none;
+      }
+      .result-overlay__text {
+        margin: 0;
+        font-size: clamp(28px, 8vw, 64px);
+        font-weight: 800;
+        text-shadow: 0 0 18px currentColor;
+      }
+
+      /* §3.7 320px 이상에서 overflow 방지 */
+      @media (max-width: 480px) {
+        .hud__score {
+          font-size: 18px;
+        }
+        .controls-hint {
+          font-size: 10px;
+        }
+        .control-btn {
+          padding: 8px 12px;
+        }
+      }
+    </style>
   </head>
   <body>
-    <!-- #game-stage: 100dvw × 100dvh 전체화면 무대 (frozen §4.7) -->
-    <main id="game-stage" class="stage">
-      <!-- 게임 보드: 뷰포트/DPR로부터 파생된 grid를 렌더 -->
-      <canvas
-        id="game-canvas"
-        class="stage__canvas"
-        role="img"
-        aria-label="네온 스네이크 게임 보드"
-      ></canvas>
+    <main class="snake-stage">
+      <!-- frozen §3.2 snake-board: 풀스크린 게임 보드 -->
+      <canvas id="snake-board" role="img" aria-label="2인 네온 스네이크 게임 보드"></canvas>
 
-      <!-- HUD: 플레이 영역 위 오버레이 (grid 크기를 줄이지 않음, frozen §4.7) -->
-      <div class="hud" aria-hidden="true">
-        <span id="hud-score" class="hud__item">점수 0</span>
-        <span id="hud-highscore" class="hud__item">최고 0</span>
-      </div>
-
-      <!-- #game-overlay: 상태 텍스트(준비/일시정지/게임오버)를 aria-live로 안내 (frozen §4.6) -->
-      <div id="game-overlay" class="overlay" aria-live="polite" role="status">
-        <div class="overlay__panel">
-          <p class="overlay__text">준비</p>
-          <p class="overlay__hint">방향키 · WASD 이동 / Space · P 일시정지</p>
-          <button
-            id="restart-button"
-            class="overlay__button"
-            type="button"
-            aria-label="게임 시작 또는 다시 시작"
-          >
-            시작 / 다시 시작
-          </button>
+      <!-- frozen §3.2/§3.6 HUD: 색상 외 '1P'/'2P' 텍스트 라벨로도 구분 -->
+      <div class="hud-bar">
+        <div id="hud-p1" class="hud hud--p1">
+          <span class="hud__label">1P</span>
+          <span id="score-p1" class="hud__score">0</span>
+        </div>
+        <div id="hud-p2" class="hud hud--p2">
+          <span class="hud__label">2P</span>
+          <span id="score-p2" class="hud__score">0</span>
         </div>
       </div>
 
-      <!-- #touch-controls: 모바일 방향 패드 (스와이프와 병행) -->
-      <div id="touch-controls" class="touch-pad" aria-hidden="true">
-        <button class="touch-pad__btn touch-pad__btn--up" type="button" data-dir="up" aria-label="위로">▲</button>
-        <button class="touch-pad__btn touch-pad__btn--left" type="button" data-dir="left" aria-label="왼쪽으로">◀</button>
-        <button class="touch-pad__btn touch-pad__btn--right" type="button" data-dir="right" aria-label="오른쪽으로">▶</button>
-        <button class="touch-pad__btn touch-pad__btn--down" type="button" data-dir="down" aria-label="아래로">▼</button>
+      <!-- frozen §3.4 상태 배너: 현재 상태 텍스트를 항상 노출(접근성 이름 포함) -->
+      <p id="status-banner" class="status-banner" role="status" aria-live="polite">스페이스로 시작</p>
+
+      <p class="controls-hint">1P: W A S D · 2P: 방향키 · Space: 시작 / 일시정지 / 재개</p>
+
+      <!-- frozen §3.2/§3.6 조작 버튼: 명시적 aria-label, 키보드 조작 가능 -->
+      <div class="controls">
+        <button id="btn-start" class="control-btn" type="button" aria-label="게임 시작 또는 재개">시작</button>
+        <button id="btn-pause" class="control-btn" type="button" aria-label="게임 일시정지 또는 재개">일시정지</button>
+        <button id="btn-restart" class="control-btn" type="button" aria-label="게임 재시작">재시작</button>
+      </div>
+
+      <!-- frozen §3.6 결과 오버레이: role="status" + aria-live="polite" 로 승자/무승부 알림 -->
+      <div id="result-overlay" class="result-overlay" role="status" aria-live="polite" hidden>
+        <p class="result-overlay__text">무승부</p>
       </div>
     </main>
 
