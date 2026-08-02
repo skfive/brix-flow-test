@@ -19,6 +19,12 @@
         --color-cpu: #ff2bd6; /* CPU(2P) 뱀 색 — 사람과 시각적으로 구분 */
         --color-menu-focus: #00e5ff; /* 메뉴 포커스 링 */
         --space-menu-gap: 16px; /* 모드/난이도 메뉴 항목 간격 */
+
+        /* frozen ui-contract@v1 §5.3 · 최고 기록 보드 token (additive, exact 값) */
+        --color-scoreboard-accent: #39ff14; /* 최고 기록 강조 (네온 그린) */
+        --color-newrecord-flash: #ff2e97; /* 신기록 배지 플래시 (네온 핑크) */
+        --space-scoreboard-gap: 12px; /* 보드 내부 항목 간격 */
+        --font-scoreboard-size: 18px; /* 보드 텍스트 크기 */
       }
 
       * {
@@ -218,6 +224,71 @@
         z-index: 6;
       }
 
+      /* frozen ui-contract@v1 §5 · 최고 기록 보드 (additive)
+         시작(start-idle)·종료(game-over) 화면에서만 노출, 캔버스를 가리지 않도록
+         하단 중앙 배치. z-index 로 승패 배너(z-index:6) 위에 표시. */
+      .scoreboard {
+        position: absolute;
+        left: 50%;
+        bottom: 96px;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-scoreboard-gap);
+        max-width: calc(100dvw - 32px);
+        z-index: 7;
+        text-align: center;
+        pointer-events: none;
+        font-size: var(--font-scoreboard-size);
+        font-variant-numeric: tabular-nums;
+      }
+      .scoreboard[hidden] {
+        display: none;
+      }
+      .scoreboard__current {
+        font-weight: 700;
+        color: #f4f4ff;
+        text-shadow: 0 0 8px rgba(244, 244, 255, 0.6);
+      }
+      .scoreboard__current[hidden] {
+        display: none;
+      }
+      .scoreboard__best {
+        font-weight: 800;
+        color: var(--color-scoreboard-accent);
+        text-shadow: 0 0 10px var(--color-scoreboard-accent);
+      }
+      .scoreboard__badge {
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        padding: 4px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--color-newrecord-flash);
+        color: var(--color-newrecord-flash);
+        text-shadow: 0 0 10px var(--color-newrecord-flash);
+        box-shadow: 0 0 14px var(--color-newrecord-flash);
+      }
+      .scoreboard__badge[hidden] {
+        display: none;
+      }
+      .scoreboard__badge--active {
+        animation: newrecord-flash 0.9s ease-in-out infinite alternate;
+      }
+      @keyframes newrecord-flash {
+        from {
+          opacity: 0.65;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .scoreboard__badge--active {
+          animation: none;
+        }
+      }
+
       /* §3.7 / 반응형 320px 이상에서 overflow 방지 */
       @media (max-width: 480px) {
         .hud__score {
@@ -332,6 +403,20 @@
 
       <!-- frozen ui-contract §6.2 승패 배너: aria-live="polite" 로 승/패/무승부 텍스트 노출 -->
       <div id="winner-banner" class="winner-banner" role="status" aria-live="polite" hidden></div>
+
+      <!-- frozen ui-contract@v1 §5 최고 기록 보드 (additive): 시작/종료 화면에서 노출.
+           색상뿐 아니라 화면 텍스트('이번 점수'/'최고 기록'/'신기록')로 상태를 구분한다. -->
+      <div id="snake-highscore-board" class="scoreboard" role="group" hidden>
+        <span id="snake-current-score" class="scoreboard__current" hidden>이번 점수 0</span>
+        <span id="snake-best-score" class="scoreboard__best" aria-label="최고 기록">최고 기록 0</span>
+        <span
+          id="snake-newrecord-badge"
+          class="scoreboard__badge"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></span>
+      </div>
     </main>
 
     <script type="module">
@@ -352,6 +437,13 @@
         MP_DEFAULT_ROWS,
       } from './src/game.js';
       import { chooseCpuDirection, createSeededRng } from './cpu.js';
+      import {
+        loadBest,
+        saveBest,
+        isNewRecord,
+        formatBestText,
+        formatCurrentText,
+      } from './highscore.js';
 
       const doc = document;
       const win = window;
@@ -380,6 +472,22 @@
       const btnPause = doc.getElementById('btn-pause');
       const btnRestart = doc.getElementById('btn-restart');
 
+      // ---- 최고 기록 보드 DOM 참조 (frozen ui-contract@v1 §5.1) ----
+      const scoreboard = doc.getElementById('snake-highscore-board');
+      const currentScoreEl = doc.getElementById('snake-current-score');
+      const bestScoreEl = doc.getElementById('snake-best-score');
+      const newRecordBadge = doc.getElementById('snake-newrecord-badge');
+
+      // localStorage 접근 자체가 실패해도(프라이빗 모드 등) 게임은 정상 시작한다.
+      // 조회/저장 예외는 highscore.js 순수 함수가 삼키므로 참조만 안전하게 확보한다.
+      const safeStorage = (() => {
+        try {
+          return win.localStorage;
+        } catch {
+          return null;
+        }
+      })();
+
       // ---- 색상: 로컬은 기존 계약(p1/p2), CPU는 신규 token(player1/cpu) ----
       const COLORS = {
         bg: '#0a0a12',
@@ -407,6 +515,11 @@
       let state = null; // 엔진 멀티플레이 state (플레이 시작 시 생성)
       let rng = createSeededRng(CPU_SEED);
       let metrics = boardMetrics();
+
+      // ---- 최고 기록 보드 뷰모델 (엔진 state 밖, 런타임 로컬) ----
+      let boardBest = 0; // 현재 표시할 최고 기록
+      let boardCurrent = 0; // 종료 화면의 "이번 점수"
+      let boardNewRecord = false; // 이번 종료가 신기록인가
 
       function activeCols() {
         return state ? state.cols : MP_DEFAULT_COLS;
@@ -484,6 +597,9 @@
         // 후조건(INV-5): 메뉴/종료 상태에서 주 실행 control 재활성, 진행 중에는 start 비활성.
         btnStart.disabled = uiState === 'playing';
         btnPause.disabled = !(uiState === 'playing' || uiState === 'paused');
+
+        // 최고 기록 보드는 현재 뷰모델(board*) 기준으로 매 동기화마다 갱신한다(§6 hook).
+        renderScoreboard();
       }
 
       // ---- 난이도 메뉴 active 표시 ----
@@ -494,11 +610,59 @@
         });
       }
 
+      // ---- 최고 기록 보드 (frozen ui-contract@v1 §5, planning-contract §6 hook) ----
+      // 시작 화면에서 강조된 모드(모드 확정 전이므로 modeIndex 기준).
+      function highlightedMode() {
+        return modeIndex === 1 ? 'cpu' : 'local';
+      }
+
+      // 이번 게임의 "점수": CPU 모드는 사람(p1) 점수, 2인 로컬은 두 플레이어 중 높은 점수.
+      function currentScoreForMode() {
+        if (!state) {
+          return 0;
+        }
+        return mode === 'cpu' ? state.p1.score : Math.max(state.p1.score, state.p2.score);
+      }
+
+      function setBadge(active) {
+        newRecordBadge.classList.toggle('scoreboard__badge--active', active);
+        newRecordBadge.hidden = !active;
+        newRecordBadge.textContent = active ? '신기록!' : '';
+      }
+
+      // 시작 화면 진입/모드 강조 변경 시 강조 모드의 최고 기록으로 뷰모델 초기화(start-idle).
+      function refreshStartBoardVars() {
+        boardBest = loadBest(safeStorage, highlightedMode());
+        boardCurrent = 0;
+        boardNewRecord = false;
+      }
+
+      // 보드 렌더: 시작(start-idle)·종료(game-over) 화면에서만 노출, 그 외엔 aria-hidden 비활성.
+      function renderScoreboard() {
+        const active = uiState === 'mode-selection' || uiState === 'game-over';
+        scoreboard.hidden = !active;
+        scoreboard.setAttribute('aria-hidden', active ? 'false' : 'true');
+        if (!active) {
+          setBadge(false);
+          return;
+        }
+        bestScoreEl.textContent = formatBestText(boardBest);
+        if (uiState === 'game-over') {
+          currentScoreEl.hidden = false;
+          currentScoreEl.textContent = formatCurrentText(boardCurrent);
+          setBadge(boardNewRecord);
+        } else {
+          currentScoreEl.hidden = true;
+          setBadge(false);
+        }
+      }
+
       // ---- 상태 전이 ----
       function goModeSelection() {
         uiState = 'mode-selection';
         state = null;
         modeIndex = mode === 'cpu' ? 1 : 0;
+        refreshStartBoardVars();
         syncView();
         applyMetrics();
         focusModeOption();
@@ -553,6 +717,13 @@
       function handleGameOver() {
         if (uiState === 'playing' && GAMEOVER.has(state.state)) {
           uiState = 'game-over';
+          // 신기록 판정 → 신기록이면 1회 저장(§6 저장 시점) → 최고 기록 갱신값으로 보드 렌더.
+          boardCurrent = currentScoreForMode();
+          boardNewRecord = isNewRecord(safeStorage, mode, boardCurrent);
+          if (boardNewRecord) {
+            saveBest(safeStorage, mode, boardCurrent);
+          }
+          boardBest = loadBest(safeStorage, mode);
           syncView();
           render();
           if (typeof btnRestart.focus === 'function') {
@@ -633,6 +804,8 @@
       function moveMenu(delta) {
         if (uiState === 'mode-selection') {
           modeIndex = (modeIndex + delta + 2) % 2;
+          refreshStartBoardVars();
+          renderScoreboard();
           focusModeOption();
         } else if (uiState === 'difficulty-selection') {
           const order = ['easy', 'normal', 'hard'];
