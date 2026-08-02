@@ -7,10 +7,18 @@ export const GRID_COLS = 28;
 export const GRID_ROWS = 28;
 export const INITIAL_SNAKE_LENGTH = 3;
 export const INITIAL_DIRECTION = 'right';
-export const INITIAL_STEP_MS = 140;
-export const SPEED_STEP_MS_DECREMENT = 8;
-export const MIN_STEP_MS = 60;
-export const SPEED_UP_EVERY_N_FOODS = 3;
+// 속도 설정 (난이도 튜닝 지점 일원화 — 값 불변)
+export const SPEED_CONFIG = {
+  initialStepMs: 140,    // 초기 tick 간격(ms) = 최소 속도
+  stepMsDecrement: 8,    // 레벨당 tick 감소량(ms) = 속도 증가량
+  minStepMs: 60,         // tick 간격 하한(ms) = 최대 속도
+  speedUpEveryNFoods: 3, // 먹이 N개마다 가속
+};
+// 기존 named export 하위호환 alias (SPEED_CONFIG에서 파생 — 값 동일)
+export const INITIAL_STEP_MS = SPEED_CONFIG.initialStepMs;
+export const SPEED_STEP_MS_DECREMENT = SPEED_CONFIG.stepMsDecrement;
+export const MIN_STEP_MS = SPEED_CONFIG.minStepMs;
+export const SPEED_UP_EVERY_N_FOODS = SPEED_CONFIG.speedUpEveryNFoods;
 export const SCORE_PER_FOOD = 10;
 export const HIGH_SCORE_STORAGE_KEY = 'neon-snake-fullscreen-0802:highscore';
 
@@ -60,7 +68,7 @@ export function createInitialState(options = {}) {
     highScore,
     foodsEaten: 0,
     speedLevel: 0,
-    stepMs: INITIAL_STEP_MS,
+    stepMs: SPEED_CONFIG.initialStepMs,
   };
 }
 
@@ -156,9 +164,12 @@ export function step(state, rng = Math.random) {
     const foodsEaten = state.foodsEaten + 1;
     let speedLevel = state.speedLevel;
     let stepMs = state.stepMs;
-    if (foodsEaten % SPEED_UP_EVERY_N_FOODS === 0) {
+    if (foodsEaten % SPEED_CONFIG.speedUpEveryNFoods === 0) {
       speedLevel = state.speedLevel + 1;
-      stepMs = Math.max(MIN_STEP_MS, INITIAL_STEP_MS - speedLevel * SPEED_STEP_MS_DECREMENT);
+      stepMs = Math.max(
+        SPEED_CONFIG.minStepMs,
+        SPEED_CONFIG.initialStepMs - speedLevel * SPEED_CONFIG.stepMsDecrement,
+      );
     }
     const food = spawnFood(grownSnake, rng, state.cols, state.rows);
     const nextState = {
