@@ -31,6 +31,11 @@
         --snake-rank-bg: #0a0f0a; /* 보드 배경 */
         --snake-rank-gap: 8px; /* 보드 항목 간격 */
         --snake-rank-radius: 6px; /* 보드/행 모서리 반경 */
+
+        /* frozen ui-contract@v1 §4.3 · 랭킹 기간 토글 token (BF-1554, additive, exact 값) */
+        --color-ranking-toggle-active: #39ff14; /* 선택된 기간 옵션 강조 */
+        --color-ranking-toggle-idle: #94a3b8; /* 미선택 옵션 */
+        --space-ranking-toggle-gap: 8px; /* 토글 옵션 간격 */
       }
 
       * {
@@ -377,6 +382,44 @@
         color: #f4f4ff;
       }
 
+      /* frozen ui-contract@v1 §4 · 랭킹 기간 토글 (BF-1554, additive)
+         랭킹 보드 상단에 전체/최근 7일 토글을 배치한다. flex-wrap 으로 좁은 폭(320px)에서
+         옵션이 줄바꿈되어도 가로 overflow 없이 보드 레이아웃을 유지한다(§4.5). */
+      .ranking-toggle {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-ranking-toggle-gap);
+        align-items: center;
+      }
+      .ranking-toggle__option {
+        font: inherit;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: var(--snake-rank-radius);
+        border: 1px solid var(--color-ranking-toggle-idle);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--color-ranking-toggle-idle);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      /* 선택된 옵션은 색상 외 테두리/그림자로도 구분 */
+      .ranking-toggle__option--active {
+        border-color: var(--color-ranking-toggle-active);
+        color: var(--color-ranking-toggle-active);
+        background: rgba(57, 255, 20, 0.14);
+        box-shadow: 0 0 10px var(--color-ranking-toggle-active);
+      }
+      .ranking-toggle__option:focus-visible {
+        outline: 2px solid var(--color-ranking-toggle-active);
+        outline-offset: 2px;
+      }
+      #ranking-period-status {
+        margin: 0;
+        min-height: 1.2em;
+        font-size: 14px;
+        color: #f4f4ff;
+      }
+
       /* §3.7 / 반응형 320px 이상에서 overflow 방지 */
       @media (max-width: 480px) {
         .hud__score {
@@ -511,6 +554,35 @@
            등록 폼(.snake-rank__form)과 상태(#snake-rank-status)는 형제로 둔다.
            색상뿐 아니라 화면 텍스트로 상태를 구분한다(§6.4). -->
       <div class="snake-rank__panel" hidden>
+        <!-- frozen ui-contract@v1 §4 랭킹 기간 토글 (BF-1554, additive): 보드 상단.
+             전체/최근 7일 선택 → #ranking-board-list 를 재조회·렌더. 색상 외 텍스트/aria 로 상태 노출. -->
+        <div
+          id="ranking-period-toggle"
+          class="ranking-toggle"
+          role="radiogroup"
+          aria-label="랭킹 기간 선택"
+        >
+          <button
+            id="ranking-period-all"
+            class="ranking-toggle__option ranking-toggle__option--active"
+            type="button"
+            data-period="all"
+            aria-pressed="true"
+          >
+            전체
+          </button>
+          <button
+            id="ranking-period-7d"
+            class="ranking-toggle__option"
+            type="button"
+            data-period="7d"
+            aria-pressed="false"
+          >
+            최근 7일
+          </button>
+        </div>
+        <div id="ranking-board-list" class="snake-rank" role="list" aria-label="기간별 랭킹 상위 10"></div>
+        <p id="ranking-period-status" role="status" aria-live="polite"></p>
         <div id="snake-rank-board" class="snake-rank" role="list" aria-label="랭킹 상위 10"></div>
         <form class="snake-rank__form" onsubmit="return false">
           <input
@@ -561,7 +633,7 @@
       } from './highscore.js';
       // frozen ui-contract@v1 §6 · 랭킹 보드 (BF-1550, additive)
       import { createScoresStore, createStoreFetch } from './src/scores-api.js';
-      import { createRankingBoard } from './src/ranking.js';
+      import { createRankingBoard, createPeriodRankingBoard } from './src/ranking.js';
 
       const doc = document;
       const win = window;
@@ -609,6 +681,18 @@
         statusEl: doc.getElementById('snake-rank-status'),
         fetchImpl: rankFetch,
       });
+      // frozen ui-contract@v1 §4 · 랭킹 기간 필터 토글 (BF-1554, additive).
+      // 등록 흐름(rankingBoard)과 독립적으로 전체/최근 7일 기간별 상위 10을 재조회·렌더한다.
+      // 동일 rankFetch 를 공유해 정적 데모 저장소를 그대로 조회한다.
+      const periodBoard = createPeriodRankingBoard({
+        toggleEl: doc.getElementById('ranking-period-toggle'),
+        allEl: doc.getElementById('ranking-period-all'),
+        sevenEl: doc.getElementById('ranking-period-7d'),
+        listEl: doc.getElementById('ranking-board-list'),
+        statusEl: doc.getElementById('ranking-period-status'),
+        fetchImpl: rankFetch,
+      });
+
       // 랭킹 보드는 종료 화면에서만 노출한다(플레이/메뉴 중 숨김).
       function showRankPanel(visible) {
         rankPanel.hidden = !visible;
@@ -801,6 +885,7 @@
         refreshStartBoardVars();
         // 종료→메뉴 복귀·초기화: 랭킹 보드를 idle 초기값으로 되돌리고 숨긴다(후조건 복원).
         rankingBoard.reset();
+        periodBoard.reset(); // 기간 필터도 전체(all) 초기 상태로 복원(BF-1554)
         showRankPanel(false);
         syncView();
         applyMetrics();
@@ -870,6 +955,8 @@
           // 랭킹 보드 노출 + 상위 랭킹 조회(확정 점수·모드 바인딩). 실패해도 게임 흐름 보존.
           showRankPanel(true);
           void rankingBoard.open({ score: boardCurrent, mode });
+          // 기간 필터 보드: 전체(all) 기준 초기 조회(BF-1554). 실패해도 게임 흐름 미영향.
+          void periodBoard.open({ mode });
           if (typeof btnRestart.focus === 'function') {
             btnRestart.focus();
           }

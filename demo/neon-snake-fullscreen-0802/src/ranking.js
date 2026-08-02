@@ -5,7 +5,7 @@
 // 의존하지 않는 순수 함수다(frozen §3.2). createRankingBoard 는 주입된 fetchImpl(frozen §3.1
 // 네트워크 계층)과 DOM 요소로 배선되며, fetchImpl·요소를 페이크로 주입하면 결정론적으로 검증된다.
 
-import { fetchScores, submitScore } from './scores-api.js';
+import { fetchScores, submitScore, RANKING_PERIODS } from './scores-api.js';
 
 // frozen §3.2 · 닉네임 유효성: trim 후 비어 있지 않은가(클라이언트 방어).
 // 요청 미발송(빈/공백 닉네임 → idle 유지)만 담당한다. 한글/영문/숫자 2~12자 등 전체 규칙은
@@ -123,4 +123,134 @@ export function createRankingBoard({ boardEl, nicknameEl, submitEl, statusEl, fe
   submitEl.addEventListener('click', submit);
 
   return { open, submit, reset };
+}
+
+// ============================================================================
+// BF-1554 · 랭킹 기간 필터 토글 (frozen ui-contract@v1 §4, additive)
+// 기존 createRankingBoard(등록 흐름)와 독립적인 additive 컨트롤러. 전체/최근 7일 토글을
+// 재조회·상태 표시하며 selector·token 을 재정의하지 않는다.
+// ============================================================================
+
+// frozen §4.2 · 기간 필터 상태별 화면 텍스트. 색상 외에 상태명/문구를 텍스트로 노출한다.
+// idle/success 는 보드 자체가 결과를 표현하므로 빈 문자열, loading/error 는 명시 문구.
+export function periodStatusText(state) {
+  switch (state) {
+    case 'loading':
+      return '랭킹 불러오는 중…';
+    case 'error':
+      return '랭킹을 불러올 수 없습니다';
+    case 'success':
+    case 'idle':
+    default:
+      return '';
+  }
+}
+
+// 기간 필터 랭킹 보드 컨트롤러 (frozen ui-contract@v1 §4).
+// elements: { toggleEl(#ranking-period-toggle), allEl(#ranking-period-all),
+//             sevenEl(#ranking-period-7d), listEl(#ranking-board-list), statusEl }
+// fetchImpl: frozen §3.1 네트워크 계층(fetchScores 에 주입). mode 는 조회 대상 게임 모드.
+// 상태: idle → loading → success/error. 실패·취소·초기화 뒤에는 전체(all) 초기값으로 복원하고
+//       토글 control 을 항상 사용 가능하게 유지한다(비활성화하지 않는다).
+export function createPeriodRankingBoard({ toggleEl, allEl, sevenEl, listEl, statusEl, fetchImpl }) {
+  const doc = listEl.ownerDocument;
+  const optionByPeriod = { all: allEl, '7d': sevenEl };
+  let context = { mode: 'local' };
+  let period = 'all'; // 초기 상태: 전체
+  let requestId = 0; // 경쟁/취소 방지: 최신 요청 결과만 반영
+
+  // 선택된 기간에 active class·aria-pressed 를 반영(색상 외 상태도 접근성 이름으로 노출).
+  function setActive(next) {
+    period = next;
+    for (const key of RANKING_PERIODS) {
+      const btn = optionByPeriod[key];
+      const active = key === next;
+      btn.classList.toggle('ranking-toggle__option--active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+  }
+
+  function setState(state) {
+    statusEl.textContent = periodStatusText(state);
+    // 토글은 loading 중에도 비활성화하지 않는다 → 재선택 가능(control 재사용 후조건).
+  }
+
+  // 상위 10개 순위 행을 화면 텍스트로 렌더한다(createRankingBoard 와 동일한 행 표현).
+  function renderEntries(entries) {
+    const rows = topEntries(entries, 10);
+    listEl.replaceChildren(
+      ...rows.map((entry) => {
+        const row = doc.createElement('div');
+        row.className = 'snake-rank__row';
+        row.setAttribute('role', 'listitem');
+        row.textContent = `${entry.rank}위 · ${entry.nickname} · ${entry.score}`;
+        return row;
+      }),
+    );
+  }
+
+  // 선택 기간으로 재조회: loading → success(렌더)/error. 오래된 응답은 폐기한다.
+  async function load(next) {
+    setActive(next);
+    setState('loading');
+    const myId = (requestId += 1);
+    try {
+      const { entries } = await fetchScores(fetchImpl, {
+        mode: context.mode,
+        limit: 10,
+        period: next,
+      });
+      if (myId !== requestId) return; // 더 최신 요청이 있으면 이 결과는 무시
+      renderEntries(entries);
+      setState('success');
+    } catch {
+      if (myId !== requestId) return;
+      // 조회 실패 → error 텍스트 표시. 토글은 재사용 가능 상태로 유지(게임 흐름 미영향).
+      setState('error');
+    }
+  }
+
+  function select(next) {
+    if (!RANKING_PERIODS.includes(next)) return;
+    void load(next);
+  }
+
+  // 종료 화면 진입: 모드 바인딩 + 전체(all) 기준 초기 조회.
+  function open({ mode }) {
+    context = { mode };
+    return load('all');
+  }
+
+  // 초기화·취소·재시작: 진행 중 요청을 무효화하고 전체(all) 초기 상태로 복원한다(후조건 복원).
+  function reset() {
+    requestId += 1; // 진행 중 조회 취소
+    context = { mode: 'local' };
+    listEl.replaceChildren();
+    setActive('all');
+    setState('idle');
+  }
+
+  // frozen §4.4 · 좌우 화살표 키로 옵션 간 이동(이동 후 선택 반영).
+  function onKeyDown(event) {
+    const key = event.key;
+    if (key !== 'ArrowLeft' && key !== 'ArrowRight') return;
+    event.preventDefault();
+    const delta = key === 'ArrowRight' ? 1 : -1;
+    const idx = RANKING_PERIODS.indexOf(period);
+    const next = RANKING_PERIODS[(idx + delta + RANKING_PERIODS.length) % RANKING_PERIODS.length];
+    const btn = optionByPeriod[next];
+    if (typeof btn.focus === 'function') {
+      btn.focus();
+    }
+    select(next);
+  }
+
+  allEl.addEventListener('click', () => select('all'));
+  sevenEl.addEventListener('click', () => select('7d'));
+  toggleEl.addEventListener('keydown', onKeyDown);
+
+  setActive('all');
+  setState('idle');
+
+  return { open, select, reset };
 }
