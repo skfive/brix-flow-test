@@ -1,53 +1,56 @@
 /* 네온 스네이크 전체화면 — 스타일
- * frozen UI 계약: docs/plans/neon-snake-fullscreen-0802-BF-1489.md §3
- * 디자인 토큰 값·이름은 frozen이며 재정의하지 않는다(§3.3). */
+ * frozen UI 계약: docs/plans/neon-snake-fullscreen-BF-1495-plan.md §4
+ * 디자인 토큰 값·이름은 frozen이며 재정의하지 않는다(§4.5). */
 
 :root {
-  --neon-primary: #39ff14; /* 뱀 몸통·주 강조(네온 그린) */
-  --neon-secondary: #00e5ff; /* 뱀 머리·보조 강조(시안) */
-  --neon-food: #ff2d95; /* 먹이(네온 핑크) */
-  --bg-night: #050510; /* stage/canvas 배경 */
-  --overlay-scrim: rgba(5, 5, 16, 0.55); /* overlay 반투명 스크림 */
-  --hud-gap: 16px; /* hud 항목 간격 */
+  /* frozen §4.5 design token (exact) */
+  --neon-primary: #39ff14;
+  --neon-bg: #050510;
+  --hud-gap: 12px;
+  --overlay-bg: rgba(5, 5, 16, 0.72);
+  --safe-area-top: env(safe-area-inset-top);
+  /* 보조 색상(비 frozen 렌더 값) */
+  --neon-secondary: #00e5ff;
+  --neon-food: #ff2d95;
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* 반응형 §3.5-1: body 스크롤 없음 */
+/* frozen §4.7: body 스크롤 없음 */
 html,
 body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: var(--bg-night);
+  background: var(--neon-bg);
   color: #eef2ff;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
-/* §3.5-1: snake-stage는 100vw × 100dvh를 채운다 */
+/* frozen §4.7: game-stage는 100dvw × 100dvh 사용 가능 영역을 채운다(고정 415px/정사각 제한 없음) */
 .stage {
   position: relative;
   display: block;
-  width: 100vw;
+  width: 100dvw;
   height: 100dvh;
-  background: radial-gradient(circle at 50% 40%, #0b0b20 0%, var(--bg-night) 70%);
+  background: radial-gradient(circle at 50% 40%, #0b0b20 0%, var(--neon-bg) 70%);
   overflow: hidden;
-  touch-action: none; /* 모바일 스와이프 제스처가 스크롤을 유발하지 않도록 */
+  touch-action: none;
 }
 
-/* §8: canvas는 stage 전체를 덮고, 렌더는 중앙 레터박스로 정사각 격자 표시 */
+/* canvas는 stage 전체를 덮는다 (backing store 크기는 DPR로 스크립트가 설정) */
 .stage__canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
-  background: var(--bg-night);
+  background: var(--neon-bg);
 }
 
-/* HUD: canvas 위에 겹쳐 표시(§3.5-3), 게임 영역을 잠식하지 않음 */
+/* HUD: 플레이 영역 위 오버레이 (grid 크기를 줄이지 않음, §4.7). safe-area 반영 */
 .hud {
   position: absolute;
   top: 0;
@@ -56,12 +59,12 @@ body {
   display: flex;
   justify-content: center;
   gap: var(--hud-gap);
-  padding: var(--hud-gap);
+  padding: calc(var(--hud-gap) + var(--safe-area-top)) var(--hud-gap) var(--hud-gap);
   pointer-events: none;
   z-index: 2;
 }
 
-.hud__metric {
+.hud__item {
   padding: 6px 14px;
   border-radius: 999px;
   background: rgba(5, 5, 16, 0.5);
@@ -74,20 +77,20 @@ body {
   white-space: nowrap;
 }
 
-/* Overlay: canvas 위 전체를 덮는 상태 안내 화면(§3.2) */
+/* Overlay: 상태 안내(준비/일시정지/게임오버). §4.4 */
 .overlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: var(--overlay-scrim);
+  padding: calc(24px + var(--safe-area-top)) 24px 24px;
+  background: var(--overlay-bg);
   backdrop-filter: blur(2px);
   z-index: 3;
 }
 
-/* 공통 유틸: 비활성 overlay를 감춘다(§3.1) */
+/* playing 상태에서 overlay 숨김 */
 .is-hidden {
   display: none !important;
 }
@@ -97,23 +100,17 @@ body {
   text-align: center;
   padding: 32px 28px;
   border-radius: 18px;
-  background: rgba(5, 5, 16, 0.72);
+  background: var(--overlay-bg);
   border: 1px solid rgba(57, 255, 20, 0.3);
   box-shadow: 0 0 32px rgba(57, 255, 20, 0.25);
 }
 
-.overlay__title {
+.overlay__text {
   margin: 0 0 12px;
-  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  font-size: clamp(1.4rem, 6vw, 2.2rem);
   font-weight: 700;
   color: var(--neon-primary);
   text-shadow: 0 0 16px rgba(57, 255, 20, 0.7);
-}
-
-.overlay__text {
-  margin: 0 0 8px;
-  font-size: clamp(1rem, 3vw, 1.2rem);
-  color: #eef2ff;
 }
 
 .overlay__hint {
@@ -128,7 +125,7 @@ body {
   padding: 12px 32px;
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--bg-night);
+  color: var(--neon-bg);
   background: var(--neon-primary);
   border: none;
   border-radius: 999px;
@@ -136,6 +133,7 @@ body {
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
+/* gameover 상태 강조 (§4.4) */
 .overlay--gameover .overlay__button {
   background: var(--neon-food);
   box-shadow: 0 0 20px rgba(255, 45, 149, 0.6);
@@ -146,32 +144,58 @@ body {
   transform: translateY(-1px);
 }
 
-/* 접근성 §3.4-3: action control 포커스 표시 */
+.overlay__button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
+}
+
 .overlay__button:focus-visible {
   outline: 3px solid var(--neon-secondary);
   outline-offset: 3px;
 }
 
-/* 스크린 리더 전용 상태 안내(§3.4-2) */
-.sr-only {
+/* #touch-controls: 모바일 방향 패드 (플레이 영역 위 오버레이) */
+.touch-pad {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: repeat(3, 44px);
+  gap: 6px;
+  z-index: 4;
 }
 
-/* 접근성 §3.4-5: prefers-reduced-motion 시 글로우/전환 애니메이션 비활성화 */
+.touch-pad__btn {
+  appearance: none;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  background: rgba(5, 5, 16, 0.55);
+  color: var(--neon-secondary);
+  border-radius: 12px;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.touch-pad__btn--up { grid-column: 2; grid-row: 1; }
+.touch-pad__btn--left { grid-column: 1; grid-row: 2; }
+.touch-pad__btn--right { grid-column: 3; grid-row: 2; }
+.touch-pad__btn--down { grid-column: 2; grid-row: 3; }
+
+/* 포인터가 없는(비터치) 환경에서는 방향 패드 숨김 */
+@media (hover: hover) and (pointer: fine) {
+  .touch-pad {
+    display: none;
+  }
+}
+
+/* 접근성 §4.6: prefers-reduced-motion 시 글로우/전환 애니메이션 축소 */
 @media (prefers-reduced-motion: reduce) {
   .overlay__button {
     transition: none;
   }
-  .hud__metric,
-  .overlay__title,
+  .hud__item,
+  .overlay__text,
   .overlay__button {
     text-shadow: none;
     box-shadow: none;

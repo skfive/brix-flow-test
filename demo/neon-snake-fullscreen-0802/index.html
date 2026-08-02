@@ -8,63 +8,47 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <!-- #snake-stage: 100vw × 100dvh 전체 화면 게임 무대 (frozen §3.1) -->
-    <main id="snake-stage" class="stage">
-      <!-- 게임 보드: 논리 격자 28×28을 정사각 셀로 렌더 -->
+    <!-- #game-stage: 100dvw × 100dvh 전체화면 무대 (frozen §4.7) -->
+    <main id="game-stage" class="stage">
+      <!-- 게임 보드: 뷰포트/DPR로부터 파생된 grid를 렌더 -->
       <canvas
-        id="snake-canvas"
+        id="game-canvas"
         class="stage__canvas"
         role="img"
         aria-label="네온 스네이크 게임 보드"
       ></canvas>
 
-      <!-- HUD: 게임 위에 겹쳐 표시, 격자 영역을 축소하지 않음 -->
+      <!-- HUD: 플레이 영역 위 오버레이 (grid 크기를 줄이지 않음, frozen §4.7) -->
       <div class="hud" aria-hidden="true">
-        <span id="hud-score" class="hud__metric">점수 0</span>
-        <span id="hud-highscore" class="hud__metric">최고 0</span>
-        <span id="hud-speed" class="hud__metric">속도 1</span>
+        <span id="hud-score" class="hud__item">점수 0</span>
+        <span id="hud-highscore" class="hud__item">최고 0</span>
       </div>
 
-      <!-- ready: 시작 안내 -->
-      <div id="screen-start" class="overlay overlay--start">
+      <!-- #game-overlay: 상태 텍스트(준비/일시정지/게임오버)를 aria-live로 안내 (frozen §4.6) -->
+      <div id="game-overlay" class="overlay" aria-live="polite" role="status">
         <div class="overlay__panel">
-          <p class="overlay__title">네온 스네이크</p>
-          <p class="overlay__text">준비됨 — 시작을 눌러 플레이하세요.</p>
+          <p class="overlay__text">준비</p>
           <p class="overlay__hint">방향키 · WASD 이동 / Space · P 일시정지</p>
-          <button id="action-start" class="overlay__button" type="button" aria-label="게임 시작">
-            시작
-          </button>
-        </div>
-      </div>
-
-      <!-- paused: 일시정지 안내 -->
-      <div id="screen-pause" class="overlay overlay--pause is-hidden">
-        <div class="overlay__panel">
-          <p class="overlay__title">일시정지</p>
-          <p class="overlay__text">Space 또는 P 를 눌러 계속하세요.</p>
-        </div>
-      </div>
-
-      <!-- gameover: 게임 오버 안내 + 다시 시작 -->
-      <div id="screen-gameover" class="overlay overlay--gameover is-hidden">
-        <div class="overlay__panel">
-          <p class="overlay__title">게임 오버</p>
-          <p class="overlay__text" id="gameover-summary">점수 0 · 최고 점수 0</p>
           <button
-            id="action-restart"
+            id="restart-button"
             class="overlay__button"
             type="button"
-            aria-label="다시 시작"
+            aria-label="게임 시작 또는 다시 시작"
           >
-            다시 시작
+            시작 / 다시 시작
           </button>
         </div>
       </div>
 
-      <!-- 스크린 리더 상태 안내 (aria-live) -->
-      <p id="sr-status" class="sr-only" aria-live="polite" role="status"></p>
+      <!-- #touch-controls: 모바일 방향 패드 (스와이프와 병행) -->
+      <div id="touch-controls" class="touch-pad" aria-hidden="true">
+        <button class="touch-pad__btn touch-pad__btn--up" type="button" data-dir="up" aria-label="위로">▲</button>
+        <button class="touch-pad__btn touch-pad__btn--left" type="button" data-dir="left" aria-label="왼쪽으로">◀</button>
+        <button class="touch-pad__btn touch-pad__btn--right" type="button" data-dir="right" aria-label="오른쪽으로">▶</button>
+        <button class="touch-pad__btn touch-pad__btn--down" type="button" data-dir="down" aria-label="아래로">▼</button>
+      </div>
     </main>
 
-    <script type="module" src="./src/main.js"></script>
+    <script type="module" src="./src/game.js"></script>
   </body>
 </html>
