@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-PACKET-B7B7991DA7F93FEE","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"PKT-TEST","status":"active","targetRef":"TS-UI-TOGGLE","title":"Verify PKT-TEST with TS-UI-TOGGLE","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
