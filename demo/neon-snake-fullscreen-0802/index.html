@@ -36,6 +36,11 @@
         --color-ranking-toggle-active: #39ff14; /* 선택된 기간 옵션 강조 */
         --color-ranking-toggle-idle: #94a3b8; /* 미선택 옵션 */
         --space-ranking-toggle-gap: 8px; /* 토글 옵션 간격 */
+
+        /* frozen ui-contract §4.4 · 닉네임 검색 token (BF-1562, additive, exact 값) */
+        --color-action-primary: #22d3ee; /* "내 순위 찾기" 주 액션 색 */
+        --color-feedback-error: #f87171; /* not-found·error 피드백 색 */
+        --space-control-gap: 12px; /* 입력창–버튼 간격 */
       }
 
       * {
@@ -420,6 +425,61 @@
         color: #f4f4ff;
       }
 
+      /* frozen ui-contract §4 · 닉네임 검색 (BF-1562, additive)
+         랭킹 보드 하단에 검색 입력창·버튼·결과 한 줄을 배치한다. flex-wrap 으로 좁은 폭(320px)
+         에서 입력창과 버튼이 줄바꿈되어도 가로 overflow 없이 배치된다(§4.6). */
+      .rank-search {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-control-gap);
+        align-items: center;
+        margin-top: var(--snake-rank-gap);
+      }
+      .rank-search input {
+        flex: 1 1 140px;
+        min-width: 0;
+        font: inherit;
+        padding: 8px 10px;
+        border-radius: var(--snake-rank-radius);
+        border: 1px solid var(--color-action-primary);
+        background: rgba(255, 255, 255, 0.06);
+        color: #f4f4ff;
+      }
+      .rank-search__submit {
+        font: inherit;
+        font-weight: 700;
+        white-space: nowrap;
+        padding: 8px 16px;
+        border-radius: var(--snake-rank-radius);
+        border: 1px solid var(--color-action-primary);
+        background: rgba(34, 211, 238, 0.14);
+        color: var(--color-action-primary);
+        cursor: pointer;
+      }
+      .rank-search__submit:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .rank-search__submit:focus-visible,
+      .rank-search input:focus-visible {
+        outline: 2px solid var(--color-action-primary);
+        outline-offset: 2px;
+      }
+      /* 결과 한 줄: 좁은 화면에서 넘치지 않게 줄바꿈 허용(§4.6). not-found·error 는 색상 외
+         텍스트로도 구분하되, 피드백 색을 함께 노출한다(§4.5). */
+      .rank-search__result {
+        margin: 0;
+        min-height: 1.2em;
+        width: 100%;
+        font-size: 14px;
+        color: #f4f4ff;
+        overflow-wrap: anywhere;
+      }
+      .rank-search__result[data-state='not-found'],
+      .rank-search__result[data-state='error'] {
+        color: var(--color-feedback-error);
+      }
+
       /* §3.7 / 반응형 320px 이상에서 overflow 방지 */
       @media (max-width: 480px) {
         .hud__score {
@@ -603,6 +663,34 @@
           </button>
         </form>
         <p id="snake-rank-status" role="status" aria-live="polite"></p>
+        <!-- frozen ui-contract §4 · 닉네임 검색 (BF-1562, additive): 랭킹 보드 하단.
+             닉네임 입력 → "내 순위 찾기" → 순위·닉네임·점수·기록 시각 한 줄 표시.
+             색상뿐 아니라 화면 텍스트로 상태를 구분한다(§4.5). 순수 조회 — 저장/게임 루프 미영향. -->
+        <div class="rank-search">
+          <input
+            id="rank-search-input"
+            type="text"
+            maxlength="12"
+            autocomplete="off"
+            placeholder="닉네임 (한글/영문/숫자 2~12자)"
+            aria-label="닉네임 검색"
+          />
+          <button
+            id="rank-search-submit"
+            class="rank-search__submit"
+            type="button"
+            aria-label="내 순위 찾기"
+          >
+            내 순위 찾기
+          </button>
+        </div>
+        <p
+          id="rank-search-result"
+          class="rank-search__result"
+          data-state="idle"
+          role="status"
+          aria-live="polite"
+        ></p>
       </div>
     </main>
 
@@ -634,6 +722,9 @@
       // frozen ui-contract@v1 §6 · 랭킹 보드 (BF-1550, additive)
       import { createScoresStore, createStoreFetch } from './src/scores-api.js';
       import { createRankingBoard, createPeriodRankingBoard } from './src/ranking.js';
+      // frozen ui-contract §4 · 닉네임 검색 (BF-1562, additive)
+      import { createSearchStore, createSearchFetch } from '../../api/snake/scores/search.js';
+      import { createRankingSearch } from './ranking-search.js';
 
       const doc = document;
       const win = window;
@@ -691,6 +782,21 @@
         listEl: doc.getElementById('ranking-board-list'),
         statusEl: doc.getElementById('ranking-period-status'),
         fetchImpl: rankFetch,
+      });
+
+      // frozen ui-contract §4 · 닉네임 검색 (BF-1562, additive).
+      // 검색 endpoint(/api/snake/scores/search)는 기존 랭킹(/api/scores)과 분리된 신규 경로다.
+      // 정적 데모라 원격 서버가 없으므로 §3 계약을 구현하는 인메모리 저장소를 createSearchFetch 로
+      // 백킹하고, found 경로를 시연할 수 있도록 결정론적 샘플 기록을 seed 한다.
+      const searchStore = createSearchStore();
+      searchStore.add({ nickname: '박기획', score: 1234, mode: 'single' });
+      searchStore.add({ nickname: 'goat', score: 2000, mode: 'single' });
+      searchStore.add({ nickname: 'ace', score: 500, mode: 'single' });
+      const rankingSearch = createRankingSearch({
+        inputEl: doc.getElementById('rank-search-input'),
+        submitEl: doc.getElementById('rank-search-submit'),
+        resultEl: doc.getElementById('rank-search-result'),
+        fetchImpl: createSearchFetch(searchStore),
       });
 
       // 랭킹 보드는 종료 화면에서만 노출한다(플레이/메뉴 중 숨김).
@@ -886,6 +992,7 @@
         // 종료→메뉴 복귀·초기화: 랭킹 보드를 idle 초기값으로 되돌리고 숨긴다(후조건 복원).
         rankingBoard.reset();
         periodBoard.reset(); // 기간 필터도 전체(all) 초기 상태로 복원(BF-1554)
+        rankingSearch.reset(); // 닉네임 검색도 idle 초기값으로 복원(BF-1562)
         showRankPanel(false);
         syncView();
         applyMetrics();
