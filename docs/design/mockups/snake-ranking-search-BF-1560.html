@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>닉네임 검색 UI 시각 mockup — BF-1560 (snake-ranking-search)</title>
+  <style>
+    /* frozen ui-contract@v1 design token (exact — 재정의 금지) */
+    :root {
+      --color-action-primary: #22d3ee;   /* submit 주 액션 / found 강조 */
+      --color-feedback-error: #f87171;    /* not-found·error 피드백 */
+      --space-control-gap: 12px;          /* 입력창–버튼 간격 */
+
+      /* 보조 렌더 색상(비 frozen) — 기존 neon-snake 테마 계승 */
+      --page-bg: #050510;
+      --search-surface: #0a0f14;
+      --text: #eef2ff;
+      --text-dim: rgba(238, 242, 255, 0.7);
+      --search-border: rgba(34, 211, 238, 0.3);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: radial-gradient(circle at 50% 30%, #0b1420 0%, var(--page-bg) 70%);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+
+    .page-title {
+      text-align: center;
+      color: var(--color-action-primary);
+      text-shadow: 0 0 16px rgba(34, 211, 238, 0.5);
+      margin: 0 0 4px;
+      font-size: 1.4rem;
+    }
+    .page-sub {
+      text-align: center;
+      color: var(--text-dim);
+      margin: 0 0 28px;
+      font-size: 0.85rem;
+    }
+
+    /* 5개 상태를 나란히 비교하는 갤러리 */
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .state-card { width: 320px; }   /* 320px — 반응형 하한 폭에서의 배치 확인 */
+    .state-card__label {
+      margin: 0 0 8px;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-action-primary);
+    }
+    .state-card__label small { color: var(--text-dim); text-transform: none; letter-spacing: 0; }
+
+    /* ── frozen 검색 UI (.rank-search / #rank-search-*) ──────────────────── */
+    .rank-search {
+      padding: 12px;
+      background: var(--search-surface);
+      border: 1px solid var(--search-border);
+      border-radius: 8px;
+    }
+    .rank-search__title {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--color-action-primary);
+    }
+
+    /* 폼: 입력창 + 버튼 — 320px 에서도 가로 overflow 없음 */
+    .rank-search__form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-control-gap);   /* 12px (frozen) */
+    }
+    #rank-search-input {
+      flex: 1;
+      min-width: 0;                    /* flex 안에서 축소 가능 → overflow 방지 */
+      padding: 8px 10px;
+      font-size: 1rem;                 /* ≥16px — 모바일 확대 방지 */
+      color: var(--text);
+      background: rgba(5, 5, 16, 0.6);
+      border: 1px solid var(--search-border);
+      border-radius: 6px;
+    }
+    #rank-search-input::placeholder { color: var(--text-dim); }
+    #rank-search-input:focus-visible {
+      outline: 3px solid var(--color-action-primary);
+      outline-offset: 2px;
+    }
+    #rank-search-input:disabled { opacity: 0.5; }
+
+    .rank-search__submit {
+      flex-shrink: 0;
+      white-space: nowrap;             /* 라벨 유지 */
+      padding: 8px 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--page-bg);
+      background: var(--color-action-primary);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .rank-search__submit:disabled { opacity: 0.5; cursor: default; }
+
+    /* 결과 영역: 상태별 텍스트 렌더 */
+    .rank-search__result {
+      margin: 12px 0 0;
+      min-height: 1.3em;               /* idle(빈 텍스트) 에서도 흔들림 방지 */
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text-dim);
+      display: flex;
+      flex-wrap: wrap;                 /* 좁은 화면: 세그먼트 줄바꿈 */
+      gap: 4px 10px;
+      align-items: baseline;
+    }
+    .rank-search__result--hint { color: var(--text-dim); font-weight: 400; }
+    .rank-search__result--found { color: var(--text); }
+    .rank-search__result--found .rank-search__rank,
+    .rank-search__result--found .rank-search__score {
+      color: var(--color-action-primary);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .rank-search__result--found .rank-search__name {
+      max-width: 12ch;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;             /* 좁은 화면: 닉네임 축약 */
+    }
+    .rank-search__result--found .rank-search__time { color: var(--text-dim); font-weight: 400; }
+    /* 색상은 보조 — 반드시 화면 텍스트 병기 */
+    .rank-search__result--error { color: var(--color-feedback-error); font-weight: 600; }
+
+    .note {
+      max-width: 760px;
+      margin: 32px auto 0;
+      padding: 16px 20px;
+      border: 1px dashed var(--search-border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    .note code { color: var(--color-action-primary); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .page-title { text-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">닉네임 검색 UI — 시각 mockup</h1>
+  <p class="page-sub">BF-1560 · frozen ui-contract@v1 (selector·token·상태 텍스트·접근성·반응형 320px) 시각 시뮬레이션 — 실제 dev 산출물 아님</p>
+
+  <div class="gallery">
+
+    <!-- ── idle ─────────────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">idle <small>· 버튼 활성 · 결과 안내/비어 있음</small></p>
+      <section id="rank-search" class="rank-search" aria-label="닉네임 검색 영역">
+        <h3 class="rank-search__title">내 순위 검색</h3>
+        <div class="rank-search__form">
+          <input id="rank-search-input" type="text" aria-label="닉네임 검색" placeholder="닉네임" maxlength="12" />
+          <button id="rank-search-submit" class="rank-search__submit" type="button" aria-label="내 순위 찾기">내 순위 찾기</button>
+        </div>
+        <p class="rank-search__result rank-search__result--hint" role="status" aria-live="polite">닉네임을 입력하고 내 순위를 찾아보세요</p>
+      </section>
+    </div>
+
+    <!-- ── searching ────────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">searching <small>· 버튼 비활성 · "검색 중…"</small></p>
+      <section class="rank-search" aria-label="닉네임 검색 영역">
+        <h3 class="rank-search__title">내 순위 검색</h3>
+        <div class="rank-search__form">
+          <input type="text" aria-label="닉네임 검색" value="박기획" disabled />
+          <button class="rank-search__submit" type="button" aria-label="내 순위 찾기" disabled>내 순위 찾기</button>
+        </div>
+        <p class="rank-search__result" role="status" aria-live="polite">검색 중…</p>
+      </section>
+    </div>
+
+    <!-- ── found ────────────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">found <small>· 순위·닉네임·점수·시각 한 줄</small></p>
+      <section class="rank-search" aria-label="닉네임 검색 영역">
+        <h3 class="rank-search__title">내 순위 검색</h3>
+        <div class="rank-search__form">
+          <input type="text" aria-label="닉네임 검색" value="박기획" />
+          <button class="rank-search__submit" type="button" aria-label="내 순위 찾기">내 순위 찾기</button>
+        </div>
+        <p class="rank-search__result rank-search__result--found" role="status" aria-live="polite">
+          <span class="rank-search__rank">1위</span>
+          <span class="rank-search__name">박기획</span>
+          <span class="rank-search__score">1234점</span>
+          <span class="rank-search__time">2026-08-03 12:00</span>
+        </p>
+      </section>
+    </div>
+
+    <!-- ── not-found ────────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">not-found <small>· 404 · 색 + 텍스트 병기</small></p>
+      <section class="rank-search" aria-label="닉네임 검색 영역">
+        <h3 class="rank-search__title">내 순위 검색</h3>
+        <div class="rank-search__form">
+          <input type="text" aria-label="닉네임 검색" value="없는닉네임" />
+          <button class="rank-search__submit" type="button" aria-label="내 순위 찾기">내 순위 찾기</button>
+        </div>
+        <p class="rank-search__result rank-search__result--error" role="status" aria-live="polite">해당 닉네임의 기록이 없습니다</p>
+      </section>
+    </div>
+
+    <!-- ── error ────────────────────────────────────────────── -->
+    <div class="state-card">
+      <p class="state-card__label">error <small>· 400/네트워크 · 색 + 텍스트 병기</small></p>
+      <section class="rank-search" aria-label="닉네임 검색 영역">
+        <h3 class="rank-search__title">내 순위 검색</h3>
+        <div class="rank-search__form">
+          <input type="text" aria-label="닉네임 검색" value="!!" />
+          <button class="rank-search__submit" type="button" aria-label="내 순위 찾기">내 순위 찾기</button>
+        </div>
+        <p class="rank-search__result rank-search__result--error" role="status" aria-live="polite">검색 중 오류가 발생했습니다</p>
+      </section>
+    </div>
+
+  </div>
+
+  <p class="note">
+    <strong>frozen 계약 반영</strong> — DOM id <code>rank-search-input</code> /
+    <code>rank-search-submit</code> / <code>rank-search-result</code>, CSS class
+    <code>rank-search</code> / <code>rank-search__submit</code> /
+    <code>rank-search__result</code>, token <code>--color-action-primary #22d3ee</code> ·
+    <code>--color-feedback-error #f87171</code> · <code>--space-control-gap 12px</code>,
+    상태 5종(idle / searching "검색 중…" / found "N위·닉네임·N점·기록시각" /
+    not-found "해당 닉네임의 기록이 없습니다" / error "검색 중 오류가 발생했습니다"), 접근성
+    입력창 <code>aria-label="닉네임 검색"</code> · 버튼 <code>aria-label="내 순위 찾기"</code> ·
+    결과 <code>role="status"</code> <code>aria-live="polite"</code> 를 그대로 표현했다.
+    상태는 색상만이 아니라 <strong>화면 텍스트</strong>로 구분된다. 갤러리 카드 폭은 반응형 하한
+    <strong>320px</strong> 로, 입력창(<code>flex:1; min-width:0</code>)+버튼
+    (<code>flex-shrink:0; white-space:nowrap</code>)이 가로 overflow 없이 배치되고 found 한 줄은
+    <code>flex-wrap</code> + 닉네임 <code>ellipsis</code> 로 좁은 화면에서 넘치지 않는다.
+    id 는 첫 카드(idle)에만 부착(1문서 1 id) — 나머지는 동일 구조를 class 로 복제한다. 실제
+    런타임에서는 단일 <code>#rank-search-result</code> 가 상태에 따라 위 5가지 텍스트로 전환된다.
+  </p>
+</body>
+</html>
