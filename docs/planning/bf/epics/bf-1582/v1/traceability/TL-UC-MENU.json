@@ -1,0 +1,1 @@
+{"artifactId":"TL-UC-MENU","artifactType":"TraceLink","relation":"elaborated_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-MENU","status":"active","targetRef":"UC-GAMEOVER-MENU","title":"REQ-MENU 구체화","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}

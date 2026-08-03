@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>게임 오버 메뉴 시각 mockup · BF-1582</title>
+  <!--
+    BF-1583 designer mockup (이디자인) — frozen ui-contract@v1 시각화.
+    이 파일은 dev 산출물이 아니라 시안 시각 시뮬레이션입니다. self-contained · 외부 의존성 0건.
+    selector/class/token 은 planner frozen 계약 그대로 사용하며 재정의하지 않습니다.
+  -->
+  <style>
+    :root {
+      /* ── frozen design token (exact) ─────────────────────────── */
+      --gameover-menu-gap: 12px;
+      --gameover-btn-padding: 10px 20px;
+      --gameover-btn-min-width: 120px;
+
+      /* ── 기존 snake 팔레트 재사용 (신규 색상 정의 없음) ────────── */
+      --go-box-bg: #111;
+      --go-box-border: #4cff80;
+      --go-text: #e0e0e0;
+      --go-title: #4cff80;
+      --go-new-record-color: #ffcc00;
+      --go-muted: #888;
+      --go-divider: rgba(255, 255, 255, 0.10);
+      --btn-restart-color: #4cff80;   /* 다시하기 = primary(green) */
+      --btn-restart-border: rgba(76, 255, 128, 0.30);
+      --btn-restart-bg: rgba(76, 255, 128, 0.08);
+      --btn-restart-hover-bg: rgba(76, 255, 128, 0.18);
+      --btn-settings-color: #00cfff;  /* 설정 = secondary(cyan) */
+      --btn-settings-border: rgba(0, 207, 255, 0.30);
+      --btn-settings-bg: rgba(0, 207, 255, 0.08);
+      --btn-settings-hover-bg: rgba(0, 207, 255, 0.18);
+      --btn-kbd-bg: rgba(255, 255, 255, 0.12);
+      --btn-kbd-border: rgba(255, 255, 255, 0.25);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 16px 64px;
+      background: #0a0a0a;
+      color: var(--go-text);
+      font-family: 'Courier New', Courier, monospace;
+      line-height: 1.5;
+    }
+
+    .mock-wrap { max-width: 900px; margin: 0 auto; }
+
+    .mock-h1 { color: #4cff80; font-size: 20px; letter-spacing: 1px; margin: 0 0 4px; }
+    .mock-sub { color: var(--go-muted); font-size: 13px; margin: 0 0 28px; }
+
+    .mock-section-title {
+      color: #00cfff; font-size: 14px; letter-spacing: 1px;
+      margin: 36px 0 12px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--go-divider);
+    }
+    .mock-note { color: var(--go-muted); font-size: 12px; margin: 0 0 14px; }
+
+    /* ── 게임 오버 오버레이 (기존 .gameover-box 규약 재현) ────────── */
+    .stage {
+      background:
+        radial-gradient(circle at 50% 40%, rgba(76,255,128,0.06), transparent 60%),
+        #050505;
+      border-radius: 10px;
+      padding: 40px 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .gameover-box {
+      background: var(--go-box-bg);
+      border: 2px solid var(--go-box-border);
+      border-radius: 12px;
+      padding: 36px 52px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(76, 255, 128, 0.3);
+      min-width: 340px;
+      max-width: 420px;
+    }
+
+    /* ── 보존 블록 (변경 금지 — 시각 참고) ──────────────────────── */
+    .gameover-box h2 { color: var(--go-title); font-size: 2.4rem; letter-spacing: 2px; margin: 0 0 12px; }
+    .go-score { font-size: 1.4rem; color: var(--go-text); margin: 0 0 8px; }
+    .go-new-record { color: var(--go-new-record-color); font-size: 1rem; font-weight: 700; letter-spacing: 1px; margin: 4px 0; text-shadow: 0 0 8px rgba(255,204,0,0.8); }
+    .go-play-time { font-size: 1rem; color: var(--go-text); margin: 4px 0; }
+    .go-divider { border: none; border-top: 1px solid var(--go-divider); margin: 18px 0; }
+    #go-item-stats { margin: 0 0 4px; }
+    .go-item-section-title { font-size: 0.95rem; color: var(--go-text); letter-spacing: 1px; margin: 0 0 10px; }
+    .go-item-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+    .go-item-list li { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; opacity: 0.9; }
+    .go-item-list li[data-item-count="0"] { opacity: 0.35; }
+    .go-item-icon { width: 22px; text-align: center; }
+    .go-item-label { flex: 1; text-align: left; letter-spacing: 1px; }
+    .go-item-count { color: var(--go-muted); }
+    .preserve-tag {
+      display: inline-block; margin-left: 6px; padding: 0 6px;
+      font-size: 10px; color: #7fe0a0; border: 1px dashed rgba(76,255,128,0.4);
+      border-radius: 4px; vertical-align: middle;
+    }
+
+    /* ── 신규: .gameover-menu / .gameover-btn / .gameover-btn__key ─ */
+    .gameover-menu {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--gameover-menu-gap);
+      margin-top: 22px;
+    }
+
+    .gameover-btn {
+      padding: var(--gameover-btn-padding);
+      min-width: var(--gameover-btn-min-width);
+      white-space: nowrap;              /* 텍스트 clip 방지 */
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      border: 1px solid;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.10s ease;
+    }
+    .gameover-btn:active { transform: scale(0.97); }
+
+    #gameover-restart-btn {
+      color: var(--btn-restart-color);
+      border-color: var(--btn-restart-border);
+      background: var(--btn-restart-bg);
+    }
+    #gameover-restart-btn:hover { background: var(--btn-restart-hover-bg); }
+    #gameover-restart-btn:focus-visible { outline: 2px solid #4cff80; outline-offset: 2px; }
+
+    #gameover-settings-btn {
+      color: var(--btn-settings-color);
+      border-color: var(--btn-settings-border);
+      background: var(--btn-settings-bg);
+    }
+    #gameover-settings-btn:hover { background: var(--btn-settings-hover-bg); }
+    #gameover-settings-btn:focus-visible { outline: 2px solid #00cfff; outline-offset: 2px; }
+
+    .gameover-btn__key {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 5px;
+      margin-left: 8px;
+      background: var(--btn-kbd-bg);
+      border: 1px solid var(--btn-kbd-border);
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── 상태 시뮬레이션용 정적 클래스 (실제 :hover/:focus 를 그려둠) ─ */
+    .is-hover#gameover-restart-btn { background: var(--btn-restart-hover-bg); }
+    .is-hover#gameover-settings-btn { background: var(--btn-settings-hover-bg); }
+    .is-focus#gameover-restart-btn { outline: 2px solid #4cff80; outline-offset: 2px; }
+    .is-focus#gameover-settings-btn { outline: 2px solid #00cfff; outline-offset: 2px; }
+
+    /* ── 320px 좁은 화면 시뮬레이션 프레임 ──────────────────────── */
+    .narrow-frame {
+      width: 320px;
+      margin: 0 auto;
+      border: 1px dashed rgba(255,255,255,0.25);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .narrow-frame .stage { padding: 24px 8px; }
+    .narrow-frame .gameover-box { min-width: 0; width: 100%; max-width: none; padding: 24px 18px; }
+    /* 좁은 화면: 세로 스택, 텍스트/배지 clip 없음 */
+    .narrow-frame .gameover-menu { flex-direction: column; }
+    .narrow-frame .gameover-btn { width: 100%; }
+
+    .state-grid { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+    .state-card { flex: 1; min-width: 260px; }
+    .state-card .cap { color: var(--go-muted); font-size: 12px; margin: 0 0 8px; }
+    .state-card .demo {
+      background: #050505; border: 1px solid var(--go-divider);
+      border-radius: 10px; padding: 20px; display: flex; justify-content: center;
+    }
+
+    .token-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+    .token-table th, .token-table td {
+      border: 1px solid var(--go-divider); padding: 6px 10px; text-align: left;
+    }
+    .token-table th { color: #00cfff; }
+    .token-table code { color: #ffcc00; }
+
+    .a11y-list { font-size: 13px; color: var(--go-text); padding-left: 18px; }
+    .a11y-list li { margin: 4px 0; }
+    .a11y-list code { color: #ffcc00; }
+  </style>
+</head>
+<body>
+  <div class="mock-wrap">
+    <h1 class="mock-h1">게임 오버 메뉴 · 시각 mockup (BF-1582)</h1>
+    <p class="mock-sub">
+      designer 시안 시각 시뮬레이션 — frozen <code>ui-contract@v1</code> 그대로. dev 산출물 아님(픽셀 일치 의무 없음).
+      명세: <code>docs/design/gameover-menu-BF-1582.md</code>
+    </p>
+
+    <!-- ─────────────────────────────────────────────────────────
+         1. gameover-idle — 기본 상태 (넓은 화면)
+    ────────────────────────────────────────────────────────── -->
+    <h2 class="mock-section-title">1 · gameover-idle (기본 · 넓은 화면)</h2>
+    <p class="mock-note">
+      기존 점수·신기록·아이템 블록은 <span class="preserve-tag">보존</span> — 아래 <code>.gameover-menu</code> 만 신규 추가.
+      두 버튼은 가로 나란히, gap 12px.
+    </p>
+    <div class="stage">
+      <div id="gameover-overlay" class="gameover-box" role="dialog" aria-modal="true" aria-label="게임 결과">
+        <h2 id="go-result">GAME OVER</h2>
+
+        <!-- 보존: 최종 점수 블록 -->
+        <p class="go-score">PLAYER: <span id="go-score">128</span> &nbsp;vs&nbsp; CPU: <span id="go-cpu-score">96</span></p>
+        <p class="go-new-record">★ 신기록!</p>
+        <p class="go-play-time">플레이 시간 · 02:47</p>
+
+        <hr class="go-divider" aria-hidden="true" />
+
+        <!-- 보존: 아이템 획득 현황 -->
+        <section id="go-item-stats" aria-label="아이템 획득 현황">
+          <p class="go-item-section-title">아이템 획득 현황 <span class="preserve-tag">보존</span></p>
+          <ul class="go-item-list">
+            <li data-item-type="SPEED_UP"     data-item-count="3"><span class="go-item-icon">⚡</span><span class="go-item-label">SPEED UP</span><span class="go-item-count">×3</span></li>
+            <li data-item-type="SLOW_DOWN"    data-item-count="1"><span class="go-item-icon">⏱</span><span class="go-item-label">SLOW DOWN</span><span class="go-item-count">×1</span></li>
+            <li data-item-type="LENGTH_BURST" data-item-count="2"><span class="go-item-icon">★</span><span class="go-item-label">LENGTH BURST</span><span class="go-item-count">×2</span></li>
+            <li data-item-type="SHIELD"       data-item-count="0"><span class="go-item-icon">🛡</span><span class="go-item-label">SHIELD</span><span class="go-item-count">×0</span></li>
+            <li data-item-type="REVERSE"      data-item-count="0"><span class="go-item-icon">↺</span><span class="go-item-label">REVERSE</span><span class="go-item-count">×0</span></li>
+          </ul>
+        </section>
+
+        <!-- 신규: 게임 오버 메뉴 -->
+        <div class="gameover-menu">
+          <button id="gameover-restart-btn" class="gameover-btn" type="button" aria-label="다시하기 (Space)">
+            다시하기 <kbd class="gameover-btn__key">Space</kbd>
+          </button>
+          <button id="gameover-settings-btn" class="gameover-btn" type="button" aria-label="설정 (S)">
+            설정 <kbd class="gameover-btn__key">S</kbd>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────
+         2. hover / focus 상태 (정적 시뮬레이션)
+    ────────────────────────────────────────────────────────── -->
+    <h2 class="mock-section-title">2 · 인터랙션 상태 (hover / focus)</h2>
+    <p class="mock-note">
+      실제 <code>:hover</code>·<code>:focus-visible</code> 는 위 1번에서 직접 확인 가능. 아래는 상태를 정적으로 그려둔 비교입니다.
+      상태 의미는 <b>색상 외 라벨 텍스트·aria-label</b> 로도 전달됩니다.
+    </p>
+    <div class="state-grid">
+      <div class="state-card">
+        <p class="cap">기본 (rest)</p>
+        <div class="demo">
+          <div class="gameover-menu" style="flex-direction:column;">
+            <button class="gameover-btn" id="gameover-restart-btn" type="button" aria-label="다시하기 (Space)">다시하기 <kbd class="gameover-btn__key">Space</kbd></button>
+            <button class="gameover-btn" id="gameover-settings-btn" type="button" aria-label="설정 (S)">설정 <kbd class="gameover-btn__key">S</kbd></button>
+          </div>
+        </div>
+      </div>
+      <div class="state-card">
+        <p class="cap">hover (배경 밝아짐)</p>
+        <div class="demo">
+          <div class="gameover-menu" style="flex-direction:column;">
+            <button class="gameover-btn is-hover" id="gameover-restart-btn" type="button" aria-label="다시하기 (Space)">다시하기 <kbd class="gameover-btn__key">Space</kbd></button>
+            <button class="gameover-btn is-hover" id="gameover-settings-btn" type="button" aria-label="설정 (S)">설정 <kbd class="gameover-btn__key">S</kbd></button>
+          </div>
+        </div>
+      </div>
+      <div class="state-card">
+        <p class="cap">focus (2px outline · settings-closed 복원 위치)</p>
+        <div class="demo">
+          <div class="gameover-menu" style="flex-direction:column;">
+            <button class="gameover-btn is-focus" id="gameover-restart-btn" type="button" aria-label="다시하기 (Space)">다시하기 <kbd class="gameover-btn__key">Space</kbd></button>
+            <button class="gameover-btn is-focus" id="gameover-settings-btn" type="button" aria-label="설정 (S)">설정 <kbd class="gameover-btn__key">S</kbd></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────
+         3. 320px 좁은 화면 — 세로 스택, clip 없음
+    ────────────────────────────────────────────────────────── -->
+    <h2 class="mock-section-title">3 · 320px 반응형 (세로 스택 · 오버플로 없음)</h2>
+    <p class="mock-note">
+      320px 뷰포트: 버튼이 세로로 접혀도 <code>min-width:120px</code> + <code>white-space:nowrap</code> 로
+      <b>텍스트·kbd 배지가 잘리지 않고</b> 오버플로도 없습니다.
+    </p>
+    <div class="narrow-frame">
+      <div class="stage">
+        <div class="gameover-box" role="dialog" aria-modal="true" aria-label="게임 결과">
+          <h2 id="go-result">GAME OVER</h2>
+          <p class="go-score">PLAYER: <span>128</span> vs CPU: <span>96</span></p>
+          <hr class="go-divider" aria-hidden="true" />
+          <section aria-label="아이템 획득 현황">
+            <p class="go-item-section-title">아이템 획득 현황</p>
+            <ul class="go-item-list">
+              <li data-item-count="3"><span class="go-item-icon">⚡</span><span class="go-item-label">SPEED UP</span><span class="go-item-count">×3</span></li>
+              <li data-item-count="2"><span class="go-item-icon">★</span><span class="go-item-label">LENGTH BURST</span><span class="go-item-count">×2</span></li>
+            </ul>
+          </section>
+          <div class="gameover-menu">
+            <button id="gameover-restart-btn" class="gameover-btn" type="button" aria-label="다시하기 (Space)">다시하기 <kbd class="gameover-btn__key">Space</kbd></button>
+            <button id="gameover-settings-btn" class="gameover-btn" type="button" aria-label="설정 (S)">설정 <kbd class="gameover-btn__key">S</kbd></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────────
+         4. frozen token / a11y 요약
+    ────────────────────────────────────────────────────────── -->
+    <h2 class="mock-section-title">4 · frozen token · 접근성 계약</h2>
+    <table class="token-table">
+      <tr><th>token / 계약</th><th>값</th><th>적용</th></tr>
+      <tr><td><code>--gameover-menu-gap</code></td><td>12px</td><td>.gameover-menu 버튼 간격</td></tr>
+      <tr><td><code>--gameover-btn-padding</code></td><td>10px 20px</td><td>.gameover-btn 내부 여백</td></tr>
+      <tr><td><code>--gameover-btn-min-width</code></td><td>120px</td><td>.gameover-btn 최소 너비</td></tr>
+    </table>
+    <ul class="a11y-list">
+      <li>다시하기 버튼: <code>aria-label="다시하기 (Space)"</code> · Tab 순서 포함 · Enter/Space 활성화</li>
+      <li>설정 버튼: <code>aria-label="설정 (S)"</code> · Tab 순서 포함 · Enter/Space 활성화</li>
+      <li><code>.gameover-btn__key</code> 로 <code>Space</code>/<code>S</code> 키 배지 노출 (<code>.paused-btn</code> kbd 규약)</li>
+      <li>모든 상태는 색상만으로 구분하지 않고 상태명을 화면 텍스트·접근성 이름으로 노출</li>
+      <li>settings-closed: 설정 모달 닫으면 포커스가 <code>#gameover-settings-btn</code> 로 복원</li>
+    </ul>
+  </div>
+</body>
+</html>
