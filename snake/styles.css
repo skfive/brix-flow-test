@@ -1466,3 +1466,74 @@ body {
   color: #7fff7f;
   margin-right: 4px;
 }
+
+/* ─── 게임 오버 메뉴 버튼 — BF-1584 (frozen ui-contract@v1) ────────
+   .paused-btn + <kbd> 패턴 재사용. #gameover-overlay 는 pointer-events:none
+   이므로 메뉴에서 다시 auto 로 되살려 버튼 클릭을 가능하게 한다. */
+.gameover-menu {
+  --gameover-menu-gap: 12px;
+  --gameover-btn-padding: 10px 20px;
+  --gameover-btn-min-width: 120px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gameover-menu-gap);
+  margin-top: 20px;
+  pointer-events: auto;
+}
+
+.gameover-btn {
+  min-width: var(--gameover-btn-min-width);
+  padding: var(--gameover-btn-padding);
+  border-radius: 8px;
+  border: 1px solid rgba(76, 255, 128, 0.30);
+  background: transparent;
+  color: #4cff80;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  transition: background 0.15s ease,
+              border-color 0.15s ease,
+              transform 0.10s ease;
+}
+.gameover-btn:hover  { background: rgba(76, 255, 128, 0.12); }
+.gameover-btn:active { transform: scale(0.97); }
+.gameover-btn:focus  { outline: 2px solid #4cff80; outline-offset: 2px; }
+
+/* 설정 버튼은 시안 구분을 위해 파랑 계열(.paused-btn-restart 규약) */
+#gameover-settings-btn {
+  color: #00cfff;
+  border-color: rgba(0, 207, 255, 0.30);
+}
+#gameover-settings-btn:hover { background: rgba(0, 207, 255, 0.12); }
+#gameover-settings-btn:focus { outline: 2px solid #00cfff; outline-offset: 2px; }
+
+/* kbd 키 배지 (.paused-btn kbd 패턴) */
+.gameover-btn__key {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  background: var(--btn-kbd-bg);
+  border: 1px solid var(--btn-kbd-border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* 좁은 화면(≤360px): 버튼 세로 접힘 — 텍스트/배지 잘림 방지 */
+@media (max-width: 360px) {
+  .gameover-menu {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .gameover-btn {
+    width: 100%;
+  }
+}
