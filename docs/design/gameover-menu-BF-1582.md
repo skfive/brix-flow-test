@@ -11,6 +11,12 @@
 > 파일 소유권과 상태 계약은 frozen blueprint 가 유일 권위이며, 본 문서는 이를 재정의하지 않습니다 (additive).
 > 신규 로직 · 신규 selector · 신규 token 을 만들지 않습니다.
 
+> **revision (BF-1583 cycle):** 버튼의 시각값(base 배경 · hover 틴트 · focus 셀렉터 · token 스코프)을
+> BF-1584 에서 실제 머지된 `snake/styles.css` 구현과 **동기화**했습니다 — base 배경 `transparent`,
+> hover `rgba(…,0.12)`, `:focus` outline, token 은 `.gameover-menu` 스코프. frozen 계약 대상
+> (selector · token 값 · 상태 · 접근성 · 반응형)은 **변경 없음**이며, 색상 틴트는 frozen 이 아니라
+> 문서·구현 일치를 위한 정정입니다.
+
 ---
 
 ## 1. 시안 개요
@@ -40,9 +46,9 @@
 | 역할 | 대상 | HEX / 값 | 출처 (기존 변수) |
 | --- | --- | --- | --- |
 | primary (다시하기) | `#gameover-restart-btn` 텍스트/보더 | `#4cff80` (green) | `.gameover-box` border · `--btn-resume-color` 계열 |
-| primary bg | `#gameover-restart-btn` 배경 | `rgba(76, 255, 128, 0.08)` | resume-bg 패턴 |
+| primary bg (base) | `#gameover-restart-btn` 배경 | `transparent` (hover 시 `rgba(76,255,128,0.12)`) | `.paused-btn` base 투명 규약 |
 | secondary (설정) | `#gameover-settings-btn` 텍스트/보더 | `#00cfff` (cyan) | `--btn-restart-color` (`.paused-btn` 재시작) |
-| secondary bg | `#gameover-settings-btn` 배경 | `rgba(0, 207, 255, 0.08)` | `--btn-restart-bg` |
+| secondary bg (base) | `#gameover-settings-btn` 배경 | `transparent` (hover 시 `rgba(0,207,255,0.12)`) | `.paused-btn` base 투명 규약 |
 | kbd 배지 배경 | `.gameover-btn__key` | `rgba(255, 255, 255, 0.12)` | `--btn-kbd-bg` |
 | kbd 배지 보더 | `.gameover-btn__key` | `rgba(255, 255, 255, 0.25)` | `--btn-kbd-border` |
 | overlay 배경 | `#gameover-overlay` (기존) | `#111` box / `rgba(0,0,0,·)` dim | `.gameover-box` |
@@ -128,8 +134,8 @@
 | 화면 텍스트 | `다시하기` + `<kbd class="gameover-btn__key">Space</kbd>` |
 | `aria-label` (frozen) | `다시하기 (Space)` |
 | padding / min-width | `var(--gameover-btn-padding)` (10px 20px) / `var(--gameover-btn-min-width)` (120px) |
-| 색상 | text/border `#4cff80`, bg `rgba(76,255,128,0.08)` |
-| interaction — hover | bg `rgba(76,255,128,0.18)` (텍스트 변화 없음) |
+| 색상 | text `#4cff80`, border `rgba(76,255,128,0.30)`, base bg `transparent` |
+| interaction — hover | bg `rgba(76,255,128,0.12)` (텍스트 변화 없음) |
 | interaction — focus | `outline: 2px solid #4cff80; outline-offset: 2px` (`.paused-btn` 규약) |
 | interaction — active | `transform: scale(0.97)` (`.paused-btn:active` 규약) |
 | 동작 (재사용) | 클릭 / `Enter` / `Space` → 기존 `doRestart()` 호출 → `restart-activated` (§6) |
@@ -142,8 +148,8 @@
 | 화면 텍스트 | `설정` + `<kbd class="gameover-btn__key">S</kbd>` |
 | `aria-label` (frozen) | `설정 (S)` |
 | padding / min-width | `var(--gameover-btn-padding)` / `var(--gameover-btn-min-width)` |
-| 색상 | text/border `#00cfff`, bg `rgba(0,207,255,0.08)` |
-| interaction — hover | bg `rgba(0,207,255,0.18)` |
+| 색상 | text `#00cfff`, border `rgba(0,207,255,0.30)`, base bg `transparent` |
+| interaction — hover | bg `rgba(0,207,255,0.12)` |
 | interaction — focus | `outline: 2px solid #00cfff; outline-offset: 2px` |
 | interaction — active | `transform: scale(0.97)` |
 | 동작 (재사용) | 클릭 / `Enter` / `S` → 기존 `openSettingsModal()` 호출 → `settings-open` (§6) |
@@ -189,16 +195,16 @@
      </button>
    </div>
    ```
-2. **CSS 토큰 (frozen 값 그대로)** — `:root` 또는 스코프에 추가:
+2. **CSS 토큰 (frozen 값 그대로)** — 아래는 BF-1584 에서 실제 머지된 `snake/styles.css` 구현과 **동기화된** 값입니다.
+   token 은 `.gameover-menu` 스코프에 두어 전역 오염을 피하고, 버튼 base 배경은 `transparent` (hover 시에만 틴트):
    ```css
-   :root {
+   .gameover-menu {
      --gameover-menu-gap: 12px;
      --gameover-btn-padding: 10px 20px;
      --gameover-btn-min-width: 120px;
-   }
-   .gameover-menu {
      display: flex; flex-wrap: wrap; justify-content: center;
      gap: var(--gameover-menu-gap); margin-top: 20px;
+     pointer-events: auto; /* overlay(pointer-events:none) 위에서 클릭 복원 */
    }
    .gameover-btn {
      padding: var(--gameover-btn-padding);
@@ -206,22 +212,22 @@
      white-space: nowrap; /* 텍스트 clip 방지 */
      font-family: 'Courier New', Courier, monospace;
      font-size: 14px; font-weight: 700; letter-spacing: 1.5px;
-     border: 1px solid; border-radius: 8px; background: transparent; cursor: pointer;
+     border: 1px solid rgba(76,255,128,0.30); border-radius: 8px;
+     background: transparent; color: #4cff80; cursor: pointer;
    }
-   #gameover-restart-btn { color: #4cff80; border-color: rgba(76,255,128,0.30); background: rgba(76,255,128,0.08); }
-   #gameover-restart-btn:hover  { background: rgba(76,255,128,0.18); }
-   #gameover-restart-btn:focus  { outline: 2px solid #4cff80; outline-offset: 2px; }
-   #gameover-settings-btn { color: #00cfff; border-color: rgba(0,207,255,0.30); background: rgba(0,207,255,0.08); }
-   #gameover-settings-btn:hover { background: rgba(0,207,255,0.18); }
-   #gameover-settings-btn:focus { outline: 2px solid #00cfff; outline-offset: 2px; }
+   .gameover-btn:hover  { background: rgba(76,255,128,0.12); }
    .gameover-btn:active { transform: scale(0.97); }
+   .gameover-btn:focus  { outline: 2px solid #4cff80; outline-offset: 2px; }
+   #gameover-settings-btn { color: #00cfff; border-color: rgba(0,207,255,0.30); }
+   #gameover-settings-btn:hover { background: rgba(0,207,255,0.12); }
+   #gameover-settings-btn:focus { outline: 2px solid #00cfff; outline-offset: 2px; }
    .gameover-btn__key {
      display: inline-flex; align-items: center; padding: 1px 5px; margin-left: 8px;
-     background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+     background: var(--btn-kbd-bg); border: 1px solid var(--btn-kbd-border);
      border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
    }
    @media (max-width: 360px) {
-     .gameover-menu { flex-direction: column; }
+     .gameover-menu { flex-direction: column; align-items: stretch; }
      .gameover-btn { width: 100%; }
    }
    ```
