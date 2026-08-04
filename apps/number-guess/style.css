@@ -1,0 +1,126 @@
+/* style.css — 숫자 맞히기 게임 스타일 (docs/plans/number-guess-plan-BF-1594.md §3, frozen token) */
+
+:root {
+  --color-action-primary: #2563eb;
+  --color-feedback-correct: #16a34a;
+  --color-feedback-hint: #b45309;
+  --space-control-gap: 12px;
+  --font-size-feedback: 1.125rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--space-control-gap);
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 게임 카드: 최대 폭 480px, 중앙 정렬 */
+.game {
+  width: 100%;
+  max-width: 480px;
+  margin: var(--space-control-gap) auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-control-gap);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.game__title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.game__intro {
+  margin: 0;
+  color: #475569;
+}
+
+/* 좁은 화면(320px+)에서 컨트롤이 세로로 쌓이도록 flex-column, overflow 방지 */
+.game__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.game__field label {
+  font-weight: 600;
+}
+
+.game__field input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.game__field input:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.game__submit {
+  padding: 10px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--color-action-primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.game__submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.game__feedback {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: var(--font-size-feedback);
+  font-weight: 600;
+}
+
+/* 상태별 색상 — 색상은 보조이며 상태명은 텍스트로도 노출된다(접근성) */
+.game__feedback[data-state="too-high"],
+.game__feedback[data-state="too-low"] {
+  color: var(--color-feedback-hint);
+}
+
+.game__feedback[data-state="win"] {
+  color: var(--color-feedback-correct);
+}
+
+.game__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-control-gap);
+  justify-content: space-between;
+  color: #334155;
+}
+
+.game__new {
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  color: var(--color-action-primary);
+  background: #ffffff;
+  border: 1px solid var(--color-action-primary);
+  border-radius: 8px;
+  cursor: pointer;
+}
