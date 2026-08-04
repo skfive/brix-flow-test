@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>status-card 시안 mockup — uptime·version (BF-1631)</title>
+    <!--
+      designer 시각 mockup — 시안 시뮬레이션용(실 dev 산출물 아님).
+      frozen ui-contract@v1 §5 의 selector·상태·token 을 재정의 없이 시각화한다.
+      vanilla-static 규약: 외부 의존성 0건, system font, CSS 변수 자체 정의.
+
+      NOTE(mockup 한정): 한 문서에 5개 상태를 나란히 보여주므로 frozen DOM ID 를
+      실제 id 속성으로 5회 중복하면 HTML invalid 가 된다. 따라서 각 요소에는
+      frozen class(반복 허용)를 쓰고, frozen DOM ID 는 data-dom-id 속성으로 매핑을
+      표기한다. 실제 index.html(developer 소유)에서는 §5.2 의 id 를 그대로 부여한다.
+    -->
+    <style>
+      :root {
+        /* ── frozen token (ui-contract §5.7 — 값 변경 금지) ── */
+        --color-status-ok: #16a34a;
+        --color-status-error: #dc2626;
+        --space-card-gap: 12px;
+        --font-size-status-label: 14px;
+
+        /* ── additive 보조 변수(mockup 시각화용 — frozen token 을 덮어쓰지 않음) ── */
+        --color-status-neutral: #64748b;
+        --color-surface: #ffffff;
+        --color-canvas: #f1f5f9;
+        --color-text: #0f172a;
+        --color-text-muted: #64748b;
+        --color-border: #e2e8f0;
+        --font-family-base: system-ui, -apple-system, "Segoe UI", Roboto,
+          "Noto Sans KR", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px 24px 64px;
+        background: var(--color-canvas);
+        color: var(--color-text);
+        font-family: var(--font-family-base);
+        line-height: 1.5;
+      }
+
+      .page-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 4px;
+      }
+      .page-sub {
+        margin: 0 0 28px;
+        color: var(--color-text-muted);
+        font-size: 13px;
+      }
+
+      .section-label {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin: 32px 0 12px;
+      }
+
+      .card-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: start;
+      }
+
+      /* ── .status-card (frozen class / #status-card-root) ── */
+      .status-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-card-gap); /* frozen --space-card-gap */
+        width: 320px;
+        max-width: 360px;
+        padding: 20px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+          0 4px 12px rgba(15, 23, 42, 0.05);
+      }
+
+      .status-card__heading {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+
+      /* ── .status-card__status (frozen / #status-card-status, aria-live) ── */
+      .status-card__status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: var(--font-size-status-label); /* frozen 14px */
+        font-weight: 600;
+        line-height: 1.4;
+      }
+
+      /* 상태 점 — 보조 색 신호. 상태명 텍스트가 항상 함께 노출되어 색 단독 구분이 아님. */
+      .status-dot {
+        flex: 0 0 auto;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--color-status-neutral);
+      }
+      .status-card[data-state="success"] .status-dot {
+        background: var(--color-status-ok);
+      }
+      .status-card[data-state="error"] .status-dot {
+        background: var(--color-status-error);
+      }
+      .status-card[data-state="success"] .status-card__status {
+        color: var(--color-status-ok);
+      }
+      .status-card[data-state="error"] .status-card__status {
+        color: var(--color-status-error);
+      }
+
+      /* loading 진행 표시 (정적 링) */
+      .status-card[data-state="loading"] .status-dot {
+        border: 2px solid var(--color-status-neutral);
+        border-top-color: transparent;
+        background: transparent;
+      }
+
+      /* ── uptime·version additive 표시 영역 (필드 그리드) ── */
+      .status-card__fields {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-card-gap);
+        padding: 12px;
+        background: var(--color-canvas);
+        border-radius: 8px;
+      }
+      .field {
+        flex: 1 1 120px;
+        min-width: 0; /* overflow 방지(320px) */
+      }
+      .field__label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        margin: 0 0 2px;
+      }
+      /* .status-card__uptime / .status-card__version (frozen classes) */
+      .field__value {
+        font-size: 15px;
+        font-weight: 500;
+        overflow-wrap: anywhere; /* 긴 version 문자열 줄바꿈 — 320px overflow 방지 */
+      }
+      .field__value[data-empty="true"] {
+        color: var(--color-text-muted);
+        font-weight: 400;
+      }
+
+      /* ── .status-card__refresh (frozen / #status-card-refresh) ── */
+      .status-card__refresh {
+        appearance: none;
+        align-self: flex-start;
+        padding: 8px 16px;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        color: #ffffff;
+        background: var(--color-text);
+        border: 1px solid var(--color-text);
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .status-card__refresh:hover {
+        background: #1e293b;
+      }
+      .status-card__refresh:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .error-message {
+        margin: 0;
+        font-size: 12px;
+        color: var(--color-status-error);
+      }
+
+      .card-caption {
+        margin: 8px 0 0;
+        font-size: 12px;
+        color: var(--color-text-muted);
+      }
+
+      /* 320px 반응형 프리뷰 프레임 */
+      .viewport-320 {
+        width: 320px;
+        border: 1px dashed var(--color-status-neutral);
+        border-radius: 12px;
+        padding: 8px;
+      }
+      .viewport-320 .status-card {
+        width: 100%;
+      }
+
+      /* hover/active 상태 표(정적 표현) */
+      .swatch-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-top: 8px;
+      }
+      .swatch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--color-text-muted);
+      }
+      .swatch__chip {
+        width: 20px;
+        height: 20px;
+        border-radius: 5px;
+        border: 1px solid var(--color-border);
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="page-title">status-card 시안 — uptime · version</h1>
+    <p class="page-sub">
+      frozen ui-contract@v1 §5 시각화 · BF-1631 / BF-1632 · vanilla-static (외부 의존성 0건)
+    </p>
+
+    <!-- ══════════════════ 상태 5종 ══════════════════ -->
+    <p class="section-label">상태 5종 (idle / loading / success / error / legacy)</p>
+    <div class="card-grid">
+      <!-- idle -->
+      <section
+        class="status-card"
+        data-state="idle"
+        data-dom-id="status-card-root"
+        aria-labelledby="mk-idle-heading"
+      >
+        <h2 id="mk-idle-heading" class="status-card__heading">상태 카드</h2>
+        <p class="status-card__status" data-dom-id="status-card-status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          대기 중 — 새로고침하세요
+        </p>
+        <div class="status-card__fields">
+          <div class="field">
+            <p class="field__label">가동 시간</p>
+            <p class="field__value status-card__uptime" data-dom-id="status-card-uptime" data-empty="true">—</p>
+          </div>
+          <div class="field">
+            <p class="field__label">버전</p>
+            <p class="field__value status-card__version" data-dom-id="status-card-version" data-empty="true">—</p>
+          </div>
+        </div>
+        <button class="status-card__refresh" data-dom-id="status-card-refresh" type="button" aria-label="상태 새로고침">
+          새로고침
+        </button>
+        <p class="card-caption">초기(조회 전) — 상태명을 화면 텍스트로 노출.</p>
+      </section>
+
+      <!-- loading -->
+      <section
+        class="status-card"
+        data-state="loading"
+        data-dom-id="status-card-root"
+        aria-labelledby="mk-loading-heading"
+      >
+        <h2 id="mk-loading-heading" class="status-card__heading">상태 카드</h2>
+        <p class="status-card__status" data-dom-id="status-card-status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          상태 확인 중…
+        </p>
+        <div class="status-card__fields">
+          <div class="field">
+            <p class="field__label">가동 시간</p>
+            <p class="field__value status-card__uptime" data-dom-id="status-card-uptime" data-empty="true">확인 중…</p>
+          </div>
+          <div class="field">
+            <p class="field__label">버전</p>
+            <p class="field__value status-card__version" data-dom-id="status-card-version" data-empty="true">확인 중…</p>
+          </div>
+        </div>
+        <button class="status-card__refresh" data-dom-id="status-card-refresh" type="button" aria-label="상태 새로고침" aria-busy="true" disabled>
+          새로고침
+        </button>
+        <p class="card-caption">조회 진행 중 — 진행 표시 + control 비활성(aria-busy).</p>
+      </section>
+
+      <!-- success -->
+      <section
+        class="status-card"
+        data-state="success"
+        data-dom-id="status-card-root"
+        aria-labelledby="mk-success-heading"
+      >
+        <h2 id="mk-success-heading" class="status-card__heading">상태 카드</h2>
+        <p class="status-card__status" data-dom-id="status-card-status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          정상 갱신됨
+        </p>
+        <div class="status-card__fields">
+          <div class="field">
+            <p class="field__label">가동 시간</p>
+            <p class="field__value status-card__uptime" data-dom-id="status-card-uptime">1시간 2분 0초</p>
+          </div>
+          <div class="field">
+            <p class="field__label">버전</p>
+            <p class="field__value status-card__version" data-dom-id="status-card-version">1.4.0</p>
+          </div>
+        </div>
+        <button class="status-card__refresh" data-dom-id="status-card-refresh" type="button" aria-label="상태 새로고침">
+          새로고침
+        </button>
+        <p class="card-caption">
+          응답에 uptimeSec(3720)·version 존재 → 포맷 값·version 렌더. 색은 보조, 상태명 함께 노출.
+        </p>
+      </section>
+
+      <!-- error -->
+      <section
+        class="status-card"
+        data-state="error"
+        data-dom-id="status-card-root"
+        aria-labelledby="mk-error-heading"
+      >
+        <h2 id="mk-error-heading" class="status-card__heading">상태 카드</h2>
+        <p class="status-card__status" data-dom-id="status-card-status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          불러오지 못했습니다 — 다시 시도
+        </p>
+        <div class="status-card__fields">
+          <div class="field">
+            <p class="field__label">가동 시간</p>
+            <p class="field__value status-card__uptime" data-dom-id="status-card-uptime" data-empty="true">—</p>
+          </div>
+          <div class="field">
+            <p class="field__label">버전</p>
+            <p class="field__value status-card__version" data-dom-id="status-card-version" data-empty="true">—</p>
+          </div>
+        </div>
+        <p class="error-message">비-200 또는 네트워크 실패로 상태를 갱신하지 못했습니다.</p>
+        <button class="status-card__refresh" data-dom-id="status-card-refresh" type="button" aria-label="상태 새로고침">
+          새로고침
+        </button>
+        <p class="card-caption">
+          실패 후 초기값 복원 + 새로고침 control 재사용 가능(§5.4 후조건).
+        </p>
+      </section>
+
+      <!-- legacy -->
+      <section
+        class="status-card"
+        data-state="legacy"
+        data-dom-id="status-card-root"
+        aria-labelledby="mk-legacy-heading"
+      >
+        <h2 id="mk-legacy-heading" class="status-card__heading">상태 카드</h2>
+        <p class="status-card__status" data-dom-id="status-card-status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          상태만 표시(구버전 응답)
+        </p>
+        <div class="status-card__fields">
+          <div class="field">
+            <p class="field__label">가동 시간</p>
+            <p class="field__value status-card__uptime" data-dom-id="status-card-uptime" data-empty="true">정보 없음</p>
+          </div>
+          <div class="field">
+            <p class="field__label">버전</p>
+            <p class="field__value status-card__version" data-dom-id="status-card-version" data-empty="true">정보 없음</p>
+          </div>
+        </div>
+        <button class="status-card__refresh" data-dom-id="status-card-refresh" type="button" aria-label="상태 새로고침">
+          새로고침
+        </button>
+        <p class="card-caption">
+          응답에 uptimeSec/version 없음(구버전 infra) → 카드 안 깨지고 status 만 표시, 필드는 "정보 없음".
+        </p>
+      </section>
+    </div>
+
+    <!-- ══════════════════ uptime 포맷 예시 (§5.5) ══════════════════ -->
+    <p class="section-label">uptime 포맷 표시 규칙 (§5.5 — 순수 함수, dev 구현)</p>
+    <div class="card-grid">
+      <section class="status-card" data-state="success" aria-label="uptime 포맷 예시">
+        <h2 class="status-card__heading">uptime 포맷 예</h2>
+        <div class="status-card__fields" style="flex-direction: column">
+          <div class="field"><p class="field__label">uptimeSec = 0</p><p class="field__value">0초</p></div>
+          <div class="field"><p class="field__label">uptimeSec = 59</p><p class="field__value">59초</p></div>
+          <div class="field"><p class="field__label">uptimeSec = 3720</p><p class="field__value">1시간 2분 0초</p></div>
+          <div class="field"><p class="field__label">uptimeSec = 100000</p><p class="field__value">1일 3시간 46분 40초</p></div>
+        </div>
+        <p class="card-caption">일/시간/분/초, 0인 상위 단위 생략, 최소 "초" 항상 표기. 결정적·시계 미접근.</p>
+      </section>
+    </div>
+
+    <!-- ══════════════════ 320px 반응형 + 긴 version ══════════════════ -->
+    <p class="section-label">320px 반응형 프리뷰 (overflow 없이 표시 — §5.9)</p>
+    <div class="viewport-320">
+      <section class="status-card" data-state="success" aria-label="320px 반응형 프리뷰">
+        <h2 class="status-card__heading">상태 카드</h2>
+        <p class="status-card__status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          정상 갱신됨
+        </p>
+        <div class="status-card__fields">
+          <div class="field">
+            <p class="field__label">가동 시간</p>
+            <p class="field__value status-card__uptime">12일 7시간 33분 8초</p>
+          </div>
+          <div class="field">
+            <p class="field__label">버전</p>
+            <p class="field__value status-card__version">1.4.0-rc.20260804+build.1729</p>
+          </div>
+        </div>
+        <button class="status-card__refresh" type="button" aria-label="상태 새로고침">새로고침</button>
+      </section>
+    </div>
+    <p class="card-caption">
+      좁은 폭에서 필드 그리드가 wrap 되고 긴 version 은 overflow-wrap 으로 줄바꿈 — content overflow 없음.
+    </p>
+
+    <!-- ══════════════════ 상태 색 · hover (보조 신호) ══════════════════ -->
+    <p class="section-label">상태 색 · hover (색은 보조 — 상태명 텍스트가 항상 동반)</p>
+    <div class="swatch-row">
+      <span class="swatch"><span class="swatch__chip" style="background: #16a34a"></span>--color-status-ok #16a34a (success)</span>
+      <span class="swatch"><span class="swatch__chip" style="background: #dc2626"></span>--color-status-error #dc2626 (error)</span>
+      <span class="swatch"><span class="swatch__chip" style="background: #64748b"></span>--color-status-neutral #64748b (loading/legacy, additive)</span>
+    </div>
+    <p class="card-caption">
+      새로고침 버튼 hover → 배경 톤 진해짐(#1e293b), disabled(loading) → opacity 0.55 + not-allowed.
+    </p>
+  </body>
+</html>
