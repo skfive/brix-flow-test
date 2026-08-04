@@ -1,0 +1,1 @@
+{"artifactId":"TL-UI-TEST","artifactType":"TraceLink","relation":"allocated_to","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-GUESS-UI","status":"active","targetRef":"PKT-TEST","title":"UI 요구사항→tester 패킷","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
