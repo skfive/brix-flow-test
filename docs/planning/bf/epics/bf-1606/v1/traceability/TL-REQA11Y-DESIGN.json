@@ -1,0 +1,1 @@
+{"artifactId":"TL-REQA11Y-DESIGN","artifactType":"TraceLink","relation":"allocated_to","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-GUESS-A11Y","status":"active","targetRef":"PKT-DESIGN","title":"접근성 요구 → designer","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}

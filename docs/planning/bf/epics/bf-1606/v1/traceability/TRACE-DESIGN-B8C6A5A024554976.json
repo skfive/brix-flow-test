@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-DESIGN-B8C6A5A024554976","artifactType":"TraceLink","relation":"realized_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-GUESS-BESTSCORE","status":"active","targetRef":"IF-GUESS-PLAN","title":"Realize REQ-GUESS-BESTSCORE by IF-GUESS-PLAN","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
