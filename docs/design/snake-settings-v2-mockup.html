@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake 설정 v2 신규 항목 시안 — BF-1625 (사운드 · 조작 방식)</title>
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       디자인 토큰
+       - 기존 BF-579 설정 모달 시각 언어 재사용 (neon-green / dark)
+       - 신규 frozen 토큰 3종은 planner ui-contract@v1 §5-5 exact 값 (변경 금지)
+       ═══════════════════════════════════════════════════════════ */
+    :root {
+      /* 기존(재사용) — 구조/배경 */
+      --bg-primary:               #0d0d0d;
+      --player-body:              #4cff80;
+      --settings-modal-bg:        #111;
+      --settings-modal-border:    rgba(76, 255, 128, 0.30);
+      --settings-modal-shadow:    0 0 30px rgba(76, 255, 128, 0.25);
+      --settings-overlay-bg:      rgba(0, 0, 0, 0.72);
+      --settings-section-divider: rgba(255, 255, 255, 0.10);
+      --settings-section-title:   rgba(255, 255, 255, 0.40);
+      --ctrl-track-bg:            rgba(255, 255, 255, 0.10);
+      --ctrl-label-text:          #e0e0e0;
+      --ctrl-value-text:          #aaaaaa;
+      --ctrl-border:              rgba(76, 255, 128, 0.25);
+      --sound-focus-ring:         #4cff80;
+      --settings-trigger-bg:      rgba(0, 0, 0, 0.45);
+      --settings-trigger-border:  rgba(255, 255, 255, 0.15);
+
+      /* ★ 신규 frozen 토큰 (ui-contract@v1 §5-5 — exact, 재정의 금지) */
+      --snake-settings-field-gap: 12px;
+      --snake-control-active-fg:  #2563eb;
+      --snake-toggle-on-bg:       #16a34a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-primary);
+      font-family: 'Courier New', Courier, monospace;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* ─── 페이지 헤더 ─── */
+    .page-header {
+      padding: 28px 32px 16px;
+      border-bottom: 1px solid rgba(76, 255, 128, 0.15);
+    }
+    .page-header h1 { font-size: 1.1rem; color: #4cff80; letter-spacing: 2px; font-weight: 700; }
+    .page-header p  { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; letter-spacing: 1px; }
+    .page-header .additive-badge {
+      display: inline-block; margin-top: 8px; padding: 3px 10px;
+      font-size: 10px; letter-spacing: 1px; border-radius: 4px;
+      background: rgba(37, 99, 235, 0.18); color: #7ba7ff; border: 1px solid rgba(37,99,235,0.4);
+    }
+
+    .section { padding: 28px 32px 0; }
+    .section-title {
+      font-size: 11px; color: rgba(255,255,255,0.40);
+      letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;
+    }
+    .legend {
+      font-size: 11px; color: rgba(255,255,255,0.50);
+      letter-spacing: 0.5px; margin-top: 10px; line-height: 1.6;
+    }
+    .legend strong { color: var(--player-body); }
+    .legend code { color: #7ba7ff; }
+
+    .preview-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px; padding: 20px;
+    }
+    .preview-card-title {
+      font-size: 11px; color: rgba(255,255,255,0.50);
+      letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px;
+    }
+    .compare-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       설정 모달 본체 (기존 BF-579 구조 재사용)
+       ═══════════════════════════════════════════════════════════ */
+    .sim-canvas {
+      position: relative; width: 100%; background: var(--bg-primary);
+      overflow: hidden; isolation: isolate; border-radius: 6px;
+      border: 1px solid rgba(76,255,128,0.08);
+    }
+    .sim-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(76,255,128,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(76,255,128,0.04) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    /* 설정 진입 버튼(기존 frozen settings-open-button) */
+    .settings-open-button {
+      position: absolute; top: 12px; right: 12px;
+      width: 34px; height: 34px;
+      background: var(--settings-trigger-bg);
+      border: 1px solid var(--settings-trigger-border);
+      border-radius: 8px; color: #e0e0e0; font-size: 18px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .settings-open-button.is-focus-restored {
+      outline: 2px solid var(--sound-focus-ring); outline-offset: 3px;
+      background: rgba(76,255,128,0.14);
+    }
+
+    .settings-modal-overlay {
+      position: absolute; inset: 0; background: var(--settings-overlay-bg);
+      display: flex; align-items: center; justify-content: center; z-index: 10;
+    }
+    .settings-panel {
+      position: relative; background: var(--settings-modal-bg);
+      border: 1px solid var(--settings-modal-border); border-radius: 12px;
+      box-shadow: var(--settings-modal-shadow);
+      width: min(480px, calc(100% - 24px)); max-height: 96%;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .settings-header {
+      padding: 16px 28px; position: relative;
+      border-bottom: 1px solid var(--settings-section-divider);
+    }
+    .settings-title { font-size: 1.3rem; color: var(--player-body); letter-spacing: 3px; font-weight: 700; }
+    .settings-close {
+      position: absolute; top: 8px; right: 8px; width: 40px; height: 40px;
+      background: transparent; border: none; color: var(--ctrl-value-text);
+      font-size: 22px; cursor: pointer; border-radius: 6px;
+    }
+    .settings-body { flex: 1; overflow-y: auto; padding: 8px 28px 4px; }
+    .settings-section {
+      padding: 10px 0 14px; border-top: 1px solid var(--settings-section-divider);
+    }
+    .settings-section:first-child { border-top: none; padding-top: 6px; }
+    .settings-section-title {
+      font-size: 11px; color: var(--settings-section-title);
+      letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;
+    }
+    /* 기존 필드 축약 표기(additive 삽입 위치 증명용) */
+    .existing-field-stub {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; font-size: 12px; color: var(--ctrl-value-text);
+    }
+    .existing-field-stub .val { color: #cfcfcf; font-weight: 700; }
+    .additive-marker {
+      font-size: 10px; letter-spacing: 1px; color: #7ba7ff;
+      border: 1px dashed rgba(37,99,235,0.5); border-radius: 4px;
+      padding: 2px 8px; margin-bottom: 10px; display: inline-block;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ★ 신규 필드 공통 — .settings__field (frozen class)
+       모든 간격은 --snake-settings-field-gap (frozen 12px)
+       ═══════════════════════════════════════════════════════════ */
+    .settings__field {
+      display: flex; align-items: center;
+      gap: var(--snake-settings-field-gap);
+      padding: var(--snake-settings-field-gap) 0;
+      font-family: inherit;
+    }
+    .settings__field-label {
+      flex: 0 0 40%; max-width: 40%;
+      font-size: 13px; color: var(--ctrl-label-text); letter-spacing: 0.5px;
+    }
+
+    /* ── 사운드 토글 — #settings-sound-toggle (role=switch) ── */
+    .settings__field--sound {
+      background: transparent; border: none; cursor: pointer; width: 100%;
+      text-align: left;
+    }
+    .sound-control {
+      display: inline-flex; align-items: center;
+      gap: var(--snake-settings-field-gap);
+    }
+    .sound-track {
+      position: relative; width: 48px; height: 24px;
+      background: var(--ctrl-track-bg); border-radius: 12px;
+      transition: background 0.15s ease;
+    }
+    .sound-thumb {
+      position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+      border-radius: 50%; background: rgba(255,255,255,0.55);
+      transition: transform 0.18s ease, background 0.15s ease;
+    }
+    .sound-state-text {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+      color: var(--ctrl-value-text); min-width: 32px;
+    }
+    /* sound-enabled : 켜짐 → 트랙 배경 --snake-toggle-on-bg (#16a34a) */
+    .settings__field--sound[aria-checked="true"] .sound-track { background: var(--snake-toggle-on-bg); }
+    .settings__field--sound[aria-checked="true"] .sound-thumb { transform: translateX(24px); background: #fff; }
+    .settings__field--sound[aria-checked="true"] .sound-state-text { color: #e0e0e0; }
+    /* sound-disabled : 꺼짐 → 중립 트랙 */
+    .settings__field--sound[aria-checked="false"] .sound-state-text { color: var(--ctrl-value-text); }
+    .settings__field--sound:focus-visible {
+      outline: 2px solid var(--sound-focus-ring); outline-offset: 3px; border-radius: 6px;
+    }
+
+    /* ── 조작 방식 — #settings-control-scheme (role=radiogroup) ── */
+    .settings__field--control { align-items: flex-start; }
+    .control-options {
+      display: inline-flex; flex-wrap: wrap; gap: var(--snake-settings-field-gap);
+    }
+    .control-option {
+      background: var(--ctrl-track-bg); border: 1px solid var(--ctrl-border);
+      border-radius: 6px; padding: 8px 14px; min-height: 36px; min-width: 64px;
+      color: #e0e0e0; font-family: inherit; font-size: 12px; font-weight: 700;
+      letter-spacing: 0.5px; cursor: pointer;
+      transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+    .control-option:hover:not([aria-pressed="true"]) { background: rgba(76,255,128,0.08); }
+    /* 선택 옵션 : 전경 --snake-control-active-fg (#2563eb) + 보더 강조 (색 외 굵은 보더로도 구분) */
+    .control-option[aria-pressed="true"] {
+      color: var(--snake-control-active-fg);
+      border-color: var(--snake-control-active-fg);
+      border-width: 2px;
+      background: rgba(37, 99, 235, 0.12);
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.35) inset;
+    }
+    .control-option:focus-visible {
+      outline: 2px solid var(--sound-focus-ring); outline-offset: 3px;
+    }
+    /* 선택 표시 텍스트 배지 (색 외 구분 — 선택된 옵션에 ✓ 노출) */
+    .control-option[aria-pressed="true"]::after {
+      content: " ✓"; font-size: 11px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       포커스 복원 흐름 다이어그램
+       ═══════════════════════════════════════════════════════════ */
+    .flow {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 0;
+    }
+    .flow-node {
+      border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+      padding: 10px 14px; font-size: 12px; background: rgba(255,255,255,0.03);
+      min-width: 120px; text-align: center;
+    }
+    .flow-node .st { display: block; font-size: 10px; color: #7ba7ff; margin-top: 4px; letter-spacing: 1px; }
+    .flow-node.focus-target { border-color: var(--sound-focus-ring); box-shadow: 0 0 0 2px rgba(76,255,128,0.25); }
+    .flow-arrow { color: rgba(255,255,255,0.4); font-size: 18px; }
+
+    /* ── 상태 카탈로그 표 ── */
+    .state-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+    .state-table th, .state-table td {
+      border: 1px solid rgba(255,255,255,0.10); padding: 8px 10px; text-align: left;
+    }
+    .state-table th { color: rgba(255,255,255,0.55); font-weight: 700; letter-spacing: 0.5px; }
+    .state-table code { color: #7ba7ff; }
+
+    /* ── 토큰 카탈로그 ── */
+    .token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+    .token-chip {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .token-swatch { width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
+    .token-name { font-size: 11px; color: #e0e0e0; letter-spacing: 0.5px; }
+    .token-value { font-size: 10px; color: var(--ctrl-value-text); margin-top: 2px; }
+
+    /* ═══════════════════════════════════════════════════════════
+       320px 반응형 프레임
+       ═══════════════════════════════════════════════════════════ */
+    .frame-320 {
+      width: 320px; max-width: 100%; margin: 0 auto;
+      border: 2px solid rgba(255,255,255,0.10); border-radius: 16px; overflow: hidden;
+      background: var(--bg-primary);
+    }
+    .frame-320 .sim-canvas { border: none; border-radius: 0; }
+    /* 좁은 폭: 필드 column 접힘 (라벨 위 / 컨트롤 아래) — overflow 방지 */
+    .frame-320 .settings__field {
+      flex-direction: column; align-items: stretch;
+      gap: calc(var(--snake-settings-field-gap) * 0.66);
+    }
+    .frame-320 .settings__field-label { flex: none; max-width: 100%; }
+    .frame-320 .control-option { min-height: 44px; flex: 1 1 auto; }
+    .frame-320 .settings-body { padding: 8px 16px 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- ─── 헤더 ─── -->
+  <header class="page-header">
+    <h1>SNAKE 설정 v2 신규 항목 시안 — BF-1625</h1>
+    <p>planner ui-contract@v1 동결 계약 그대로 · 사운드 토글 + 조작 방식 선택 additive 추가</p>
+    <span class="additive-badge">ADDITIVE — 기존 설정/게임오버 메뉴 계약 불변</span>
+  </header>
+
+  <!-- ─── 1. 설정 패널 열림 — 신규 "조작" 섹션 포함 전체 ─── -->
+  <section class="section">
+    <p class="section-title">1. 설정 패널 열림 (settings-open) — 신규 조작 섹션 additive</p>
+    <div class="preview-card">
+      <p class="preview-card-title">#settings-panel · 기본값(사운드 켜짐 / 조작 방향키)</p>
+      <div class="sim-canvas" style="height: 560px;">
+        <div class="sim-grid"></div>
+        <button class="settings-open-button" aria-label="설정" title="settings-open-button">⚙</button>
+
+        <div class="settings-modal-overlay">
+          <div class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="v2-title">
+            <header class="settings-header">
+              <h2 id="v2-title" class="settings-title">게임 설정</h2>
+              <button class="settings-close" type="button" aria-label="설정 닫기">×</button>
+            </header>
+            <div class="settings-body">
+
+              <!-- 기존 섹션(축약 — 실제로는 불변 유지, 위치 증명용) -->
+              <div class="settings-section">
+                <p class="settings-section-title">게임 · 먹이 · 아이템 · 시간 (기존 — 불변)</p>
+                <div class="existing-field-stub"><span>난이도</span><span class="val">normal</span></div>
+                <div class="existing-field-stub"><span>적 지렁이 수</span><span class="val">1</span></div>
+                <div class="existing-field-stub"><span>배수 먹이 등장</span><span class="val">on</span></div>
+                <div class="existing-field-stub"><span>시간 제한</span><span class="val">무제한</span></div>
+              </div>
+
+              <!-- ★ 신규 "조작" 섹션 (additive, 기존 섹션 뒤) -->
+              <div class="settings-section">
+                <p class="settings-section-title">조작</p>
+                <span class="additive-marker">★ v2 신규 · additive</span>
+
+                <!-- 사운드 토글 : #settings-sound-toggle -->
+                <button
+                  id="settings-sound-toggle"
+                  class="settings__field settings__field--sound"
+                  role="switch"
+                  aria-checked="true"
+                  aria-label="사운드">
+                  <span class="settings__field-label">사운드</span>
+                  <span class="sound-control">
+                    <span class="sound-track" aria-hidden="true"><span class="sound-thumb"></span></span>
+                    <span class="sound-state-text">켜짐</span>
+                  </span>
+                </button>
+
+                <!-- 조작 방식 : #settings-control-scheme -->
+                <div
+                  id="settings-control-scheme"
+                  class="settings__field settings__field--control"
+                  role="radiogroup"
+                  aria-label="조작 방식">
+                  <span class="settings__field-label">조작 방식</span>
+                  <div class="control-options">
+                    <button class="control-option" type="button" role="radio" aria-checked="true"  aria-pressed="true"  data-value="arrows">방향키</button>
+                    <button class="control-option" type="button" role="radio" aria-checked="false" aria-pressed="false" data-value="wasd">WASD</button>
+                    <button class="control-option" type="button" role="radio" aria-checked="false" aria-pressed="false" data-value="both">둘 다</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="legend">
+        신규 "조작" 섹션은 <code>#settings-panel</code> 본문 <strong>끝에</strong> additive 삽입.
+        기존 게임/먹이/아이템/시간 섹션과 게임 오버 메뉴는 마크업·selector 불변.
+        간격은 전부 <code>--snake-settings-field-gap: 12px</code>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── 2. 사운드 토글 상태 비교 ─── -->
+  <section class="section">
+    <p class="section-title">2. 사운드 토글 — sound-enabled / sound-disabled (색 외 텍스트 구분)</p>
+    <div class="compare-grid">
+      <div class="preview-card">
+        <p class="preview-card-title">sound-enabled · 켜짐 · aria-checked="true"</p>
+        <div style="background: var(--settings-modal-bg); border-radius: 8px; padding: 16px;">
+          <button class="settings__field settings__field--sound" role="switch" aria-checked="true" aria-label="사운드">
+            <span class="settings__field-label">사운드</span>
+            <span class="sound-control">
+              <span class="sound-track" aria-hidden="true"><span class="sound-thumb"></span></span>
+              <span class="sound-state-text">켜짐</span>
+            </span>
+          </button>
+        </div>
+        <p class="legend">트랙 배경 <code>--snake-toggle-on-bg #16a34a</code> + 텍스트 "켜짐". thumb 우측 이동.</p>
+      </div>
+      <div class="preview-card">
+        <p class="preview-card-title">sound-disabled · 꺼짐 · aria-checked="false"</p>
+        <div style="background: var(--settings-modal-bg); border-radius: 8px; padding: 16px;">
+          <button class="settings__field settings__field--sound" role="switch" aria-checked="false" aria-label="사운드">
+            <span class="settings__field-label">사운드</span>
+            <span class="sound-control">
+              <span class="sound-track" aria-hidden="true"><span class="sound-thumb"></span></span>
+              <span class="sound-state-text">꺼짐</span>
+            </span>
+          </button>
+        </div>
+        <p class="legend">중립 트랙 <code>--ctrl-track-bg</code> + 텍스트 "꺼짐". 색만이 아니라 <strong>화면 텍스트</strong>로 상태를 노출.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 3. 조작 방식 상태 비교 ─── -->
+  <section class="section">
+    <p class="section-title">3. 조작 방식 — control-arrows / control-wasd / control-both</p>
+    <div class="compare-grid">
+      <div class="preview-card">
+        <p class="preview-card-title">control-arrows (기본값)</p>
+        <div style="background: var(--settings-modal-bg); border-radius: 8px; padding: 16px;">
+          <div class="settings__field settings__field--control" role="radiogroup" aria-label="조작 방식">
+            <span class="settings__field-label">조작 방식</span>
+            <div class="control-options">
+              <button class="control-option" role="radio" aria-checked="true"  aria-pressed="true"  type="button">방향키</button>
+              <button class="control-option" role="radio" aria-checked="false" aria-pressed="false" type="button">WASD</button>
+              <button class="control-option" role="radio" aria-checked="false" aria-pressed="false" type="button">둘 다</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="preview-card">
+        <p class="preview-card-title">control-wasd</p>
+        <div style="background: var(--settings-modal-bg); border-radius: 8px; padding: 16px;">
+          <div class="settings__field settings__field--control" role="radiogroup" aria-label="조작 방식">
+            <span class="settings__field-label">조작 방식</span>
+            <div class="control-options">
+              <button class="control-option" role="radio" aria-checked="false" aria-pressed="false" type="button">방향키</button>
+              <button class="control-option" role="radio" aria-checked="true"  aria-pressed="true"  type="button">WASD</button>
+              <button class="control-option" role="radio" aria-checked="false" aria-pressed="false" type="button">둘 다</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="preview-card">
+        <p class="preview-card-title">control-both</p>
+        <div style="background: var(--settings-modal-bg); border-radius: 8px; padding: 16px;">
+          <div class="settings__field settings__field--control" role="radiogroup" aria-label="조작 방식">
+            <span class="settings__field-label">조작 방식</span>
+            <div class="control-options">
+              <button class="control-option" role="radio" aria-checked="false" aria-pressed="false" type="button">방향키</button>
+              <button class="control-option" role="radio" aria-checked="false" aria-pressed="false" type="button">WASD</button>
+              <button class="control-option" role="radio" aria-checked="true"  aria-pressed="true"  type="button">둘 다</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="legend">
+      선택 옵션은 전경 <code>--snake-control-active-fg #2563eb</code> + <strong>2px 보더</strong> + <strong>✓ 배지</strong>로 구분 —
+      색만이 아니라 형태·텍스트로도 선택 상태를 노출(색각 이상 대응). 단일 선택(radiogroup).
+    </p>
+  </section>
+
+  <!-- ─── 4. 포커스 복원 흐름 ─── -->
+  <section class="section">
+    <p class="section-title">4. 설정 닫힘 후 포커스 복원 — settings-open-button 으로 복원</p>
+    <div class="preview-card">
+      <div class="flow">
+        <div class="flow-node focus-target">⚙ 설정 버튼<span class="st">#settings-open-button · focus</span></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node">설정 패널 열림<span class="st">settings-open</span></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node">닫기 / 취소 / 저장 / Esc<span class="st">settings-closed</span></div>
+        <span class="flow-arrow">↩</span>
+        <div class="flow-node focus-target">⚙ 설정 버튼 포커스 복원<span class="st">#settings-open-button · focus 復</span></div>
+      </div>
+      <p class="legend">
+        기존 게임 오버 메뉴 배선(<code>notifySettingsClosed() → settingsBtn.focus()</code>)을 <strong>재사용</strong>.
+        신규 배선을 추가하지 않고, 패널 닫힘 시 키보드 포커스를 <code>#settings-open-button</code> 으로 되돌린다.
+      </p>
+      <div style="margin-top: 14px;">
+        <span style="font-size:11px;color:rgba(255,255,255,0.5);">복원된 버튼 focus 시각 예시 ↓</span><br>
+        <button class="settings-open-button is-focus-restored" style="position: static; margin-top: 10px;" aria-label="설정">⚙</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 5. 320px 반응형 ─── -->
+  <section class="section">
+    <p class="section-title">5. 320px 반응형 — 신규 필드 column 접힘, overflow 없음</p>
+    <div class="preview-card">
+      <p class="preview-card-title">320px viewport · 신규 조작 섹션</p>
+      <div class="frame-320">
+        <div class="sim-canvas" style="height: 420px;">
+          <div class="sim-grid"></div>
+          <button class="settings-open-button" aria-label="설정">⚙</button>
+          <div class="settings-modal-overlay">
+            <div class="settings-panel" role="dialog" aria-modal="true">
+              <header class="settings-header">
+                <h2 class="settings-title" style="font-size:1.1rem;">게임 설정</h2>
+                <button class="settings-close" type="button" aria-label="설정 닫기">×</button>
+              </header>
+              <div class="settings-body">
+                <div class="settings-section">
+                  <p class="settings-section-title">조작</p>
+                  <button class="settings__field settings__field--sound" role="switch" aria-checked="true" aria-label="사운드">
+                    <span class="settings__field-label">사운드</span>
+                    <span class="sound-control">
+                      <span class="sound-track" aria-hidden="true"><span class="sound-thumb"></span></span>
+                      <span class="sound-state-text">켜짐</span>
+                    </span>
+                  </button>
+                  <div class="settings__field settings__field--control" role="radiogroup" aria-label="조작 방식">
+                    <span class="settings__field-label">조작 방식</span>
+                    <div class="control-options">
+                      <button class="control-option" role="radio" aria-checked="true"  aria-pressed="true"  type="button">방향키</button>
+                      <button class="control-option" role="radio" aria-checked="false" aria-pressed="false" type="button">WASD</button>
+                      <button class="control-option" role="radio" aria-checked="false" aria-pressed="false" type="button">둘 다</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="legend">
+        ≤320px 에서 <code>.settings__field</code> 는 <strong>column</strong>(라벨 위 / 컨트롤 아래)으로 접히고,
+        조작 방식 3옵션은 <code>flex-wrap: wrap</code> + 각 옵션 flex 확장으로 <strong>가로 overflow 없이</strong> 배치.
+        터치 타겟 44px 확보. 기존 게임 오버 메뉴 레이아웃은 영향 없음.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── 6. 상태 카탈로그 ─── -->
+  <section class="section">
+    <p class="section-title">6. frozen 상태 카탈로그 (색 외 화면 텍스트 매핑)</p>
+    <div class="preview-card">
+      <table class="state-table">
+        <thead>
+          <tr><th>컴포넌트</th><th>상태</th><th>aria</th><th>화면 텍스트</th><th>주요 토큰</th></tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="2">사운드<br><code>#settings-sound-toggle</code></td>
+              <td><code>sound-enabled</code></td><td>aria-checked=true</td><td>켜짐</td><td><code>--snake-toggle-on-bg</code></td></tr>
+          <tr><td><code>sound-disabled</code></td><td>aria-checked=false</td><td>꺼짐</td><td><code>--ctrl-track-bg</code></td></tr>
+          <tr><td rowspan="3">조작 방식<br><code>#settings-control-scheme</code></td>
+              <td><code>control-arrows</code></td><td>aria-pressed=true</td><td>방향키</td><td><code>--snake-control-active-fg</code></td></tr>
+          <tr><td><code>control-wasd</code></td><td>aria-pressed=true</td><td>WASD</td><td><code>--snake-control-active-fg</code></td></tr>
+          <tr><td><code>control-both</code></td><td>aria-pressed=true</td><td>둘 다</td><td><code>--snake-control-active-fg</code></td></tr>
+          <tr><td rowspan="2">패널<br><code>#settings-panel</code></td>
+              <td><code>settings-open</code></td><td>aria-modal=true</td><td>(표시)</td><td>—</td></tr>
+          <tr><td><code>settings-closed</code></td><td>—</td><td>(비표시, 포커스 복원)</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─── 7. 신규 토큰 카탈로그 ─── -->
+  <section class="section">
+    <p class="section-title">7. 신규 frozen 디자인 토큰 (ui-contract@v1 §5-5 · exact 값)</p>
+    <div class="preview-card">
+      <div class="token-grid">
+        <div class="token-chip">
+          <div class="token-swatch" style="background: repeating-linear-gradient(45deg,#333 0 4px,#444 4px 8px);"></div>
+          <div>
+            <div class="token-name">--snake-settings-field-gap</div>
+            <div class="token-value">12px (필드 간격)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: #2563eb;"></div>
+          <div>
+            <div class="token-name">--snake-control-active-fg</div>
+            <div class="token-value">#2563eb (조작 방식 선택 전경)</div>
+          </div>
+        </div>
+        <div class="token-chip">
+          <div class="token-swatch" style="background: #16a34a;"></div>
+          <div>
+            <div class="token-name">--snake-toggle-on-bg</div>
+            <div class="token-value">#16a34a (사운드 켜짐 트랙)</div>
+          </div>
+        </div>
+      </div>
+      <p class="legend">위 3개 토큰은 planner 가 동결한 <strong>exact 값</strong> — designer/developer 재정의 금지. 신규 필드에만 적용.</p>
+    </div>
+  </section>
+
+</body>
+</html>

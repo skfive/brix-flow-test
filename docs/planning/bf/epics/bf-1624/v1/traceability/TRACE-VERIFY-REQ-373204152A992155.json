@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-REQ-373204152A992155","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-SETTINGS-UI","status":"active","targetRef":"TS-MIGRATE","title":"Verify REQ-SETTINGS-UI with TS-MIGRATE","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
