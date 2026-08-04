@@ -1,0 +1,147 @@
+/* 숫자 맞히기 게임 스타일 (BF-1602) — §3.3 frozen design token, §3.6 responsive */
+:root {
+  --color-action-primary: #2563eb;
+  --color-feedback-higher: #f59e0b;
+  --color-feedback-lower: #3b82f6;
+  --color-feedback-win: #16a34a;
+  --color-feedback-error: #dc2626;
+  --space-control-gap: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+/* §3.6 320px 이상 overflow 방지 */
+.game {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.game__title {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+}
+
+.game__intro {
+  margin: 0 0 20px;
+  color: #64748b;
+}
+
+.game__form {
+  display: flex;
+  gap: var(--space-control-gap);
+  margin-bottom: 16px;
+}
+
+.game__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.game__input:focus {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 1px;
+}
+
+.game__submit {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: #ffffff;
+  background: var(--color-action-primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.game__submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.game__feedback {
+  margin: 0 0 16px;
+  min-height: 1.5em;
+  font-weight: 600;
+}
+
+/* §3.4 상태별 색상 — 색상 외 텍스트는 game.js 가 항상 채운다 */
+.game__feedback[data-state="idle"] {
+  color: #475569;
+}
+.game__feedback[data-state="higher"] {
+  color: var(--color-feedback-higher);
+}
+.game__feedback[data-state="lower"] {
+  color: var(--color-feedback-lower);
+}
+.game__feedback[data-state="win"] {
+  color: var(--color-feedback-win);
+}
+.game__feedback[data-state="invalid"] {
+  color: var(--color-feedback-error);
+}
+
+.game__stats {
+  display: flex;
+  gap: var(--space-control-gap);
+  justify-content: space-between;
+  margin-bottom: 20px;
+  color: #334155;
+}
+
+.game__stat {
+  margin: 0;
+}
+
+.game__new-game {
+  width: 100%;
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* win 상태에서 new-game 강조 */
+.game__new-game.is-emphasized {
+  color: #ffffff;
+  background: var(--color-feedback-win);
+  border-color: var(--color-feedback-win);
+  font-weight: 700;
+}
+
+/* §3.6 480px 미만: 입력·제출 control 세로 stack */
+@media (max-width: 479px) {
+  .game__form {
+    flex-direction: column;
+  }
+
+  .game__submit {
+    width: 100%;
+  }
+}
