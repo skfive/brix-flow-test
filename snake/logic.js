@@ -83,10 +83,20 @@ export const ENEMY_TARGET_VALUE_ITEM = {
 /** 설정 localStorage 키 (명세 §5-1) */
 export const SNAKE_SETTINGS_LS_KEY = "bf-snake-settings";
 
-/** 설정 스키마 버전 (명세 §5-2) */
-export const SNAKE_SETTINGS_SCHEMA_VERSION = 1;
+/**
+ * 설정 스키마 버전.
+ * - v1 (BF-579): schemaVersion 1, 7개 필드.
+ * - v2 (BF-1626): schemaVersion 2, soundEnabled/controlScheme 필드 additive 추가.
+ */
+export const SNAKE_SETTINGS_SCHEMA_VERSION = 2;
 
-/** 기본 설정값 (명세 §2-1) */
+/**
+ * 기본 설정값 (v2 — planner 명세 §2-2).
+ * 기존 7개 필드의 의미·기본값은 불변, 신규 2개 필드만 additive 추가.
+ * - soundEnabled: 신규 기능 기본 노출값 true.
+ * - controlScheme: "both" — 기존 game.js KEY_DIR 이 방향키+WASD 를 동시
+ *   지원하므로 "both" 가 behavior-preserving 기본값이다 (work packet AC).
+ */
 export const SNAKE_SETTINGS_DEFAULTS = Object.freeze({
   schemaVersion:     SNAKE_SETTINGS_SCHEMA_VERSION,
   difficulty:        "normal",
@@ -96,31 +106,43 @@ export const SNAKE_SETTINGS_DEFAULTS = Object.freeze({
   multiplierEnabled: true,
   timeLimitSec:      null,
   initialLength:     3,
+  soundEnabled:      true,      // BF-1626 v2 (신규)
+  controlScheme:     "both",    // BF-1626 v2 (신규 — arrows|wasd|both)
 });
 
-/** 허용 범위 (명세 §2-1, §2-2 — BF-584: cpuCount 0~5 확장) */
+/** 허용 범위 (BF-584: cpuCount 0~5 확장, BF-1626: controlScheme 추가) */
 export const SNAKE_SETTINGS_LIMITS = Object.freeze({
   difficulty:    ["easy", "normal"],
   cpuCount:      [0, 1, 2, 3, 4, 5],
   itemSpawnRate: { min: 0.0, max: 1.0 },
   timeLimitSec:  { min: 60,  max: 600 },
   initialLength: [3, 5, 7],
+  controlScheme: ["arrows", "wasd", "both"],   // BF-1626 v2
 });
 
 /**
- * 입력 객체를 §2-1 기본값과 병합 + §9 EC 정책으로 검증.
+ * v1→v2 설정 마이그레이션 + 검증 (BF-1626, planner 명세 §3).
  *
- * - 모르는 필드는 무시
- * - 허용 범위 외 값은 기본값으로 폴백 + console.warn
- * - cpuCount === 2 는 1 로 폴백 (EC-1: 본 스토리에서 코드 미준비)
+ * 원칙 (frozen invariant):
+ * - 데이터 보존: 저장된 유효 필드 값은 유실되지 않는다.
+ * - 멱등: 이미 v2 인 입력을 재마이그레이션해도 결과가 동일하다.
+ * - 미래 버전 강등 금지: schemaVersion > 2 이면 알려진 필드만 병합하되
+ *   원본 schemaVersion 을 그대로 보존한다.
  *
- * @param {unknown} raw  parse 된 localStorage 객체 (null/undefined/non-object 도 허용)
+ * 규칙:
+ * - null/undefined/non-object/배열 → v2 전체 기본값 (EC-1).
+ * - 없음/1/2/비숫자(문자열·NaN 등) → 9개 필드 검증 병합 후 schemaVersion=2.
+ * - schemaVersion > 2 (숫자) → 알려진 9개 필드 병합 + 원본 schemaVersion 보존.
+ * - 기존 7개 필드의 검증·clamp·폴백 정책은 v1 과 동일 (회귀 없음).
+ *
+ * @param {unknown} raw  parse 된 localStorage 객체 (손상 입력 허용)
  * @returns {typeof SNAKE_SETTINGS_DEFAULTS}
  */
-export function validateAndMergeSettings(raw) {
+export function migrateSettings(raw) {
   const out = { ...SNAKE_SETTINGS_DEFAULTS };
-  if (raw === null || raw === undefined || typeof raw !== "object") return out;
+  if (raw === null || raw === undefined || typeof raw !== "object" || Array.isArray(raw)) return out;
 
+  // ── 기존 7개 필드 (v1 계약 불변) ─────────────────────────
   // difficulty (enum)
   if (typeof raw.difficulty === "string" && SNAKE_SETTINGS_LIMITS.difficulty.includes(raw.difficulty)) {
     out.difficulty = raw.difficulty;
@@ -184,13 +206,43 @@ export function validateAndMergeSettings(raw) {
     }
   }
 
-  // schemaVersion — 현재 v1 만 정의. 미래 값(2+) 은 알려진 필드만 추출하고 schemaVersion=1 로 정규화.
-  if (typeof raw.schemaVersion === "number" && raw.schemaVersion > SNAKE_SETTINGS_SCHEMA_VERSION) {
-    info("[BF-579] settings.schemaVersion 이 미래 값:", raw.schemaVersion, "— 알려진 필드만 사용");
+  // ── v2 신규 2개 필드 (BF-1626) ───────────────────────────
+  // soundEnabled (boolean, 기본 true)
+  if (typeof raw.soundEnabled === "boolean") {
+    out.soundEnabled = raw.soundEnabled;
+  } else if (raw.soundEnabled !== undefined) {
+    warn("[BF-1626] settings.soundEnabled 비boolean — 기본값(true) 폴백:", raw.soundEnabled);
   }
-  out.schemaVersion = SNAKE_SETTINGS_SCHEMA_VERSION;
+
+  // controlScheme (enum arrows|wasd|both, 기본 both)
+  if (typeof raw.controlScheme === "string" && SNAKE_SETTINGS_LIMITS.controlScheme.includes(raw.controlScheme)) {
+    out.controlScheme = raw.controlScheme;
+  } else if (raw.controlScheme !== undefined) {
+    warn("[BF-1626] settings.controlScheme 허용 외 — 기본값(both) 폴백:", raw.controlScheme);
+  }
+
+  // ── schemaVersion 처리 (강등 금지 — 명세 §3-3) ───────────
+  if (typeof raw.schemaVersion === "number" && raw.schemaVersion > SNAKE_SETTINGS_SCHEMA_VERSION) {
+    // 미래 버전: 알려진 필드만 병합하되 원본 schemaVersion 을 보존한다.
+    info("[BF-1626] settings.schemaVersion 미래 값:", raw.schemaVersion, "— 알려진 필드만 사용, 버전 보존");
+    out.schemaVersion = raw.schemaVersion;
+  } else {
+    // 없음/1/2/비숫자(문자열·NaN 등) → v2 로 정규화.
+    out.schemaVersion = SNAKE_SETTINGS_SCHEMA_VERSION;
+  }
 
   return out;
+}
+
+/**
+ * 입력 객체를 v2 기본값과 병합 + 검증하여 반환한다.
+ * BF-1626: migrateSettings 로 위임 (v2 반환). 기존 호출부 시그니처 유지.
+ *
+ * @param {unknown} raw  parse 된 localStorage 객체 (null/undefined/non-object 도 허용)
+ * @returns {typeof SNAKE_SETTINGS_DEFAULTS}
+ */
+export function validateAndMergeSettings(raw) {
+  return migrateSettings(raw);
 }
 
 /** logic.js 단위 테스트에서도 console 호출은 OK — node 환경 호환 */

@@ -1537,3 +1537,136 @@ body {
     width: 100%;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   BF-1626 · 설정 스키마 v2 신규 항목(사운드/조작 방식)
+   frozen ui-contract@v1 (additive). 기존 gameover/settings-modal
+   토큰과 이름이 겹치지 않는 별도 토큰만 추가한다.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --snake-settings-field-gap: 12px;
+  --snake-control-active-fg: #2563eb;
+  --snake-toggle-on-bg: #16a34a;
+}
+
+.settings-open-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(20, 24, 40, 0.85);
+  color: #e5e7eb;
+  font-size: 14px;
+  cursor: pointer;
+}
+.settings-open-button:focus-visible {
+  outline: 2px solid var(--snake-control-active-fg);
+  outline-offset: 2px;
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--snake-settings-field-gap);
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 24px));
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 18, 32, 0.96);
+  color: #e5e7eb;
+}
+.settings-panel[hidden],
+.settings-panel.is-settings-closed[hidden] {
+  display: none;
+}
+
+.settings-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.settings-panel__title {
+  margin: 0;
+  font-size: 16px;
+}
+.settings-panel__close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 각 설정 항목 — field-gap 토큰으로 간격 유지 */
+.settings__field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--snake-settings-field-gap);
+  flex-wrap: wrap;
+}
+.settings__field-label {
+  font-size: 14px;
+}
+
+/* 사운드 토글 — 켜짐 시 on-bg 토큰, 상태 텍스트로도 구분 */
+.settings-sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(60, 64, 80, 0.9);
+  color: #e5e7eb;
+  font-size: 13px;
+  cursor: pointer;
+}
+.settings-sound-toggle[data-state="sound-enabled"],
+.settings-sound-toggle[aria-checked="true"] {
+  background: var(--snake-toggle-on-bg);
+  color: #fff;
+}
+.settings-sound-toggle:focus-visible {
+  outline: 2px solid var(--snake-control-active-fg);
+  outline-offset: 2px;
+}
+
+/* 조작 방식 — 선택 옵션에 active-fg 토큰. 색상 외 aria-checked/텍스트로 구분 */
+.settings-control-scheme {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.settings-control-scheme__option {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(60, 64, 80, 0.9);
+  color: #e5e7eb;
+  font-size: 13px;
+  cursor: pointer;
+}
+.settings-control-scheme__option[aria-checked="true"] {
+  border-color: var(--snake-control-active-fg);
+  color: var(--snake-control-active-fg);
+  font-weight: 700;
+}
+.settings-control-scheme__option:focus-visible {
+  outline: 2px solid var(--snake-control-active-fg);
+  outline-offset: 2px;
+}
+
+/* 320px 이상에서 신규 2개 항목이 overflow 없이 배치되도록 세로 스택 폴백 */
+@media (max-width: 360px) {
+  .settings__field {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
