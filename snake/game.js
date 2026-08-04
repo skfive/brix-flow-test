@@ -3180,6 +3180,108 @@ if (settingsTriggerEl) {
     openSettingsModal("start");
   });
 }
+
+// ─────────────────────────────────────────────────────────────
+// BF-1626: 설정 스키마 v2 신규 패널(사운드/조작 방식) 배선
+//   frozen ui-contract@v1. 기존 settings-modal 흐름과 독립적인 additive 패널.
+//   조작 방식 변경은 currentSettings 에 즉시 반영되어 키 입력(resolveDirKey)에
+//   바로 적용된다. 닫힘/취소 후 '추가 설정' 버튼으로 포커스를 복원한다.
+// ─────────────────────────────────────────────────────────────
+const settingsOpenBtnEl     = document.getElementById("settings-open-button");
+const settingsPanelEl       = document.getElementById("settings-panel");
+const settingsSoundToggleEl = document.getElementById("settings-sound-toggle");
+const settingsControlEl     = document.getElementById("settings-control-scheme");
+const settingsPanelCloseEl  = settingsPanelEl ? settingsPanelEl.querySelector(".settings-panel__close") : null;
+
+function reflectSettingsPanel() {
+  if (settingsSoundToggleEl) {
+    const on = currentSettings.soundEnabled !== false;
+    settingsSoundToggleEl.setAttribute("aria-checked", String(on));
+    settingsSoundToggleEl.setAttribute("data-state", on ? "sound-enabled" : "sound-disabled");
+    const txt = settingsSoundToggleEl.querySelector(".settings-sound-toggle__text");
+    if (txt) txt.textContent = on ? "사운드 켜짐" : "사운드 꺼짐";
+  }
+  if (settingsControlEl) {
+    const scheme = currentSettings.controlScheme || "arrows";
+    settingsControlEl.setAttribute("data-state", "control-" + scheme);
+    const opts = settingsControlEl.querySelectorAll(".settings-control-scheme__option");
+    for (let i = 0; i < opts.length; i++) {
+      opts[i].setAttribute("aria-checked", String(opts[i].getAttribute("data-value") === scheme));
+    }
+  }
+}
+
+function openSettingsPanel() {
+  if (!settingsPanelEl) return;
+  reflectSettingsPanel();
+  settingsPanelEl.removeAttribute("hidden");
+  settingsPanelEl.classList.remove("is-settings-closed");
+  settingsPanelEl.setAttribute("data-state", "settings-open");
+  if (settingsOpenBtnEl) settingsOpenBtnEl.setAttribute("aria-expanded", "true");
+  if (settingsSoundToggleEl && typeof settingsSoundToggleEl.focus === "function") {
+    settingsSoundToggleEl.focus();
+  }
+}
+
+function closeSettingsPanel() {
+  if (!settingsPanelEl) return;
+  settingsPanelEl.setAttribute("hidden", "");
+  settingsPanelEl.classList.add("is-settings-closed");
+  settingsPanelEl.setAttribute("data-state", "settings-closed");
+  if (settingsOpenBtnEl) {
+    settingsOpenBtnEl.setAttribute("aria-expanded", "false");
+    // 닫힘/취소 후 주 실행 control 재활성화 — '추가 설정' 버튼으로 포커스 복원.
+    if (typeof settingsOpenBtnEl.focus === "function") settingsOpenBtnEl.focus();
+  }
+}
+
+function persistPanelSettings() {
+  const merged = (typeof saveSnakeSettings === "function")
+    ? saveSnakeSettings(currentSettings)
+    : validateAndMergeSettings(currentSettings);
+  currentSettings = merged;
+  // 사운드는 기존 사운드 시스템의 별도 키에도 영속해 즉시 반영.
+  if (typeof saveSettingsSoundEnabled === "function") {
+    saveSettingsSoundEnabled(currentSettings.soundEnabled !== false);
+  }
+  reflectSettingsPanel();
+}
+
+if (settingsOpenBtnEl) {
+  settingsOpenBtnEl.addEventListener("click", () => openSettingsPanel());
+}
+if (settingsPanelCloseEl) {
+  settingsPanelCloseEl.addEventListener("click", () => closeSettingsPanel());
+}
+if (settingsPanelEl) {
+  settingsPanelEl.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeSettingsPanel();
+    }
+  });
+}
+if (settingsSoundToggleEl) {
+  settingsSoundToggleEl.addEventListener("click", () => {
+    currentSettings = Object.assign({}, currentSettings, {
+      soundEnabled: !(currentSettings.soundEnabled !== false),
+    });
+    persistPanelSettings();
+  });
+}
+if (settingsControlEl) {
+  settingsControlEl.addEventListener("click", (e) => {
+    const opt = (e.target instanceof Element)
+      ? e.target.closest(".settings-control-scheme__option")
+      : null;
+    if (!opt) return;
+    const val = opt.getAttribute("data-value");
+    if (["arrows", "wasd", "both"].indexOf(val) < 0) return;
+    currentSettings = Object.assign({}, currentSettings, { controlScheme: val });
+    persistPanelSettings();   // 즉시 반영 — resolveDirKey 가 currentSettings 를 읽음
+  });
+}
+
 if (pausedBtnSettingsEl) {
   pausedBtnSettingsEl.addEventListener("click", () => {
     if (state && state.status === "paused") {
@@ -3302,17 +3404,41 @@ function doRestart() {
 // ─────────────────────────────────────────────────────────────
 // 키보드 이벤트
 // ─────────────────────────────────────────────────────────────
-const KEY_DIR = {
+// 방향키 / WASD 를 분리 — BF-1626: settings.controlScheme 반영을 위해.
+const ARROW_KEY_DIR = {
   ArrowUp:    DIR.UP,
   ArrowDown:  DIR.DOWN,
   ArrowLeft:  DIR.LEFT,
   ArrowRight: DIR.RIGHT,
-  // WASD 지원 — BF-514 AC §2
+};
+// WASD 지원 — BF-514 AC §2
+const WASD_KEY_DIR = {
   w: DIR.UP,    W: DIR.UP,
   s: DIR.DOWN,  S: DIR.DOWN,
   a: DIR.LEFT,  A: DIR.LEFT,
   d: DIR.RIGHT, D: DIR.RIGHT,
 };
+
+/**
+ * BF-1626: 현재 settings.controlScheme 에 따라 눌린 키를 방향으로 해석.
+ * - "arrows": 방향키만 (WASD 무시, 기본값 — 기존 동작 보존)
+ * - "wasd":   WASD 만 (방향키 무시)
+ * - "both":   둘 다
+ * 미매칭/미허용이면 undefined.
+ *
+ * @param {string} key  KeyboardEvent.key
+ * @returns {{x:number,y:number}|undefined}
+ */
+function resolveDirKey(key) {
+  const scheme = (currentSettings && currentSettings.controlScheme) || "arrows";
+  if (scheme !== "wasd" && Object.prototype.hasOwnProperty.call(ARROW_KEY_DIR, key)) {
+    return ARROW_KEY_DIR[key];
+  }
+  if (scheme !== "arrows" && Object.prototype.hasOwnProperty.call(WASD_KEY_DIR, key)) {
+    return WASD_KEY_DIR[key];
+  }
+  return undefined;
+}
 
 // ─────────────────────────────────────────────────────────────
 // BF-560: 일시정지 모달 버튼 이벤트 핸들러 (명세 §5-2)
@@ -3438,8 +3564,9 @@ window.addEventListener("keydown", (e) => {
   }
 
   // ⑤ 방향키는 playing 상태에서만 허용 (paused 중 방향 변경 불가)
+  //    BF-1626: settings.controlScheme 에 따라 방향키/WASD 필터.
   if (state.status === "playing") {
-    const dir = KEY_DIR[e.key];
+    const dir = resolveDirKey(e.key);
     if (dir) {
       e.preventDefault();
       state = changeDirection(state, dir);

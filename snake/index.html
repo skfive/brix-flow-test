@@ -306,6 +306,46 @@
       </div>
     </div>
 
+    <!-- BF-1626: 설정 스키마 v2 신규 항목(사운드/조작 방식) — frozen ui-contract@v1
+         additive 확장. 기존 settings-modal / gameover 메뉴 계약은 손대지 않는다.
+         상태는 색상 외 화면 텍스트(사운드 켜짐/꺼짐, 방향키/WASD/둘 다)로도 구분. -->
+    <button id="settings-open-button" type="button" class="settings-open-button"
+            aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-panel">
+      추가 설정
+    </button>
+    <section id="settings-panel" class="settings-panel is-settings-closed"
+             data-state="settings-closed" aria-label="추가 설정" hidden>
+      <header class="settings-panel__header">
+        <h2 class="settings-panel__title">추가 설정</h2>
+        <button type="button" class="settings-panel__close" aria-label="추가 설정 닫기">×</button>
+      </header>
+
+      <!-- 사운드 토글 -->
+      <div class="settings__field settings__field--sound">
+        <span class="settings__field-label" id="settings-sound-label">효과음</span>
+        <button id="settings-sound-toggle" type="button" class="settings-sound-toggle"
+                role="switch" aria-label="사운드" aria-checked="true"
+                aria-describedby="settings-sound-label" data-state="sound-enabled">
+          <span class="settings-sound-toggle__text">사운드 켜짐</span>
+        </button>
+      </div>
+
+      <!-- 조작 방식 선택 -->
+      <div class="settings__field settings__field--control">
+        <span class="settings__field-label" id="settings-control-label">조작 방식</span>
+        <div id="settings-control-scheme" class="settings-control-scheme"
+             role="radiogroup" aria-label="조작 방식"
+             aria-describedby="settings-control-label" data-state="control-arrows">
+          <button type="button" class="settings-control-scheme__option" role="radio"
+                  data-value="arrows" aria-checked="true">방향키</button>
+          <button type="button" class="settings-control-scheme__option" role="radio"
+                  data-value="wasd" aria-checked="false">WASD</button>
+          <button type="button" class="settings-control-scheme__option" role="radio"
+                  data-value="both" aria-checked="false">둘 다</button>
+        </div>
+      </div>
+    </section>
+
     <!-- BF-518: file:// CORS 회피 — 인라인 로직 글로벌 폴백 스크립트
          BF-530: cpuChooseDir / tickFull / 확장된 createInitialState 추가
          BF-533: pickMultiplier / spawnFoodWithMultiplier / pendingGrowth / multiplierStats 추가
@@ -405,7 +445,8 @@
 
       // ── BF-579: 게임 설정 (planner 명세 §2, §5) ──────────────
       var SNAKE_SETTINGS_LS_KEY = "bf-snake-settings";
-      var SNAKE_SETTINGS_SCHEMA_VERSION = 1;
+      // BF-1626: 스키마 v2 — soundEnabled/controlScheme additive 추가.
+      var SNAKE_SETTINGS_SCHEMA_VERSION = 2;
       var SNAKE_SETTINGS_DEFAULTS = Object.freeze({
         schemaVersion:     SNAKE_SETTINGS_SCHEMA_VERSION,
         difficulty:        "normal",
@@ -415,6 +456,8 @@
         multiplierEnabled: true,
         timeLimitSec:      null,
         initialLength:     3,
+        soundEnabled:      true,      // BF-1626 v2 (신규)
+        controlScheme:     "arrows",  // BF-1626 v2 (신규 — arrows|wasd|both, 기본 arrows)
       });
       var SNAKE_SETTINGS_LIMITS = Object.freeze({
         difficulty:    ["easy", "normal"],
@@ -422,11 +465,14 @@
         itemSpawnRate: { min: 0.0, max: 1.0 },
         timeLimitSec:  { min: 60,  max: 600 },
         initialLength: [3, 5, 7],
+        controlScheme: ["arrows", "wasd", "both"],   // BF-1626 v2
       });
 
-      function validateAndMergeSettings(raw) {
+      // BF-1626: v1→v2 마이그레이션 + 검증 (강등 금지·멱등·데이터 보존).
+      function migrateSettings(raw) {
         var out = Object.assign({}, SNAKE_SETTINGS_DEFAULTS);
-        if (raw === null || raw === undefined || typeof raw !== "object") return out;
+        if (raw === null || raw === undefined || typeof raw !== "object" ||
+            Object.prototype.toString.call(raw) === "[object Array]") return out;
 
         if (typeof raw.difficulty === "string" && SNAKE_SETTINGS_LIMITS.difficulty.indexOf(raw.difficulty) >= 0) {
           out.difficulty = raw.difficulty;
@@ -452,8 +498,23 @@
         if (typeof raw.initialLength === "number" && SNAKE_SETTINGS_LIMITS.initialLength.indexOf(raw.initialLength) >= 0) {
           out.initialLength = raw.initialLength;
         }
-        out.schemaVersion = SNAKE_SETTINGS_SCHEMA_VERSION;
+        // BF-1626 v2 신규 필드
+        if (typeof raw.soundEnabled === "boolean") out.soundEnabled = raw.soundEnabled;
+        if (typeof raw.controlScheme === "string" && SNAKE_SETTINGS_LIMITS.controlScheme.indexOf(raw.controlScheme) >= 0) {
+          out.controlScheme = raw.controlScheme;
+        }
+        // schemaVersion — 미래 버전(>2) 은 원본 보존(강등 금지), 그 외 v2 정규화.
+        if (typeof raw.schemaVersion === "number" && raw.schemaVersion > SNAKE_SETTINGS_SCHEMA_VERSION) {
+          out.schemaVersion = raw.schemaVersion;
+        } else {
+          out.schemaVersion = SNAKE_SETTINGS_SCHEMA_VERSION;
+        }
         return out;
+      }
+
+      // 기존 호출부 시그니처 유지 — migrateSettings 로 위임(v2 반환).
+      function validateAndMergeSettings(raw) {
+        return migrateSettings(raw);
       }
 
       function clampInitialLength(length, cols) {
@@ -1473,6 +1534,7 @@
         SNAKE_SETTINGS_DEFAULTS:      SNAKE_SETTINGS_DEFAULTS,
         SNAKE_SETTINGS_LIMITS:        SNAKE_SETTINGS_LIMITS,
         validateAndMergeSettings:     validateAndMergeSettings,
+        migrateSettings:              migrateSettings,
         loadSnakeSettings:            loadSnakeSettings,
         saveSnakeSettings:            saveSnakeSettings,
         clampInitialLength:           clampInitialLength,
