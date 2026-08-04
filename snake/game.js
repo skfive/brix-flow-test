@@ -3202,7 +3202,7 @@ function reflectSettingsPanel() {
     if (txt) txt.textContent = on ? "사운드 켜짐" : "사운드 꺼짐";
   }
   if (settingsControlEl) {
-    const scheme = currentSettings.controlScheme || "both";
+    const scheme = currentSettings.controlScheme || "arrows";
     settingsControlEl.setAttribute("data-state", "control-" + scheme);
     const opts = settingsControlEl.querySelectorAll(".settings-control-scheme__option");
     for (let i = 0; i < opts.length; i++) {
@@ -3421,16 +3421,16 @@ const WASD_KEY_DIR = {
 
 /**
  * BF-1626: 현재 settings.controlScheme 에 따라 눌린 키를 방향으로 해석.
- * - "arrows": 방향키만 (WASD 무시)
+ * - "arrows": 방향키만 (WASD 무시, 기본값 — 기존 동작 보존)
  * - "wasd":   WASD 만 (방향키 무시)
- * - "both":   둘 다 (기본값 — 기존 동작 보존)
+ * - "both":   둘 다
  * 미매칭/미허용이면 undefined.
  *
  * @param {string} key  KeyboardEvent.key
  * @returns {{x:number,y:number}|undefined}
  */
 function resolveDirKey(key) {
-  const scheme = (currentSettings && currentSettings.controlScheme) || "both";
+  const scheme = (currentSettings && currentSettings.controlScheme) || "arrows";
   if (scheme !== "wasd" && Object.prototype.hasOwnProperty.call(ARROW_KEY_DIR, key)) {
     return ARROW_KEY_DIR[key];
   }

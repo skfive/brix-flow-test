@@ -335,13 +335,13 @@
         <span class="settings__field-label" id="settings-control-label">조작 방식</span>
         <div id="settings-control-scheme" class="settings-control-scheme"
              role="radiogroup" aria-label="조작 방식"
-             aria-describedby="settings-control-label" data-state="control-both">
+             aria-describedby="settings-control-label" data-state="control-arrows">
           <button type="button" class="settings-control-scheme__option" role="radio"
-                  data-value="arrows" aria-checked="false">방향키</button>
+                  data-value="arrows" aria-checked="true">방향키</button>
           <button type="button" class="settings-control-scheme__option" role="radio"
                   data-value="wasd" aria-checked="false">WASD</button>
           <button type="button" class="settings-control-scheme__option" role="radio"
-                  data-value="both" aria-checked="true">둘 다</button>
+                  data-value="both" aria-checked="false">둘 다</button>
         </div>
       </div>
     </section>
@@ -457,7 +457,7 @@
         timeLimitSec:      null,
         initialLength:     3,
         soundEnabled:      true,      // BF-1626 v2 (신규)
-        controlScheme:     "both",    // BF-1626 v2 (신규 — arrows|wasd|both)
+        controlScheme:     "arrows",  // BF-1626 v2 (신규 — arrows|wasd|both, 기본 arrows)
       });
       var SNAKE_SETTINGS_LIMITS = Object.freeze({
         difficulty:    ["easy", "normal"],

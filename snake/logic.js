@@ -94,8 +94,8 @@ export const SNAKE_SETTINGS_SCHEMA_VERSION = 2;
  * 기본 설정값 (v2 — planner 명세 §2-2).
  * 기존 7개 필드의 의미·기본값은 불변, 신규 2개 필드만 additive 추가.
  * - soundEnabled: 신규 기능 기본 노출값 true.
- * - controlScheme: "both" — 기존 game.js KEY_DIR 이 방향키+WASD 를 동시
- *   지원하므로 "both" 가 behavior-preserving 기본값이다 (work packet AC).
+ * - controlScheme: "arrows" — frozen planning-contract@v1 §2-2 기본값. 기존
+ *   방향키 조작 동작을 그대로 보존하는 behavior-preserving 기본값이다.
  */
 export const SNAKE_SETTINGS_DEFAULTS = Object.freeze({
   schemaVersion:     SNAKE_SETTINGS_SCHEMA_VERSION,
@@ -107,7 +107,7 @@ export const SNAKE_SETTINGS_DEFAULTS = Object.freeze({
   timeLimitSec:      null,
   initialLength:     3,
   soundEnabled:      true,      // BF-1626 v2 (신규)
-  controlScheme:     "both",    // BF-1626 v2 (신규 — arrows|wasd|both)
+  controlScheme:     "arrows",  // BF-1626 v2 (신규 — arrows|wasd|both, 기본 arrows)
 });
 
 /** 허용 범위 (BF-584: cpuCount 0~5 확장, BF-1626: controlScheme 추가) */
@@ -214,11 +214,11 @@ export function migrateSettings(raw) {
     warn("[BF-1626] settings.soundEnabled 비boolean — 기본값(true) 폴백:", raw.soundEnabled);
   }
 
-  // controlScheme (enum arrows|wasd|both, 기본 both)
+  // controlScheme (enum arrows|wasd|both, 기본 arrows)
   if (typeof raw.controlScheme === "string" && SNAKE_SETTINGS_LIMITS.controlScheme.includes(raw.controlScheme)) {
     out.controlScheme = raw.controlScheme;
   } else if (raw.controlScheme !== undefined) {
-    warn("[BF-1626] settings.controlScheme 허용 외 — 기본값(both) 폴백:", raw.controlScheme);
+    warn("[BF-1626] settings.controlScheme 허용 외 — 기본값(arrows) 폴백:", raw.controlScheme);
   }
 
   // ── schemaVersion 처리 (강등 금지 — 명세 §3-3) ───────────

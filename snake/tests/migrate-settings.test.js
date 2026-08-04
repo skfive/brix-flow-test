@@ -10,8 +10,9 @@
 //   - 기존 7개 필드 계약 불변 (범위 외 폴백/clamp)
 //   - v2 신규 필드 검증 (허용값/타입 폴백)
 //
-// 참고: work packet AC 는 controlScheme 기본값을 'both' 로 지정한다(기존
-//   game.js KEY_DIR 이 방향키+WASD 를 동시 지원 → 'both' 가 behavior-preserving).
+// 참고: frozen planning-contract@v1 §2-2 는 controlScheme 기본값을 'arrows' 로
+//   지정한다(기존 방향키 조작을 그대로 보존하는 behavior-preserving 기본값).
+//   'both' 는 저장값으로 유효하며(허용값 배열), 저장된 경우 그대로 보존된다.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,7 +31,7 @@ test('스키마 버전은 2 이다', () => {
 
 test('DEFAULTS 에 신규 필드가 additive 로 존재한다', () => {
   assert.equal(SNAKE_SETTINGS_DEFAULTS.soundEnabled, true);
-  assert.equal(SNAKE_SETTINGS_DEFAULTS.controlScheme, 'both');
+  assert.equal(SNAKE_SETTINGS_DEFAULTS.controlScheme, 'arrows');
   assert.equal(SNAKE_SETTINGS_DEFAULTS.schemaVersion, 2);
   // 기존 7개 필드 기본값 불변
   assert.equal(SNAKE_SETTINGS_DEFAULTS.difficulty, 'normal');
@@ -59,7 +60,7 @@ test('AC-1: schemaVersion 없는 v1 데이터 → 값 보존 + 신규 기본값 
   assert.equal(out.initialLength, 3);
   // 신규 필드 기본값
   assert.equal(out.soundEnabled, true);
-  assert.equal(out.controlScheme, 'both');
+  assert.equal(out.controlScheme, 'arrows');
   // 버전 상향
   assert.equal(out.schemaVersion, 2);
 });
@@ -68,7 +69,7 @@ test('schemaVersion:1 명시 데이터도 v2 로 정규화된다', () => {
   const out = migrateSettings({ schemaVersion: 1, difficulty: 'easy' });
   assert.equal(out.schemaVersion, 2);
   assert.equal(out.difficulty, 'easy');
-  assert.equal(out.controlScheme, 'both');
+  assert.equal(out.controlScheme, 'arrows');
 });
 
 // ── AC-2 멱등성 ─────────────────────────────────────────────
@@ -101,12 +102,12 @@ test('controlScheme 3개 허용값 모두 채택된다', () => {
 // ── AC-4 신규 필드 잘못된 값 폴백 ───────────────────────────
 test('AC-4: controlScheme 허용 외/soundEnabled 비boolean → 기본값 폴백', () => {
   const out = migrateSettings({ schemaVersion: 2, controlScheme: 'joystick', soundEnabled: 'yes' });
-  assert.equal(out.controlScheme, 'both');   // 기본값 폴백
+  assert.equal(out.controlScheme, 'arrows'); // 기본값 폴백
   assert.equal(out.soundEnabled, true);      // 비boolean → 기본값
 });
 
 test('EC-3: controlScheme 대소문자 "ARROWS" → 기본값 폴백', () => {
-  assert.equal(migrateSettings({ controlScheme: 'ARROWS' }).controlScheme, 'both');
+  assert.equal(migrateSettings({ controlScheme: 'ARROWS' }).controlScheme, 'arrows');
 });
 
 test('EC-4: soundEnabled:null → 기본값 true', () => {
@@ -167,7 +168,7 @@ test('EC-1: null/undefined/문자열/배열 → v2 전체 기본값, 예외 미�
     const out = migrateSettings(bad);
     assert.equal(out.schemaVersion, 2);
     assert.equal(out.difficulty, 'normal');
-    assert.equal(out.controlScheme, 'both');
+    assert.equal(out.controlScheme, 'arrows');
     assert.equal(out.soundEnabled, true);
   }
 });
@@ -176,7 +177,7 @@ test('EC-1: null/undefined/문자열/배열 → v2 전체 기본값, 예외 미�
 test('AC-3: validateAndMergeSettings 는 v2 (9필드 + version 2) 를 반환한다', () => {
   const out = validateAndMergeSettings({ difficulty: 'easy' });
   assert.equal(out.schemaVersion, 2);
-  assert.equal(out.controlScheme, 'both');
+  assert.equal(out.controlScheme, 'arrows');
   assert.equal(out.soundEnabled, true);
   assert.equal(out.difficulty, 'easy');
 });
