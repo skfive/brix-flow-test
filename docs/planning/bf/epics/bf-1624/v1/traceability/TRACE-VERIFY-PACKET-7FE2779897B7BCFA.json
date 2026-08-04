@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-PACKET-7FE2779897B7BCFA","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"PKT-DEVELOP","status":"active","targetRef":"TS-GAMEOVER-REGRESSION","title":"Verify PKT-DEVELOP with TS-GAMEOVER-REGRESSION","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
