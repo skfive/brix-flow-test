@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-DESIGN-C94BD19ABA10E32A","artifactType":"TraceLink","relation":"realized_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-NEW-GAME","status":"active","targetRef":"IF-JUDGE","title":"Realize REQ-NEW-GAME by IF-JUDGE","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
