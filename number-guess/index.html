@@ -12,31 +12,30 @@
       <h1 id="game-title">숫자 맞히기</h1>
       <p class="game__lead">1부터 100 사이의 숫자를 맞혀보세요</p>
 
-      <p id="guess-feedback" class="game__feedback" role="status" aria-live="polite">1부터 100 사이의 숫자를 입력하세요</p>
+      <p id="feedback" class="game__feedback" role="status" aria-live="polite" data-state="idle">1부터 100 사이의 숫자를 입력하세요</p>
 
       <form id="guess-form" class="game__form" autocomplete="off" novalidate>
         <label class="game__label" for="guess-input">추측할 숫자 (1~100)</label>
         <input id="guess-input" class="game__input" type="number" min="1" max="100" step="1"
-               inputmode="numeric" placeholder="1 ~ 100">
-        <button id="guess-submit" class="game__submit" type="submit" aria-label="입력한 숫자 제출">추측하기</button>
+               inputmode="numeric" aria-label="추측할 숫자" placeholder="1 ~ 100">
+        <button id="submit-btn" class="game__button game__button--primary" type="submit" aria-label="추측 제출">추측 제출</button>
       </form>
 
       <dl class="game__stats">
         <div class="game__stat">
           <dt>시도 횟수</dt>
-          <dd id="guess-attempts">0</dd>
+          <dd id="attempts">0</dd>
         </div>
         <div class="game__stat">
           <dt>최고 기록</dt>
-          <dd id="best-score">—</dd>
+          <dd id="best-score">기록 없음</dd>
         </div>
       </dl>
 
-      <button id="new-game" class="game__new" type="button" aria-label="새 게임 시작">새 게임</button>
+      <button id="new-game-btn" class="game__button game__button--ghost" type="button" aria-label="새 게임 시작">새 게임</button>
     </section>
   </main>
 
-  <script src="./judge.js"></script>
   <script src="./game.js"></script>
 </body>
 </html>

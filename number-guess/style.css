@@ -1,12 +1,13 @@
-/* number-guess/style.css — 숫자 맞히기 게임 스타일
- * 계약: docs/plans/number-guess-BF-1588.md §5·§7·§8 (frozen design token)
+/* number-guess/style.css — 숫자 맞히기 게임 스타일 (BF-1614)
+ * 계약: docs/plans/number-guess-plan-BF-1612.md §3.2·§3.3·§3.6 (frozen class·token·반응형)
  * vanilla-static · system font only · 외부 의존성 0건
  */
 :root {
-  /* frozen design token (§5) — 값 변경·재정의 금지 */
+  /* frozen design token (§3.3) — 값 변경·재정의 금지 */
   --color-action-primary: #2563eb;
-  --color-feedback-success: #16a34a;
-  --color-feedback-hint: #64748b;
+  --color-feedback-higher: #f59e0b;
+  --color-feedback-lower: #3b82f6;
+  --color-feedback-win: #16a34a;
   --space-control-gap: 12px;
 
   /* 파생 표현 토큰 */
@@ -35,7 +36,7 @@ body {
   line-height: 1.5;
 }
 
-/* ===== 게임 카드 (.game) — 중앙 정렬 + 최대 너비 제한 (§8) ===== */
+/* ===== 게임 카드 (.game) — max-width 로 뷰포트 중앙 정렬 (§3.6) ===== */
 .game {
   width: 100%;
   max-width: 420px;
@@ -63,7 +64,7 @@ body {
   margin-top: -12px;
 }
 
-/* ===== 피드백 (aria-live) ===== */
+/* ===== 피드백 (aria-live) — 상태명 텍스트가 주 신호, 색은 보조 (§3.4·§3.5) ===== */
 .game__feedback {
   min-height: 1.6em;
   text-align: center;
@@ -72,10 +73,9 @@ body {
   line-height: 1.4;
   color: var(--color-text-muted);
 }
-/* 상태별 색 — 색상은 보조 신호, 상태 텍스트가 주 신호 (§4·§7) */
-.game__feedback[data-state="hint-higher"],
-.game__feedback[data-state="hint-lower"] { color: var(--color-feedback-hint); }
-.game__feedback[data-state="won"] { color: var(--color-feedback-success); font-weight: 700; }
+.game__feedback[data-state="higher"] { color: var(--color-feedback-higher); }
+.game__feedback[data-state="lower"] { color: var(--color-feedback-lower); }
+.game__feedback[data-state="win"] { color: var(--color-feedback-win); font-weight: 700; }
 
 /* ===== 입력 폼 ===== */
 .game__form {
@@ -111,9 +111,8 @@ body {
 }
 .game__input:disabled { opacity: 0.55; cursor: not-allowed; }
 
-/* ===== 버튼 ===== */
-.game__submit,
-.game__new {
+/* ===== 버튼 (.game__button) — 주 실행/새 게임 ===== */
+.game__button {
   width: 100%;
   font-family: inherit;
   font-size: 1rem;
@@ -124,18 +123,18 @@ body {
   cursor: pointer;
   color: #fff;
 }
-.game__submit { background: var(--color-action-primary); }
-.game__submit:hover { filter: brightness(0.95); }
-.game__submit:active { transform: translateY(1px); }
-.game__submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.game__button--primary { background: var(--color-action-primary); }
+.game__button--primary:hover { filter: brightness(0.95); }
+.game__button--primary:active { transform: translateY(1px); }
+.game__button--primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.game__new {
+.game__button--ghost {
   background: transparent;
   color: var(--color-action-primary);
   border: 1px solid var(--color-action-primary);
 }
-.game__new:hover { background: rgba(37, 99, 235, 0.08); }
-.game__new:active { transform: translateY(1px); }
+.game__button--ghost:hover { background: rgba(37, 99, 235, 0.08); }
+.game__button--ghost:active { transform: translateY(1px); }
 
 /* ===== 통계 (시도/best) ===== */
 .game__stats {
@@ -160,7 +159,7 @@ body {
   margin-top: 4px;
 }
 
-/* ===== 반응형 — 320px 이상 overflow 방지 (§8) ===== */
+/* ===== 반응형 — 320px 이상 content overflow 방지 (§3.6) ===== */
 @media (max-width: 360px) {
   body { padding: 16px 12px; }
   .game { padding: 20px; }
