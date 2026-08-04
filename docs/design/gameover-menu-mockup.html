@@ -8,6 +8,10 @@
     BF-1583 designer mockup (이디자인) — frozen ui-contract@v1 시각화.
     이 파일은 dev 산출물이 아니라 시안 시각 시뮬레이션입니다. self-contained · 외부 의존성 0건.
     selector/class/token 은 planner frozen 계약 그대로 사용하며 재정의하지 않습니다.
+
+    revision (BF-1583 cycle): 버튼 base/hover/focus 시각값을 BF-1584 에서 실제 머지된
+    snake/styles.css 구현과 동기화 — base 배경 transparent, hover rgba(…,0.12), :focus outline.
+    (색상값은 frozen 대상 아님 — dev 픽셀 일치 의무 없음이나 문서 정확성을 위해 shipped 값에 맞춤.)
   -->
   <style>
     :root {
@@ -26,12 +30,12 @@
       --go-divider: rgba(255, 255, 255, 0.10);
       --btn-restart-color: #4cff80;   /* 다시하기 = primary(green) */
       --btn-restart-border: rgba(76, 255, 128, 0.30);
-      --btn-restart-bg: rgba(76, 255, 128, 0.08);
-      --btn-restart-hover-bg: rgba(76, 255, 128, 0.18);
+      --btn-restart-bg: transparent;                 /* shipped: base 틴트 없음 */
+      --btn-restart-hover-bg: rgba(76, 255, 128, 0.12);
       --btn-settings-color: #00cfff;  /* 설정 = secondary(cyan) */
       --btn-settings-border: rgba(0, 207, 255, 0.30);
-      --btn-settings-bg: rgba(0, 207, 255, 0.08);
-      --btn-settings-hover-bg: rgba(0, 207, 255, 0.18);
+      --btn-settings-bg: transparent;                /* shipped: base 틴트 없음 */
+      --btn-settings-hover-bg: rgba(0, 207, 255, 0.12);
       --btn-kbd-bg: rgba(255, 255, 255, 0.12);
       --btn-kbd-border: rgba(255, 255, 255, 0.25);
     }
@@ -107,7 +111,8 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: var(--gameover-menu-gap);
-      margin-top: 22px;
+      margin-top: 20px;
+      pointer-events: auto;   /* shipped: overlay(pointer-events:none) 위에서 클릭 복원 */
     }
 
     .gameover-btn {
@@ -135,7 +140,7 @@
       background: var(--btn-restart-bg);
     }
     #gameover-restart-btn:hover { background: var(--btn-restart-hover-bg); }
-    #gameover-restart-btn:focus-visible { outline: 2px solid #4cff80; outline-offset: 2px; }
+    #gameover-restart-btn:focus { outline: 2px solid #4cff80; outline-offset: 2px; }
 
     #gameover-settings-btn {
       color: var(--btn-settings-color);
@@ -143,7 +148,7 @@
       background: var(--btn-settings-bg);
     }
     #gameover-settings-btn:hover { background: var(--btn-settings-hover-bg); }
-    #gameover-settings-btn:focus-visible { outline: 2px solid #00cfff; outline-offset: 2px; }
+    #gameover-settings-btn:focus { outline: 2px solid #00cfff; outline-offset: 2px; }
 
     .gameover-btn__key {
       display: inline-flex;
@@ -174,8 +179,8 @@
     }
     .narrow-frame .stage { padding: 24px 8px; }
     .narrow-frame .gameover-box { min-width: 0; width: 100%; max-width: none; padding: 24px 18px; }
-    /* 좁은 화면: 세로 스택, 텍스트/배지 clip 없음 */
-    .narrow-frame .gameover-menu { flex-direction: column; }
+    /* 좁은 화면: 세로 스택, 텍스트/배지 clip 없음 (shipped: @media max-width:360px) */
+    .narrow-frame .gameover-menu { flex-direction: column; align-items: stretch; }
     .narrow-frame .gameover-btn { width: 100%; }
 
     .state-grid { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
@@ -254,7 +259,7 @@
     ────────────────────────────────────────────────────────── -->
     <h2 class="mock-section-title">2 · 인터랙션 상태 (hover / focus)</h2>
     <p class="mock-note">
-      실제 <code>:hover</code>·<code>:focus-visible</code> 는 위 1번에서 직접 확인 가능. 아래는 상태를 정적으로 그려둔 비교입니다.
+      실제 <code>:hover</code>·<code>:focus</code> 는 위 1번에서 직접 확인 가능. 아래는 상태를 정적으로 그려둔 비교입니다.
       상태 의미는 <b>색상 외 라벨 텍스트·aria-label</b> 로도 전달됩니다.
     </p>
     <div class="state-grid">
