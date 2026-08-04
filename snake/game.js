@@ -3557,7 +3557,11 @@ window.addEventListener("keydown", (e) => {
   }
 
   // ④ BF-631: D 키 — debug 오버레이 토글 (상태 무관)
-  if (e.code === "KeyD") {
+  //    BF-1626 revision: controlScheme 가 WASD 를 활성화한 경우(wasd/both)
+  //    'd' 는 오른쪽 방향 전환에 쓰이므로 debug 토글로 가로채면 안 된다.
+  //    (기존 'arrows' 모드에서는 'd' 가 방향에 매핑되지 않아 debug 토글 유지.)
+  const dbgScheme = (currentSettings && currentSettings.controlScheme) || "arrows";
+  if (e.code === "KeyD" && dbgScheme !== "wasd" && dbgScheme !== "both") {
     e.preventDefault();
     toggleDebugOverlay();
     return;
