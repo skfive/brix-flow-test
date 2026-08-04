@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>숫자 맞히기 게임</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="game">
+      <h1 class="game__title">숫자 맞히기</h1>
+      <p class="game__intro">1부터 100 사이의 비밀 숫자를 맞혀 보세요.</p>
+
+      <div class="game__field">
+        <label for="guess-input">추측할 숫자 (1–100)</label>
+        <input
+          id="guess-input"
+          type="number"
+          min="1"
+          max="100"
+          step="1"
+          inputmode="numeric"
+          autocomplete="off"
+        />
+      </div>
+
+      <button id="guess-submit" class="game__submit" type="button" aria-label="추측 제출">
+        제출
+      </button>
+
+      <p id="guess-feedback" class="game__feedback" data-state="idle" aria-live="polite"></p>
+
+      <div class="game__meta">
+        <span id="attempt-count">시도: 0회</span>
+        <span id="best-score">최고 기록: 기록 없음</span>
+      </div>
+
+      <button id="new-game" class="game__new" type="button">새 게임</button>
+    </main>
+
+    <!-- judge.js 를 먼저 로드해 globalThis.judge 를 노출한 뒤 game.js 가 사용한다. defer 로 순서·DOM 보장. -->
+    <script src="judge.js" defer></script>
+    <script src="game.js" defer></script>
+  </body>
+</html>
