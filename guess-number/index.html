@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>숫자 맞히기 게임</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="game">
+      <h1>숫자 맞히기 게임</h1>
+      <p>1부터 100 사이의 숫자를 맞혀보세요.</p>
+
+      <div class="game__stats">
+        <span>시도 횟수: <strong id="attempt-count">0</strong></span>
+        <span>최고 기록: <strong id="best-score">-</strong></span>
+      </div>
+
+      <div class="game__controls">
+        <input
+          id="guess-input"
+          class="game__input"
+          type="number"
+          min="1"
+          max="100"
+          inputmode="numeric"
+          aria-label="추측 숫자 입력"
+          placeholder="1 ~ 100"
+        />
+        <button id="guess-submit" class="game__submit" type="button" aria-label="추측 제출">
+          제출
+        </button>
+        <button id="new-game" type="button">새 게임</button>
+      </div>
+
+      <p id="feedback" class="game__feedback" aria-live="polite" role="status">
+        1부터 100 사이의 숫자를 맞혀보세요.
+      </p>
+    </main>
+
+    <script type="module" src="game.js"></script>
+  </body>
+</html>
