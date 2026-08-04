@@ -1,14 +1,15 @@
-/* number-guess/style.css — 숫자 맞히기 게임 스타일 (BF-1614)
- * 계약: docs/plans/number-guess-plan-BF-1612.md §3.2·§3.3·§3.6 (frozen class·token·반응형)
+/* number-guess/style.css — 숫자 맞히기 게임 스타일 (BF-1620)
+ * 계약: docs/plans/number-guess-BF-1618-plan.md §5.3·§5.5·§5.7 (frozen class·token·반응형)
  * vanilla-static · system font only · 외부 의존성 0건
  */
 :root {
-  /* frozen design token (§3.3) — 값 변경·재정의 금지 */
+  /* frozen design token (§5.5) — 값·이름 변경·재정의 금지 */
   --color-action-primary: #2563eb;
-  --color-feedback-higher: #f59e0b;
-  --color-feedback-lower: #3b82f6;
-  --color-feedback-win: #16a34a;
+  --color-feedback-correct: #16a34a;
+  --color-feedback-hint: #d97706;
+  --color-feedback-error: #dc2626;
   --space-control-gap: 12px;
+  --font-stack: system-ui;
 
   /* 파생 표현 토큰 */
   --color-surface: #ffffff;
@@ -17,7 +18,7 @@
   --color-text-muted: #64748b;
   --color-border: #cbd5e1;
   --color-bg: #eef2f7;
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-sans: var(--font-stack), -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --radius: 16px;
   --radius-sm: 10px;
 }
@@ -36,7 +37,7 @@ body {
   line-height: 1.5;
 }
 
-/* ===== 게임 카드 (.game) — max-width 로 뷰포트 중앙 정렬 (§3.6) ===== */
+/* ===== 게임 카드 (.game) — max-width 로 뷰포트 중앙 정렬 (§5.7) ===== */
 .game {
   width: 100%;
   max-width: 420px;
@@ -64,7 +65,7 @@ body {
   margin-top: -12px;
 }
 
-/* ===== 피드백 (aria-live) — 상태명 텍스트가 주 신호, 색은 보조 (§3.4·§3.5) ===== */
+/* ===== 피드백 (aria-live) — 상태명 텍스트가 주 신호, 색은 보조 (§5.4·§5.6) ===== */
 .game__feedback {
   min-height: 1.6em;
   text-align: center;
@@ -73,25 +74,21 @@ body {
   line-height: 1.4;
   color: var(--color-text-muted);
 }
-.game__feedback[data-state="higher"] { color: var(--color-feedback-higher); }
-.game__feedback[data-state="lower"] { color: var(--color-feedback-lower); }
-.game__feedback[data-state="win"] { color: var(--color-feedback-win); font-weight: 700; }
+.game__feedback[data-state="hint-higher"],
+.game__feedback[data-state="hint-lower"] { color: var(--color-feedback-hint); }
+.game__feedback[data-state="win"] { color: var(--color-feedback-correct); font-weight: 700; }
+.game__feedback[data-state="invalid"] { color: var(--color-feedback-error); }
 
-/* ===== 입력 폼 ===== */
+/* ===== 입력 폼 — 360px 미만에서 입력·버튼 세로 stack (§5.7) ===== */
 .game__form {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: var(--space-control-gap);
 }
 
-.game__label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
 .game__input {
-  width: 100%;
+  flex: 1 1 140px;
+  min-width: 0; /* 320px 이상 overflow 방지 (§5.7) */
   font-family: inherit;
   font-size: 1.4rem;
   font-weight: 600;
@@ -111,30 +108,38 @@ body {
 }
 .game__input:disabled { opacity: 0.55; cursor: not-allowed; }
 
-/* ===== 버튼 (.game__button) — 주 실행/새 게임 ===== */
-.game__button {
+/* ===== 제출 버튼 (.game__submit) — 주 실행 control ===== */
+.game__submit {
+  flex: 0 0 auto;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 13px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: #fff;
+  background: var(--color-action-primary);
+}
+.game__submit:hover { filter: brightness(0.95); }
+.game__submit:active { transform: translateY(1px); }
+.game__submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ===== 새 게임 버튼 (ghost) ===== */
+.game__new-game {
   width: 100%;
   font-family: inherit;
   font-size: 1rem;
   font-weight: 600;
   padding: 13px;
-  border: none;
+  border: 1px solid var(--color-action-primary);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  color: #fff;
-}
-.game__button--primary { background: var(--color-action-primary); }
-.game__button--primary:hover { filter: brightness(0.95); }
-.game__button--primary:active { transform: translateY(1px); }
-.game__button--primary:disabled { opacity: 0.55; cursor: not-allowed; }
-
-.game__button--ghost {
   background: transparent;
   color: var(--color-action-primary);
-  border: 1px solid var(--color-action-primary);
 }
-.game__button--ghost:hover { background: rgba(37, 99, 235, 0.08); }
-.game__button--ghost:active { transform: translateY(1px); }
+.game__new-game:hover { background: rgba(37, 99, 235, 0.08); }
+.game__new-game:active { transform: translateY(1px); }
 
 /* ===== 통계 (시도/best) ===== */
 .game__stats {
@@ -143,6 +148,7 @@ body {
 }
 .game__stat {
   flex: 1;
+  min-width: 0;
   background: var(--color-surface-muted);
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -159,9 +165,11 @@ body {
   margin-top: 4px;
 }
 
-/* ===== 반응형 — 320px 이상 content overflow 방지 (§3.6) ===== */
-@media (max-width: 360px) {
+/* ===== 반응형 — 360px 미만 입력·버튼 컨트롤 세로 stack (§5.7) ===== */
+@media (max-width: 359.98px) {
   body { padding: 16px 12px; }
   .game { padding: 20px; }
+  .game__form { flex-direction: column; }
   .game__input { font-size: 1.2rem; }
+  .game__submit { width: 100%; }
 }
