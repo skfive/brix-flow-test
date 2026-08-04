@@ -1,0 +1,1 @@
+{"artifactId":"TR-RE-JUDGE-ARCH","artifactType":"TraceLink","relation":"realized_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-JUDGE","status":"active","targetRef":"ARCH-NG","title":"REQ-JUDGE→ARCH-NG","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
