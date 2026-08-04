@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>숫자 맞히기 게임 — UI 시안 mockup (BF-1619 / 계약 BF-1618)</title>
+  <style>
+    /* ── 계약 동결 토큰(ui-contract@v1 5.5) + 시안 보조 토큰 ────────────── */
+    :root {
+      /* 동결 — 이름·값 변경 금지 */
+      --color-action-primary: #2563eb;
+      --color-feedback-correct: #16a34a;
+      --color-feedback-hint: #d97706;
+      --color-feedback-error: #dc2626;
+      --space-control-gap: 12px;
+      --font-stack: system-ui, -apple-system, sans-serif;
+
+      /* 시안 보조 — 중립 계열(designer 추가) */
+      --color-bg: #f1f5f9;
+      --color-surface: #ffffff;
+      --color-border: #e2e8f0;
+      --color-text: #0f172a;
+      --color-text-muted: #64748b;
+      --color-action-primary-hover: #1d4ed8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 16px;
+      background: var(--color-bg);
+      font-family: var(--font-stack);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+
+    .page-title {
+      max-width: 960px;
+      margin: 0 auto 8px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .page-sub {
+      max-width: 960px;
+      margin: 0 auto 28px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    .section-label {
+      max-width: 960px;
+      margin: 32px auto 12px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+
+    /* 상태 시안 나열 그리드 */
+    .grid {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+
+    .state-caption {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      margin: 0 0 8px;
+    }
+
+    /* ── 게임 카드 (.game) ─────────────────────────────────────────────── */
+    .game {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 400px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, .08), 0 1px 2px rgba(15, 23, 42, .04);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .game h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    /* 통계 (.game__stats) */
+    .game__stats {
+      display: flex;
+      gap: 16px;
+    }
+    .game__stats > div {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 12px;
+      background: var(--color-bg);
+      border-radius: 10px;
+    }
+    .game__stats span {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+    }
+    .game__stats strong {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    /* 피드백 (.game__feedback) */
+    .game__feedback {
+      margin: 0;
+      min-height: 26px;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--color-text-muted);
+    }
+    .game__feedback--hint    { color: var(--color-feedback-hint); }
+    .game__feedback--correct { color: var(--color-feedback-correct); }
+    .game__feedback--error   { color: var(--color-feedback-error); }
+
+    /* 입력 폼 (.game__form) */
+    .game__form {
+      display: flex;
+      gap: var(--space-control-gap);
+    }
+    .game__input {
+      flex: 1 1 auto;
+      min-width: 0;               /* 320px overflow 방지 */
+      font-family: var(--font-stack);
+      font-size: 16px;
+      font-weight: 500;
+      padding: 10px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      color: var(--color-text);
+    }
+    .game__input:focus {
+      outline: 2px solid var(--color-action-primary);
+      outline-offset: 1px;
+      border-color: var(--color-action-primary);
+    }
+    .game__submit {
+      flex: 0 0 auto;
+      font-family: var(--font-stack);
+      font-size: 16px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      background: var(--color-action-primary);
+      color: #ffffff;
+      cursor: pointer;
+    }
+    .game__submit:hover { background: var(--color-action-primary-hover); }
+    .game__submit:focus-visible {
+      outline: 2px solid var(--color-action-primary);
+      outline-offset: 2px;
+    }
+    .game__submit:disabled {
+      background: #93a3c9;
+      cursor: not-allowed;
+    }
+
+    /* 새 게임 (#new-game) — secondary */
+    .new-game {
+      font-family: var(--font-stack);
+      font-size: 16px;
+      font-weight: 500;
+      padding: 10px 18px;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      background: var(--color-surface);
+      color: var(--color-text);
+      cursor: pointer;
+    }
+    .new-game:hover { background: var(--color-bg); }
+
+    /* ── 반응형 프레임(시안 시뮬레이션) ───────────────────────────────── */
+    .frames {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      align-items: start;
+    }
+    .device {
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 12px;
+      background: #f8fafc;
+    }
+    .device figcaption {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      margin: 0 0 10px;
+      text-align: center;
+    }
+    .viewport {
+      background: var(--color-bg);
+      padding: 16px;
+      overflow: hidden;         /* 실제 320/360 뷰포트 폭 시뮬레이션 */
+    }
+    .viewport--320 { width: 320px; }
+    .viewport--360 { width: 360px; }
+    /* 360px 미만 프레임: 폼 세로 stack 시뮬레이션 (계약 5.7) */
+    .viewport--320 .game__form { flex-direction: column; }
+    .viewport--320 .game__submit { width: 100%; }
+    .viewport .game { max-width: none; }
+
+    .note {
+      max-width: 960px;
+      margin: 12px auto 0;
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">숫자 맞히기 게임 — UI 시안 mockup</h1>
+  <p class="page-sub">
+    BF-1619 designer 시안 · 계약 BF-1618 ui-contract@v1 · vanilla-static(외부 의존성 0건, system font).
+    이 mockup은 시안 시각화 전용이며 런타임 산출물이 아닙니다.
+  </p>
+
+  <!-- ── 상태별 시안 ─────────────────────────────────────────────────── -->
+  <p class="section-label">상태별 시안 (idle · hint-higher · hint-lower · win · invalid)</p>
+  <div class="grid">
+
+    <!-- idle -->
+    <div>
+      <p class="state-caption">① idle — 최초 로드 / 새 게임 직후</p>
+      <main class="game">
+        <h1>숫자 맞히기</h1>
+        <div class="game__stats">
+          <div><span>시도</span><strong id="attempts-count">0</strong></div>
+          <div><span>최고</span><strong id="best-score">--</strong></div>
+        </div>
+        <p class="game__feedback" aria-live="polite">1~100 사이 숫자를 입력하세요</p>
+        <form class="game__form">
+          <input class="game__input" type="number" min="1" max="100"
+                 inputmode="numeric" placeholder="1~100"
+                 aria-label="1부터 100 사이 숫자 입력" />
+          <button class="game__submit" type="submit" aria-label="추측 제출">제출</button>
+        </form>
+        <button class="new-game" type="button">새 게임</button>
+      </main>
+    </div>
+
+    <!-- hint-higher -->
+    <div>
+      <p class="state-caption">② hint-higher — 정답이 더 큼</p>
+      <main class="game">
+        <h1>숫자 맞히기</h1>
+        <div class="game__stats">
+          <div><span>시도</span><strong>3</strong></div>
+          <div><span>최고</span><strong>7</strong></div>
+        </div>
+        <p class="game__feedback game__feedback--hint" aria-live="polite">더 큼 ↑</p>
+        <form class="game__form">
+          <input class="game__input" type="number" min="1" max="100"
+                 inputmode="numeric" placeholder="1~100" value="42"
+                 aria-label="1부터 100 사이 숫자 입력" />
+          <button class="game__submit" type="submit" aria-label="추측 제출">제출</button>
+        </form>
+        <button class="new-game" type="button">새 게임</button>
+      </main>
+    </div>
+
+    <!-- hint-lower -->
+    <div>
+      <p class="state-caption">③ hint-lower — 정답이 더 작음</p>
+      <main class="game">
+        <h1>숫자 맞히기</h1>
+        <div class="game__stats">
+          <div><span>시도</span><strong>4</strong></div>
+          <div><span>최고</span><strong>7</strong></div>
+        </div>
+        <p class="game__feedback game__feedback--hint" aria-live="polite">더 작음 ↓</p>
+        <form class="game__form">
+          <input class="game__input" type="number" min="1" max="100"
+                 inputmode="numeric" placeholder="1~100" value="88"
+                 aria-label="1부터 100 사이 숫자 입력" />
+          <button class="game__submit" type="submit" aria-label="추측 제출">제출</button>
+        </form>
+        <button class="new-game" type="button">새 게임</button>
+      </main>
+    </div>
+
+    <!-- win -->
+    <div>
+      <p class="state-caption">④ win — 정답 (submit 비활성)</p>
+      <main class="game">
+        <h1>숫자 맞히기</h1>
+        <div class="game__stats">
+          <div><span>시도</span><strong>6</strong></div>
+          <div><span>최고</span><strong>6</strong></div>
+        </div>
+        <p class="game__feedback game__feedback--correct" aria-live="polite">정답! 6번 만에 맞혔습니다</p>
+        <form class="game__form">
+          <input class="game__input" type="number" min="1" max="100"
+                 inputmode="numeric" placeholder="1~100" value="57"
+                 aria-label="1부터 100 사이 숫자 입력" />
+          <button class="game__submit" type="submit" aria-label="추측 제출" disabled>제출</button>
+        </form>
+        <button class="new-game" type="button">새 게임</button>
+      </main>
+    </div>
+
+    <!-- invalid -->
+    <div>
+      <p class="state-caption">⑤ invalid — 잘못된 입력 (submit 활성 유지)</p>
+      <main class="game">
+        <h1>숫자 맞히기</h1>
+        <div class="game__stats">
+          <div><span>시도</span><strong>2</strong></div>
+          <div><span>최고</span><strong>7</strong></div>
+        </div>
+        <p class="game__feedback game__feedback--error" aria-live="polite">1~100 사이 정수를 입력하세요</p>
+        <form class="game__form">
+          <input class="game__input" type="number" min="1" max="100"
+                 inputmode="numeric" placeholder="1~100" value="150"
+                 aria-label="1부터 100 사이 숫자 입력" />
+          <button class="game__submit" type="submit" aria-label="추측 제출">제출</button>
+        </form>
+        <button class="new-game" type="button">새 게임</button>
+      </main>
+    </div>
+
+  </div>
+
+  <p class="note">
+    피드백은 색상 + 텍스트(+ 화살표 문자)로 중복 표현해 색상만으로 상태를 구분하지
+    않습니다(계약 5.6). win에서 제출 버튼이 <code>disabled</code>로 비활성입니다.
+  </p>
+
+  <!-- ── 반응형 시안 ─────────────────────────────────────────────────── -->
+  <p class="section-label">반응형 (320px · 360px)</p>
+  <div class="frames">
+
+    <figure class="device" style="margin:0;">
+      <figcaption>360px — 입력·버튼 가로 배치</figcaption>
+      <div class="viewport viewport--360">
+        <main class="game">
+          <h1>숫자 맞히기</h1>
+          <div class="game__stats">
+            <div><span>시도</span><strong>3</strong></div>
+            <div><span>최고</span><strong>7</strong></div>
+          </div>
+          <p class="game__feedback" aria-live="polite">1~100 사이 숫자를 입력하세요</p>
+          <form class="game__form">
+            <input class="game__input" type="number" min="1" max="100"
+                   inputmode="numeric" placeholder="1~100"
+                   aria-label="1부터 100 사이 숫자 입력" />
+            <button class="game__submit" type="submit" aria-label="추측 제출">제출</button>
+          </form>
+          <button class="new-game" type="button">새 게임</button>
+        </main>
+      </div>
+    </figure>
+
+    <figure class="device" style="margin:0;">
+      <figcaption>320px — 입력·버튼 세로 stack (&lt; 360px)</figcaption>
+      <div class="viewport viewport--320">
+        <main class="game">
+          <h1>숫자 맞히기</h1>
+          <div class="game__stats">
+            <div><span>시도</span><strong>3</strong></div>
+            <div><span>최고</span><strong>7</strong></div>
+          </div>
+          <p class="game__feedback" aria-live="polite">1~100 사이 숫자를 입력하세요</p>
+          <form class="game__form">
+            <input class="game__input" type="number" min="1" max="100"
+                   inputmode="numeric" placeholder="1~100"
+                   aria-label="1부터 100 사이 숫자 입력" />
+            <button class="game__submit" type="submit" aria-label="추측 제출">제출</button>
+          </form>
+          <button class="new-game" type="button">새 게임</button>
+        </main>
+      </div>
+    </figure>
+
+  </div>
+
+  <p class="note">
+    320px 이상에서 content overflow(가로 스크롤)가 없고, 360px 미만에서
+    <code>.game__form</code>이 세로 stack됩니다(계약 5.7). 실제 구현은
+    <code>@media (max-width: 359px)</code>로 처리하며, 위 프레임은 폭 고정 컨테이너로
+    시뮬레이션한 것입니다.
+  </p>
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-REQ-90FB966DA4CEB5BF","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-FEEDBACK","status":"active","targetRef":"TS-STATES","title":"Verify REQ-FEEDBACK with TS-STATES","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
