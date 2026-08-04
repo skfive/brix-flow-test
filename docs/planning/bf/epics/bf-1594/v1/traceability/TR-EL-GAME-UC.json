@@ -1,0 +1,1 @@
+{"artifactId":"TR-EL-GAME-UC","artifactType":"TraceLink","relation":"elaborated_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-GAMEPLAY","status":"active","targetRef":"UC-PLAY","title":"REQ-GAMEPLAY→UC-PLAY","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}

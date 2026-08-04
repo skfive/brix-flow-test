@@ -1,0 +1,1 @@
+{"artifactId":"TR-VE-A11Y","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-A11Y","status":"active","targetRef":"TS-UIQUALITY","title":"REQ-A11Y→TS-UIQUALITY","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
