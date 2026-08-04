@@ -1,0 +1,1 @@
+{"artifactId":"TL-REQA11Y-VERIFY","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-GUESS-A11Y","status":"active","targetRef":"TS-GUESS-UI","title":"접근성 요구 → 테스트 명세","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
