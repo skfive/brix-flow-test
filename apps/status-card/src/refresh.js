@@ -22,6 +22,9 @@
     idle: "최근 상태를 확인하려면 새로고침하세요.",
     loading: "상태를 불러오는 중…",
     success: "상태를 방금 갱신했습니다.",
+    // legacy(구버전 infra) — 조회는 성공했으나 uptimeSec/version 이 없는 응답.
+    // success 와 구별되는 고유 상태 텍스트로 '구버전 응답'임을 화면·접근성 이름에 노출한다(frozen §5.4).
+    legacy: "상태를 갱신했습니다. 구버전 응답이라 가동 시간·버전 정보가 없습니다.",
     error: "상태를 불러오지 못했습니다. 다시 시도해 주세요.",
   };
 
@@ -177,12 +180,14 @@
           return refreshFn();
         })
         .then(function (payload) {
-          // 성공 응답에서 uptimeSec/version 을 소비한다. 필드가 없으면(구버전 infra)
-          // deriveFieldDisplay 가 legacy 대체 텍스트를 반환해 카드가 깨지지 않는다.
+          // 조회 성공 응답에서 uptimeSec/version 을 소비한다. 두 필드가 계약을 만족하면 success,
+          // 하나라도 없으면(구버전 infra) deriveFieldDisplay 의 legacy 플래그를 소비해 별도 legacy
+          // 상태로 전이한다(frozen §5.4 — 카드를 깨뜨리지 않고 status 만 표시, uptime/version 은 대체 텍스트).
           var fields = deriveFieldDisplay(payload);
+          var resolvedStatus = fields.legacy ? "legacy" : "success";
           setState({
-            status: "success",
-            statusText: STATUS_TEXT.success,
+            status: resolvedStatus,
+            statusText: STATUS_TEXT[resolvedStatus],
             lastUpdated: formatUpdatedAt(now()),
             retryAvailable: false,
             uptimeText: fields.uptimeText,
