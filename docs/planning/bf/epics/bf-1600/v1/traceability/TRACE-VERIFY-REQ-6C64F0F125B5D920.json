@@ -1,0 +1,1 @@
+{"artifactId":"TRACE-VERIFY-REQ-6C64F0F125B5D920","artifactType":"TraceLink","relation":"verified_by","revision":1,"schemaVersion":"trace-link-v1","sourceRef":"REQ-FEEDBACK","status":"active","targetRef":"TS-GAMEPLAY","title":"Verify REQ-FEEDBACK with TS-GAMEPLAY","writer":{"actorId":"01KT3CRZ3WD8YFTNJQVYBD7FVC","actorType":"persona","role":"planner"}}
