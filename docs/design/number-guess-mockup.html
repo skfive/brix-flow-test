@@ -2,287 +2,347 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>숫자 맞히기 게임 — UI mockup (BF-1594)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>숫자 맞히기 게임 — UI 시안 mockup (BF-1612)</title>
   <style>
-    /* ── frozen design token (재정의 금지 — planner ui-contract@v1) ── */
+    /* ── 동결 디자인 토큰 (ui-contract@v1 — 값 변경 금지) ── */
     :root {
       --color-action-primary: #2563eb;
-      --color-feedback-correct: #16a34a;
-      --color-feedback-hint: #b45309;
+      --color-feedback-higher: #f59e0b;
+      --color-feedback-lower: #3b82f6;
+      --color-feedback-win: #16a34a;
       --space-control-gap: 12px;
-      --font-size-feedback: 1.125rem;
 
-      /* ── 보조 중립 토큰 (additive — frozen 값 미침범) ── */
-      --color-bg: #f1f5f9;
+      /* 보조 색 (시안 표현용 — dev 참고, 값은 재량) */
+      --color-bg-page: #f1f5f9;
       --color-surface: #ffffff;
       --color-text: #0f172a;
-      --color-text-muted: #475569;
-      --color-border: #cbd5e1;
-      --color-action-primary-hover: #1d4ed8;
+      --color-text-muted: #64748b;
+      --color-border: #e2e8f0;
+      --font-scale-base: 16px;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      min-height: 100vh;
-      background: var(--color-bg);
-      color: var(--color-text);
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto,
-                   "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
-      line-height: 1.6;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       padding: 24px 16px 48px;
-      gap: 32px;
+      /* system font stack — 외부 웹폰트 0건 */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      font-size: var(--font-scale-base);
+      line-height: 1.5;
+      color: var(--color-text);
+      background: var(--color-bg-page);
     }
 
-    .page-note {
-      max-width: 480px;
-      width: 100%;
-      color: var(--color-text-muted);
-      font-size: 0.875rem;
-      text-align: center;
+    .page-title { text-align: center; font-size: 1.25rem; margin: 0 0 4px; }
+    .page-sub {
+      text-align: center; color: var(--color-text-muted);
+      font-size: 0.8125rem; margin: 0 0 28px;
     }
-    .page-note strong { color: var(--color-text); }
 
-    /* ── 게임 카드 (frozen class: game) ── */
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .state-block { min-width: 0; }
+    .state-caption {
+      font-size: 0.8125rem; font-weight: 600; color: var(--color-text-muted);
+      margin: 0 0 8px; text-align: center;
+    }
+
+    /* ── 게임 카드 (.game) — max-width 중앙 정렬 (반응형 동결) ── */
     .game {
-      max-width: 480px;
-      width: 100%;
-      margin-inline: auto;
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 24px;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
       display: flex;
       flex-direction: column;
-      gap: calc(var(--space-control-gap) * 2);
+      gap: 16px;
     }
 
-    .game h1 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 700;
-      line-height: 1.3;
+    .game__header h1 {
+      font-size: 1.5rem; font-weight: 700; line-height: 1.25; margin: 0;
     }
-    .game__lead {
-      margin: calc(var(--space-control-gap) * -1) 0 0;
-      color: var(--color-text-muted);
-      font-size: 1rem;
+    .game__header p {
+      margin: 4px 0 0; color: var(--color-text-muted); font-size: 0.8125rem;
     }
 
-    /* ── 입력 + 제출 (frozen class: game__field / game__submit) ── */
-    .game__field {
-      display: flex;
-      align-items: flex-end;
-      gap: var(--space-control-gap);
-      flex-wrap: wrap;
+    /* ── 통계 (.game__stats) ── */
+    .game__stats {
+      display: flex; gap: var(--space-control-gap);
     }
-    .game__field label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--color-text-muted);
-      margin-bottom: 4px;
-    }
-    .game__field .field-col {
+    .stat {
       flex: 1;
-      min-width: 0;
+      background: var(--color-bg-page);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: center;
     }
-    .game__field input {
-      width: 100%;
-      min-width: 0;
+    .stat__label {
+      display: block; font-size: 0.8125rem; font-weight: 500;
+      color: var(--color-text-muted);
+    }
+    .stat__value {
+      display: block; font-size: 1.25rem; font-weight: 700; line-height: 1.2;
+    }
+
+    /* ── 입력행 — 320px overflow 방지 (flex-wrap + min-width:0) ── */
+    .game__controls {
+      display: flex; flex-wrap: wrap; gap: var(--space-control-gap);
+    }
+    .game__input {
+      flex: 1 1 140px; min-width: 0;
       font-size: 1rem;
       padding: 10px 12px;
       border: 1px solid var(--color-border);
-      border-radius: 10px;
+      border-radius: 8px;
       background: #fff;
       color: var(--color-text);
     }
-    .game__field input:focus-visible {
+    .game__input:focus {
       outline: 2px solid var(--color-action-primary);
       outline-offset: 1px;
       border-color: var(--color-action-primary);
     }
 
-    .game__submit {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #fff;
-      background: var(--color-action-primary);
-      border: none;
-      border-radius: 10px;
-      padding: 10px 20px;
+    /* ── 버튼 (.game__button) ── */
+    .game__button {
+      font-size: 1rem; font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 8px;
       cursor: pointer;
+    }
+    /* 제출 버튼: 주 실행 컨트롤 — primary 색 (동결 토큰) */
+    #submit-btn {
+      flex: 0 0 auto;
+      border: none;
+      background: var(--color-action-primary);
+      color: #fff;
+    }
+    #submit-btn:hover { filter: brightness(0.94); }
+    /* 새 게임 버튼: 보조(outline) — 위계 구분 */
+    #new-game-btn {
+      align-self: stretch;
+      border: 1px solid var(--color-border);
+      background: #fff; color: var(--color-text);
+    }
+    #new-game-btn:hover { background: var(--color-bg-page); }
+
+    /* ── 피드백 (.game__feedback) — 상태 라벨 + 문장 (색 + 텍스트 이중 채널) ── */
+    .game__feedback {
+      display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+      font-size: 1rem; font-weight: 500; line-height: 1.4;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: var(--color-bg-page);
+      color: var(--color-text);
+    }
+    /* 상태 라벨 텍스트 — 색상과 무관하게 항상 노출 (색각/스크린리더 대응) */
+    .state-label {
+      font-size: 0.8125rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 999px;
+      background: var(--color-text-muted); color: #fff;
       white-space: nowrap;
     }
-    .game__submit:hover { background: var(--color-action-primary-hover); }
-    .game__submit:focus-visible {
-      outline: 2px solid var(--color-action-primary-hover);
-      outline-offset: 2px;
-    }
-    .game__submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .feedback-text { font-size: 1rem; font-weight: 500; }
 
-    /* ── 피드백 (frozen class: game__feedback) ── */
-    .game__feedback {
-      margin: 0;
-      font-size: var(--font-size-feedback);
-      font-weight: 600;
-      line-height: 1.5;
-      min-height: calc(var(--font-size-feedback) * 1.5);
+    /* 상태별 강조색 (동결 피드백 토큰) — 라벨 텍스트 위 부가 색 신호 */
+    .game__feedback--higher .state-label { background: var(--color-feedback-higher); }
+    .game__feedback--higher .feedback-text { color: #b45309; font-weight: 600; }
+    .game__feedback--lower  .state-label { background: var(--color-feedback-lower); }
+    .game__feedback--lower  .feedback-text { color: #1d4ed8; font-weight: 600; }
+    .game__feedback--win {
+      background: #f0fdf4;
     }
-    .game__feedback[data-state="idle"]     { color: var(--color-text-muted); }
-    .game__feedback[data-state="too-high"] { color: var(--color-feedback-hint); }
-    .game__feedback[data-state="too-low"]  { color: var(--color-feedback-hint); }
-    .game__feedback[data-state="win"]      { color: var(--color-feedback-correct); }
+    .game__feedback--win .state-label { background: var(--color-feedback-win); }
+    .game__feedback--win .feedback-text { color: var(--color-feedback-win); font-weight: 700; }
 
-    /* ── 메타 (frozen class: game__meta) ── */
-    .game__meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-control-gap);
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--color-text-muted);
-      border-top: 1px solid var(--color-border);
-      padding-top: var(--space-control-gap);
-    }
-    .game__meta span { white-space: nowrap; }
-    .game__meta b { color: var(--color-text); }
-
-    /* ── 새 게임 (frozen class: game__new) ── */
-    .game__new {
-      align-self: flex-start;
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--color-action-primary);
-      background: transparent;
-      border: 1px solid var(--color-action-primary);
-      border-radius: 10px;
-      padding: 8px 18px;
-      cursor: pointer;
-    }
-    .game__new:hover {
-      background: var(--color-action-primary);
-      color: #fff;
-    }
-
-    /* ── 좁은 화면: 컨트롤 세로 스택 (320px overflow 방지) ── */
-    @media (max-width: 360px) {
-      .game { padding: 16px; }
-      .game__field { flex-direction: column; align-items: stretch; }
-      .game__submit { width: 100%; }
-    }
-
-    /* ── 상태 변형 쇼케이스 (mockup 전용, dev 산출물 아님) ── */
-    .states {
-      max-width: 480px;
-      width: 100%;
-    }
-    .states h2 {
-      font-size: 1.125rem;
-      margin: 0 0 8px;
-    }
-    .states p.hint {
-      margin: 0 0 16px;
-      font-size: 0.875rem;
-      color: var(--color-text-muted);
-    }
-    .state-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: var(--space-control-gap);
-    }
-    .state-card {
+    /* ── 상태·토큰 범례 ── */
+    .legend {
+      max-width: 1120px; margin: 32px auto 0;
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 12px; padding: 20px 24px;
     }
-    .state-card .state-name {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--color-text-muted);
-      margin-bottom: 8px;
+    .legend h2 { font-size: 1rem; margin: 0 0 12px; }
+    .legend table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+    .legend th, .legend td {
+      text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border);
+      vertical-align: top;
     }
-    .state-card .demo-feedback {
-      font-size: var(--font-size-feedback);
-      font-weight: 600;
-      line-height: 1.4;
+    .legend th { color: var(--color-text-muted); font-weight: 600; }
+    .swatch {
+      display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+      vertical-align: middle; margin-right: 6px; border: 1px solid rgba(0,0,0,0.1);
     }
-    .state-card[data-state="idle"]     .demo-feedback { color: var(--color-text-muted); }
-    .state-card[data-state="too-high"] .demo-feedback { color: var(--color-feedback-hint); }
-    .state-card[data-state="too-low"]  .demo-feedback { color: var(--color-feedback-hint); }
-    .state-card[data-state="win"]      .demo-feedback { color: var(--color-feedback-correct); }
+    code { font-size: 0.9em; }
   </style>
 </head>
 <body>
+  <h1 class="page-title">숫자 맞히기 게임 — UI 시안 mockup</h1>
+  <p class="page-sub">BF-1612 · ui-contract@v1 시각 시뮬레이션 (system font · 외부 의존성 0건)</p>
 
-  <p class="page-note">
-    <strong>숫자 맞히기 게임 — UI mockup (BF-1594)</strong><br>
-    planner가 동결한 selector·token·상태·접근성·반응형 계약의 시각 시뮬레이션입니다.
-    실제 dev 산출물이 아닌 시안 표현이며, 상태는 색이 아니라 <b>화면 텍스트</b>로 구분됩니다.
-  </p>
+  <div class="state-grid">
 
-  <!-- ── 주 게임 카드 (frozen DOM id 그대로 사용) ── -->
-  <main class="game">
-    <h1>숫자 맞히기</h1>
-    <p class="game__lead">1~100 사이 비밀 숫자를 맞혀보세요.</p>
-
-    <form class="game__field" onsubmit="return false;">
-      <div class="field-col">
-        <label for="guess-input">추측 숫자</label>
-        <input id="guess-input" type="number" min="1" max="100"
-               inputmode="numeric" placeholder="예: 42" value="42">
-      </div>
-      <button id="guess-submit" class="game__submit" type="submit"
-              aria-label="추측 제출">제출</button>
-    </form>
-
-    <p id="guess-feedback" class="game__feedback" aria-live="polite" data-state="idle">
-      숫자를 입력하고 제출하세요
-    </p>
-
-    <div class="game__meta">
-      <span>시도 횟수: <b id="attempt-count">0</b></span>
-      <span>최고 기록: <b id="best-score">기록 없음</b></span>
+    <!-- 상태 1: idle -->
+    <div class="state-block">
+      <p class="state-caption">① 상태: idle (초기 로드 · 입력 대기)</p>
+      <section class="game" data-state="idle">
+        <div class="game__header">
+          <h1>숫자 맞히기</h1>
+          <p>1 ~ 100 사이의 숫자를 맞혀보세요.</p>
+        </div>
+        <div class="game__stats">
+          <div class="stat"><span class="stat__label">시도</span><span class="stat__value" id="attempts">0</span></div>
+          <div class="stat"><span class="stat__label">최고 기록</span><span class="stat__value" id="best-score">기록 없음</span></div>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" id="guess-input" type="number" min="1" max="100" placeholder="1 ~ 100" aria-label="추측할 숫자">
+          <button class="game__button" id="submit-btn" aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback" id="feedback" aria-live="polite">
+          <span class="state-label">준비됨</span>
+          <span class="feedback-text">1~100 사이의 숫자를 입력하고 제출하세요.</span>
+        </div>
+        <button class="game__button" id="new-game-btn">새 게임</button>
+      </section>
     </div>
 
-    <button id="new-game" class="game__new" type="button">새 게임</button>
-  </main>
-
-  <!-- ── 상태 변형 쇼케이스 (idle / too-high / too-low / win) ── -->
-  <section class="states">
-    <h2>상태별 피드백 표현 (색 + 화면 텍스트 이중 채널)</h2>
-    <p class="hint">
-      네 가지 상태 모두 색상만이 아니라 상태를 나타내는 화면 텍스트로 구분됩니다.
-      guess-feedback은 aria-live=&quot;polite&quot;로 이 텍스트를 스크린리더에 낭독합니다.
-    </p>
-    <div class="state-grid">
-      <div class="state-card" data-state="idle">
-        <div class="state-name">idle</div>
-        <div class="demo-feedback">숫자를 입력하고 제출하세요</div>
-      </div>
-      <div class="state-card" data-state="too-low">
-        <div class="state-name">too-low · 추측 &lt; 정답</div>
-        <div class="demo-feedback">더 큼 — 정답은 더 큰 숫자예요</div>
-      </div>
-      <div class="state-card" data-state="too-high">
-        <div class="state-name">too-high · 추측 &gt; 정답</div>
-        <div class="demo-feedback">더 작음 — 정답은 더 작은 숫자예요</div>
-      </div>
-      <div class="state-card" data-state="win">
-        <div class="state-name">win · 추측 = 정답</div>
-        <div class="demo-feedback">정답! 축하합니다 🎉</div>
-      </div>
+    <!-- 상태 2: higher -->
+    <div class="state-block">
+      <p class="state-caption">② 상태: higher (더 높게 · 추측 &lt; 정답)</p>
+      <section class="game" data-state="higher">
+        <div class="game__header">
+          <h1>숫자 맞히기</h1>
+          <p>1 ~ 100 사이의 숫자를 맞혀보세요.</p>
+        </div>
+        <div class="game__stats">
+          <div class="stat"><span class="stat__label">시도</span><span class="stat__value">1</span></div>
+          <div class="stat"><span class="stat__label">최고 기록</span><span class="stat__value">7</span></div>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" type="number" min="1" max="100" value="30" aria-label="추측할 숫자">
+          <button class="game__button" aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback game__feedback--higher" aria-live="polite">
+          <span class="state-label">더 높게</span>
+          <span class="feedback-text">정답은 더 높아요. 더 큰 수를 입력해 보세요.</span>
+        </div>
+        <button class="game__button">새 게임</button>
+      </section>
     </div>
-  </section>
 
+    <!-- 상태 3: lower -->
+    <div class="state-block">
+      <p class="state-caption">③ 상태: lower (더 낮게 · 추측 &gt; 정답)</p>
+      <section class="game" data-state="lower">
+        <div class="game__header">
+          <h1>숫자 맞히기</h1>
+          <p>1 ~ 100 사이의 숫자를 맞혀보세요.</p>
+        </div>
+        <div class="game__stats">
+          <div class="stat"><span class="stat__label">시도</span><span class="stat__value">2</span></div>
+          <div class="stat"><span class="stat__label">최고 기록</span><span class="stat__value">7</span></div>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" type="number" min="1" max="100" value="70" aria-label="추측할 숫자">
+          <button class="game__button" aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback game__feedback--lower" aria-live="polite">
+          <span class="state-label">더 낮게</span>
+          <span class="feedback-text">정답은 더 낮아요. 더 작은 수를 입력해 보세요.</span>
+        </div>
+        <button class="game__button">새 게임</button>
+      </section>
+    </div>
+
+    <!-- 상태 4: win -->
+    <div class="state-block">
+      <p class="state-caption">④ 상태: win (정답 · 추측 == 정답)</p>
+      <section class="game" data-state="win">
+        <div class="game__header">
+          <h1>숫자 맞히기</h1>
+          <p>1 ~ 100 사이의 숫자를 맞혀보세요.</p>
+        </div>
+        <div class="game__stats">
+          <div class="stat"><span class="stat__label">시도</span><span class="stat__value">5</span></div>
+          <div class="stat"><span class="stat__label">최고 기록</span><span class="stat__value">5</span></div>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" type="number" min="1" max="100" value="50" aria-label="추측할 숫자">
+          <button class="game__button" aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback game__feedback--win" aria-live="polite">
+          <span class="state-label">정답!</span>
+          <span class="feedback-text">정답이에요! 5번 만에 맞혔어요.</span>
+        </div>
+        <button class="game__button">새 게임</button>
+      </section>
+    </div>
+
+    <!-- 상태 5: reset (새 게임 직후 — 진행 초기화 + 입력 재활성화, best score 유지) -->
+    <div class="state-block">
+      <p class="state-caption">⑤ 상태: reset → idle (새 게임 직후 · 시도 0 · best score 유지)</p>
+      <section class="game" data-state="reset">
+        <div class="game__header">
+          <h1>숫자 맞히기</h1>
+          <p>1 ~ 100 사이의 숫자를 맞혀보세요.</p>
+        </div>
+        <div class="game__stats">
+          <div class="stat"><span class="stat__label">시도</span><span class="stat__value">0</span></div>
+          <div class="stat"><span class="stat__label">최고 기록</span><span class="stat__value">5</span></div>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" type="number" min="1" max="100" placeholder="1 ~ 100" aria-label="추측할 숫자">
+          <button class="game__button" aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback" aria-live="polite">
+          <span class="state-label">준비됨</span>
+          <span class="feedback-text">새 게임을 시작했어요. 다시 숫자를 입력해 보세요.</span>
+        </div>
+        <button class="game__button">새 게임</button>
+      </section>
+    </div>
+
+  </div>
+
+  <!-- 상태·토큰 범례 (색상 비의존 상태 텍스트 규칙 강조) -->
+  <div class="legend">
+    <h2>상태 · 토큰 범례</h2>
+    <table>
+      <thead>
+        <tr><th>상태</th><th>화면 라벨 텍스트</th><th>강조 색 토큰</th><th>진입 조건</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>idle</code></td><td>준비됨</td><td><span class="swatch" style="background:#64748b"></span>중립(muted)</td><td>초기 로드 후 입력 대기</td></tr>
+        <tr><td><code>higher</code></td><td>더 높게</td><td><span class="swatch" style="background:#f59e0b"></span><code>--color-feedback-higher #f59e0b</code></td><td>추측 &lt; 정답</td></tr>
+        <tr><td><code>lower</code></td><td>더 낮게</td><td><span class="swatch" style="background:#3b82f6"></span><code>--color-feedback-lower #3b82f6</code></td><td>추측 &gt; 정답</td></tr>
+        <tr><td><code>win</code></td><td>정답!</td><td><span class="swatch" style="background:#16a34a"></span><code>--color-feedback-win #16a34a</code></td><td>추측 == 정답</td></tr>
+        <tr><td><code>reset</code></td><td>준비됨</td><td><span class="swatch" style="background:#64748b"></span>중립(muted)</td><td>새 게임 → 초기화 후 idle 안정화</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:0.8125rem;color:var(--color-text-muted);margin:12px 0 0;">
+      동결 토큰: <code>--color-action-primary #2563eb</code>(제출 버튼),
+      <code>--color-feedback-higher #f59e0b</code>,
+      <code>--color-feedback-lower #3b82f6</code>,
+      <code>--color-feedback-win #16a34a</code>,
+      <code>--space-control-gap 12px</code>(control 간격).
+      동결 selector: id <code>guess-input · submit-btn · feedback · attempts · best-score · new-game-btn</code>,
+      class <code>game · game__input · game__feedback · game__stats · game__button</code>.
+      모든 상태는 <strong>색상만이 아니라 상태 라벨 텍스트</strong>로 구분되며
+      <code>aria-live="polite"</code> 로 읽어줍니다. 입력은 <code>aria-label="추측할 숫자"</code>,
+      제출은 <code>aria-label="추측 제출"</code> · Enter 제출 지원.
+    </p>
+  </div>
 </body>
 </html>
