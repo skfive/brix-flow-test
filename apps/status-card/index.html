@@ -23,6 +23,14 @@
       <!-- 마지막 갱신 시각 (성공 시 노출) -->
       <p id="status-card-last-updated" class="status-card__last-updated" hidden></p>
 
+      <!--
+        확장 health 필드 표시 영역 (BF-1633) — uptimeSec/version 을 소비해 렌더한다.
+        구버전 infra(uptimeSec/version 부재) 응답에서는 대체 텍스트로 상태명을 노출해
+        카드를 깨뜨리지 않는다. 초기값도 대체 텍스트라 undefined/NaN 을 드러내지 않는다.
+      -->
+      <p id="status-card-uptime" class="status-card__uptime">가동 시간 정보 없음</p>
+      <p id="status-card-version" class="status-card__version">버전 정보 없음</p>
+
       <div class="status-card__actions">
         <!-- 주 실행 control (새로고침 버튼) -->
         <button

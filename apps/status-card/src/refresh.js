@@ -22,6 +22,9 @@
     idle: "최근 상태를 확인하려면 새로고침하세요.",
     loading: "상태를 불러오는 중…",
     success: "상태를 방금 갱신했습니다.",
+    // legacy(구버전 infra) — 조회는 성공했으나 uptimeSec/version 이 없는 응답.
+    // success 와 구별되는 고유 상태 텍스트로 '구버전 응답'임을 화면·접근성 이름에 노출한다(frozen §5.4).
+    legacy: "상태를 갱신했습니다. 구버전 응답이라 가동 시간·버전 정보가 없습니다.",
     error: "상태를 불러오지 못했습니다. 다시 시도해 주세요.",
   };
 
@@ -30,12 +33,64 @@
   /** error 상태 텍스트 modifier class(frozen). */
   var ERROR_TEXT_CLASS = "status-card__status-text--error";
 
+  /**
+   * 확장 필드(uptimeSec/version) 부재 시 노출할 대체 텍스트(BF-1633).
+   * 구버전 infra(legacy) 응답에서도 undefined/NaN 대신 상태명을 화면 텍스트로 노출한다.
+   */
+  var UPTIME_FALLBACK = "가동 시간 정보 없음";
+  var VERSION_FALLBACK = "버전 정보 없음";
+
+  /**
+   * uptimeSec(0 이상 정수, 초)를 사람이 읽는 문자열로 포맷하는 순수 함수(BF-1633 §5.5).
+   * 일/시간/분/초 단위로 환산하고, 값이 0인 상위 단위는 생략하되 최소 "초" 단위는 항상 표기한다.
+   * 결정적·부작용 없음 — 시계(Date)·전역 상태·DOM 에 접근하지 않는다. 같은 입력 → 같은 출력.
+   * @param {number} uptimeSec 0 이상 정수(초)
+   * @returns {string} 예: 0 → "0초", 137 → "2분 17초", 3720 → "1시간 2분 0초"
+   */
+  function formatUptime(uptimeSec) {
+    // 계약(§3)상 입력은 0 이상 정수지만, undefined/NaN 을 절대 노출하지 않도록 방어적으로 정규화한다.
+    var total = Math.floor(uptimeSec);
+    if (!Number.isFinite(total) || total < 0) total = 0;
+
+    var days = Math.floor(total / 86400);
+    var hours = Math.floor((total % 86400) / 3600);
+    var minutes = Math.floor((total % 3600) / 60);
+    var seconds = total % 60;
+
+    var parts = [];
+    if (days > 0) parts.push(days + "일");
+    if (days > 0 || hours > 0) parts.push(hours + "시간");
+    if (days > 0 || hours > 0 || minutes > 0) parts.push(minutes + "분");
+    parts.push(seconds + "초");
+    return parts.join(" ");
+  }
+
+  /**
+   * health 응답 payload 에서 uptime/version 표시 문자열을 도출하는 순수 함수(BF-1633 §5.6).
+   * 두 필드가 계약(uptimeSec=정수≥0, version=비어있지 않은 문자열)을 만족하면 값을 렌더하고,
+   * 하나라도 없거나 계약을 위반하면 구버전(legacy)으로 보고 대체 텍스트를 노출한다(카드 미파손).
+   * @param {*} payload refreshFn 이 resolve 한 값(구버전에서는 필드 부재 또는 undefined)
+   * @returns {{uptimeText: string, versionText: string, legacy: boolean}}
+   */
+  function deriveFieldDisplay(payload) {
+    var data = payload && typeof payload === "object" ? payload : {};
+    var hasUptime = Number.isInteger(data.uptimeSec) && data.uptimeSec >= 0;
+    var hasVersion = typeof data.version === "string" && data.version.length > 0;
+    return {
+      uptimeText: hasUptime ? formatUptime(data.uptimeSec) : UPTIME_FALLBACK,
+      versionText: hasVersion ? data.version : VERSION_FALLBACK,
+      legacy: !hasUptime || !hasVersion,
+    };
+  }
+
   /** 초기(idle) 상태 스냅샷. */
   var IDLE_STATE = {
     status: "idle",
     statusText: STATUS_TEXT.idle,
     lastUpdated: null,
     retryAvailable: false,
+    uptimeText: UPTIME_FALLBACK,
+    versionText: VERSION_FALLBACK,
   };
 
   /** 갱신 시각을 HH:MM:SS 로 표기한다. */
@@ -90,6 +145,11 @@
 
       // 재시도 액션 — error(retryAvailable) 일 때만 노출.
       retryAction.hidden = !state.retryAvailable;
+
+      // 확장 필드(uptime/version) 표시 영역 — 존재할 때만 렌더(구 마크업에서 안전).
+      // 값이 없으면 대체 텍스트로 상태명을 노출해 undefined/NaN 을 화면에 드러내지 않는다.
+      if (elements.uptime) elements.uptime.textContent = state.uptimeText;
+      if (elements.version) elements.version.textContent = state.versionText;
     }
 
     function setState(next) {
@@ -103,32 +163,47 @@
 
       // 갱신 시각은 성공 시에만 새로 찍고, 그 전까지는 직전 값을 보존한다.
       var previousUpdated = state.lastUpdated;
+      // uptime/version 표시도 로딩 중에는 직전 값을 유지해 깜빡임을 막는다.
+      var previousUptime = state.uptimeText;
+      var previousVersion = state.versionText;
       setState({
         status: "loading",
         statusText: STATUS_TEXT.loading,
         lastUpdated: previousUpdated,
         retryAvailable: false,
+        uptimeText: previousUptime,
+        versionText: previousVersion,
       });
 
       return Promise.resolve()
         .then(function () {
           return refreshFn();
         })
-        .then(function () {
+        .then(function (payload) {
+          // 조회 성공 응답에서 uptimeSec/version 을 소비한다. 두 필드가 계약을 만족하면 success,
+          // 하나라도 없으면(구버전 infra) deriveFieldDisplay 의 legacy 플래그를 소비해 별도 legacy
+          // 상태로 전이한다(frozen §5.4 — 카드를 깨뜨리지 않고 status 만 표시, uptime/version 은 대체 텍스트).
+          var fields = deriveFieldDisplay(payload);
+          var resolvedStatus = fields.legacy ? "legacy" : "success";
           setState({
-            status: "success",
-            statusText: STATUS_TEXT.success,
+            status: resolvedStatus,
+            statusText: STATUS_TEXT[resolvedStatus],
             lastUpdated: formatUpdatedAt(now()),
             retryAvailable: false,
+            uptimeText: fields.uptimeText,
+            versionText: fields.versionText,
           });
         })
         .catch(function () {
           // 실패 — 진행 표시(loading)를 걷어내고 재시도 액션을 노출, control 재활성화.
+          // uptime/version 은 초기 대체 텍스트로 되돌려 오래된 값을 남기지 않는다.
           setState({
             status: "error",
             statusText: STATUS_TEXT.error,
             lastUpdated: previousUpdated,
             retryAvailable: true,
+            uptimeText: UPTIME_FALLBACK,
+            versionText: VERSION_FALLBACK,
           });
         });
     }
@@ -169,6 +244,9 @@
     var statusText = document.getElementById("status-card-status-text");
     var lastUpdated = document.getElementById("status-card-last-updated");
     var retryAction = document.getElementById("status-card-retry-action");
+    // 확장 필드 표시 영역(BF-1633) — 부재해도 안전하도록 선택적으로 조회한다.
+    var uptime = document.getElementById("status-card-uptime");
+    var version = document.getElementById("status-card-version");
 
     if (
       refreshButton instanceof HTMLButtonElement &&
@@ -181,16 +259,23 @@
         statusText: statusText,
         lastUpdated: lastUpdated,
         retryAction: retryAction,
+        uptime: uptime instanceof HTMLElement ? uptime : null,
+        version: version instanceof HTMLElement ? version : null,
       });
     }
   }
 
-  // 디버깅·재사용을 위해 전역으로 팩토리를 노출(선택적).
-  if (typeof window !== "undefined") {
-    window.StatusCardRefresh = {
-      STATUS_TEXT: STATUS_TEXT,
-      createStatusCardRefresh: createStatusCardRefresh,
-    };
+  // 디버깅·재사용·단위 테스트를 위해 순수 API 를 전역으로 노출한다.
+  // 브라우저에서는 globalThis === window 라 기존 window.StatusCardRefresh 접근이 그대로 동작하고,
+  // node --test(ESM side-effect import)에서는 globalThis 로 순수 함수를 검증한다.
+  var StatusCardRefreshApi = {
+    STATUS_TEXT: STATUS_TEXT,
+    formatUptime: formatUptime,
+    deriveFieldDisplay: deriveFieldDisplay,
+    createStatusCardRefresh: createStatusCardRefresh,
+  };
+  if (typeof globalThis !== "undefined") {
+    globalThis.StatusCardRefresh = StatusCardRefreshApi;
   }
 
   // 브라우저 환경에서만 자동 초기화한다.
