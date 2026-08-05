@@ -1,0 +1,112 @@
+:root {
+  --color-bg: #0f172a;
+  --color-board: #1e293b;
+  --color-snake: #22c55e;
+  --color-food: #ef4444;
+  --color-text: #f8fafc;
+  --color-overlay-bg: rgba(15, 23, 42, 0.85);
+  --space-hud-gap: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.game-container {
+  position: relative;
+  width: min(90vw, 480px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-hud-gap);
+  padding: 16px;
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-hud-gap);
+}
+
+.score-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  background: var(--color-board);
+  border-radius: 8px;
+}
+
+.btn {
+  appearance: none;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn--primary {
+  background: var(--color-snake);
+  color: var(--color-bg);
+  font-weight: 600;
+}
+
+.btn--primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  background: var(--color-overlay-bg);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.overlay--hidden {
+  display: none;
+}
+
+.overlay--paused,
+.overlay--game-over {
+  display: flex;
+}
+
+/* 너비 360px 이상: game-canvas 는 컨테이너 폭에 비례해 종횡비를 유지하며 축소된다 (overflow 없음). */
+@media (min-width: 360px) {
+  .game-container {
+    width: min(90vw, 480px);
+  }
+}
+
+/* 너비 600px 미만: hud 는 세로로 쌓인다. */
+@media (max-width: 599px) {
+  .hud {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
