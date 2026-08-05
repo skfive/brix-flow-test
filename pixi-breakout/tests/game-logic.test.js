@@ -12,6 +12,8 @@ import {
   startGame,
   togglePause,
   restartGame,
+  movePaddleTo,
+  movePaddleByDirection,
   update,
 } from '../src/game-logic.js';
 
@@ -243,6 +245,52 @@ test('재시작: game-over 이후 restartGame은 점수/라이프/보드를 초�
 
   const freshBall = createBall(restarted.board, restarted.paddle);
   assert.deepEqual(restarted.ball, freshBall, '공 위치가 초기 위치로 복원되어야 한다');
+});
+
+test('movePaddleTo: 보드 범위를 벗어나면 좌우 경계로 클램프된다', () => {
+  const state = createInitialState({ board: BOARD });
+
+  const movedLeftOverflow = movePaddleTo(state, -50);
+  assert.equal(movedLeftOverflow.paddle.x, 0, '좌측 경계를 벗어나면 0으로 클램프되어야 한다');
+
+  const movedRightOverflow = movePaddleTo(state, BOARD.width);
+  assert.equal(
+    movedRightOverflow.paddle.x,
+    BOARD.width - state.paddle.width,
+    '우측 경계를 벗어나면 (board.width - paddle.width)로 클램프되어야 한다',
+  );
+
+  const movedWithinBounds = movePaddleTo(state, 200);
+  assert.equal(movedWithinBounds.paddle.x, 200, '범위 안이면 그대로 반영되어야 한다');
+});
+
+test('movePaddleByDirection: playing 상태에서 방향/속도/dt에 비례해 이동한다', () => {
+  const state = createInitialState({ board: BOARD, status: 'playing' });
+  const startX = state.paddle.x;
+
+  const movedRight = movePaddleByDirection(state, 1, 0.1);
+  assert.equal(
+    movedRight.paddle.x,
+    startX + state.paddle.speed * 0.1,
+    '오른쪽 방향(1)이면 speed*dt만큼 우측으로 이동해야 한다',
+  );
+
+  const movedLeft = movePaddleByDirection(state, -1, 0.1);
+  assert.equal(
+    movedLeft.paddle.x,
+    startX - state.paddle.speed * 0.1,
+    '왼쪽 방향(-1)이면 speed*dt만큼 좌측으로 이동해야 한다',
+  );
+});
+
+test('movePaddleByDirection: playing 상태가 아니거나 방향이 0이면 이동하지 않는다', () => {
+  const playingState = createInitialState({ board: BOARD, status: 'playing' });
+  const noDirection = movePaddleByDirection(playingState, 0, 0.1);
+  assert.equal(noDirection.paddle.x, playingState.paddle.x, '방향이 0이면 위치가 변하지 않는다');
+
+  const pausedState = createInitialState({ board: BOARD, status: 'paused' });
+  const pausedMove = movePaddleByDirection(pausedState, 1, 0.1);
+  assert.equal(pausedMove.paddle.x, pausedState.paddle.x, 'playing이 아니면 위치가 변하지 않는다');
 });
 
 test('상태 전이: start에서 startGame 호출 시 playing으로 전이된다', () => {

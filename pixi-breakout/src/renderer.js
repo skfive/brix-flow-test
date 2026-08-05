@@ -40,12 +40,33 @@ const TIER_COLOR = {
   3: COLORS.brickTier3,
 };
 
-const STATUS_LABEL = {
-  start: '시작 전',
-  playing: '진행 중',
-  paused: '일시정지',
-  'game-over': '게임 오버',
-  clear: '클리어',
+// 상태별 overlay 3단 텍스트(H1 title / H2 subtitle / caption).
+const STATUS_TEXT = {
+  start: {
+    title: '브레이크아웃',
+    subtitle: '시작 전',
+    caption: '시작 버튼을 눌러 게임을 시작하세요',
+  },
+  playing: {
+    title: '브레이크아웃',
+    subtitle: '진행 중',
+    caption: '',
+  },
+  paused: {
+    title: '일시정지',
+    subtitle: '게임이 일시정지되었습니다',
+    caption: '재개 버튼을 눌러 계속하세요',
+  },
+  'game-over': {
+    title: '게임 오버',
+    subtitle: '모든 라이프를 소진했습니다',
+    caption: '다시 시작 버튼을 눌러 재도전하세요',
+  },
+  clear: {
+    title: '클리어',
+    subtitle: '모든 벽돌을 파괴했습니다',
+    caption: '다시 시작 버튼을 눌러 새 게임을 시작하세요',
+  },
 };
 
 const OVERLAY_CLASS_BY_STATUS = {
@@ -89,7 +110,9 @@ export function createGameView(rootDocument = document) {
   const dom = {
     gameRoot: rootDocument.getElementById('game-root'),
     overlay: rootDocument.getElementById('game-overlay'),
-    overlayMessage: rootDocument.getElementById('overlay-message'),
+    overlayTitle: rootDocument.getElementById('overlay-title'),
+    overlaySubtitle: rootDocument.getElementById('overlay-subtitle'),
+    overlayCaption: rootDocument.getElementById('overlay-caption'),
     scoreValue: rootDocument.getElementById('score-value'),
     livesValue: rootDocument.getElementById('lives-value'),
     bestScoreValue: rootDocument.getElementById('best-score-value'),
@@ -105,8 +128,12 @@ export function createGameView(rootDocument = document) {
     backgroundColor: COLORS.bg,
     antialias: true,
   });
-  app.view.setAttribute('role', 'img');
-  app.view.setAttribute('aria-label', '벽돌깨기 게임 보드');
+  // 패들은 canvas 위에 그려지며 좌우 방향키로만 조작 가능해야 하므로(접근성 5.5),
+  // canvas 자체를 tabindex로 포커스 가능하게 하고 role/aria-label로 조작법을 알린다.
+  // focus 시 시각 outline은 index.html의 `#game-root canvas:focus-visible` 규칙이 담당한다.
+  app.view.setAttribute('role', 'application');
+  app.view.setAttribute('tabindex', '0');
+  app.view.setAttribute('aria-label', '벽돌깨기 게임 보드 — 좌우 방향키로 패들을 조작합니다');
   dom.gameRoot.insertBefore(app.view, dom.gameRoot.firstChild);
 
   const boardBg = new PIXI.Graphics();
@@ -164,37 +191,45 @@ export function createGameView(rootDocument = document) {
   }
 
   function renderOverlay(current) {
+    dom.restartButton.classList.toggle(
+      'restart-button--cta',
+      current.status === 'game-over' || current.status === 'clear',
+    );
+
     if (current.status === lastOverlayStatus) return;
     lastOverlayStatus = current.status;
     dom.overlay.classList.remove(...ALL_OVERLAY_CLASSES);
     const overlayClass = OVERLAY_CLASS_BY_STATUS[current.status];
     if (overlayClass) dom.overlay.classList.add(overlayClass);
     dom.overlay.setAttribute('data-state', current.status);
-    dom.overlayMessage.textContent = STATUS_LABEL[current.status] ?? current.status;
+    const text = STATUS_TEXT[current.status] ?? { title: current.status, subtitle: current.status, caption: '' };
+    dom.overlayTitle.textContent = text.title;
+    dom.overlaySubtitle.textContent = text.subtitle;
+    dom.overlayCaption.textContent = text.caption;
   }
 
+  // pause-button의 aria-label은 frozen 계약값("게임 일시정지")으로 상태와 무관하게 고정한다.
+  // 시각적 텍스트(시작/일시정지/재개)와 aria-pressed/disabled만 상태별로 갱신한다.
   function renderPauseButton(current) {
     if (current.status === lastPauseButtonStatus) return;
     lastPauseButtonStatus = current.status;
 
+    dom.pauseButton.setAttribute('aria-label', '게임 일시정지');
+
     if (current.status === 'start') {
       dom.pauseButton.textContent = '시작';
-      dom.pauseButton.setAttribute('aria-label', '게임 시작');
       dom.pauseButton.setAttribute('aria-pressed', 'false');
       dom.pauseButton.disabled = false;
     } else if (current.status === 'playing') {
       dom.pauseButton.textContent = '일시정지';
-      dom.pauseButton.setAttribute('aria-label', '일시정지');
       dom.pauseButton.setAttribute('aria-pressed', 'false');
       dom.pauseButton.disabled = false;
     } else if (current.status === 'paused') {
       dom.pauseButton.textContent = '재개';
-      dom.pauseButton.setAttribute('aria-label', '게임 재개');
       dom.pauseButton.setAttribute('aria-pressed', 'true');
       dom.pauseButton.disabled = false;
     } else {
       dom.pauseButton.textContent = '일시정지';
-      dom.pauseButton.setAttribute('aria-label', '일시정지');
       dom.pauseButton.setAttribute('aria-pressed', 'false');
       dom.pauseButton.disabled = true;
     }

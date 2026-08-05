@@ -55,6 +55,28 @@
     font-weight: 600;
   }
 
+  /* 타이포그래피: H1 32px/700, H2 18px/600, Caption 13px */
+  .overlay__title {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .overlay__subtitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .overlay__caption {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-text-secondary);
+  }
+
   #game-root {
     position: relative;
     width: 100%;
@@ -117,6 +139,17 @@
     outline-offset: 2px;
   }
 
+  /* game-over/clear 상태의 restart-button CTA 강조 */
+  .restart-button--cta {
+    background: var(--color-ball);
+  }
+
+  /* 패들은 canvas(board)에 그려지므로 board 자체에 focus outline을 제공한다 */
+  #game-root canvas:focus-visible {
+    outline: 3px solid var(--color-brick-tier1);
+    outline-offset: -3px;
+  }
+
   @media (max-width: 360px) {
     .hud {
       font-size: 12px;
@@ -129,12 +162,14 @@
     <span class="hud__score">점수: <span id="score-value">0</span></span>
     <span class="hud__lives">라이프: <span id="lives-value">3</span></span>
     <span>최고 점수: <span id="best-score-value">0</span></span>
-    <button id="pause-button" type="button" aria-label="게임 시작">시작</button>
-    <button id="restart-button" type="button" aria-label="다시 시작">다시 시작</button>
+    <button id="pause-button" type="button" aria-label="게임 일시정지">시작</button>
+    <button id="restart-button" type="button" aria-label="게임 다시 시작">다시 시작</button>
   </div>
   <div id="game-root">
     <div id="game-overlay" class="overlay overlay--start" role="status" aria-live="polite" data-state="start">
-      <p id="overlay-message">시작 전</p>
+      <h1 id="overlay-title" class="overlay__title">브레이크아웃</h1>
+      <h2 id="overlay-subtitle" class="overlay__subtitle">시작 전</h2>
+      <p id="overlay-caption" class="overlay__caption">시작 버튼을 눌러 게임을 시작하세요</p>
     </div>
   </div>
 
