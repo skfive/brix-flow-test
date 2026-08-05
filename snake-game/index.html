@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="game-root" class="game-container">
+    <div class="hud">
+      <div id="score-display" aria-live="polite">
+        점수: <span class="score-value">0</span>
+      </div>
+      <div class="hud-controls">
+        <button id="pause-button" class="btn btn--primary" type="button" aria-label="일시정지">일시정지</button>
+        <button id="restart-button" class="btn btn--primary" type="button" aria-label="다시 시작">다시 시작</button>
+      </div>
+    </div>
+
+    <canvas id="game-canvas" width="400" height="400"></canvas>
+
+    <div id="status-overlay" class="overlay overlay--hidden" role="alertdialog" aria-label="게임 상태">
+      <p id="overlay-message"></p>
+      <p id="final-score"></p>
+    </div>
+  </div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
