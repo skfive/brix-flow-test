@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pixi Breakout</title>
+<style>
+  :root {
+    --color-bg: #0b1021;
+    --color-brick-tier1: #38bdf8;
+    --color-brick-tier2: #818cf8;
+    --color-brick-tier3: #f472b6;
+    --color-ball: #facc15;
+    --color-paddle: #e2e8f0;
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #94a3b8;
+    --font-family-ui: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-ui);
+  }
+
+  body {
+    min-height: 100vh;
+    padding: 16px 12px;
+  }
+
+  .hud {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px 16px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+  }
+
+  .hud__score,
+  .hud__lives {
+    color: var(--color-text-primary);
+    font-weight: 600;
+  }
+
+  #game-root {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    aspect-ratio: 4 / 3;
+    background: var(--color-bg);
+    overflow: hidden;
+  }
+
+  #game-root canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(11, 16, 33, 0.85);
+    color: var(--color-text-primary);
+    text-align: center;
+    padding: 16px;
+  }
+
+  .overlay--start,
+  .overlay--paused,
+  .overlay--gameover,
+  .overlay--clear {
+    display: flex;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--color-text-secondary);
+    background: var(--color-paddle);
+    color: var(--color-bg);
+    cursor: pointer;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  button:focus-visible {
+    outline: 3px solid var(--color-brick-tier1);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 360px) {
+    .hud {
+      font-size: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="hud" id="game-hud">
+    <span class="hud__score">점수: <span id="score-value">0</span></span>
+    <span class="hud__lives">라이프: <span id="lives-value">3</span></span>
+    <span>최고 점수: <span id="best-score-value">0</span></span>
+    <button id="pause-button" type="button" aria-label="게임 시작">시작</button>
+    <button id="restart-button" type="button" aria-label="다시 시작">다시 시작</button>
+  </div>
+  <div id="game-root">
+    <div id="game-overlay" class="overlay overlay--start" role="status" aria-live="polite" data-state="start">
+      <p id="overlay-message">시작 전</p>
+    </div>
+  </div>
+
+  <!-- PixiJS v7 CDN (unpkg) — window.PIXI 전역으로 노출됨. renderer.js가 이를 참조한다. -->
+  <script src="https://unpkg.com/pixi.js@7.4.3/dist/pixi.min.js"></script>
+  <script type="module" src="./src/renderer.js"></script>
+</body>
+</html>
