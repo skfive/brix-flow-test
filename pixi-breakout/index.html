@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pixi Breakout</title>
+<style>
+  :root {
+    --color-bg: #0b1021;
+    --color-brick-tier1: #38bdf8;
+    --color-brick-tier2: #818cf8;
+    --color-brick-tier3: #f472b6;
+    --color-ball: #facc15;
+    --color-paddle: #e2e8f0;
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #94a3b8;
+    --font-family-ui: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-ui);
+  }
+
+  body {
+    min-height: 100vh;
+    padding: 16px 12px;
+  }
+
+  .hud {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px 16px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    color: var(--color-text-secondary);
+    /* Body: design.md §3 — 16px/500/line-height 1.3 */
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .hud__score,
+  .hud__lives {
+    color: var(--color-text-primary);
+    font-weight: 500;
+  }
+
+  /* 타이포그래피: H1 32px/700, H2 18px/600, Caption 13px */
+  .overlay__title {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .overlay__subtitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .overlay__caption {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-text-secondary);
+  }
+
+  #game-root {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    aspect-ratio: 4 / 3;
+    background: var(--color-bg);
+    overflow: hidden;
+  }
+
+  #game-root canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(11, 16, 33, 0.85);
+    color: var(--color-text-primary);
+    text-align: center;
+    padding: 16px;
+  }
+
+  .overlay--start,
+  .overlay--paused,
+  .overlay--gameover,
+  .overlay--clear {
+    display: flex;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--color-text-secondary);
+    background: var(--color-paddle);
+    color: var(--color-bg);
+    cursor: pointer;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  button:focus-visible {
+    outline: 3px solid var(--color-brick-tier1);
+    outline-offset: 2px;
+  }
+
+  /* game-over/clear 상태의 restart-button CTA 강조 */
+  .restart-button--cta {
+    background: var(--color-ball);
+  }
+
+  /* 패들은 canvas(board)에 그려지므로 board 자체에 focus outline을 제공한다.
+     design.md §5.3: outline 2px solid --color-ball + focus ring glow(rgba(250,204,21,.35)).
+     #game-root가 overflow:hidden이라 바깥으로 번지는 box-shadow는 잘리므로 inset으로 적용해
+     동일한 색상/크기의 링이 보드 안쪽에 온전히 보이도록 한다. */
+  #game-root canvas:focus-visible {
+    outline: 2px solid var(--color-ball);
+    outline-offset: -2px;
+    box-shadow: inset 0 0 0 4px rgba(250, 204, 21, 0.35);
+  }
+
+  @media (max-width: 360px) {
+    .hud {
+      font-size: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="hud" id="game-hud">
+    <span class="hud__score">점수: <span id="score-value">0</span></span>
+    <span class="hud__lives">라이프: <span id="lives-value">3</span></span>
+    <span>최고 점수: <span id="best-score-value">0</span></span>
+    <button id="pause-button" type="button" aria-label="게임 일시정지">시작</button>
+    <button id="restart-button" type="button" aria-label="게임 다시 시작">다시 시작</button>
+  </div>
+  <div id="game-root">
+    <div id="game-overlay" class="overlay overlay--start" role="status" aria-live="polite" data-state="start">
+      <h1 id="overlay-title" class="overlay__title">브레이크아웃</h1>
+      <h2 id="overlay-subtitle" class="overlay__subtitle">시작 전</h2>
+      <p id="overlay-caption" class="overlay__caption">시작 버튼을 눌러 게임을 시작하세요</p>
+    </div>
+  </div>
+
+  <!-- PixiJS v7 CDN (unpkg) — window.PIXI 전역으로 노출됨. renderer.js가 이를 참조한다. -->
+  <script src="https://unpkg.com/pixi.js@7.4.3/dist/pixi.min.js"></script>
+  <script type="module" src="./src/renderer.js"></script>
+</body>
+</html>
