@@ -75,7 +75,8 @@ export function createBrick(overrides = {}) {
 }
 
 export function createDefaultBricks(board) {
-  const rowTiers = [3, 2, 1];
+  // design.md §5.1: 8열 × 5행. 위쪽 행일수록 내구도가 높은 tier로 난이도 그라데이션을 준다.
+  const rowTiers = [3, 3, 2, 2, 1];
   const cols = 8;
   const marginTop = 60;
   const marginX = 20;

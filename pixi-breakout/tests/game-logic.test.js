@@ -9,6 +9,7 @@ import {
   createInitialState,
   createBrick,
   createBall,
+  createDefaultBricks,
   startGame,
   togglePause,
   restartGame,
@@ -291,6 +292,20 @@ test('movePaddleByDirection: playing 상태가 아니거나 방향이 0이면 �
   const pausedState = createInitialState({ board: BOARD, status: 'paused' });
   const pausedMove = movePaddleByDirection(pausedState, 1, 0.1);
   assert.equal(pausedMove.paddle.x, pausedState.paddle.x, 'playing이 아니면 위치가 변하지 않는다');
+});
+
+test('기본 벽돌 배치: design.md §5.1 규격대로 8열 × 5행(40개) 그리드가 생성된다', () => {
+  const bricks = createDefaultBricks(BOARD);
+
+  assert.equal(bricks.length, 40, '8열 × 5행 = 40개 벽돌이어야 한다');
+
+  const rowYs = [...new Set(bricks.map((b) => b.y))].sort((a, b) => a - b);
+  assert.equal(rowYs.length, 5, '행(row)이 5개여야 한다');
+
+  rowYs.forEach((y) => {
+    const rowBricks = bricks.filter((b) => b.y === y);
+    assert.equal(rowBricks.length, 8, '각 행은 8열이어야 한다');
+  });
 });
 
 test('상태 전이: start에서 startGame 호출 시 playing으로 전이된다', () => {

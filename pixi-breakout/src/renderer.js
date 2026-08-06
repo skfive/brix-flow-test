@@ -41,6 +41,7 @@ const TIER_COLOR = {
 };
 
 // 상태별 overlay 3단 텍스트(H1 title / H2 subtitle / caption).
+// game-over/clear는 design.md §7 계약에 따라 최종 점수/최고 점수를 subtitle/caption에 노출한다.
 const STATUS_TEXT = {
   start: {
     title: '브레이크아웃',
@@ -57,17 +58,25 @@ const STATUS_TEXT = {
     subtitle: '게임이 일시정지되었습니다',
     caption: '재개 버튼을 눌러 계속하세요',
   },
-  'game-over': {
-    title: '게임 오버',
-    subtitle: '모든 라이프를 소진했습니다',
-    caption: '다시 시작 버튼을 눌러 재도전하세요',
-  },
-  clear: {
-    title: '클리어',
-    subtitle: '모든 벽돌을 파괴했습니다',
-    caption: '다시 시작 버튼을 눌러 새 게임을 시작하세요',
-  },
 };
+
+function getStatusText(current) {
+  if (current.status === 'game-over') {
+    return {
+      title: '게임 오버',
+      subtitle: `최종 점수: ${current.score}`,
+      caption: `최고 점수: ${current.bestScore}`,
+    };
+  }
+  if (current.status === 'clear') {
+    return {
+      title: '클리어!',
+      subtitle: `최종 점수: ${current.score}`,
+      caption: '모든 벽돌을 파괴했습니다',
+    };
+  }
+  return STATUS_TEXT[current.status] ?? { title: current.status, subtitle: current.status, caption: '' };
+}
 
 const OVERLAY_CLASS_BY_STATUS = {
   start: 'overlay--start',
@@ -202,19 +211,19 @@ export function createGameView(rootDocument = document) {
     const overlayClass = OVERLAY_CLASS_BY_STATUS[current.status];
     if (overlayClass) dom.overlay.classList.add(overlayClass);
     dom.overlay.setAttribute('data-state', current.status);
-    const text = STATUS_TEXT[current.status] ?? { title: current.status, subtitle: current.status, caption: '' };
+    const text = getStatusText(current);
     dom.overlayTitle.textContent = text.title;
     dom.overlaySubtitle.textContent = text.subtitle;
     dom.overlayCaption.textContent = text.caption;
   }
 
-  // pause-button의 aria-label은 frozen 계약값("게임 일시정지")으로 상태와 무관하게 고정한다.
-  // 시각적 텍스트(시작/일시정지/재개)와 aria-pressed/disabled만 상태별로 갱신한다.
+  // pause-button의 aria-label은 design.md §8 계약에 따라 상태별로 갱신한다:
+  // paused 상태일 때만 "게임 재개", 그 외에는 "게임 일시정지".
   function renderPauseButton(current) {
     if (current.status === lastPauseButtonStatus) return;
     lastPauseButtonStatus = current.status;
 
-    dom.pauseButton.setAttribute('aria-label', '게임 일시정지');
+    dom.pauseButton.setAttribute('aria-label', current.status === 'paused' ? '게임 재개' : '게임 일시정지');
 
     if (current.status === 'start') {
       dom.pauseButton.textContent = '시작';
