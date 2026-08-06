@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Star Collector · 화면 시안 (BF-1713)</title>
+  <style>
+    /* =========================================================
+       design-tokens.html 과 동일한 CSS 변수 (frozen §3.5 — exact).
+       이 시안의 모든 색/치수는 아래 변수를 참조하며 값을 하드코딩하지 않는다.
+       ========================================================= */
+    :root {
+      --color-bg: #0f172a;
+      --color-player: #38bdf8;
+      --color-star: #fbbf24;
+      --color-hazard: #ef4444;
+      --color-hud-text: #f8fafc;
+      --font-hud-size: 20px;
+      --font-title-size: 40px;
+      --space-hud-gap: 12px;
+      --radius-panel: 12px;
+
+      /* additive presentation tokens (프로즌 토큰 재정의 아님) */
+      --shadow-panel: 0 10px 30px rgba(2, 6, 23, 0.55);
+      --color-panel: #1e293b;
+      --color-muted: #94a3b8;
+      --overlay-scrim: rgba(15, 23, 42, 0.78);
+      --font-stack: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      --mono-stack: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: clamp(16px, 4vw, 40px);
+      background: var(--color-bg);
+      color: var(--color-hud-text);
+      font-family: var(--font-stack);
+      line-height: 1.5;
+    }
+
+    .page-head { max-width: 1040px; margin: 0 auto 32px; }
+    .page-head h1 { font-size: var(--font-title-size); margin: 0 0 8px; letter-spacing: -0.02em; }
+    .page-head p  { color: var(--color-muted); margin: 0; max-width: 64ch; }
+
+    .gallery {
+      max-width: 1040px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .state-card { display: flex; flex-direction: column; gap: var(--space-hud-gap); }
+    .state-card > .label {
+      font-size: 14px;
+      color: var(--color-muted);
+      font-family: var(--mono-stack);
+    }
+    .state-card > .label b { color: var(--color-hud-text); font-weight: 600; }
+
+    /* ===== #game-root — 게임 전체 컨테이너 ===== */
+    .game-root {
+      position: relative;
+      width: 100%;
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+      overflow: hidden;
+    }
+
+    /* ===== .hud / .hud__score — #hud-score(aria-live) ===== */
+    .hud {
+      position: absolute;
+      inset: 0 0 auto 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-hud-gap);
+      padding: var(--space-hud-gap);
+      pointer-events: none;
+    }
+    .hud__score {
+      font-size: var(--font-hud-size);
+      font-weight: 700;
+      color: var(--color-star);
+      background: var(--overlay-scrim);
+      padding: 6px 12px;
+      border-radius: var(--radius-panel);
+    }
+    .hud__badge {
+      font-size: 13px;
+      color: var(--color-hud-text);
+      background: var(--overlay-scrim);
+      padding: 6px 10px;
+      border-radius: var(--radius-panel);
+    }
+
+    /* ===== #game-canvas — 4:3 종횡비 자리표시자 ===== */
+    .game-canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(56,189,248,0.10), transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(251,191,36,0.10), transparent 40%),
+        var(--color-bg);
+      position: relative;
+    }
+    .game-canvas .canvas-tag {
+      position: absolute;
+      left: 50%; bottom: 8px; transform: translateX(-50%);
+      font-family: var(--mono-stack);
+      font-size: 11px;
+      color: var(--color-muted);
+    }
+
+    /* 캔버스 내부 엔티티 (시안 표현용 정적 도형 — 토큰 색 참조) */
+    .ent { position: absolute; }
+    .ent--player { width: 12%; aspect-ratio: 1; background: var(--color-player); border-radius: 6px; left: 44%; bottom: 10%; }
+    .ent--star   { width: 8%;  aspect-ratio: 1; background: var(--color-star); left: 22%; top: 26%;
+                   clip-path: polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+    .ent--star.s2 { left: 66%; top: 40%; }
+    .ent--hazard { width: 10%; aspect-ratio: 1; background: var(--color-hazard); border-radius: 50%; right: 20%; top: 20%; }
+
+    /* ===== .overlay / .overlay--* — #game-overlay(role=status) ===== */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: var(--space-hud-gap);
+      padding: 24px;
+      background: var(--overlay-scrim);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
+    }
+    /* 색상만이 아니라 좌측 상태 띠 + 텍스트로 상태를 구분 */
+    .overlay--start    { border-top: 4px solid var(--color-player); }
+    .overlay--paused   { border-top: 4px solid var(--color-star); }
+    .overlay--gameover { border-top: 4px solid var(--color-hazard); }
+
+    .overlay-title { font-size: var(--font-title-size); font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+    .overlay-body  { margin: 0; color: var(--color-hud-text); max-width: 34ch; }
+    .overlay-hint  { margin: 0; color: var(--color-muted); font-size: 14px; }
+    .overlay-final { font-size: var(--font-hud-size); color: var(--color-star); font-weight: 700; margin: 0; }
+
+    /* playing 상태: 오버레이 없이 HUD 만 활성 */
+    .overlay--hidden { display: none; }
+
+    /* ===== .button / .button--primary — #restart-button ===== */
+    .button {
+      font-family: inherit;
+      font-size: var(--font-hud-size);
+      font-weight: 600;
+      color: var(--color-hud-text);
+      background: transparent;
+      border: 2px solid var(--color-muted);
+      border-radius: var(--radius-panel);
+      padding: 10px 22px;
+      cursor: pointer;
+    }
+    .button--primary {
+      background: var(--color-player);
+      border-color: var(--color-player);
+      color: var(--color-bg);
+    }
+    .button:focus-visible { outline: 3px solid var(--color-star); outline-offset: 2px; }
+
+    /* DOM ID 매핑 캡션 */
+    .selector-map {
+      max-width: 1040px;
+      margin: 40px auto 0;
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+      padding: 20px 24px;
+    }
+    .selector-map h2 { font-size: 20px; margin: 0 0 12px; }
+    .selector-map table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .selector-map th, .selector-map td {
+      text-align: left; padding: 8px 10px;
+      border-bottom: 1px solid rgba(148,163,184,0.2);
+      vertical-align: top;
+    }
+    .selector-map th { color: var(--color-muted); font-weight: 600; }
+    .selector-map code { font-family: var(--mono-stack); color: var(--color-star); }
+  </style>
+</head>
+<body>
+  <header class="page-head">
+    <h1>Star Collector · 화면 시안</h1>
+    <p>
+      frozen UI contract (BF-1713 §3) 의 네 게임 상태를 정적으로 표현한 시안입니다.
+      모든 selector(class)·토큰·접근성 속성을 그대로 반영하며, 상태는 색상만이 아니라
+      화면 텍스트(상태명)로도 구분합니다. 캔버스는 4:3 종횡비 자리표시자입니다.
+    </p>
+  </header>
+
+  <div class="gallery">
+
+    <!-- ============ START ============ -->
+    <div class="state-card">
+      <p class="label">상태 <b>start</b> · <code>.overlay--start</code></p>
+      <div class="game-root" data-dom-id="game-root">
+        <div class="hud">
+          <span class="hud__score" data-dom-id="hud-score" role="status" aria-live="polite">점수: 0</span>
+          <span class="hud__badge">Star Collector</span>
+        </div>
+        <div class="game-canvas" data-dom-id="game-canvas" aria-hidden="true">
+          <span class="ent ent--player"></span>
+          <span class="canvas-tag">#game-canvas · 4:3</span>
+        </div>
+        <div class="overlay overlay--start" data-dom-id="game-overlay" role="status">
+          <p class="overlay-title" data-dom-id="overlay-title">게임 시작</p>
+          <p class="overlay-body">별을 모으고 위험을 피하세요.</p>
+          <p class="overlay-hint">← → 이동 · Space 점프 · Enter 시작</p>
+          <button class="button button--primary" type="button">시작</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PLAYING (HUD) ============ -->
+    <div class="state-card">
+      <p class="label">상태 <b>playing</b> · HUD 활성 · 오버레이 없음</p>
+      <div class="game-root" data-dom-id="game-root">
+        <div class="hud">
+          <span class="hud__score" data-dom-id="hud-score" role="status" aria-live="polite">점수: 120</span>
+          <span class="hud__badge">플레이 중</span>
+        </div>
+        <div class="game-canvas" data-dom-id="game-canvas" aria-hidden="true">
+          <span class="ent ent--star"></span>
+          <span class="ent ent--star s2"></span>
+          <span class="ent ent--hazard"></span>
+          <span class="ent ent--player"></span>
+          <span class="canvas-tag">#game-canvas · 4:3</span>
+        </div>
+        <div class="overlay overlay--hidden" data-dom-id="game-overlay" role="status">
+          <p class="overlay-title" data-dom-id="overlay-title">플레이 중</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PAUSED ============ -->
+    <div class="state-card">
+      <p class="label">상태 <b>paused</b> · <code>.overlay--paused</code></p>
+      <div class="game-root" data-dom-id="game-root">
+        <div class="hud">
+          <span class="hud__score" data-dom-id="hud-score" role="status" aria-live="polite">점수: 120</span>
+          <span class="hud__badge">일시정지</span>
+        </div>
+        <div class="game-canvas" data-dom-id="game-canvas" aria-hidden="true">
+          <span class="ent ent--star"></span>
+          <span class="ent ent--player"></span>
+          <span class="canvas-tag">#game-canvas · 4:3</span>
+        </div>
+        <div class="overlay overlay--paused" data-dom-id="game-overlay" role="status">
+          <p class="overlay-title" data-dom-id="overlay-title">일시정지</p>
+          <p class="overlay-body">진행이 멈췄습니다.</p>
+          <p class="overlay-hint">Enter 또는 재개로 이어서 플레이</p>
+          <button class="button" type="button">재개</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ GAMEOVER ============ -->
+    <div class="state-card">
+      <p class="label">상태 <b>gameover</b> · <code>.overlay--gameover</code></p>
+      <div class="game-root" data-dom-id="game-root">
+        <div class="hud">
+          <span class="hud__score" data-dom-id="hud-score" role="status" aria-live="polite">점수: 120</span>
+          <span class="hud__badge">종료</span>
+        </div>
+        <div class="game-canvas" data-dom-id="game-canvas" aria-hidden="true">
+          <span class="ent ent--hazard"></span>
+          <span class="ent ent--player"></span>
+          <span class="canvas-tag">#game-canvas · 4:3</span>
+        </div>
+        <div class="overlay overlay--gameover" data-dom-id="game-overlay" role="status">
+          <p class="overlay-title" data-dom-id="overlay-title">게임 오버</p>
+          <p class="overlay-final">최종 점수: 120</p>
+          <p class="overlay-hint">Enter 또는 아래 버튼으로 다시 시작</p>
+          <button class="button button--primary" type="button" data-dom-id="restart-button" aria-label="게임 다시 시작">다시 시작</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DOM ID / selector 매핑 (frozen §3.2–3.3) : 시안은 갤러리 유효성을 위해
+       data-dom-id 로 표기하고, 런타임(developer index.html)의 exact id 를 아래에 명시 -->
+  <section class="selector-map">
+    <h2>frozen selector 매핑 (런타임 exact id / class)</h2>
+    <table>
+      <thead>
+        <tr><th>frozen selector</th><th>역할</th><th>접근성</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>#game-root</code></td><td>게임 전체 컨테이너</td><td>—</td></tr>
+        <tr><td><code>#game-canvas</code></td><td>Phaser 캔버스 마운트 · 4:3</td><td>—</td></tr>
+        <tr><td><code>#hud-score</code> · <code>.hud__score</code></td><td>점수 표시</td><td><code>aria-live="polite"</code></td></tr>
+        <tr><td><code>#game-overlay</code> · <code>.overlay</code></td><td>상태 오버레이</td><td><code>role="status"</code></td></tr>
+        <tr><td><code>#overlay-title</code></td><td>상태명 텍스트</td><td>상태명 노출</td></tr>
+        <tr><td><code>#restart-button</code> · <code>.button--primary</code></td><td>재시작</td><td><code>aria-label="게임 다시 시작"</code></td></tr>
+        <tr><td><code>.overlay--start / --paused / --gameover</code></td><td>상태별 오버레이 변형</td><td>—</td></tr>
+        <tr><td><code>.hud</code> · <code>.button</code></td><td>HUD 컨테이너 · 기본 버튼</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>
