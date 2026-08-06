@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>디자인 토큰 — Phaser 엔드리스 러너</title>
+    <style>
+      :root {
+        --color-bg-top: #0b1120;
+        --color-bg-bottom: #1e293b;
+        --color-ground: #334155;
+        --color-player: #38bdf8;
+        --color-obstacle-ground: #f43f5e;
+        --color-obstacle-air: #a855f7;
+        --color-accent: #fbbf24;
+        --color-text: #f8fafc;
+        --font-size-title: 48px;
+        --font-size-hud: 20px;
+        --font-weight-bold: 700;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --radius-panel: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: var(--space-lg);
+        background: linear-gradient(180deg, var(--color-bg-top), var(--color-bg-bottom));
+        color: var(--color-text);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      h1 {
+        font-size: var(--font-size-title);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-accent);
+        margin: 0 0 var(--space-lg);
+      }
+
+      h2 {
+        font-size: var(--font-size-hud);
+        font-weight: var(--font-weight-bold);
+        margin: var(--space-lg) 0 var(--space-md);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: var(--space-md);
+      }
+
+      .swatch {
+        border-radius: var(--radius-panel);
+        padding: var(--space-md);
+        background: rgba(15, 23, 42, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+      }
+
+      .swatch__chip {
+        height: 64px;
+        border-radius: var(--radius-panel);
+        border: 1px solid rgba(248, 250, 252, 0.15);
+      }
+
+      .swatch__name {
+        font-weight: var(--font-weight-bold);
+      }
+
+      .swatch__value {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        opacity: 0.85;
+        font-size: 14px;
+      }
+
+      .token-row {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: var(--radius-panel);
+        margin-bottom: var(--space-sm);
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>디자인 토큰</h1>
+    <p>Phaser 엔드리스 러너의 동결된(frozen) UI 토큰 참조 시트입니다. 값은 blueprint와 정확히 일치합니다.</p>
+
+    <h2>색상</h2>
+    <div class="grid">
+      <div class="swatch">
+        <div class="swatch__chip" style="background: var(--color-bg-top)"></div>
+        <span class="swatch__name">--color-bg-top</span>
+        <span class="swatch__value">#0b1120</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background: var(--color-bg-bottom)"></div>
+        <span class="swatch__name">--color-bg-bottom</span>
+        <span class="swatch__value">#1e293b</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background: var(--color-ground)"></div>
+        <span class="swatch__name">--color-ground</span>
+        <span class="swatch__value">#334155</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background: var(--color-player)"></div>
+        <span class="swatch__name">--color-player</span>
+        <span class="swatch__value">#38bdf8</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background: var(--color-obstacle-ground)"></div>
+        <span class="swatch__name">--color-obstacle-ground</span>
+        <span class="swatch__value">#f43f5e</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background: var(--color-obstacle-air)"></div>
+        <span class="swatch__name">--color-obstacle-air</span>
+        <span class="swatch__value">#a855f7</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background: var(--color-accent)"></div>
+        <span class="swatch__name">--color-accent</span>
+        <span class="swatch__value">#fbbf24</span>
+      </div>
+      <div class="swatch">
+        <div class="swatch__chip" style="background: var(--color-text)"></div>
+        <span class="swatch__name">--color-text</span>
+        <span class="swatch__value">#f8fafc</span>
+      </div>
+    </div>
+
+    <h2>타이포그래피</h2>
+    <div class="token-row"><span>--font-size-title</span><span>48px</span></div>
+    <div class="token-row"><span>--font-size-hud</span><span>20px</span></div>
+    <div class="token-row"><span>--font-weight-bold</span><span>700</span></div>
+
+    <h2>스페이싱 &amp; 반경</h2>
+    <div class="token-row"><span>--space-sm</span><span>8px</span></div>
+    <div class="token-row"><span>--space-md</span><span>16px</span></div>
+    <div class="token-row"><span>--space-lg</span><span>24px</span></div>
+    <div class="token-row"><span>--radius-panel</span><span>12px</span></div>
+  </body>
+</html>

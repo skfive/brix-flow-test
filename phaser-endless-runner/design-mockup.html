@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UI 목업 — Phaser 엔드리스 러너</title>
+    <style>
+      :root {
+        --color-bg-top: #0b1120;
+        --color-bg-bottom: #1e293b;
+        --color-ground: #334155;
+        --color-player: #38bdf8;
+        --color-obstacle-ground: #f43f5e;
+        --color-obstacle-air: #a855f7;
+        --color-accent: #fbbf24;
+        --color-text: #f8fafc;
+        --font-size-title: 48px;
+        --font-size-hud: 20px;
+        --font-weight-bold: 700;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --radius-panel: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: var(--space-lg);
+        background: #020617;
+        color: var(--color-text);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      h1 {
+        font-size: var(--font-size-title);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-accent);
+        margin: 0 0 var(--space-lg);
+      }
+
+      .mockups {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: var(--space-lg);
+      }
+
+      figcaption {
+        margin-bottom: var(--space-sm);
+        font-weight: var(--font-weight-bold);
+        font-size: var(--font-size-hud);
+      }
+
+      /* 실제 index.html과 동일한 selector/토큰을 사용한 정적 목업 */
+      .runner {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: var(--radius-panel);
+        overflow: hidden;
+        background: linear-gradient(180deg, var(--color-bg-top), var(--color-bg-bottom));
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      }
+
+      .runner__ground {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 20%;
+        background: var(--color-ground);
+      }
+
+      .runner__player {
+        position: absolute;
+        bottom: 20%;
+        left: 15%;
+        width: 8%;
+        height: 22%;
+        background: var(--color-player);
+        border-radius: 4px;
+      }
+
+      .runner__obstacle--ground {
+        position: absolute;
+        bottom: 20%;
+        left: 60%;
+        width: 6%;
+        height: 16%;
+        background: var(--color-obstacle-ground);
+        border-radius: 4px;
+      }
+
+      .runner__obstacle--air {
+        position: absolute;
+        bottom: 42%;
+        left: 78%;
+        width: 8%;
+        height: 10%;
+        background: var(--color-obstacle-air);
+        border-radius: 4px;
+      }
+
+      .runner__hud {
+        position: absolute;
+        top: var(--space-md);
+        left: var(--space-md);
+        right: var(--space-md);
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        font-size: var(--font-size-hud);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .runner__hud span {
+        background: rgba(15, 23, 42, 0.55);
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-panel);
+      }
+
+      #hud-highscore {
+        color: var(--color-accent);
+      }
+
+      .runner__overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-lg);
+        background: rgba(11, 17, 32, 0.72);
+      }
+
+      .runner__panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-md);
+        text-align: center;
+      }
+
+      .runner__title {
+        margin: 0;
+        font-size: var(--font-size-title);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-accent);
+      }
+
+      .runner__button {
+        border: none;
+        cursor: pointer;
+        font-size: var(--font-size-hud);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-bg-top);
+        background: var(--color-player);
+        padding: var(--space-sm) var(--space-lg);
+        border-radius: var(--radius-panel);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>UI 목업 — 4개 상태</h1>
+    <p>동결된 selector·상태·토큰을 사용한 정적 레이아웃 참조입니다. 실행 구현은 index.html / src/main.js에 있습니다.</p>
+
+    <div class="mockups">
+      <!-- start -->
+      <figure>
+        <figcaption>start</figcaption>
+        <div class="runner">
+          <div class="runner__ground"></div>
+          <div class="runner__player"></div>
+          <div class="runner__hud">
+            <span>점수 0</span><span>거리 0m</span><span>최고 120</span>
+          </div>
+          <div class="runner__overlay">
+            <div class="runner__panel">
+              <h2 class="runner__title">엔드리스 러너</h2>
+              <p>Space / ArrowUp 점프 · ArrowDown 숙이기</p>
+              <button class="runner__button" type="button" aria-label="게임 시작">게임 시작</button>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <!-- playing -->
+      <figure>
+        <figcaption>playing</figcaption>
+        <div class="runner">
+          <div class="runner__ground"></div>
+          <div class="runner__player"></div>
+          <div class="runner__obstacle--ground"></div>
+          <div class="runner__obstacle--air"></div>
+          <div class="runner__hud">
+            <span>점수 340</span><span>거리 340m</span><span>최고 120</span>
+          </div>
+        </div>
+      </figure>
+
+      <!-- paused -->
+      <figure>
+        <figcaption>paused</figcaption>
+        <div class="runner">
+          <div class="runner__ground"></div>
+          <div class="runner__player"></div>
+          <div class="runner__hud">
+            <span>점수 340</span><span>거리 340m</span><span>최고 120</span>
+          </div>
+          <div class="runner__overlay">
+            <div class="runner__panel">
+              <h2 class="runner__title">일시정지</h2>
+              <p>게임이 일시정지되었습니다.</p>
+              <button class="runner__button" type="button" aria-label="게임 재개">재개</button>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <!-- gameover -->
+      <figure>
+        <figcaption>gameover</figcaption>
+        <div class="runner">
+          <div class="runner__ground"></div>
+          <div class="runner__player"></div>
+          <div class="runner__hud">
+            <span>점수 512</span><span>거리 512m</span><span>최고 512</span>
+          </div>
+          <div class="runner__overlay" role="alert">
+            <div class="runner__panel">
+              <h2 class="runner__title">게임 오버</h2>
+              <p>게임 오버 — 점수 512 · 최고 512</p>
+              <button class="runner__button" type="button" aria-label="다시 시작">다시 시작</button>
+            </div>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </body>
+</html>
