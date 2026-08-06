@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>pixi-shooter</title>
+  <style>
+    :root {
+      --color-bg-space: #05070f;
+      --color-player: #4fd1ff;
+      --color-enemy-linear: #ff5470;
+      --color-enemy-zigzag: #ffb84f;
+      --color-bullet-player: #e8fff3;
+      --color-bullet-enemy: #ff8080;
+      --color-explosion: #ffd23f;
+      --color-hud-text: #f5f7ff;
+
+      --font-family-hud: 'Segoe UI', system-ui, sans-serif;
+      --font-size-score: 20px;
+      --font-size-message: 32px;
+
+      --layout-hud-height: 64px;
+      --layout-play-area-ratio: 9 / 16;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      min-width: 360px;
+      background: var(--color-bg-space);
+      color: var(--color-hud-text);
+      font-family: var(--font-family-hud);
+    }
+
+    .game-shell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-height: 100vh;
+      padding: 8px;
+    }
+
+    .game-shell__canvas-wrap {
+      position: relative;
+      width: min(100%, calc(100vh * 9 / 16));
+      aspect-ratio: var(--layout-play-area-ratio);
+      background: var(--color-bg-space);
+      overflow: hidden;
+    }
+
+    .game-shell__canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 시각적으로는 숨기되 스크린리더에는 상태명을 노출(접근성 이름) */
+    .game-shell__status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-root" class="game-shell">
+    <div class="game-shell__canvas-wrap">
+      <canvas id="game-canvas"></canvas>
+    </div>
+    <p id="game-status" class="game-shell__status" role="status" aria-live="polite">스페이스바를 눌러 시작</p>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
