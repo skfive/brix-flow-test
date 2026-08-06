@@ -1,0 +1,197 @@
+/* styles.css — Color Guess 스타일시트
+   implementation-plan.md §5 토큰 · §7 반응형 · §4 상태 표현 (frozen, 값 변경 금지) */
+
+:root {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-text-primary: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-correct: #22c55e;
+  --color-wrong: #ef4444;
+  --color-accent: #3b82f6;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --radius-md: 12px;
+  --font-size-target: 28px;
+  --font-size-body: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-lg);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--font-size-body);
+}
+
+.game {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.game__hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+.game__title {
+  margin: 0;
+  font-size: var(--font-size-target);
+}
+
+.game__stats {
+  display: flex;
+  gap: var(--space-lg);
+  margin: 0;
+}
+
+.game__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.game__stat dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-body);
+}
+
+.game__stat dd {
+  margin: 0;
+  font-size: var(--font-size-target);
+  font-weight: 700;
+}
+
+.game__round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+.game__prompt {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.game__target {
+  margin: 0;
+  font-size: var(--font-size-target);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.game__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.swatch {
+  flex: 1 1 120px;
+  min-height: 80px;
+  border: 3px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.swatch:disabled {
+  cursor: default;
+}
+
+.swatch--correct {
+  border-color: var(--color-correct);
+  box-shadow: 0 0 0 3px var(--color-correct);
+}
+
+.swatch--wrong {
+  border-color: var(--color-wrong);
+  box-shadow: 0 0 0 3px var(--color-wrong);
+}
+
+.game__feedback {
+  margin: 0;
+  min-height: 1.5em;
+  font-weight: 600;
+}
+
+.gameover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 2px solid var(--color-wrong);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.gameover[hidden] {
+  display: none;
+}
+
+.gameover__title {
+  margin: 0;
+  font-size: var(--font-size-target);
+}
+
+.gameover__score {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.gameover__restart {
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.gameover__restart:focus-visible {
+  outline: 3px solid var(--color-text-primary);
+  outline-offset: 2px;
+}
+
+/* 반응형: 480px 미만에서 색상 견본을 세로로 재배치 (§7) */
+@media (max-width: 479px) {
+  .game__swatches {
+    flex-direction: column;
+  }
+
+  .swatch {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}

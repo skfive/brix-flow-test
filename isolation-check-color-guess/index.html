@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Color Guess — 색상 맞히기</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game" aria-label="색상 맞히기 게임">
+      <header class="game__hud">
+        <h1 class="game__title">색상 맞히기</h1>
+        <dl class="game__stats">
+          <div class="game__stat">
+            <dt>점수</dt>
+            <dd id="score-value">0</dd>
+          </div>
+          <div class="game__stat">
+            <dt>목숨</dt>
+            <dd id="lives-value">3</dd>
+          </div>
+        </dl>
+      </header>
+
+      <section class="game__round" aria-label="현재 라운드">
+        <p class="game__prompt">아래 색상 값을 견본에서 골라보세요</p>
+        <p id="color-target" class="game__target">#000000</p>
+        <div id="swatch-options" class="game__swatches" role="group" aria-label="색상 견본"></div>
+        <p id="feedback-message" class="game__feedback" aria-live="polite">색상을 맞혀보세요</p>
+      </section>
+
+      <section id="gameover-panel" class="gameover" hidden>
+        <h2 class="gameover__title">게임 오버</h2>
+        <p class="gameover__score">최종 점수 <span id="final-score">0</span></p>
+        <button id="restart-button" type="button" class="gameover__restart" aria-label="다시 시작">
+          다시 시작
+        </button>
+      </section>
+    </main>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

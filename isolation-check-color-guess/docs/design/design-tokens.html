@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Color Guess — 디자인 토큰</title>
+    <style>
+      /* implementation-plan.md §5 frozen 토큰 (값 변경 금지) */
+      :root {
+        --color-bg: #0f172a;
+        --color-surface: #1e293b;
+        --color-text-primary: #f8fafc;
+        --color-text-muted: #94a3b8;
+        --color-correct: #22c55e;
+        --color-wrong: #ef4444;
+        --color-accent: #3b82f6;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --radius-md: 12px;
+        --font-size-target: 28px;
+        --font-size-body: 16px;
+      }
+      body {
+        margin: 0;
+        padding: var(--space-lg);
+        background: var(--color-bg);
+        color: var(--color-text-primary);
+        font-family: system-ui, sans-serif;
+        font-size: var(--font-size-body);
+      }
+      h1 {
+        font-size: var(--font-size-target);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        max-width: 640px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: var(--space-sm) var(--space-md);
+        border-bottom: 1px solid var(--color-text-muted);
+      }
+      code {
+        color: var(--color-text-muted);
+      }
+      .swatch-cell {
+        width: 48px;
+        height: 24px;
+        border-radius: 6px;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Color Guess 디자인 토큰</h1>
+    <p><code>:root</code>에 정의되는 frozen 토큰과 값. developer/designer는 값을 재정의하지 않는다.</p>
+    <table>
+      <thead>
+        <tr><th>토큰</th><th>값</th><th>미리보기</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>--color-bg</code></td><td><code>#0f172a</code></td><td><span class="swatch-cell" style="background:#0f172a"></span></td></tr>
+        <tr><td><code>--color-surface</code></td><td><code>#1e293b</code></td><td><span class="swatch-cell" style="background:#1e293b"></span></td></tr>
+        <tr><td><code>--color-text-primary</code></td><td><code>#f8fafc</code></td><td><span class="swatch-cell" style="background:#f8fafc"></span></td></tr>
+        <tr><td><code>--color-text-muted</code></td><td><code>#94a3b8</code></td><td><span class="swatch-cell" style="background:#94a3b8"></span></td></tr>
+        <tr><td><code>--color-correct</code></td><td><code>#22c55e</code></td><td><span class="swatch-cell" style="background:#22c55e"></span></td></tr>
+        <tr><td><code>--color-wrong</code></td><td><code>#ef4444</code></td><td><span class="swatch-cell" style="background:#ef4444"></span></td></tr>
+        <tr><td><code>--color-accent</code></td><td><code>#3b82f6</code></td><td><span class="swatch-cell" style="background:#3b82f6"></span></td></tr>
+        <tr><td><code>--space-sm</code></td><td><code>8px</code></td><td></td></tr>
+        <tr><td><code>--space-md</code></td><td><code>16px</code></td><td></td></tr>
+        <tr><td><code>--space-lg</code></td><td><code>24px</code></td><td></td></tr>
+        <tr><td><code>--radius-md</code></td><td><code>12px</code></td><td></td></tr>
+        <tr><td><code>--font-size-target</code></td><td><code>28px</code></td><td></td></tr>
+        <tr><td><code>--font-size-body</code></td><td><code>16px</code></td><td></td></tr>
+      </tbody>
+    </table>
+  </body>
+</html>
