@@ -1,0 +1,88 @@
+/* 디자인 토큰 정의 및 견본 레이아웃 (ui-contract@v1 — 이름·값 재정의 금지) */
+
+:root {
+  /* 색상 */
+  --color-bg: #ffffff;
+  --color-fg: #1a1a1a;
+  --color-accent: #2563eb;
+  /* 간격 */
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  /* 타이포 */
+  --font-family-base: system-ui, sans-serif;
+  --font-size-base: 16px;
+  --font-size-lg: 20px;
+}
+
+/* dark 상태: 토큰 이름은 유지하고 색상 값만 스코프에서 오버라이드 */
+[data-theme="dark"] {
+  --color-bg: #1a1a1a;
+  --color-fg: #ffffff;
+  --color-accent: #60a5fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+}
+
+#token-showcase {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+#theme-toggle {
+  align-self: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#theme-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 320px 이상에서 wrap되어 content overflow가 발생하지 않는다 */
+.token-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.swatch {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--color-fg);
+  border-radius: 8px;
+  background: var(--color-bg);
+}
+
+.swatch__preview {
+  height: var(--space-lg);
+  margin-bottom: var(--space-sm);
+  border-radius: 4px;
+}
+
+.swatch__label {
+  display: block;
+  font-size: var(--font-size-base);
+  color: var(--color-fg);
+  word-break: break-word;
+}
