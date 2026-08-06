@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beat Tap — 디자인 토큰 (frozen ui-contract@v1 §3.5)</title>
+    <style>
+      /* 동결된 디자인 토큰 — 값 변경 금지 (docs/plans/BF-1739/implementation-plan.md §3.5) */
+      :root {
+        --color-bg: #0f1020;
+        --color-lane: #1b1d3a;
+        --color-note: #38bdf8;
+        --color-judge-perfect: #22c55e;
+        --color-judge-good: #eab308;
+        --color-judge-miss: #ef4444;
+        --color-text-primary: #f8fafc;
+        --space-lane-gap: 8px;
+        --radius-note: 6px;
+        --shadow-note: 0 2px 6px rgba(0, 0, 0, 0.4);
+        --font-size-hud: 20px;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--color-bg);
+        color: var(--color-text-primary);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      h1 {
+        font-size: var(--font-size-hud);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        max-width: 720px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 1px solid rgba(248, 250, 252, 0.15);
+        font-variant-numeric: tabular-nums;
+      }
+      .swatch {
+        display: inline-block;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-note);
+        vertical-align: middle;
+        border: 1px solid rgba(248, 250, 252, 0.25);
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .note-demo {
+        display: inline-block;
+        width: 120px;
+        height: 24px;
+        background: var(--color-note);
+        border-radius: var(--radius-note);
+        box-shadow: var(--shadow-note);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Beat Tap 디자인 토큰</h1>
+    <p>frozen ui-contract@v1 §3.5의 exact 토큰 값입니다. selector/token 재정의 없이 그대로 사용합니다.</p>
+
+    <table aria-label="색상 토큰">
+      <thead>
+        <tr>
+          <th>토큰</th>
+          <th>값</th>
+          <th>미리보기</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--color-bg</code></td>
+          <td><code>#0f1020</code></td>
+          <td><span class="swatch" style="background: var(--color-bg)"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-lane</code></td>
+          <td><code>#1b1d3a</code></td>
+          <td><span class="swatch" style="background: var(--color-lane)"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-note</code></td>
+          <td><code>#38bdf8</code></td>
+          <td><span class="swatch" style="background: var(--color-note)"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-judge-perfect</code></td>
+          <td><code>#22c55e</code></td>
+          <td><span class="swatch" style="background: var(--color-judge-perfect)"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-judge-good</code></td>
+          <td><code>#eab308</code></td>
+          <td><span class="swatch" style="background: var(--color-judge-good)"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-judge-miss</code></td>
+          <td><code>#ef4444</code></td>
+          <td><span class="swatch" style="background: var(--color-judge-miss)"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-text-primary</code></td>
+          <td><code>#f8fafc</code></td>
+          <td><span class="swatch" style="background: var(--color-text-primary)"></span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 style="font-size: var(--font-size-hud)">치수 · 그림자 · 타이포 토큰</h2>
+    <table aria-label="레이아웃 토큰">
+      <thead>
+        <tr>
+          <th>토큰</th>
+          <th>값</th>
+          <th>미리보기</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--space-lane-gap</code></td>
+          <td><code>8px</code></td>
+          <td>레인 간격</td>
+        </tr>
+        <tr>
+          <td><code>--radius-note</code></td>
+          <td><code>6px</code></td>
+          <td><span class="note-demo"></span></td>
+        </tr>
+        <tr>
+          <td><code>--shadow-note</code></td>
+          <td><code>0 2px 6px rgba(0,0,0,0.4)</code></td>
+          <td><span class="note-demo"></span></td>
+        </tr>
+        <tr>
+          <td><code>--font-size-hud</code></td>
+          <td><code>20px</code></td>
+          <td><span style="font-size: var(--font-size-hud)">HUD 20px</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

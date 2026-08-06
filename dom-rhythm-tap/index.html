@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beat Tap — 리듬 탭 게임</title>
+    <style>
+      /* 디자인 토큰 (frozen ui-contract@v1 §3.5 — 값 변경 금지) */
+      :root {
+        --color-bg: #0f1020;
+        --color-lane: #1b1d3a;
+        --color-note: #38bdf8;
+        --color-judge-perfect: #22c55e;
+        --color-judge-good: #eab308;
+        --color-judge-miss: #ef4444;
+        --color-text-primary: #f8fafc;
+        --space-lane-gap: 8px;
+        --radius-note: 6px;
+        --shadow-note: 0 2px 6px rgba(0, 0, 0, 0.4);
+        --font-size-hud: 20px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg);
+        color: var(--color-text-primary);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      .game {
+        position: relative;
+        width: min(480px, 100vw);
+        height: min(720px, 100vh);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--color-bg);
+      }
+
+      /* HUD (§3.3) */
+      .hud {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-lane-gap);
+        padding: 12px;
+        font-size: var(--font-size-hud);
+      }
+
+      .hud__item {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .hud__label {
+        font-size: 0.7em;
+        opacity: 0.75;
+      }
+
+      .hud__value {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #pause-button {
+        margin-left: auto;
+      }
+
+      #judgment-feedback {
+        min-height: 1.4em;
+        padding: 0 12px 8px;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      #judgment-feedback.note--perfect {
+        color: var(--color-judge-perfect);
+      }
+      #judgment-feedback.note--good {
+        color: var(--color-judge-good);
+      }
+      #judgment-feedback.note--miss {
+        color: var(--color-judge-miss);
+      }
+
+      /* 레인 영역 (§3.2/§3.3) */
+      #lane-container {
+        position: relative;
+        flex: 1;
+        display: flex;
+        gap: var(--space-lane-gap);
+        padding: var(--space-lane-gap);
+        min-height: 0;
+      }
+
+      .game__lane {
+        position: relative;
+        flex: 1 1 0;
+        min-width: 0;
+        background: var(--color-lane);
+        border-radius: var(--radius-note);
+        overflow: hidden;
+      }
+
+      .game__lane-key {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 6px;
+        text-align: center;
+        font-weight: 700;
+        font-size: clamp(14px, 5vw, 22px);
+        opacity: 0.85;
+        pointer-events: none;
+      }
+
+      /* 판정선 — 위치 유지(§3.7) */
+      #judgment-line {
+        position: absolute;
+        left: var(--space-lane-gap);
+        right: var(--space-lane-gap);
+        bottom: 15%;
+        height: 4px;
+        background: var(--color-text-primary);
+        opacity: 0.9;
+        border-radius: 2px;
+        pointer-events: none;
+      }
+
+      /* 노트 (§3.3) */
+      .game__note {
+        position: absolute;
+        left: 8%;
+        right: 8%;
+        height: clamp(16px, 5%, 28px);
+        background: var(--color-note);
+        border-radius: var(--radius-note);
+        box-shadow: var(--shadow-note);
+        will-change: top;
+      }
+      .game__note.note--perfect {
+        background: var(--color-judge-perfect);
+      }
+      .game__note.note--good {
+        background: var(--color-judge-good);
+      }
+      .game__note.note--miss {
+        background: var(--color-judge-miss);
+      }
+
+      /* 화면 상태 오버레이 (§3.4) */
+      .screen {
+        position: absolute;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 24px;
+        text-align: center;
+        background: rgba(15, 16, 32, 0.92);
+      }
+
+      .screen--start {
+        border-top: 3px solid var(--color-note);
+      }
+      .screen--pause {
+        border-top: 3px solid var(--color-judge-good);
+      }
+      .screen--gameover {
+        border-top: 3px solid var(--color-judge-perfect);
+      }
+
+      /* data-state 로 현재 화면만 노출 */
+      .game[data-state="start"] #start-screen,
+      .game[data-state="paused"] #pause-screen,
+      .game[data-state="gameover"] #result-panel {
+        display: flex;
+      }
+
+      .combo-counter {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+      }
+
+      button {
+        font: inherit;
+        padding: 10px 20px;
+        border: 0;
+        border-radius: var(--radius-note);
+        background: var(--color-note);
+        color: var(--color-bg);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.1);
+      }
+
+      .screen__title {
+        margin: 0;
+        font-size: clamp(22px, 7vw, 32px);
+      }
+      .result__list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: var(--font-size-hud);
+        display: grid;
+        gap: 4px;
+      }
+
+      /* 반응형: 320px 이상 가로 overflow 없음(§3.7) */
+      @media (max-width: 340px) {
+        .hud {
+          font-size: 16px;
+          padding: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 게임 루트: data-state 로 start/playing/paused/gameover 노출 (§3.4) -->
+    <main id="game-root" class="game" data-state="start" aria-label="Beat Tap 리듬 게임">
+      <!-- HUD (§3.2) -->
+      <div class="hud">
+        <div class="hud__item">
+          <span class="hud__label">점수</span>
+          <span id="hud-score" class="hud__value">0</span>
+        </div>
+        <div id="hud-combo-wrap" class="hud__item combo-counter" aria-live="polite">
+          <span class="hud__label">콤보</span>
+          <span id="hud-combo" class="hud__value">0</span>
+        </div>
+        <div class="hud__item">
+          <span class="hud__label">정확도</span>
+          <span id="hud-accuracy" class="hud__value">100%</span>
+        </div>
+        <button id="pause-button" type="button" aria-label="게임 일시정지">일시정지</button>
+      </div>
+
+      <!-- 판정 피드백: aria-live 로 판정 변화 안내 (§3.6) -->
+      <div id="judgment-feedback" aria-live="polite" role="status"></div>
+
+      <!-- 4개 레인 + 판정선 (§3.2) -->
+      <div id="lane-container">
+        <div class="game__lane" data-lane="0">
+          <span class="game__lane-key">D</span>
+        </div>
+        <div class="game__lane" data-lane="1">
+          <span class="game__lane-key">F</span>
+        </div>
+        <div class="game__lane" data-lane="2">
+          <span class="game__lane-key">J</span>
+        </div>
+        <div class="game__lane" data-lane="3">
+          <span class="game__lane-key">K</span>
+        </div>
+        <div id="judgment-line" aria-hidden="true"></div>
+      </div>
+
+      <!-- 시작 화면 (§3.4) -->
+      <section id="start-screen" class="screen screen--start" aria-label="시작 화면">
+        <h1 class="screen__title">Beat Tap</h1>
+        <p>D · F · J · K 키로 판정선에 맞춰 노트를 누르세요.</p>
+        <p>상태: 시작 대기</p>
+        <button id="start-button" type="button" aria-label="게임 시작">게임 시작</button>
+      </section>
+
+      <!-- 일시정지 화면 (§3.4) -->
+      <section id="pause-screen" class="screen screen--pause" aria-label="일시정지 화면">
+        <h2 class="screen__title">일시정지</h2>
+        <p>상태: 일시정지됨</p>
+        <button id="resume-button" type="button" aria-label="게임 재개">계속하기</button>
+      </section>
+
+      <!-- 결과 화면 (§3.4) -->
+      <section id="result-panel" class="screen screen--gameover" aria-label="게임 종료 결과 화면">
+        <h2 class="screen__title">게임 종료</h2>
+        <p>상태: 종료됨</p>
+        <ul class="result__list">
+          <li>Perfect: <span id="result-perfect">0</span></li>
+          <li>Good: <span id="result-good">0</span></li>
+          <li>Miss: <span id="result-miss">0</span></li>
+          <li>최대 콤보: <span id="result-maxcombo">0</span></li>
+          <li>정확도: <span id="result-accuracy">100%</span></li>
+        </ul>
+        <button id="result-restart-button" type="button" aria-label="게임 재시작">다시 시작</button>
+      </section>
+    </main>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
