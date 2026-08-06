@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory Match</title>
+    <!-- CDN Phaser 3 (BF-1715 계약: CDN 로드) -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <style>
+      /* 디자인 토큰 (BF-1715 §4 frozen — 값 변경 금지) */
+      :root {
+        --color-bg: #1a1a2e;
+        --color-card-back: #16213e;
+        --color-card-face: #e94560;
+        --color-accent: #0f3460;
+        --color-text: #f5f5f5;
+        --space-card-gap: 12px;
+        --radius-card: 8px;
+        --font-size-hud: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      .memory-match {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .memory-match__title {
+        font-size: 20px;
+        margin: 8px 0 0;
+        text-align: center;
+      }
+
+      .memory-match__hint {
+        margin: 0;
+        text-align: center;
+        opacity: 0.85;
+      }
+
+      .hud {
+        display: flex;
+        gap: var(--space-card-gap);
+        justify-content: center;
+        flex-wrap: wrap;
+        width: 100%;
+      }
+
+      .hud__stat {
+        background: var(--color-accent);
+        border-radius: var(--radius-card);
+        padding: 8px 16px;
+        font-size: var(--font-size-hud);
+        min-width: 120px;
+        text-align: center;
+      }
+
+      #game-root {
+        width: 100%;
+        max-width: 480px;
+        aspect-ratio: 1 / 1;
+        background: var(--color-card-back);
+        border-radius: var(--radius-card);
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* 캔버스는 컨테이너 폭에 맞춰 종횡비 유지 스케일 (BF-1715 §6) */
+      #game-root canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+      }
+
+      .btn-restart {
+        background: var(--color-card-face);
+        color: var(--color-text);
+        border: none;
+        border-radius: var(--radius-card);
+        padding: 10px 24px;
+        font-size: var(--font-size-hud);
+        cursor: pointer;
+      }
+
+      .btn-restart:focus-visible {
+        outline: 3px solid var(--color-text);
+        outline-offset: 2px;
+      }
+
+      .clear-screen {
+        position: fixed;
+        inset: 0;
+        background: rgba(26, 26, 46, 0.92);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        text-align: center;
+        padding: 24px;
+      }
+
+      .clear-screen[hidden] {
+        display: none;
+      }
+
+      .clear-screen__heading {
+        font-size: 24px;
+        margin: 0;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (min-width: 768px) {
+        #game-root {
+          max-width: 560px;
+        }
+        .memory-match__title {
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="memory-match">
+      <h1 class="memory-match__title">Memory Match</h1>
+      <p class="memory-match__hint" id="status-text">카드를 뒤집어 짝을 맞추세요</p>
+
+      <section class="hud" aria-label="게임 진행 정보">
+        <div class="hud__stat" id="hud-moves">이동: 0</div>
+        <div class="hud__stat" id="hud-timer">시간: 00:00</div>
+      </section>
+
+      <div id="game-root" aria-label="카드 격자"></div>
+
+      <!-- 카드 상태 변화 접근성 안내 -->
+      <p class="sr-only" id="a11y-live" aria-live="polite"></p>
+
+      <button
+        type="button"
+        class="btn-restart"
+        id="restart-button"
+        aria-label="게임 다시 시작"
+      >
+        게임 시작
+      </button>
+    </main>
+
+    <div
+      class="clear-screen"
+      id="clear-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="clear-heading"
+      hidden
+    >
+      <h2 class="clear-screen__heading" id="clear-heading">클리어!</h2>
+      <p id="clear-detail"></p>
+    </div>
+
+    <script type="module" src="./src/game.js"></script>
+  </body>
+</html>
