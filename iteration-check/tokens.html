@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>디자인 토큰 견본</title>
+    <link rel="stylesheet" href="tokens.css" />
+  </head>
+  <body>
+    <main id="token-showcase">
+      <button
+        id="theme-toggle"
+        type="button"
+        aria-label="테마 전환"
+        aria-pressed="false"
+      >
+        라이트 모드
+      </button>
+
+      <div class="token-grid">
+        <!-- 색상 토큰 -->
+        <div class="swatch">
+          <div
+            class="swatch__preview"
+            style="background: var(--color-bg); border: 1px solid var(--color-fg);"
+          ></div>
+          <span class="swatch__label">--color-bg · #ffffff</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__preview" style="background: var(--color-fg);"></div>
+          <span class="swatch__label">--color-fg · #1a1a1a</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__preview" style="background: var(--color-accent);"></div>
+          <span class="swatch__label">--color-accent · #2563eb</span>
+        </div>
+
+        <!-- 간격 토큰 -->
+        <div class="swatch">
+          <div
+            class="swatch__preview"
+            style="width: var(--space-sm); background: var(--color-accent);"
+          ></div>
+          <span class="swatch__label">--space-sm · 8px</span>
+        </div>
+        <div class="swatch">
+          <div
+            class="swatch__preview"
+            style="width: var(--space-md); background: var(--color-accent);"
+          ></div>
+          <span class="swatch__label">--space-md · 16px</span>
+        </div>
+        <div class="swatch">
+          <div
+            class="swatch__preview"
+            style="width: var(--space-lg); background: var(--color-accent);"
+          ></div>
+          <span class="swatch__label">--space-lg · 24px</span>
+        </div>
+
+        <!-- 타이포 토큰 -->
+        <div class="swatch">
+          <div
+            class="swatch__preview"
+            style="font-family: var(--font-family-base);"
+          >
+            Aa
+          </div>
+          <span class="swatch__label">--font-family-base · system-ui, sans-serif</span>
+        </div>
+        <div class="swatch">
+          <div
+            class="swatch__preview"
+            style="font-size: var(--font-size-base);"
+          >
+            Aa
+          </div>
+          <span class="swatch__label">--font-size-base · 16px</span>
+        </div>
+        <div class="swatch">
+          <div class="swatch__preview" style="font-size: var(--font-size-lg);">
+            Aa
+          </div>
+          <span class="swatch__label">--font-size-lg · 20px</span>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="tokens.js"></script>
+  </body>
+</html>
