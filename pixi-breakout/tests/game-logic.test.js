@@ -5,7 +5,12 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
+// game-logic.js는 pixi-breakout/src/package.json(type: commonjs)로 인해 Node에서 CJS로
+// 취급된다(BF-1702 리뷰 수정: file:// 브라우저 호환을 위해 module.exports/window 병행 노출로
+// 전환했다). CJS 모듈의 module.exports 객체는 ESM default import로 그대로 받아 구조분해한다.
+import BreakoutLogic from '../src/game-logic.js';
+
+const {
   createInitialState,
   createBrick,
   createBall,
@@ -16,7 +21,7 @@ import {
   movePaddleTo,
   movePaddleByDirection,
   update,
-} from '../src/game-logic.js';
+} = BreakoutLogic;
 
 const BOARD = { width: 800, height: 600 };
 

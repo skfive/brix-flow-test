@@ -7,8 +7,19 @@
 // - 프레임마다 새 PixiJS 객체를 대량 할당하지 않는다: Graphics는 초기화 시 1회만
 //   생성하고, 매 프레임에는 position/visible 갱신 또는 상태가 실제로 바뀐 경우에만
 //   clear() 후 재드로우한다.
+//
+// 모듈 형식(BF-1702 리뷰 수정): file://에서 정적 서버 없이 열어도 <script type="module">의
+// CORS 제약 없이 즉시 로드되도록 ES import 대신 classic <script>로 로드하고, game-logic.js가
+// 노출한 전역 window.BreakoutLogic을 읽는다(index.html에서 game-logic.js를 renderer.js보다
+// 먼저 로드해 순서를 보장한다).
 
-import {
+if (!window.BreakoutLogic) {
+  throw new Error(
+    'game-logic.js(window.BreakoutLogic)를 찾을 수 없습니다. index.html의 <script> 로드 순서를 확인하세요.',
+  );
+}
+
+const {
   createInitialState,
   startGame,
   togglePause,
@@ -16,7 +27,7 @@ import {
   movePaddleTo,
   movePaddleByDirection,
   update,
-} from './game-logic.js';
+} = window.BreakoutLogic;
 
 const PIXI = window.PIXI;
 
@@ -115,7 +126,7 @@ function paintBrick(graphics, brick) {
   }
 }
 
-export function createGameView(rootDocument = document) {
+function createGameView(rootDocument = document) {
   const dom = {
     gameRoot: rootDocument.getElementById('game-root'),
     overlay: rootDocument.getElementById('game-overlay'),
