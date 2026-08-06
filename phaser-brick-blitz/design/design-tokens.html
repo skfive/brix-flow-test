@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phaser 벽돌깨기 — 디자인 토큰 팔레트</title>
+  <style>
+    /* UI 계약 §2.4 디자인 토큰 — exact 이름·값 */
+    :root {
+      --color-bg: #0f1424;
+      --color-surface: #1b2138;
+      --color-paddle: #4cc9f0;
+      --color-ball: #f8f9fa;
+      --color-brick-r1: #ef476f;
+      --color-brick-r2: #ffd166;
+      --color-brick-r3: #06d6a0;
+      --color-text: #e9ecef;
+      --space-hud-gap: 16px;
+      --radius-brick: 4px;
+      --font-size-hud: 20px;
+      --font-size-title: 40px;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    h1 { font-size: var(--font-size-title); }
+    h2 { font-size: var(--font-size-hud); margin-top: 32px; }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: var(--space-hud-gap);
+    }
+
+    .swatch {
+      background: var(--color-surface);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .swatch .chip {
+      height: 64px;
+      border-radius: var(--radius-brick);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .swatch code { display: block; margin-top: 8px; font-size: 13px; opacity: 0.85; }
+    .swatch strong { display: block; margin-top: 4px; }
+
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--color-surface); }
+  </style>
+</head>
+<body>
+  <h1>디자인 토큰 팔레트</h1>
+  <p>UI 계약(§2.4)에 동결된 CSS 변수 토큰을 exact 이름·값으로 시각화합니다.</p>
+
+  <h2>색상 토큰</h2>
+  <div class="swatches">
+    <div class="swatch">
+      <div class="chip" style="background: var(--color-bg);"></div>
+      <strong>배경</strong><code>--color-bg: #0f1424</code>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background: var(--color-surface);"></div>
+      <strong>표면</strong><code>--color-surface: #1b2138</code>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background: var(--color-paddle);"></div>
+      <strong>패들</strong><code>--color-paddle: #4cc9f0</code>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background: var(--color-ball);"></div>
+      <strong>공</strong><code>--color-ball: #f8f9fa</code>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background: var(--color-brick-r1);"></div>
+      <strong>벽돌 1행</strong><code>--color-brick-r1: #ef476f</code>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background: var(--color-brick-r2);"></div>
+      <strong>벽돌 2행</strong><code>--color-brick-r2: #ffd166</code>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background: var(--color-brick-r3);"></div>
+      <strong>벽돌 3행</strong><code>--color-brick-r3: #06d6a0</code>
+    </div>
+    <div class="swatch">
+      <div class="chip" style="background: var(--color-text);"></div>
+      <strong>텍스트</strong><code>--color-text: #e9ecef</code>
+    </div>
+  </div>
+
+  <h2>간격·형태·타이포 토큰</h2>
+  <table>
+    <thead><tr><th>토큰</th><th>값</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td><code>--space-hud-gap</code></td><td>16px</td><td>HUD·레이아웃 간격</td></tr>
+      <tr><td><code>--radius-brick</code></td><td>4px</td><td>벽돌 모서리 반경</td></tr>
+      <tr><td><code>--font-size-hud</code></td><td>20px</td><td>HUD(점수·목숨) 글자 크기</td></tr>
+      <tr><td><code>--font-size-title</code></td><td>40px</td><td>오버레이 제목 글자 크기</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>
