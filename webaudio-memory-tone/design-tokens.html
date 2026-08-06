@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tone Recall — Design Tokens</title>
+    <style>
+      :root {
+        --color-pad-green: #22c55e;
+        --color-pad-red: #ef4444;
+        --color-pad-yellow: #eab308;
+        --color-pad-blue: #3b82f6;
+        --color-bg: #0f172a;
+        --color-text: #f8fafc;
+        --space-pad-gap: 16px;
+        --radius-pad: 12px;
+        --font-size-round: 24px;
+      }
+      body {
+        margin: 0;
+        padding: 32px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-family: system-ui, sans-serif;
+      }
+      h1 {
+        font-size: var(--font-size-round);
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        max-width: 640px;
+      }
+      th,
+      td {
+        border: 1px solid rgba(248, 250, 252, 0.2);
+        padding: 8px 12px;
+        text-align: left;
+        font-size: 14px;
+      }
+      .swatch {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+      code {
+        font-family: ui-monospace, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tone Recall — Design Tokens (frozen)</h1>
+    <p>implementation-plan §3.4 에서 동결된 토큰. 변경·재정의하지 않는다.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>값</th>
+          <th>미리보기</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--color-pad-green</code></td>
+          <td>#22c55e</td>
+          <td><span class="swatch" style="background: var(--color-pad-green)"></span>초록 pad</td>
+        </tr>
+        <tr>
+          <td><code>--color-pad-red</code></td>
+          <td>#ef4444</td>
+          <td><span class="swatch" style="background: var(--color-pad-red)"></span>빨강 pad</td>
+        </tr>
+        <tr>
+          <td><code>--color-pad-yellow</code></td>
+          <td>#eab308</td>
+          <td><span class="swatch" style="background: var(--color-pad-yellow)"></span>노랑 pad</td>
+        </tr>
+        <tr>
+          <td><code>--color-pad-blue</code></td>
+          <td>#3b82f6</td>
+          <td><span class="swatch" style="background: var(--color-pad-blue)"></span>파랑 pad</td>
+        </tr>
+        <tr>
+          <td><code>--color-bg</code></td>
+          <td>#0f172a</td>
+          <td><span class="swatch" style="background: var(--color-bg)"></span>배경</td>
+        </tr>
+        <tr>
+          <td><code>--color-text</code></td>
+          <td>#f8fafc</td>
+          <td><span class="swatch" style="background: var(--color-text)"></span>텍스트</td>
+        </tr>
+        <tr>
+          <td><code>--space-pad-gap</code></td>
+          <td>16px</td>
+          <td>pad 간격</td>
+        </tr>
+        <tr>
+          <td><code>--radius-pad</code></td>
+          <td>12px</td>
+          <td>pad 모서리 반경</td>
+        </tr>
+        <tr>
+          <td><code>--font-size-round</code></td>
+          <td>24px</td>
+          <td>라운드 표시 폰트 크기</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tone Recall — UI Mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* mockup 전용 레이아웃 — 런타임 계약(styles.css)을 재정의하지 않고 배치만 */
+      .mock-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 32px;
+        justify-content: center;
+        padding: 24px;
+      }
+      .mock-panel {
+        width: 320px;
+      }
+      .mock-panel h2 {
+        text-align: center;
+        font-size: 16px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mock-grid">
+      <!-- 상태: idle -->
+      <section class="app mock-panel">
+        <h2>상태: idle</h2>
+        <header class="hud">
+          <h1 class="app__title">Tone Recall</h1>
+          <p class="hud__round" aria-live="polite">라운드 —</p>
+          <button type="button" class="hud__start" aria-label="게임 시작">게임 시작</button>
+        </header>
+        <p class="status" role="status">시작 버튼을 눌러 게임을 시작하세요.</p>
+        <section class="board" aria-label="색 pad 보드" data-state="idle">
+          <button type="button" class="pad pad--green" aria-label="초록 pad"></button>
+          <button type="button" class="pad pad--red" aria-label="빨강 pad"></button>
+          <button type="button" class="pad pad--yellow" aria-label="노랑 pad"></button>
+          <button type="button" class="pad pad--blue" aria-label="파랑 pad"></button>
+        </section>
+      </section>
+
+      <!-- 상태: playback (초록 pad 활성) -->
+      <section class="app mock-panel">
+        <h2>상태: playback</h2>
+        <header class="hud">
+          <h1 class="app__title">Tone Recall</h1>
+          <p class="hud__round" aria-live="polite">라운드 3</p>
+          <button type="button" class="hud__start" aria-label="게임 시작" disabled>게임 시작</button>
+        </header>
+        <p class="status" role="status">재생 중… 순서를 잘 기억하세요 (라운드 3)</p>
+        <section class="board" aria-label="색 pad 보드" data-state="playback">
+          <button type="button" class="pad pad--green pad--active" aria-label="초록 pad"></button>
+          <button type="button" class="pad pad--red" aria-label="빨강 pad"></button>
+          <button type="button" class="pad pad--yellow" aria-label="노랑 pad"></button>
+          <button type="button" class="pad pad--blue" aria-label="파랑 pad"></button>
+        </section>
+      </section>
+
+      <!-- 상태: gameover (overlay) -->
+      <section class="app mock-panel" style="position: relative">
+        <h2>상태: gameover</h2>
+        <header class="hud">
+          <h1 class="app__title">Tone Recall</h1>
+          <p class="hud__round" aria-live="polite">라운드 —</p>
+          <button type="button" class="hud__start" aria-label="게임 시작">다시 시작</button>
+        </header>
+        <p class="status" role="status">게임 오버 — 도달 라운드: 3</p>
+        <section class="board" aria-label="색 pad 보드" data-state="gameover">
+          <button type="button" class="pad pad--green" aria-label="초록 pad"></button>
+          <button type="button" class="pad pad--red" aria-label="빨강 pad"></button>
+          <button type="button" class="pad pad--yellow" aria-label="노랑 pad"></button>
+          <button type="button" class="pad pad--blue" aria-label="파랑 pad"></button>
+        </section>
+        <div
+          class="overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="게임 오버"
+          style="position: absolute"
+        >
+          <div class="overlay__card">
+            <h2 class="overlay__title">게임 오버</h2>
+            <p class="overlay__detail">도달 라운드: 3</p>
+            <p class="overlay__hint">시작 버튼으로 다시 도전하세요.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
