@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>디지털 시계</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <style>
+      /* 스타일 값은 tokens.css 의 CSS 변수만 var() 로 소비한다 (하드코딩 금지). */
+      body {
+        margin: 0;
+      }
+
+      .clock {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-md);
+        min-height: 100vh;
+        padding: var(--space-md);
+        background: var(--color-surface);
+        color: var(--color-text-primary);
+        font-family: var(--font-family-mono);
+      }
+
+      .clock__time {
+        color: var(--color-text-primary);
+        font-family: var(--font-family-mono);
+        /* 320px 이상에서 뷰포트 폭에 따라 폰트가 축소되어도 잘리지 않도록 clamp.
+           경계값은 --space-md 토큰에서 파생하고, 가운데 vw 로 반응형 스케일. */
+        font-size: clamp(var(--space-md), 12vw, calc(var(--space-md) * 4));
+        white-space: nowrap;
+        max-width: 100%;
+      }
+
+      .clock__toggle {
+        color: var(--color-surface);
+        background: var(--color-accent);
+        font-family: var(--font-family-mono);
+        border: none;
+        padding: var(--space-md);
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="clock-root" class="clock">
+      <time
+        id="clock-time"
+        class="clock__time"
+        aria-live="polite"
+      >--:--:--</time>
+      <button
+        id="clock-toggle"
+        class="clock__toggle"
+        type="button"
+        aria-label="시간 형식 전환"
+      >24시간제로</button>
+    </main>
+    <script type="module" src="clock.js"></script>
+  </body>
+</html>
