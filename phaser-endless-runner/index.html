@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phaser 엔드리스 러너</title>
+    <!-- Phaser 3는 CDN으로 로드한다(번들러/npm 의존성 없음) -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <style>
+      :root {
+        --color-bg-top: #0b1120;
+        --color-bg-bottom: #1e293b;
+        --color-ground: #334155;
+        --color-player: #38bdf8;
+        --color-obstacle-ground: #f43f5e;
+        --color-obstacle-air: #a855f7;
+        --color-accent: #fbbf24;
+        --color-text: #f8fafc;
+        --font-size-title: 48px;
+        --font-size-hud: 20px;
+        --font-weight-bold: 700;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --radius-panel: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background: linear-gradient(180deg, var(--color-bg-top), var(--color-bg-bottom));
+        color: var(--color-text);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-md);
+      }
+
+      .runner {
+        position: relative;
+        width: 100%;
+        max-width: 800px;
+        aspect-ratio: 16 / 9; /* 고정 종횡비 유지, 뷰포트 폭에 맞춰 축소 */
+        border-radius: var(--radius-panel);
+        overflow: hidden;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        background: linear-gradient(180deg, var(--color-bg-top), var(--color-bg-bottom));
+      }
+
+      #game-root {
+        position: absolute;
+        inset: 0;
+      }
+
+      #game-root canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .runner__hud {
+        position: absolute;
+        top: var(--space-md);
+        left: var(--space-md);
+        right: var(--space-md);
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        font-size: var(--font-size-hud);
+        font-weight: var(--font-weight-bold);
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      .runner__hud span {
+        background: rgba(15, 23, 42, 0.55);
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-panel);
+      }
+
+      #hud-highscore {
+        color: var(--color-accent);
+      }
+
+      .runner__overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-lg);
+        background: rgba(11, 17, 32, 0.72);
+        z-index: 3;
+      }
+
+      .runner__overlay[hidden] {
+        display: none;
+      }
+
+      .runner__panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-md);
+        text-align: center;
+        max-width: 90%;
+      }
+
+      .runner__title {
+        margin: 0;
+        font-size: var(--font-size-title);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-accent);
+      }
+
+      .runner__button {
+        appearance: none;
+        border: none;
+        cursor: pointer;
+        font-size: var(--font-size-hud);
+        font-weight: var(--font-weight-bold);
+        color: var(--color-bg-top);
+        background: var(--color-player);
+        padding: var(--space-sm) var(--space-lg);
+        border-radius: var(--radius-panel);
+        transition: transform 0.08s ease, filter 0.08s ease;
+      }
+
+      .runner__button:hover {
+        filter: brightness(1.08);
+      }
+
+      .runner__button:active {
+        transform: translateY(1px);
+      }
+
+      .runner__button:focus-visible {
+        outline: 3px solid var(--color-accent);
+        outline-offset: 2px;
+      }
+
+      @media (max-width: 420px) {
+        :root {
+          --font-size-title: 32px;
+          --font-size-hud: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="runner" aria-label="Phaser 엔드리스 러너 게임">
+      <div id="game-root"></div>
+
+      <div class="runner__hud">
+        <span id="hud-score">점수 0</span>
+        <span id="hud-distance">거리 0m</span>
+        <span id="hud-highscore">최고 0</span>
+      </div>
+
+      <!-- start 상태 -->
+      <div id="start-overlay" class="runner__overlay">
+        <div class="runner__panel">
+          <h1 class="runner__title">엔드리스 러너</h1>
+          <p>Space / ArrowUp 으로 점프, ArrowDown 으로 숙이기. 장애물을 피해 최대한 멀리 달리세요.</p>
+          <button id="start-button" class="runner__button" type="button" aria-label="게임 시작">
+            게임 시작
+          </button>
+        </div>
+      </div>
+
+      <!-- paused 상태 -->
+      <div id="pause-overlay" class="runner__overlay" hidden>
+        <div class="runner__panel">
+          <h2 class="runner__title">일시정지</h2>
+          <p>게임이 일시정지되었습니다.</p>
+          <button id="resume-button" class="runner__button" type="button" aria-label="게임 재개">
+            재개
+          </button>
+        </div>
+      </div>
+
+      <!-- gameover 상태 -->
+      <div id="gameover-overlay" class="runner__overlay" role="alert" hidden>
+        <div class="runner__panel">
+          <h2 class="runner__title">게임 오버</h2>
+          <p id="gameover-score">점수 0 · 최고 0</p>
+          <button id="restart-button" class="runner__button" type="button" aria-label="다시 시작">
+            다시 시작
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
