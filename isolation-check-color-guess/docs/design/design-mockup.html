@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Color Guess — 디자인 목업</title>
+    <!-- 실제 게임과 동일한 스타일시트를 참조해 정적 렌더한다 (§3 selector 계약). -->
+    <link rel="stylesheet" href="../../styles.css" />
+    <style>
+      /* 목업 전용: 상태를 한 화면에 나란히 보이기 위한 보조 레이아웃 */
+      body {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .mockup-note {
+        color: var(--color-text-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <p class="mockup-note">아래는 frozen selector·상태 계약의 정적 렌더 목업입니다.</p>
+
+    <!-- playing / correct / wrong 상태 -->
+    <main class="game" aria-label="색상 맞히기 게임 (진행 중)">
+      <header class="game__hud">
+        <h1 class="game__title">색상 맞히기</h1>
+        <dl class="game__stats">
+          <div class="game__stat"><dt>점수</dt><dd id="score-value">2</dd></div>
+          <div class="game__stat"><dt>목숨</dt><dd id="lives-value">2</dd></div>
+        </dl>
+      </header>
+      <section class="game__round" aria-label="현재 라운드">
+        <p class="game__prompt">아래 색상 값을 견본에서 골라보세요</p>
+        <p id="color-target" class="game__target">#3b82f6</p>
+        <div id="swatch-options" class="game__swatches" role="group" aria-label="색상 견본">
+          <button type="button" class="swatch swatch--correct" style="background:#3b82f6" aria-label="1번 색상 견본"></button>
+          <button type="button" class="swatch" style="background:#22c55e" aria-label="2번 색상 견본"></button>
+          <button type="button" class="swatch swatch--wrong" style="background:#ef4444" aria-label="3번 색상 견본"></button>
+          <button type="button" class="swatch" style="background:#94a3b8" aria-label="4번 색상 견본"></button>
+        </div>
+        <p id="feedback-message" class="game__feedback" aria-live="polite">정답입니다</p>
+      </section>
+    </main>
+
+    <!-- gameover 상태 -->
+    <section id="gameover-panel" class="gameover" aria-label="게임 오버">
+      <h2 class="gameover__title">게임 오버</h2>
+      <p class="gameover__score">최종 점수 <span id="final-score">5</span></p>
+      <button id="restart-button" type="button" class="gameover__restart" aria-label="다시 시작">다시 시작</button>
+    </section>
+  </body>
+</html>
