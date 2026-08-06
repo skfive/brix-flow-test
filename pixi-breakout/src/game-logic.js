@@ -4,8 +4,14 @@
 // - PixiJS와 DOM API(document/window/canvas 등)를 import하지 않는다.
 // - 모든 함수는 이전 state(POJO)와 입력을 받아 새 state(POJO)를 반환하는 순수 함수다.
 // - 부수효과가 없고 결정론적이다(Math.random 등 비결정적 API를 사용하지 않는다).
+//
+// 모듈 형식(BF-1702 리뷰 수정): file://에서 정적 서버 없이 열어도 renderer.js가 즉시 로드되도록
+// ES module(import/export) 대신 CommonJS/전역 병행 노출 패턴을 쓴다. 브라우저는 classic
+// <script>로 이 파일을 로드해 window.BreakoutLogic 전역으로 접근하고(§index.html), Node는
+// 같은 디렉터리의 package.json(type: commonjs)을 통해 CJS로 취급되어 module.exports를 쓴다.
+// tests/game-logic.test.js는 default import 후 구조분해하여 이 export 객체를 그대로 사용한다.
 
-export const DEFAULT_BOARD = { width: 800, height: 600 };
+const DEFAULT_BOARD = { width: 800, height: 600 };
 
 const DEFAULT_PADDLE = { width: 100, height: 14, speed: 300 };
 const DEFAULT_BALL = { radius: 8, speed: 260 };
@@ -13,7 +19,7 @@ const DEFAULT_LIVES = 3;
 
 // 벽돌 tier별 내구도(hits)/점수/접근성 spot 개수.
 // 접근성 요구: 색상뿐 아니라 spot count로도 내구도를 구분한다.
-export const BRICK_TIERS = {
+const BRICK_TIERS = {
   1: { hits: 1, score: 10 },
   2: { hits: 2, score: 20 },
   3: { hits: 3, score: 30 },
@@ -34,7 +40,7 @@ function circleRectIntersect(cx, cy, radius, rect) {
   return dx * dx + dy * dy <= radius * radius;
 }
 
-export function createPaddle(board, overrides = {}) {
+function createPaddle(board, overrides = {}) {
   const width = overrides.width ?? DEFAULT_PADDLE.width;
   const height = overrides.height ?? DEFAULT_PADDLE.height;
   return {
@@ -46,7 +52,7 @@ export function createPaddle(board, overrides = {}) {
   };
 }
 
-export function createBall(board, paddle, overrides = {}) {
+function createBall(board, paddle, overrides = {}) {
   const radius = overrides.radius ?? DEFAULT_BALL.radius;
   return {
     radius,
@@ -57,7 +63,7 @@ export function createBall(board, paddle, overrides = {}) {
   };
 }
 
-export function createBrick(overrides = {}) {
+function createBrick(overrides = {}) {
   const tier = overrides.tier ?? 1;
   const tierInfo = BRICK_TIERS[tier];
   return {
@@ -74,7 +80,7 @@ export function createBrick(overrides = {}) {
   };
 }
 
-export function createDefaultBricks(board) {
+function createDefaultBricks(board) {
   // design.md §5.1: 8열 × 5행. 위쪽 행일수록 내구도가 높은 tier로 난이도 그라데이션을 준다.
   const rowTiers = [3, 3, 2, 2, 1];
   const cols = 8;
@@ -103,7 +109,7 @@ export function createDefaultBricks(board) {
   return bricks;
 }
 
-export function createInitialState(overrides = {}) {
+function createInitialState(overrides = {}) {
   const board = { ...DEFAULT_BOARD, ...overrides.board };
   const paddle = createPaddle(board, overrides.paddle ?? {});
   const ball = createBall(board, paddle, overrides.ball ?? {});
@@ -121,27 +127,27 @@ export function createInitialState(overrides = {}) {
   };
 }
 
-export function startGame(state) {
+function startGame(state) {
   if (state.status !== 'start') return state;
   return { ...state, status: 'playing' };
 }
 
-export function togglePause(state) {
+function togglePause(state) {
   if (state.status === 'playing') return { ...state, status: 'paused' };
   if (state.status === 'paused') return { ...state, status: 'playing' };
   return state;
 }
 
-export function restartGame(state) {
+function restartGame(state) {
   return createInitialState({ board: state.board, bestScore: state.bestScore });
 }
 
-export function movePaddleTo(state, x) {
+function movePaddleTo(state, x) {
   const clampedX = clamp(x, 0, state.board.width - state.paddle.width);
   return { ...state, paddle: { ...state.paddle, x: clampedX } };
 }
 
-export function movePaddleByDirection(state, direction, dt) {
+function movePaddleByDirection(state, direction, dt) {
   if (state.status !== 'playing') return state;
   if (!direction) return state;
   const dx = direction * state.paddle.speed * dt;
@@ -149,7 +155,7 @@ export function movePaddleByDirection(state, direction, dt) {
 }
 
 // dt: 초 단위 델타 타임. status가 'playing'이 아니면 아무 변화도 없다(일시정지 시 위치/점수 보존).
-export function update(state, dt) {
+function update(state, dt) {
   if (state.status !== 'playing') return state;
 
   const { board, paddle } = state;
@@ -245,4 +251,32 @@ export function update(state, dt) {
     bricks: nextBricks,
     ball: { x, y, vx, vy, radius },
   };
+}
+
+const BreakoutLogic = {
+  DEFAULT_BOARD,
+  BRICK_TIERS,
+  createPaddle,
+  createBall,
+  createBrick,
+  createDefaultBricks,
+  createInitialState,
+  startGame,
+  togglePause,
+  restartGame,
+  movePaddleTo,
+  movePaddleByDirection,
+  update,
+};
+
+// Node(CJS, 이 디렉터리의 package.json type:commonjs로 인해)에서는 module.exports로 노출한다.
+// tests/game-logic.test.js는 default import 후 구조분해해서 사용한다.
+if (typeof module === 'object' && module.exports) {
+  module.exports = BreakoutLogic;
+}
+
+// 브라우저 classic <script>(정적 서버·file:// 모두)에서는 전역 window.BreakoutLogic으로 노출한다.
+// renderer.js가 이 전역을 읽는다(§renderer.js 상단 참고).
+if (typeof window !== 'undefined') {
+  window.BreakoutLogic = BreakoutLogic;
 }
