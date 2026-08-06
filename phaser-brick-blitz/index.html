@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phaser 벽돌깨기</title>
+  <!-- Phaser 3 (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <style>
+    /* 디자인 토큰(UI 계약 §2.4) — exact 이름·값 */
+    :root {
+      --color-bg: #0f1424;
+      --color-surface: #1b2138;
+      --color-paddle: #4cc9f0;
+      --color-ball: #f8f9fa;
+      --color-brick-r1: #ef476f;
+      --color-brick-r2: #ffd166;
+      --color-brick-r3: #06d6a0;
+      --color-text: #e9ecef;
+      --space-hud-gap: 16px;
+      --radius-brick: 4px;
+      --font-size-hud: 20px;
+      --font-size-title: 40px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* 루트 레이아웃 */
+    .game {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-hud-gap);
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+      /* 320px 이상에서 가로 overflow 방지 */
+      overflow-x: hidden;
+    }
+
+    /* HUD: 점수·목숨 */
+    .game__hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-hud-gap);
+      width: 100%;
+      font-size: var(--font-size-hud);
+      /* 좁은 화면에서도 텍스트가 잘리지 않도록 */
+      flex-wrap: wrap;
+      word-break: keep-all;
+      white-space: normal;
+    }
+
+    .game__hud span {
+      background: var(--color-surface);
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+
+    /* 캔버스 마운트 지점: 컨테이너 폭에 맞춰 비율 유지 축소 */
+    #game-canvas {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      aspect-ratio: 480 / 640;
+      background: var(--color-surface);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #game-canvas canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* 오버레이 공통: 각 상태별 1:1 대응 */
+    .game__overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-hud-gap);
+      text-align: center;
+      padding: 24px;
+      background: rgba(15, 20, 36, 0.86);
+      color: var(--color-text);
+    }
+
+    .game__overlay[hidden] { display: none; }
+
+    .game__overlay h2 {
+      margin: 0;
+      font-size: var(--font-size-title);
+    }
+
+    .game__overlay p { margin: 0; }
+
+    /* 상태 전이 버튼(시작/재개/재시작) */
+    .game__button {
+      font-size: var(--font-size-hud);
+      color: var(--color-bg);
+      background: var(--color-paddle);
+      border: 0;
+      border-radius: 6px;
+      padding: 12px 24px;
+      cursor: pointer;
+    }
+
+    .game__button:focus-visible {
+      outline: 3px solid var(--color-ball);
+      outline-offset: 2px;
+    }
+
+    /* 벽돌 요소(계약 selector 노출; 렌더링은 Phaser 캔버스) */
+    .game__brick {
+      border-radius: var(--radius-brick);
+    }
+  </style>
+</head>
+<body>
+  <main id="game-root" class="game" data-state="ready">
+    <div class="game__hud">
+      <span id="hud-score">점수: 0</span>
+      <span id="hud-lives">목숨: 3</span>
+      <button id="btn-pause" class="game__button" type="button" aria-label="일시정지">일시정지</button>
+    </div>
+
+    <div id="game-canvas">
+      <!-- ready 오버레이 -->
+      <div id="overlay-start" class="game__overlay" role="dialog" aria-labelledby="overlay-start-title">
+        <h2 id="overlay-start-title">준비 완료 (ready)</h2>
+        <p>Space 키 또는 시작 버튼으로 게임을 시작하세요.</p>
+        <p>← → 방향키 또는 마우스로 패들을 조작합니다.</p>
+        <button id="btn-start" class="game__button" type="button">시작</button>
+      </div>
+
+      <!-- paused 오버레이 -->
+      <div id="overlay-pause" class="game__overlay" role="dialog" aria-labelledby="overlay-pause-title" hidden>
+        <h2 id="overlay-pause-title">일시정지 (paused)</h2>
+        <p>Space 키 또는 재개 버튼으로 이어서 진행합니다.</p>
+        <button id="btn-resume" class="game__button" type="button">재개</button>
+      </div>
+
+      <!-- gameover 오버레이 -->
+      <div id="overlay-gameover" class="game__overlay" role="dialog" aria-labelledby="overlay-gameover-title" hidden>
+        <h2 id="overlay-gameover-title">게임 오버 (gameover)</h2>
+        <p id="overlay-gameover-score">최종 점수: 0</p>
+        <button id="btn-restart-gameover" class="game__button" type="button">다시 시작</button>
+      </div>
+
+      <!-- cleared 오버레이 -->
+      <div id="overlay-clear" class="game__overlay" role="dialog" aria-labelledby="overlay-clear-title" hidden>
+        <h2 id="overlay-clear-title">클리어 (cleared)</h2>
+        <p id="overlay-clear-score">모든 벽돌을 깼습니다! 점수: 0</p>
+        <button id="btn-restart-clear" class="game__button" type="button">다시 시작</button>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./src/game.js"></script>
+</body>
+</html>

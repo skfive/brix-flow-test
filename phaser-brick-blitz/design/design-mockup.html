@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phaser 벽돌깨기 — UI 시각 mockup</title>
+  <style>
+    /* UI 계약 §2.4 디자인 토큰 — exact 이름·값 */
+    :root {
+      --color-bg: #0f1424;
+      --color-surface: #1b2138;
+      --color-paddle: #4cc9f0;
+      --color-ball: #f8f9fa;
+      --color-brick-r1: #ef476f;
+      --color-brick-r2: #ffd166;
+      --color-brick-r3: #06d6a0;
+      --color-text: #e9ecef;
+      --space-hud-gap: 16px;
+      --radius-brick: 4px;
+      --font-size-hud: 20px;
+      --font-size-title: 40px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .mockups {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    /* 루트 레이아웃(계약 selector: game) */
+    .game {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-hud-gap);
+      max-width: 360px;
+      margin: 0 auto;
+      padding: 12px;
+      overflow-x: hidden;
+    }
+
+    .game__hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-hud-gap);
+      font-size: var(--font-size-hud);
+      flex-wrap: wrap;
+      word-break: keep-all;
+    }
+    .game__hud span { background: var(--color-surface); padding: 6px 12px; border-radius: 6px; }
+
+    .stage {
+      position: relative;
+      aspect-ratio: 480 / 640;
+      background: var(--color-surface);
+      border-radius: 8px;
+      overflow: hidden;
+      padding: 12px;
+    }
+
+    /* 벽돌: 행별 색상(계약 selector: game__brick) */
+    .brick-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+    .game__brick { height: 18px; border-radius: var(--radius-brick); }
+    .r1 { background: var(--color-brick-r1); }
+    .r2 { background: var(--color-brick-r2); }
+    .r3 { background: var(--color-brick-r3); }
+
+    .ball {
+      position: absolute; left: 50%; top: 62%;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--color-ball);
+    }
+    .paddle {
+      position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
+      width: 96px; height: 14px; border-radius: 6px;
+      background: var(--color-paddle);
+    }
+
+    /* 오버레이(계약 selector: game__overlay) */
+    .game__overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: var(--space-hud-gap); text-align: center; padding: 24px;
+      background: rgba(15, 20, 36, 0.86);
+    }
+    .game__overlay h2 { margin: 0; font-size: var(--font-size-title); }
+    .game__overlay p { margin: 0; }
+
+    .game__button {
+      font-size: var(--font-size-hud);
+      color: var(--color-bg); background: var(--color-paddle);
+      border: 0; border-radius: 6px; padding: 12px 24px; cursor: pointer;
+    }
+
+    .caption { text-align: center; font-size: 14px; opacity: 0.8; margin-top: 8px; }
+    h1 { font-size: var(--font-size-title); }
+  </style>
+</head>
+<body>
+  <h1>UI 시각 mockup</h1>
+  <p>UI 계약(§2)의 selector·상태·토큰·접근성을 exact 하게 시각화합니다. 다섯 상태(ready/playing/paused/gameover/cleared)를 각각 보여줍니다.</p>
+
+  <div class="mockups">
+    <!-- playing -->
+    <section>
+      <div class="game" data-state="playing">
+        <div class="game__hud">
+          <span>점수: 120</span>
+          <span>목숨: 3</span>
+          <button class="game__button" type="button" aria-label="일시정지">일시정지</button>
+        </div>
+        <div class="stage">
+          <div class="brick-grid">
+            <div class="game__brick r1"></div><div class="game__brick r1"></div><div class="game__brick r1"></div><div class="game__brick r1"></div><div class="game__brick r1"></div><div class="game__brick r1"></div>
+            <div class="game__brick r2"></div><div class="game__brick r2"></div><div class="game__brick r2"></div><div class="game__brick r2"></div><div class="game__brick r2"></div><div class="game__brick r2"></div>
+            <div class="game__brick r3"></div><div class="game__brick r3"></div><div class="game__brick r3"></div><div class="game__brick r3"></div><div class="game__brick r3"></div><div class="game__brick r3"></div>
+          </div>
+          <div class="ball"></div>
+          <div class="paddle"></div>
+        </div>
+      </div>
+      <p class="caption">playing — overlay 없음, 벽돌 3행 색상(r1/r2/r3)</p>
+    </section>
+
+    <!-- ready -->
+    <section>
+      <div class="game" data-state="ready">
+        <div class="game__hud"><span>점수: 0</span><span>목숨: 3</span><button class="game__button" type="button" aria-label="일시정지">일시정지</button></div>
+        <div class="stage">
+          <div class="game__overlay" role="dialog">
+            <h2>준비 완료 (ready)</h2>
+            <p>Space 키 또는 시작 버튼으로 시작</p>
+            <button class="game__button" type="button">시작</button>
+          </div>
+        </div>
+      </div>
+      <p class="caption">ready — overlay-start, 상태명 텍스트 노출</p>
+    </section>
+
+    <!-- paused -->
+    <section>
+      <div class="game" data-state="paused">
+        <div class="game__hud"><span>점수: 120</span><span>목숨: 2</span><button class="game__button" type="button" aria-label="일시정지">일시정지</button></div>
+        <div class="stage">
+          <div class="game__overlay" role="dialog">
+            <h2>일시정지 (paused)</h2>
+            <p>Space 키 또는 재개 버튼으로 이어서 진행</p>
+            <button class="game__button" type="button">재개</button>
+          </div>
+        </div>
+      </div>
+      <p class="caption">paused — overlay-pause</p>
+    </section>
+
+    <!-- gameover -->
+    <section>
+      <div class="game" data-state="gameover">
+        <div class="game__hud"><span>점수: 0</span><span>목숨: 0</span><button class="game__button" type="button" aria-label="일시정지">일시정지</button></div>
+        <div class="stage">
+          <div class="game__overlay" role="dialog">
+            <h2>게임 오버 (gameover)</h2>
+            <p>최종 점수: 340</p>
+            <button class="game__button" type="button">다시 시작</button>
+          </div>
+        </div>
+      </div>
+      <p class="caption">gameover — overlay-gameover, 초기값 복귀 후 시작 재사용 가능</p>
+    </section>
+
+    <!-- cleared -->
+    <section>
+      <div class="game" data-state="cleared">
+        <div class="game__hud"><span>점수: 480</span><span>목숨: 2</span><button class="game__button" type="button" aria-label="일시정지">일시정지</button></div>
+        <div class="stage">
+          <div class="game__overlay" role="dialog">
+            <h2>클리어 (cleared)</h2>
+            <p>모든 벽돌을 깼습니다! 점수: 480</p>
+            <button class="game__button" type="button">다시 시작</button>
+          </div>
+        </div>
+      </div>
+      <p class="caption">cleared — overlay-clear</p>
+    </section>
+  </div>
+</body>
+</html>
