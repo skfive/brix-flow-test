@@ -107,9 +107,9 @@ test('isSolvable(): 홀수 폭(3) 규칙 — 역위 수 짝수만 solvable', () 
   const b = solvedBoard();
   [b[6], b[7]] = [b[7], b[6]]; // 인접 두 타일 swap → 역위 수 1(홀수) → unsolvable
   assert.equal(isSolvable(b), false);
-  // 빈 칸의 행 위치는 판정에 영향 없음(폭이 홀수): 빈 칸을 위로 옮겨도 solvable 유지
+  // 빈 칸의 행 위치는 판정에 영향 없음(폭이 홀수): 빈 칸을 다른 행으로 슬라이드해도 solvable 유지
   const c = solvedBoard();
-  [c[8], c[2]] = [c[2], c[8]]; // 8번 타일과 빈 칸 자리만 이동(역위 수는 그대로 짝수)
+  [c[8], c[5]] = [c[5], c[8]]; // 빈 칸을 index 8(row2)→index 5(row1)로 합법 슬라이드(역위 수 짝수 유지)
   assert.equal(isSolvable(c), true);
 });
 
