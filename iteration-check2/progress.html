@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진행 막대 데모 · BF-1843</title>
+    <style>
+      :root {
+        /* 동결 design token (ui-contract@v1 §4.5) */
+        --color-progress-fill: #2563eb;
+        --color-progress-track: #e5e7eb;
+        --progress-height: 24px;
+        --progress-radius: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #111827;
+        background: #f9fafb;
+      }
+
+      .progress {
+        width: 100%;
+        max-width: 480px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .progress__heading {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      /* 진행 막대 트랙(배경) */
+      .progress__track {
+        width: 100%;
+        height: var(--progress-height);
+        background: var(--color-progress-track);
+        border-radius: var(--progress-radius);
+        overflow: hidden;
+      }
+
+      /* 채워지는 진행 표시 */
+      .progress__fill {
+        height: 100%;
+        width: 0%;
+        background: var(--color-progress-fill);
+        border-radius: var(--progress-radius);
+        transition: width 200ms ease;
+      }
+
+      /* 진행률/상태명 라벨 */
+      .progress__label {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      .progress__label strong {
+        font-weight: 700;
+      }
+
+      .progress__controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      /* increment/reset control 공통 */
+      .progress__control {
+        flex: 1 1 140px;
+        min-height: 44px;
+        padding: 10px 16px;
+        font-size: 15px;
+        font-weight: 600;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #111827;
+        cursor: pointer;
+      }
+
+      .progress__control--primary {
+        border-color: var(--color-progress-fill);
+        background: var(--color-progress-fill);
+        color: #ffffff;
+      }
+
+      .progress__control:focus-visible {
+        outline: 3px solid #1d4ed8;
+        outline-offset: 2px;
+      }
+
+      .progress__control:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="progress-root" class="progress">
+      <h1 class="progress__heading">진행 막대 데모</h1>
+
+      <div
+        id="progress-bar"
+        class="progress__track"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+        aria-labelledby="progress-label"
+      >
+        <div id="progress-fill" class="progress__fill"></div>
+      </div>
+
+      <p id="progress-label" class="progress__label" aria-live="polite">
+        진행률 <strong>0%</strong> · 상태: <strong>대기(idle)</strong>
+      </p>
+
+      <div class="progress__controls">
+        <button
+          id="progress-increment"
+          type="button"
+          class="progress__control progress__control--primary"
+          aria-label="진행률 10% 증가"
+        >
+          10% 증가
+        </button>
+        <button
+          id="progress-reset"
+          type="button"
+          class="progress__control"
+          aria-label="진행률 초기화(0%, 대기 상태)"
+        >
+          초기화
+        </button>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var STEP = 10;
+
+        // --- pure logic (testable) ---
+        // 진행률을 0~100 정수 범위로 clamp한다 (E1/E3).
+        function clampProgress(value) {
+          if (value < 0) return 0;
+          if (value > 100) return 100;
+          return value;
+        }
+
+        // value에서 상태를 파생한다 (§5): 0→idle, 0<v<100→progressing, 100→complete.
+        function deriveStatus(value) {
+          if (value <= 0) return "idle";
+          if (value >= 100) return "complete";
+          return "progressing";
+        }
+        // --- end pure logic ---
+
+        // 상태명(색상 외 텍스트/접근성 이름 구분): idle / progressing / complete
+        var STATUS_TEXT = {
+          idle: "대기(idle)",
+          progressing: "진행 중(progressing)",
+          complete: "완료(complete)",
+        };
+
+        var root = document.getElementById("progress-root");
+        var bar = document.getElementById("progress-bar");
+        var fill = document.getElementById("progress-fill");
+        var label = document.getElementById("progress-label");
+        var incrementBtn = document.getElementById("progress-increment");
+        var resetBtn = document.getElementById("progress-reset");
+
+        var state = { value: 0, status: "idle" };
+
+        function render() {
+          fill.style.width = state.value + "%";
+          bar.setAttribute("aria-valuenow", String(state.value));
+          label.innerHTML =
+            "진행률 <strong>" +
+            state.value +
+            "%</strong> · 상태: <strong>" +
+            STATUS_TEXT[state.status] +
+            "</strong>";
+          root.setAttribute("data-status", state.status);
+          // 완료 시 주 실행 control 비활성화, 초기화로 재활성화된다.
+          incrementBtn.disabled = state.status === "complete";
+        }
+
+        function setValue(next) {
+          state.value = clampProgress(next);
+          state.status = deriveStatus(state.value);
+          render();
+        }
+
+        incrementBtn.addEventListener("click", function () {
+          setValue(state.value + STEP);
+        });
+
+        resetBtn.addEventListener("click", function () {
+          setValue(0);
+        });
+
+        // 초기 렌더(idle, 0%)
+        render();
+      })();
+    </script>
+  </body>
+</html>
