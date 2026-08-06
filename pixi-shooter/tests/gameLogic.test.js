@@ -148,6 +148,10 @@ test('게임오버 이후 재시작하면 점수/라이프/엔티티가 초기�
 
   update(state, 0, { fire: true }, () => 0.9);
   assert.equal(countActive(state.bullets), 1, '재시작 후 발사 입력이 다시 활성화된다');
+
+  const xBeforeMove = state.player.x;
+  update(state, 0.1, { right: true }, () => 0.9);
+  assert.ok(state.player.x > xBeforeMove, '재시작 후 방향키 이동 입력도 다시 활성화된다');
 });
 
 test('적 스폰 규칙 - rng < 0.5면 직진형이 스폰되고 위치는 rng로 결정된다', () => {
