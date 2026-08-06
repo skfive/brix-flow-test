@@ -1,0 +1,162 @@
+/* 숫자 야구 게임 스타일 — frozen 디자인 토큰(ui-contract@v1) 참조. */
+:root {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-text: #f8fafc;
+  --color-strike: #22c55e;
+  --color-ball: #eab308;
+  --color-out: #ef4444;
+  --space-md: 16px;
+  --radius-md: 12px;
+  --font-size-display: 1.5rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.game {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+.game__title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.75rem;
+}
+
+.game__display {
+  font-size: var(--font-size-display);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.game__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.game__label {
+  flex-basis: 100%;
+  font-size: 0.9rem;
+}
+
+.game__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-md);
+  font-size: var(--font-size-display);
+  text-align: center;
+  letter-spacing: 0.3em;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.game__input:focus {
+  outline: none;
+  border-color: var(--color-strike);
+}
+
+.game__submit,
+.game__restart {
+  padding: var(--space-md);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-bg);
+  background: var(--color-strike);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.game__submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.game__feedback {
+  margin: 0;
+  min-height: 1.5em;
+  text-align: center;
+  font-size: var(--font-size-display);
+  font-weight: 700;
+}
+
+.game__feedback[data-kind='strike'] {
+  color: var(--color-strike);
+}
+
+.game__feedback[data-kind='hit'] {
+  color: var(--color-ball);
+}
+
+.game__feedback[data-kind='out'],
+.game__feedback[data-kind='error'] {
+  color: var(--color-out);
+}
+
+.game__attempts {
+  margin: 0;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.game__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  text-align: center;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+}
+
+.game__result[hidden] {
+  display: none;
+}
+
+.game__result-title {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: 700;
+}
+
+.game__result-answer {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+/* 좁은 너비(모바일) — 입력·버튼 control을 단일 열로 세로 정렬한다. */
+@media (max-width: 400px) {
+  .game__form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .game__submit {
+    width: 100%;
+  }
+}

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>숫자 야구 게임</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main id="game-root" class="game" data-state="playing">
+      <h1 class="game__title">숫자 야구</h1>
+
+      <section id="rgb-display" class="game__display" aria-live="polite">
+        서로 다른 세 자리 숫자(1–9)를 맞혀보세요. 기회는 9번입니다.
+      </section>
+
+      <form id="guess-form" class="game__form">
+        <label class="game__label" for="guess-input">세 자리 숫자 추측</label>
+        <input
+          id="guess-input"
+          class="game__input"
+          type="text"
+          inputmode="numeric"
+          maxlength="3"
+          autocomplete="off"
+          placeholder="예: 123"
+          aria-label="세 자리 숫자 추측 입력"
+        />
+        <button id="guess-submit" class="game__submit" type="submit" aria-label="추측 제출">
+          제출
+        </button>
+      </form>
+
+      <p id="feedback" class="game__feedback" role="status" aria-live="polite"></p>
+      <p id="attempts-count" class="game__attempts">시도 0 / 9</p>
+
+      <section id="result-screen" class="game__result" hidden aria-live="polite">
+        <p id="result-title" class="game__result-title"></p>
+        <p id="result-answer" class="game__result-answer"></p>
+        <button
+          id="restart-button"
+          class="game__restart"
+          type="button"
+          aria-label="게임 재시작"
+        >
+          다시 시작
+        </button>
+      </section>
+    </main>
+
+    <script type="module">
+      // DOM 이벤트 핸들러 — 순수 로직(game.js)을 조합해 화면 상태를 갱신한다.
+      import { createGame, MAX_ATTEMPTS } from './src/game.js';
+
+      const els = {
+        root: document.getElementById('game-root'),
+        form: document.getElementById('guess-form'),
+        input: document.getElementById('guess-input'),
+        submit: document.getElementById('guess-submit'),
+        feedback: document.getElementById('feedback'),
+        attempts: document.getElementById('attempts-count'),
+        result: document.getElementById('result-screen'),
+        resultTitle: document.getElementById('result-title'),
+        resultAnswer: document.getElementById('result-answer'),
+        restart: document.getElementById('restart-button'),
+      };
+
+      let game = createGame();
+
+      function showPlaying() {
+        els.root.dataset.state = 'playing';
+        els.input.disabled = false;
+        els.submit.disabled = false;
+        els.input.value = '';
+        els.feedback.textContent = '';
+        els.feedback.dataset.kind = '';
+        els.attempts.textContent = `시도 0 / ${MAX_ATTEMPTS}`;
+        els.result.hidden = true;
+        els.resultTitle.textContent = '';
+        els.resultAnswer.textContent = '';
+        els.input.focus();
+      }
+
+      function endGame(state) {
+        els.root.dataset.state = state;
+        els.input.disabled = true;
+        els.submit.disabled = true;
+        els.result.hidden = false;
+        els.resultTitle.textContent =
+          state === 'win'
+            ? '승리! 정답을 맞혔습니다.'
+            : '패배! 9번의 기회를 모두 사용했습니다.';
+        els.resultAnswer.textContent = `정답: ${game.getSecret().join(' ')}`;
+        els.restart.focus();
+      }
+
+      els.form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const result = game.submit(els.input.value);
+
+        if (result.error) {
+          els.feedback.dataset.kind = 'error';
+          els.feedback.textContent = result.error;
+          return;
+        }
+
+        els.attempts.textContent = `시도 ${result.attemptsUsed} / ${MAX_ATTEMPTS}`;
+
+        if (result.out) {
+          els.feedback.dataset.kind = 'out';
+          els.feedback.textContent = '아웃 — 일치하는 숫자가 없습니다.';
+        } else {
+          els.feedback.dataset.kind = result.strikes === 3 ? 'strike' : 'hit';
+          els.feedback.textContent = `${result.strikes} 스트라이크 ${result.balls} 볼`;
+        }
+
+        els.input.value = '';
+
+        if (result.state === 'win') {
+          endGame('win');
+        } else if (result.state === 'lose') {
+          endGame('lose');
+        } else {
+          els.input.focus();
+        }
+      });
+
+      els.restart.addEventListener('click', () => {
+        game.restart();
+        showPlaying();
+      });
+
+      showPlaying();
+    </script>
+  </body>
+</html>
