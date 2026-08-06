@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>격리 실증 미니 페이지 (backend)</title>
+    <style>
+      :root {
+        /* frozen design token (ui-contract@v1) */
+        --color-action-primary: #2563eb;
+        --space-control-gap: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #1f2937;
+        background: #f9fafb;
+      }
+
+      /* 320px 이상에서 content overflow 방지 */
+      .mini {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+      }
+
+      .mini__title {
+        margin: 0 0 16px;
+        font-size: 1.125rem;
+      }
+
+      .mini__status {
+        margin: 0 0 12px;
+        font-weight: 600;
+      }
+
+      /* 색상만이 아닌 텍스트로 상태를 구분하되, 색상은 보조 신호로만 사용 */
+      .mini[data-state="idle"] .mini__status {
+        color: #4b5563;
+      }
+      .mini[data-state="submitting"] .mini__status {
+        color: var(--color-action-primary);
+      }
+      .mini[data-state="success"] .mini__status {
+        color: #15803d;
+      }
+      .mini[data-state="error"] .mini__status {
+        color: #b91c1c;
+      }
+
+      .mini__progress {
+        margin: 0 0 12px;
+        color: var(--color-action-primary);
+      }
+
+      .mini__controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-control-gap);
+      }
+
+      .mini__submit {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 10px 16px;
+        font-size: 1rem;
+        color: #ffffff;
+        background: var(--color-action-primary);
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .mini__submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .mini__reset {
+        flex: 0 0 auto;
+        padding: 10px 16px;
+        font-size: 1rem;
+        color: var(--color-action-primary);
+        background: #ffffff;
+        border: 1px solid var(--color-action-primary);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="mini-root" class="mini" data-state="idle">
+      <h1 class="mini__title">격리 실증 미니 페이지</h1>
+      <p class="mini__status" data-mini-status aria-live="polite">대기 중</p>
+      <p class="mini__progress" data-mini-progress hidden>제출을 처리하는 중입니다…</p>
+      <div class="mini__controls">
+        <button
+          type="button"
+          id="mini-submit"
+          class="mini__submit"
+          aria-label="제출 실행"
+        >
+          제출
+        </button>
+        <button
+          type="button"
+          id="mini-reset"
+          class="mini__reset"
+          aria-label="초기화"
+        >
+          초기화
+        </button>
+      </div>
+    </main>
+
+    <script type="module" src="./src/feature.js"></script>
+  </body>
+</html>
