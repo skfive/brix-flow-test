@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>숫자 야구 — 디자인 토큰 (BF-1773)</title>
+  <style>
+    /* ============================================================
+       Frozen 디자인 토큰 (implementation-plan.md §3.4 — 값 변경 금지)
+       developer 는 아래 동일 변수명을 그대로 참조한다.
+       ============================================================ */
+    :root {
+      --color-bg: #0f172a;
+      --color-surface: #1e293b;
+      --color-text: #f8fafc;
+      --color-strike: #22c55e;
+      --color-ball: #eab308;
+      --color-out: #ef4444;
+      --space-md: 16px;
+      --radius-md: 12px;
+      --font-size-display: 1.5rem;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 24px 64px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    header p {
+      margin: 0 0 32px;
+      opacity: 0.75;
+      font-size: 14px;
+    }
+
+    section {
+      margin-bottom: 40px;
+    }
+    section > h2 {
+      font-size: 20px;
+      font-weight: 700;
+      border-bottom: 2px solid var(--color-surface);
+      padding-bottom: 8px;
+      margin: 0 0 20px;
+    }
+
+    /* ---------- 색상 견본 ---------- */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: var(--space-md);
+    }
+    .swatch {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--color-surface);
+    }
+    .swatch__chip {
+      height: 88px;
+    }
+    .swatch__meta {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .swatch__meta code {
+      display: block;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+    .swatch__meta .name { font-weight: 600; }
+    .swatch__meta .val { opacity: 0.8; }
+
+    /* ---------- 타이포그래피 ---------- */
+    .type-row {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--color-surface);
+    }
+    .type-row:last-child { border-bottom: none; }
+    .type-label {
+      flex: 0 0 200px;
+      font-size: 13px;
+      opacity: 0.75;
+      font-family: ui-monospace, monospace;
+    }
+    .type-sample-display { font-size: var(--font-size-display); font-weight: 700; }
+    .type-sample-heading { font-size: 28px; font-weight: 700; }
+    .type-sample-body { font-size: 16px; font-weight: 400; }
+    .type-sample-caption { font-size: 13px; font-weight: 400; opacity: 0.8; }
+
+    /* ---------- 간격 ---------- */
+    .space-demo {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .space-demo__row {
+      display: flex;
+      gap: var(--space-md);
+    }
+    .space-demo__row .box {
+      width: 56px;
+      height: 56px;
+      background: var(--color-surface);
+      border: 2px solid var(--color-strike);
+      border-radius: var(--radius-md);
+    }
+
+    /* ---------- 반경 ---------- */
+    .radius-demo {
+      width: 120px;
+      height: 96px;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+      color: var(--color-text);
+    }
+
+    /* ---------- 판정 색상 매핑 ---------- */
+    .verdict-row {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+    }
+    .verdict-chip {
+      flex: 1 1 160px;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      background: var(--color-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .verdict-chip__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: var(--font-size-display);
+      font-weight: 700;
+    }
+    .verdict-chip__dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+    .verdict-chip__note {
+      font-size: 12px;
+      opacity: 0.8;
+      font-family: ui-monospace, monospace;
+    }
+
+    .note {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>숫자 야구 — 디자인 토큰</h1>
+      <p>BF-1773 · frozen 토큰 계약(implementation-plan.md §3.4)의 시각 정의. 아래 모든 견본은 <code>:root</code> CSS custom property로 렌더링됩니다. developer 는 동일 변수명을 하드코딩 없이 참조합니다.</p>
+    </header>
+
+    <!-- ===================== 색상 견본 ===================== -->
+    <section aria-labelledby="sec-color">
+      <h2 id="sec-color">색상 (Color)</h2>
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-bg);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-bg</code>
+            <code class="val">#0f172a · 배경</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-surface);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-surface</code>
+            <code class="val">#1e293b · 카드/표면</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-text);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-text</code>
+            <code class="val">#f8fafc · 본문 텍스트</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-strike);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-strike</code>
+            <code class="val">#22c55e · 스트라이크</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-ball);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-ball</code>
+            <code class="val">#eab308 · 볼</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-out);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-out</code>
+            <code class="val">#ef4444 · 아웃</code>
+          </div>
+        </div>
+      </div>
+      <p class="note">배경(#0f172a) 위 텍스트(#f8fafc) 대비 &gt; 4.5:1 — WCAG AA 본문 기준 충족. 판정 색상(strike/ball/out)은 색상만으로 구분하지 않고 상태명 텍스트를 항상 병기합니다(§3.5).</p>
+    </section>
+
+    <!-- ===================== 판정 색상 매핑 ===================== -->
+    <section aria-labelledby="sec-verdict">
+      <h2 id="sec-verdict">판정 색상 매핑 (Strike / Ball / Out)</h2>
+      <div class="verdict-row">
+        <div class="verdict-chip">
+          <span class="verdict-chip__badge">
+            <span class="verdict-chip__dot" style="background: var(--color-strike);"></span>스트라이크
+          </span>
+          <span class="verdict-chip__note">--color-strike · 숫자·위치 모두 일치</span>
+        </div>
+        <div class="verdict-chip">
+          <span class="verdict-chip__badge">
+            <span class="verdict-chip__dot" style="background: var(--color-ball);"></span>볼
+          </span>
+          <span class="verdict-chip__note">--color-ball · 숫자 있으나 위치 다름</span>
+        </div>
+        <div class="verdict-chip">
+          <span class="verdict-chip__badge">
+            <span class="verdict-chip__dot" style="background: var(--color-out);"></span>아웃
+          </span>
+          <span class="verdict-chip__note">--color-out · 일치 숫자 없음</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 타이포그래피 ===================== -->
+    <section aria-labelledby="sec-type">
+      <h2 id="sec-type">타이포그래피 (Typography)</h2>
+      <div class="type-row">
+        <span class="type-label">--font-size-display<br>(1.5rem / 700)</span>
+        <span class="type-sample-display">1 스트라이크 · 1 볼</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">heading<br>(28px / 700)</span>
+        <span class="type-sample-heading">숫자 야구</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">body<br>(16px / 400)</span>
+        <span class="type-sample-body">서로 다른 세 자리 숫자를 추측하세요</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">caption<br>(13px / 400)</span>
+        <span class="type-sample-caption">시도 3 / 9</span>
+      </div>
+      <p class="note">디스플레이 지표(판정 결과)만 frozen 토큰 <code>--font-size-display</code>로 고정됩니다. heading/body/caption 크기는 시안 권장값입니다.</p>
+    </section>
+
+    <!-- ===================== 간격 ===================== -->
+    <section aria-labelledby="sec-space">
+      <h2 id="sec-space">간격 (Spacing)</h2>
+      <div class="space-demo">
+        <div class="space-demo__row">
+          <div class="box"></div>
+          <div class="box"></div>
+          <div class="box"></div>
+        </div>
+        <span style="font-family: ui-monospace, monospace; font-size: 13px;">--space-md = 16px (기본 gap · padding)</span>
+      </div>
+    </section>
+
+    <!-- ===================== 반경 ===================== -->
+    <section aria-labelledby="sec-radius">
+      <h2 id="sec-radius">반경 (Radius)</h2>
+      <div class="radius-demo">--radius-md<br>12px</div>
+    </section>
+  </div>
+</body>
+</html>
