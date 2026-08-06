@@ -1,0 +1,195 @@
+/* svg-puzzle-slider/styles.css
+   frozen 디자인 토큰(설계 §3.4)을 그대로 사용한다. */
+:root {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-tile: #f8fafc;
+  --color-tile-text: #0f172a;
+  --color-accent: #2563eb;
+  --space-tile-gap: 8px;
+  --radius-tile: 12px;
+  --font-size-tile: 28px;
+  --shadow-tile: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-tile);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.puzzle-page {
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.puzzle {
+  width: 100%;
+  max-width: 460px;
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-tile);
+}
+
+.puzzle h1 {
+  margin: 0 0 16px;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+/* HUD — 기본 가로 배치, 좁은 화면에서 세로 재배치(§3.6) */
+.puzzle__hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.puzzle__stat {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.puzzle__stat span {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* 보드 래퍼 — clear-screen 오버레이 기준 */
+.puzzle__board-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* SVG 보드는 뷰포트에 맞춰 축소(§3.6) — content overflow 없음 */
+.puzzle__board {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--color-bg);
+  border-radius: var(--radius-tile);
+}
+
+.puzzle__tile {
+  cursor: pointer;
+  /* transform transition 으로 슬라이딩 애니메이션 */
+  transition: transform 160ms ease;
+}
+
+.puzzle__tile:not(.puzzle__tile--movable) {
+  cursor: default;
+}
+
+.puzzle__tile-rect {
+  fill: var(--color-tile);
+  stroke: transparent;
+  filter: drop-shadow(var(--shadow-tile));
+}
+
+.puzzle__tile--movable .puzzle__tile-rect {
+  stroke: var(--color-accent);
+  stroke-width: 3;
+}
+
+.puzzle__tile:focus {
+  outline: none;
+}
+
+.puzzle__tile:focus .puzzle__tile-rect {
+  stroke: var(--color-accent);
+  stroke-width: 4;
+}
+
+.puzzle__tile-text {
+  fill: var(--color-tile-text);
+  font-size: var(--font-size-tile);
+  font-weight: 700;
+  user-select: none;
+}
+
+/* 빈 칸 타일 (렌더러에서 실제 노드는 생성하지 않지만 계약상 class 정의 유지) */
+.puzzle__tile--empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 클리어 화면 오버레이 */
+.puzzle__clear {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.88);
+  border-radius: var(--radius-tile);
+  text-align: center;
+}
+
+.puzzle__clear[hidden] {
+  display: none;
+}
+
+.puzzle__clear-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+.puzzle__clear-text {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* 상태별 시각 힌트 (색상만으로 구분하지 않으며 텍스트는 항상 노출) */
+.puzzle[data-state="cleared"] .puzzle__board {
+  outline: 3px solid var(--color-accent);
+}
+
+.puzzle__controls {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.puzzle__restart {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-tile);
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-tile);
+  padding: 10px 24px;
+  cursor: pointer;
+}
+
+.puzzle__restart:hover {
+  filter: brightness(1.1);
+}
+
+.puzzle__restart:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 좁은 화면(≈320px 대응): HUD 세로 재배치 */
+@media (max-width: 400px) {
+  .puzzle {
+    padding: 16px;
+  }
+  .puzzle__hud {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+}
