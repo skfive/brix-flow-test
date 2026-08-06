@@ -14,32 +14,44 @@
         color: #94a3b8;
         text-align: center;
       }
+      .mockup-state-label {
+        max-width: 460px;
+        margin: 24px auto 4px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #cbd5e1;
+        text-align: center;
+      }
     </style>
   </head>
   <body>
-    <main class="puzzle-page">
-      <section class="puzzle" data-state="playing" aria-labelledby="mock-title">
-        <h1 id="mock-title">SVG 슬라이딩 퍼즐</h1>
-        <p class="mockup-note">
-          정적 UI 시안 — frozen selector/token 기준 레이아웃 참조(로직 없음).
-        </p>
+    <main class="puzzle-page" style="flex-direction: column; align-items: center;">
+      <p class="mockup-note">
+        정적 UI 시안 — frozen selector/token 기준 3×3(8-퍼즐) 상태별 레이아웃 참조(로직 없음).
+        4개 상태(start / playing / paused / cleared)를 각각 &lt;section&gt;으로 렌더한다.
+      </p>
+
+      <!-- ============ 상태 1: start (초기 로드, 셔플 전 준비) ============ -->
+      <p class="mockup-state-label">상태: start (준비)</p>
+      <section class="puzzle" data-state="start" aria-labelledby="mock-title-start">
+        <h1 id="mock-title-start">SVG 슬라이딩 퍼즐</h1>
 
         <div class="puzzle__hud">
-          <p class="puzzle__stat">이동 횟수: <span id="move-count">7</span></p>
-          <p class="puzzle__stat">경과 시간: <span id="elapsed-time">00:42</span></p>
-          <p class="puzzle__stat" id="puzzle-status">상태: 진행 중</p>
+          <p class="puzzle__stat">이동 횟수: <span id="move-count">0</span></p>
+          <p class="puzzle__stat">경과 시간: <span id="elapsed-time">00:00</span></p>
+          <p class="puzzle__stat" id="puzzle-status">상태: 준비</p>
         </div>
 
         <div class="puzzle__board-wrap">
           <svg
             id="puzzle-board"
             class="puzzle__board"
-            viewBox="0 0 392 392"
+            viewBox="0 0 296 296"
             role="group"
-            aria-label="4x4 슬라이딩 퍼즐 보드(시안)"
+            aria-label="3x3 슬라이딩 퍼즐 보드(시안 — 준비)"
           >
             <g id="puzzle-tiles">
-              <!-- 정적 샘플 배치: 1..15 + 빈 칸(우하단) -->
+              <!-- 준비 상태: 1..8 정렬, 우하단(200,200) 빈 칸 -->
               <g class="puzzle__tile" transform="translate(8, 8)" aria-label="타일 1">
                 <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
                 <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">1</text>
@@ -48,59 +60,31 @@
                 <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
                 <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">2</text>
               </g>
-              <g class="puzzle__tile puzzle__tile--movable" transform="translate(200, 8)" aria-label="타일 3">
+              <g class="puzzle__tile" transform="translate(200, 8)" aria-label="타일 3">
                 <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
                 <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">3</text>
               </g>
-              <g class="puzzle__tile" transform="translate(296, 8)" aria-label="타일 4">
+              <g class="puzzle__tile" transform="translate(8, 104)" aria-label="타일 4">
                 <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
                 <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">4</text>
               </g>
-              <g class="puzzle__tile" transform="translate(8, 104)" aria-label="타일 5">
+              <g class="puzzle__tile" transform="translate(104, 104)" aria-label="타일 5">
                 <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
                 <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">5</text>
               </g>
-              <g class="puzzle__tile" transform="translate(104, 104)" aria-label="타일 6">
+              <g class="puzzle__tile" transform="translate(200, 104)" aria-label="타일 6">
                 <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
                 <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">6</text>
               </g>
-              <g class="puzzle__tile" transform="translate(200, 104)" aria-label="타일 7">
+              <g class="puzzle__tile" transform="translate(8, 200)" aria-label="타일 7">
                 <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
                 <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">7</text>
               </g>
-              <g class="puzzle__tile" transform="translate(296, 104)" aria-label="타일 8">
+              <g class="puzzle__tile" transform="translate(104, 200)" aria-label="타일 8">
                 <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
                 <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">8</text>
               </g>
-              <g class="puzzle__tile" transform="translate(8, 200)" aria-label="타일 9">
-                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
-                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">9</text>
-              </g>
-              <g class="puzzle__tile" transform="translate(104, 200)" aria-label="타일 10">
-                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
-                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">10</text>
-              </g>
-              <g class="puzzle__tile" transform="translate(200, 200)" aria-label="타일 11">
-                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
-                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">11</text>
-              </g>
-              <g class="puzzle__tile puzzle__tile--movable" transform="translate(296, 200)" aria-label="타일 12">
-                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
-                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">12</text>
-              </g>
-              <g class="puzzle__tile" transform="translate(8, 296)" aria-label="타일 13">
-                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
-                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">13</text>
-              </g>
-              <g class="puzzle__tile" transform="translate(104, 296)" aria-label="타일 14">
-                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
-                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">14</text>
-              </g>
-              <g class="puzzle__tile puzzle__tile--movable" transform="translate(200, 296)" aria-label="타일 15">
-                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
-                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">15</text>
-              </g>
-              <!-- 우하단(296,296) 은 빈 칸: puzzle__tile--empty (노드 없음/시각 숨김) -->
+              <!-- 우하단(200,200) 은 빈 칸: puzzle__tile--empty (노드 없음/시각 숨김) -->
             </g>
           </svg>
         </div>
@@ -109,6 +93,197 @@
           <button id="restart-button" type="button" class="puzzle__restart" aria-label="퍼즐 재시작">
             재시작
           </button>
+        </div>
+      </section>
+
+      <!-- ============ 상태 2: playing (셔플 완료, 조작 가능) ============ -->
+      <p class="mockup-state-label">상태: playing (진행 중)</p>
+      <section class="puzzle" data-state="playing" aria-labelledby="mock-title-playing">
+        <h1 id="mock-title-playing">SVG 슬라이딩 퍼즐</h1>
+
+        <div class="puzzle__hud">
+          <p class="puzzle__stat">이동 횟수: <span>5</span></p>
+          <p class="puzzle__stat">경과 시간: <span>00:23</span></p>
+          <p class="puzzle__stat">상태: 진행 중</p>
+        </div>
+
+        <div class="puzzle__board-wrap">
+          <svg
+            class="puzzle__board"
+            viewBox="0 0 296 296"
+            role="group"
+            aria-label="3x3 슬라이딩 퍼즐 보드(시안 — 진행 중)"
+          >
+            <g>
+              <!-- 진행 중 셔플 배치: 빈 칸은 중앙(104,104), 상하좌우 타일이 movable -->
+              <g class="puzzle__tile" transform="translate(8, 8)" aria-label="타일 2">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">2</text>
+              </g>
+              <g class="puzzle__tile puzzle__tile--movable" transform="translate(104, 8)" aria-label="타일 8">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">8</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(200, 8)" aria-label="타일 3">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">3</text>
+              </g>
+              <g class="puzzle__tile puzzle__tile--movable" transform="translate(8, 104)" aria-label="타일 1">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">1</text>
+              </g>
+              <!-- 중앙(104,104) 은 빈 칸 -->
+              <g class="puzzle__tile puzzle__tile--movable" transform="translate(200, 104)" aria-label="타일 4">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">4</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(8, 200)" aria-label="타일 7">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">7</text>
+              </g>
+              <g class="puzzle__tile puzzle__tile--movable" transform="translate(104, 200)" aria-label="타일 6">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">6</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(200, 200)" aria-label="타일 5">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">5</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+
+        <div class="puzzle__controls">
+          <button type="button" class="puzzle__restart" aria-label="퍼즐 재시작">재시작</button>
+        </div>
+      </section>
+
+      <!-- ============ 상태 3: paused (진행 일시 중단, 조작 잠금) ============ -->
+      <p class="mockup-state-label">상태: paused (일시 정지)</p>
+      <section class="puzzle" data-state="paused" aria-labelledby="mock-title-paused">
+        <h1 id="mock-title-paused">SVG 슬라이딩 퍼즐</h1>
+
+        <div class="puzzle__hud">
+          <p class="puzzle__stat">이동 횟수: <span>5</span></p>
+          <p class="puzzle__stat">경과 시간: <span>00:23</span></p>
+          <p class="puzzle__stat">상태: 일시 정지</p>
+        </div>
+
+        <div class="puzzle__board-wrap">
+          <svg
+            class="puzzle__board"
+            viewBox="0 0 296 296"
+            role="group"
+            aria-label="3x3 슬라이딩 퍼즐 보드(시안 — 일시 정지, 조작 잠금)"
+          >
+            <g>
+              <!-- 일시 정지: playing 과 동일 배치, movable 강조 없음(조작 잠금) -->
+              <g class="puzzle__tile" transform="translate(8, 8)" aria-label="타일 2">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">2</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(104, 8)" aria-label="타일 8">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">8</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(200, 8)" aria-label="타일 3">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">3</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(8, 104)" aria-label="타일 1">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">1</text>
+              </g>
+              <!-- 중앙(104,104) 은 빈 칸 -->
+              <g class="puzzle__tile" transform="translate(200, 104)" aria-label="타일 4">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">4</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(8, 200)" aria-label="타일 7">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">7</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(104, 200)" aria-label="타일 6">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">6</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(200, 200)" aria-label="타일 5">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">5</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+
+        <div class="puzzle__controls">
+          <button type="button" class="puzzle__restart" aria-label="퍼즐 재시작">재시작</button>
+        </div>
+      </section>
+
+      <!-- ============ 상태 4: cleared (목표 배열 일치, clear-screen 노출) ============ -->
+      <p class="mockup-state-label">상태: cleared (완료)</p>
+      <section class="puzzle" data-state="cleared" aria-labelledby="mock-title-cleared">
+        <h1 id="mock-title-cleared">SVG 슬라이딩 퍼즐</h1>
+
+        <div class="puzzle__hud">
+          <p class="puzzle__stat">이동 횟수: <span>24</span></p>
+          <p class="puzzle__stat">경과 시간: <span>01:07</span></p>
+          <p class="puzzle__stat">상태: 완료</p>
+        </div>
+
+        <div class="puzzle__board-wrap">
+          <svg
+            class="puzzle__board"
+            viewBox="0 0 296 296"
+            role="group"
+            aria-label="3x3 슬라이딩 퍼즐 보드(시안 — 완료)"
+          >
+            <g>
+              <!-- 완료: 1..8 정렬, 우하단 빈 칸 -->
+              <g class="puzzle__tile" transform="translate(8, 8)" aria-label="타일 1">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">1</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(104, 8)" aria-label="타일 2">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">2</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(200, 8)" aria-label="타일 3">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">3</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(8, 104)" aria-label="타일 4">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">4</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(104, 104)" aria-label="타일 5">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">5</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(200, 104)" aria-label="타일 6">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">6</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(8, 200)" aria-label="타일 7">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">7</text>
+              </g>
+              <g class="puzzle__tile" transform="translate(104, 200)" aria-label="타일 8">
+                <rect width="88" height="88" rx="12" class="puzzle__tile-rect" />
+                <text x="44" y="44" text-anchor="middle" dominant-baseline="central" class="puzzle__tile-text">8</text>
+              </g>
+              <!-- 우하단(200,200) 빈 칸 -->
+            </g>
+          </svg>
+
+          <div class="puzzle__clear" role="status">
+            <p class="puzzle__clear-title">클리어!</p>
+            <p class="puzzle__clear-text">1부터 8까지 모두 정렬했습니다. 상태: 완료</p>
+          </div>
+        </div>
+
+        <div class="puzzle__controls">
+          <button type="button" class="puzzle__restart" aria-label="퍼즐 재시작">재시작</button>
         </div>
       </section>
     </main>

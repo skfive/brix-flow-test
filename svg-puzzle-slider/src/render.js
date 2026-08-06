@@ -53,7 +53,7 @@ export function createPuzzle(root, rng = Math.random) {
   let elapsedSec = 0;
   let timerId = null;
   let state = STATE.START;
-  // 값(1..15) → <g> 엘리먼트 캐시
+  // 값(1..8) → <g> 엘리먼트 캐시
   const tileEls = new Map();
 
   function setState(next) {
@@ -105,7 +105,7 @@ export function createPuzzle(root, rng = Math.random) {
     }, 1000);
   }
 
-  // 타일 엘리먼트를 최초 1회 생성한다(값 1..15).
+  // 타일 엘리먼트를 최초 1회 생성한다(값 1..8).
   function buildTiles() {
     els.tiles.replaceChildren();
     tileEls.clear();

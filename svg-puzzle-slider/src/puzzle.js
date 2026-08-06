@@ -1,16 +1,16 @@
 // svg-puzzle-slider/src/puzzle.js
 // 순수 게임 로직 (렌더링/DOM/타이머/window 의존 없음).
-// 보드는 길이 16의 1차원 배열: 값 1..15 는 타일 번호, 0 은 빈 칸.
-// 목표(solved) 배열: [1..15, 0].
+// 보드는 길이 9의 1차원 배열: 값 1..8 은 타일 번호, 0 은 빈 칸.
+// 목표(solved) 배열: [1..8, 0].
 //
 // 주의: 이 파일은 순수 함수 집합이다. 모든 상태 전이 함수는 원본을 변형하지 않고
 // 새 배열을 반환한다. 무작위(shuffle)는 주입된 rng 로 결정적 테스트가 가능하다.
 
-export const SIZE = 4; // 한 변의 타일 수 (4x4 = 15-퍼즐)
-export const TILE_COUNT = SIZE * SIZE; // 16
+export const SIZE = 3; // 한 변의 타일 수 (3x3 = 8-퍼즐)
+export const TILE_COUNT = SIZE * SIZE; // 9
 export const EMPTY = 0; // 빈 칸 값
 
-// 목표(정렬 완료) 보드를 반환한다: [1,2,...,15,0]
+// 목표(정렬 완료) 보드를 반환한다: [1,2,...,8,0]
 export function solvedBoard() {
   const board = [];
   for (let i = 1; i < TILE_COUNT; i++) board.push(i);
@@ -71,14 +71,10 @@ export function countInversions(board) {
 }
 
 // solvable 판정.
-// 짝수 폭(SIZE=4) 퍼즐 규칙: (역위 수 + 빈 칸의 아래에서부터 센 행 번호[1-index])가 홀수이면 solvable.
-//   - 빈 칸의 행(위=0) blankRow0 = floor(emptyIndex/SIZE)
-//   - 아래에서부터의 행 번호 rowFromBottom = SIZE - blankRow0
+// 홀수 폭(SIZE=3) 8-퍼즐 규칙: 역위 수가 짝수이면 solvable.
+//   - 폭이 홀수이므로 빈 칸의 행 위치는 판정에 영향을 주지 않는다(설계 §5.2).
 export function isSolvable(board) {
-  const inversions = countInversions(board);
-  const blankRow0 = Math.floor(emptyIndex(board) / SIZE);
-  const rowFromBottom = SIZE - blankRow0;
-  return (inversions + rowFromBottom) % 2 === 1;
+  return countInversions(board) % 2 === 0;
 }
 
 // 주입된 rng 로 solvable 하고 아직 solved 가 아닌 보드를 생성한다.
