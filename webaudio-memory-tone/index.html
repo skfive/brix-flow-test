@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tone Recall — 소리 기억 게임</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hud">
+        <h1 class="app__title">Tone Recall</h1>
+        <p id="round-indicator" class="hud__round" aria-live="polite">라운드 —</p>
+        <button
+          id="start-button"
+          type="button"
+          class="hud__start"
+          aria-label="게임 시작"
+        >
+          게임 시작
+        </button>
+      </header>
+
+      <p id="status-message" class="status" role="status" aria-live="polite">
+        시작 버튼을 눌러 게임을 시작하세요.
+      </p>
+
+      <section
+        id="board"
+        class="board"
+        aria-label="색 pad 보드"
+        data-state="idle"
+      >
+        <button
+          id="pad-green"
+          type="button"
+          class="pad pad--green"
+          data-pad="green"
+          aria-label="초록 pad"
+        ></button>
+        <button
+          id="pad-red"
+          type="button"
+          class="pad pad--red"
+          data-pad="red"
+          aria-label="빨강 pad"
+        ></button>
+        <button
+          id="pad-yellow"
+          type="button"
+          class="pad pad--yellow"
+          data-pad="yellow"
+          aria-label="노랑 pad"
+        ></button>
+        <button
+          id="pad-blue"
+          type="button"
+          class="pad pad--blue"
+          data-pad="blue"
+          aria-label="파랑 pad"
+        ></button>
+      </section>
+
+      <div
+        id="game-over-panel"
+        class="overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="게임 오버"
+        hidden
+      >
+        <div class="overlay__card">
+          <h2 class="overlay__title">게임 오버</h2>
+          <p id="game-over-panel-detail" class="overlay__detail"></p>
+          <p class="overlay__hint">시작 버튼으로 다시 도전하세요.</p>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
