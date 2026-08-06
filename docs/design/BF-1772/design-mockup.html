@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>숫자 야구 — 화면 상태 시안 (BF-1773)</title>
+  <style>
+    /* ============================================================
+       design-tokens.html 과 동일한 frozen 토큰 (하드코딩 없이 var() 참조).
+       implementation-plan.md §3.4 — 값 변경 금지.
+       ============================================================ */
+    :root {
+      --color-bg: #0f172a;
+      --color-surface: #1e293b;
+      --color-text: #f8fafc;
+      --color-strike: #22c55e;
+      --color-ball: #eab308;
+      --color-out: #ef4444;
+      --space-md: 16px;
+      --radius-md: 12px;
+      --font-size-display: 1.5rem;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 20px 64px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      line-height: 1.5;
+    }
+
+    .doc-head {
+      max-width: 1120px;
+      margin: 0 auto 28px;
+    }
+    .doc-head h1 { margin: 0 0 4px; font-size: 26px; }
+    .doc-head p { margin: 0; opacity: 0.75; font-size: 14px; }
+
+    .states {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      align-items: start;
+    }
+
+    .state-panel {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+    }
+    .state-panel__title {
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin: 0 0 12px;
+    }
+
+    /* ---------- 게임 화면 공통(.game / #game-root) ---------- */
+    .game {
+      background: var(--color-bg);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    /* 디스플레이 영역(#rgb-display / .game__display) */
+    .game__display {
+      font-size: var(--font-size-display);
+      font-weight: 700;
+      color: var(--color-text);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      text-align: center;
+    }
+    .game__display small {
+      display: block;
+      font-size: 13px;
+      font-weight: 400;
+      opacity: 0.75;
+      margin-top: 4px;
+    }
+
+    /* 입력 행 — 좁은 너비에서 단일 열 세로 정렬(§3.6) */
+    .game__controls {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+    }
+    .game__input {
+      flex: 1 1 140px;
+      min-width: 0;
+      font: inherit;
+      font-size: var(--font-size-display);
+      letter-spacing: 0.3em;
+      text-align: center;
+      color: var(--color-text);
+      background: var(--color-surface);
+      border: 2px solid var(--color-surface);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+    .game__input:focus-visible {
+      outline: none;
+      border-color: var(--color-strike);
+    }
+    .game__submit {
+      flex: 0 0 auto;
+      font: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-bg);
+      background: var(--color-strike);
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    .game__submit:hover,
+    .game__submit:focus-visible {
+      outline: 2px solid var(--color-text);
+      outline-offset: 2px;
+    }
+    .game__submit:disabled {
+      background: var(--color-surface);
+      color: var(--color-text);
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 피드백 영역(#feedback / .game__feedback · aria-live) */
+    .game__feedback {
+      min-height: 24px;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .verdict {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+    }
+    .verdict__dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+    .verdict--strike .verdict__dot { background: var(--color-strike); }
+    .verdict--ball .verdict__dot { background: var(--color-ball); }
+    .verdict--out .verdict__dot { background: var(--color-out); }
+    .verdict--out { color: var(--color-out); }
+    .feedback--error { color: var(--color-out); font-weight: 600; }
+
+    /* 시도 표시(#attempts-count / .game__attempts) */
+    .game__attempts {
+      font-size: 13px;
+      opacity: 0.85;
+      font-family: ui-monospace, monospace;
+    }
+
+    /* 결과 화면(#result-screen / .game__result) */
+    .game__result {
+      position: absolute;
+      inset: var(--space-md);
+      border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-md);
+      text-align: center;
+      padding: 20px;
+    }
+    .game__result-title {
+      font-size: var(--font-size-display);
+      font-weight: 700;
+    }
+    .game__result--win .game__result-title { color: var(--color-strike); }
+    .game__result--lose .game__result-title { color: var(--color-out); }
+    .game__result-answer {
+      font-size: 16px;
+    }
+    .game__result-answer strong {
+      font-size: var(--font-size-display);
+      letter-spacing: 0.3em;
+    }
+    .btn-restart {
+      font: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-bg);
+      background: var(--color-text);
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    .btn-restart:hover,
+    .btn-restart:focus-visible {
+      outline: 2px solid var(--color-text);
+      outline-offset: 2px;
+    }
+
+    .legend {
+      max-width: 1120px;
+      margin: 32px auto 0;
+      font-size: 13px;
+      opacity: 0.85;
+    }
+    .legend h2 { font-size: 16px; margin: 0 0 8px; }
+    .legend ul { margin: 0; padding-left: 20px; }
+    .legend li { margin-bottom: 4px; }
+    .legend code {
+      font-family: ui-monospace, monospace;
+      background: var(--color-surface);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    /* 좁은 너비(≤360px): 입력·버튼 control 단일 열 세로 정렬(§3.6) */
+    @media (max-width: 360px) {
+      .game__controls { flex-direction: column; }
+      .game__submit { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-head">
+    <h1>숫자 야구 — 화면 상태 시안</h1>
+    <p>BF-1773 · playing / win / lose 세 상태를 frozen selector·token 그대로 표현. 모든 색은 <code>var()</code> 참조(하드코딩 없음), 판정은 색상+상태명 텍스트 동시 노출(색상만으로 구분 X).</p>
+  </div>
+
+  <div class="states">
+
+    <!-- ===================== playing ===================== -->
+    <div class="state-panel">
+      <p class="state-panel__title">상태: playing (진행 중 — 입력·제출 가능)</p>
+      <div class="game" id="game-root">
+        <div class="game__display" id="rgb-display">
+          숫자 야구
+          <small>서로 다른 세 자리 숫자를 맞혀보세요</small>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" id="guess-input" type="text" inputmode="numeric" maxlength="3"
+                 placeholder="123" value="172" aria-label="세 자리 숫자 추측 입력">
+          <button type="button" class="game__submit" id="guess-submit" aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback" id="feedback" role="status" aria-live="polite">
+          <span class="verdict verdict--strike"><span class="verdict__dot"></span>1 스트라이크</span>
+          <span class="verdict verdict--ball"><span class="verdict__dot"></span>1 볼</span>
+        </div>
+        <div class="game__attempts" id="attempts-count">시도 3 / 9</div>
+      </div>
+    </div>
+
+    <!-- ===================== playing (검증 오류) ===================== -->
+    <div class="state-panel">
+      <p class="state-panel__title">상태: playing (입력 검증 오류 — 시도 미소모)</p>
+      <div class="game">
+        <div class="game__display">
+          숫자 야구
+          <small>서로 다른 세 자리 숫자를 맞혀보세요</small>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" type="text" inputmode="numeric" maxlength="3"
+                 value="112" aria-label="세 자리 숫자 추측 입력">
+          <button type="button" class="game__submit" aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback" role="status" aria-live="polite">
+          <span class="feedback--error">세 자리 숫자가 서로 달라야 합니다</span>
+        </div>
+        <div class="game__attempts">시도 3 / 9</div>
+      </div>
+    </div>
+
+    <!-- ===================== win ===================== -->
+    <div class="state-panel">
+      <p class="state-panel__title">상태: win (3 스트라이크 — 결과 화면 노출)</p>
+      <div class="game">
+        <div class="game__display">
+          숫자 야구
+          <small>서로 다른 세 자리 숫자를 맞혀보세요</small>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" type="text" maxlength="3" value="371" disabled aria-label="세 자리 숫자 추측 입력">
+          <button type="button" class="game__submit" disabled aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback" role="status" aria-live="polite">
+          <span class="verdict verdict--strike"><span class="verdict__dot"></span>3 스트라이크</span>
+        </div>
+        <div class="game__attempts">시도 4 / 9</div>
+        <div class="game__result game__result--win" id="result-screen" role="alertdialog" aria-label="게임 결과: 승리">
+          <span class="game__result-title">승리!</span>
+          <span class="game__result-answer" id="result-answer">정답 <strong>371</strong> · 4회 만에 성공</span>
+          <button type="button" class="btn-restart" id="restart-button" aria-label="게임 재시작">다시 하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== lose ===================== -->
+    <div class="state-panel">
+      <p class="state-panel__title">상태: lose (9회 소진 — 정답 노출)</p>
+      <div class="game">
+        <div class="game__display">
+          숫자 야구
+          <small>서로 다른 세 자리 숫자를 맞혀보세요</small>
+        </div>
+        <div class="game__controls">
+          <input class="game__input" type="text" maxlength="3" value="482" disabled aria-label="세 자리 숫자 추측 입력">
+          <button type="button" class="game__submit" disabled aria-label="추측 제출">제출</button>
+        </div>
+        <div class="game__feedback" role="status" aria-live="polite">
+          <span class="verdict verdict--out"><span class="verdict__dot"></span>아웃</span>
+        </div>
+        <div class="game__attempts">시도 9 / 9</div>
+        <div class="game__result game__result--lose" role="alertdialog" aria-label="게임 결과: 패배">
+          <span class="game__result-title">패배</span>
+          <span class="game__result-answer">정답은 <strong>371</strong> 였습니다</span>
+          <button type="button" class="btn-restart" aria-label="게임 재시작">다시 하기</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <h2>selector · 토큰 참조</h2>
+    <ul>
+      <li>DOM ID: <code>#game-root</code> <code>#rgb-display</code> <code>#guess-input</code> <code>#guess-submit</code> <code>#feedback</code> <code>#attempts-count</code> <code>#result-screen</code> <code>#result-answer</code> <code>#restart-button</code></li>
+      <li>CSS class: <code>.game</code> <code>.game__display</code> <code>.game__input</code> <code>.game__submit</code> <code>.game__feedback</code> <code>.game__attempts</code> <code>.game__result</code></li>
+      <li>토큰: <code>--color-bg</code> <code>--color-surface</code> <code>--color-text</code> <code>--color-strike</code> <code>--color-ball</code> <code>--color-out</code> <code>--space-md</code> <code>--radius-md</code> <code>--font-size-display</code></li>
+      <li>상태: <code>playing</code> / <code>win</code> / <code>lose</code> — 승리/패배/진행 중을 상태명 텍스트로 노출(색상만으로 구분 X)</li>
+      <li>접근성: <code>#guess-input</code> = <code>aria-label="세 자리 숫자 추측 입력"</code>, <code>#guess-submit</code>·<code>#restart-button</code> 명시적 aria-label, <code>#feedback</code> <code>aria-live="polite"</code></li>
+      <li>반응형: 패널 최소 300px, ≤360px 뷰포트에서 입력·버튼 단일 열 세로 정렬 — ≥320px overflow 없음(§3.6)</li>
+    </ul>
+  </div>
+</body>
+</html>
