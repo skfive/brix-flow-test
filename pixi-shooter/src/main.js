@@ -8,17 +8,10 @@ import {
   resumeGame,
   update,
 } from './logic/gameLogic.js';
-import { createRenderer } from './render/renderer.js';
+import { createRenderer, STATUS_TEXT } from './render/renderer.js';
 
 const BEST_SCORE_KEY = 'pixi-shooter:best-score';
 const MAX_DT = 0.05; // 탭 비활성 등으로 프레임 간격이 벌어져도 물리 폭주 방지
-
-const STATUS_LABEL = {
-  [STATUS.READY]: 'ready',
-  [STATUS.PLAYING]: 'playing',
-  [STATUS.PAUSED]: 'paused',
-  [STATUS.GAMEOVER]: 'gameover',
-};
 
 function loadBestScore() {
   try {
@@ -60,15 +53,17 @@ function bindInput(state, input) {
         break;
       case 'Space':
         event.preventDefault();
-        if (!event.repeat && (state.status === STATUS.READY || state.status === STATUS.GAMEOVER)) {
-          startGame(state);
+        if (!event.repeat) {
+          if (state.status === STATUS.READY || state.status === STATUS.GAMEOVER) {
+            startGame(state);
+          } else if (state.status === STATUS.PAUSED) {
+            // design.md §7.2/§9: 재개는 Space로 수행하되, 재개를 트리거한 이 keydown 자체는
+            // 발사로 새지 않도록 input.fire를 세우지 않고 즉시 반환한다(재개 직후 1프레임 발사 억제).
+            resumeGame(state);
+            break;
+          }
         }
-        input.fire = true;
-        break;
-      case 'Escape':
-      case 'KeyP':
-        if (state.status === STATUS.PLAYING) pauseGame(state);
-        else if (state.status === STATUS.PAUSED) resumeGame(state);
+        if (state.status === STATUS.PLAYING) input.fire = true;
         break;
       default:
         break;
@@ -98,6 +93,18 @@ function bindInput(state, input) {
   });
 }
 
+// design.md §7.2/§9: playing → paused 전이는 별도 키가 아닌 창 포커스 상실(blur)/탭 비활성(visibilitychange)으로
+// 자동 트리거한다 — 방향키+Space만으로 전체 플로우를 조작한다는 접근성 계약을 지키기 위함(재개는 Space, bindInput 참고).
+function bindAutoPause(state) {
+  const tryPause = () => {
+    if (state.status === STATUS.PLAYING) pauseGame(state);
+  };
+  window.addEventListener('blur', tryPause);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) tryPause();
+  });
+}
+
 async function main() {
   const canvas = document.getElementById('game-canvas');
   const statusEl = document.getElementById('game-status');
@@ -107,6 +114,7 @@ async function main() {
 
   const input = { left: false, right: false, up: false, down: false, fire: false };
   bindInput(state, input);
+  bindAutoPause(state);
 
   let lastStatus = null;
   let lastBestScore = state.bestScore;
@@ -114,7 +122,8 @@ async function main() {
   function syncSideEffects() {
     if (state.status !== lastStatus) {
       lastStatus = state.status;
-      if (statusEl) statusEl.textContent = STATUS_LABEL[state.status];
+      // 화면 텍스트(renderer STATUS_TEXT)와 접근성 이름을 동일하게 유지한다(design.md §8).
+      if (statusEl) statusEl.textContent = STATUS_TEXT[state.status].main;
     }
     if (state.bestScore !== lastBestScore) {
       lastBestScore = state.bestScore;

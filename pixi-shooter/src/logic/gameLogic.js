@@ -40,7 +40,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   enemyBulletSpeed: 200,
   enemyBulletPoolSize: 16,
 
-  explosionDuration: 0.35,
+  explosionDuration: 0.25, // design.md §6 폭발(explosion) 모션 지속시간(250ms)과 일치
   explosionPoolSize: 12,
 
   scorePerLinearKill: 10,
