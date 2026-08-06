@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Space Defender · 화면 시안 (BF-1714)</title>
+  <style>
+    /*
+     * frozen UI 계약 시안 (BF-1714 · implementation-plan.md §5~§9)
+     * design-tokens.html 과 동일한 CSS 변수를 참조한다 — 값 하드코딩 금지.
+     * 상태: start / playing / paused / gameover 전부 포함.
+     * 각 계약 DOM ID 는 유일성을 위해 해당 상태 보드에 1회씩 배치했다.
+     */
+    :root {
+      /* frozen tokens — design-tokens.html 과 동일 선언 */
+      --color-bg-space: #0b0e1a;
+      --color-panel: #151a2e;
+      --color-accent-primary: #00e5ff;
+      --color-danger: #ff3b6b;
+      --color-text-primary: #e8ecf8;
+      --space-hud-gap: 12px;
+      --radius-panel: 8px;
+      --font-size-score: 24px;
+      --font-size-title: 40px;
+      --shadow-panel: 0 10px 30px color-mix(in srgb, var(--color-bg-space) 70%, black),
+                      0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 22%, transparent);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 28px 16px 64px;
+      background:
+        radial-gradient(1000px 500px at 50% -10%, color-mix(in srgb, var(--color-accent-primary) 8%, transparent), transparent 70%),
+        var(--color-bg-space);
+      color: var(--color-text-primary);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      line-height: 1.55;
+    }
+
+    .page { max-width: 1080px; margin: 0 auto; }
+
+    header.doc-head h1 { font-size: var(--font-size-title); margin: 0 0 8px; letter-spacing: -0.5px; }
+    header.doc-head p { margin: 0; font-size: 14px; color: color-mix(in srgb, var(--color-text-primary) 70%, transparent); }
+    header.doc-head .badge {
+      display: inline-block; margin-top: 12px; padding: 4px 12px;
+      border-radius: var(--radius-panel);
+      background: color-mix(in srgb, var(--color-accent-primary) 14%, transparent);
+      color: var(--color-accent-primary); font-size: 13px; font-weight: 600;
+    }
+
+    .boards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    .board { min-width: 0; }
+    .board__caption {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px; font-size: 14px; font-weight: 600;
+    }
+    .board__caption .state-tag {
+      font-family: ui-monospace, monospace; font-size: 12px;
+      padding: 2px 8px; border-radius: 6px;
+      background: color-mix(in srgb, var(--color-accent-primary) 16%, transparent);
+      color: var(--color-accent-primary);
+    }
+    .board__caption .state-tag.is-danger {
+      background: color-mix(in srgb, var(--color-danger) 18%, transparent);
+      color: var(--color-danger);
+    }
+
+    /* ===== 게임 뷰포트 (계약 구조) ===== */
+    /* #game-root : 전체 루트 컨테이너 */
+    .game-root {
+      position: relative;
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+      overflow: hidden;
+    }
+
+    /* .hud : 상단 HUD 컨테이너 — --space-hud-gap 로 지표 간격 */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-hud-gap);
+      padding: 12px 14px;
+      background: color-mix(in srgb, var(--color-bg-space) 55%, var(--color-panel));
+      border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+      flex-wrap: wrap;
+    }
+    /* .hud__stat : 개별 지표 — 라벨+값 텍스트로 노출(색상 의존 금지) */
+    .hud__stat {
+      display: flex; flex-direction: column; min-width: 0;
+    }
+    .hud__stat .label {
+      font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+      color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+    }
+    .hud__stat .value {
+      font-size: var(--font-size-score);
+      font-family: ui-monospace, "SFMono-Regular", monospace;
+      font-weight: 700; color: var(--color-text-primary);
+      white-space: nowrap;
+    }
+    .hud__stat--lives .value { color: var(--color-danger); }
+    .hud__stat--high .value { color: var(--color-accent-primary); }
+
+    /* .canvas-frame : 캔버스 프레임 / #game-canvas : Phaser 렌더 캔버스 자리표시자 */
+    /* 세로형 비율 유지 + 뷰포트 높이에 맞춰 축소 */
+    .canvas-frame {
+      position: relative;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 360px;
+    }
+    .game-canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 2 / 3;      /* 세로형(portrait) 비율 유지 */
+      max-height: 78vh;         /* 뷰포트 높이에 맞춰 축소 */
+      background:
+        repeating-linear-gradient(0deg, transparent 0 26px, color-mix(in srgb, var(--color-accent-primary) 5%, transparent) 26px 27px),
+        radial-gradient(120px 120px at 50% 18%, color-mix(in srgb, var(--color-accent-primary) 10%, transparent), transparent 70%),
+        var(--color-bg-space);
+    }
+    .canvas-frame .placeholder-label {
+      position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+      font-family: ui-monospace, monospace; font-size: 11px;
+      color: color-mix(in srgb, var(--color-text-primary) 45%, transparent);
+    }
+    /* 함선/탄/적 자리표시 도형 (Graphics 렌더 예시) */
+    .ship {
+      position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 12px solid transparent; border-right: 12px solid transparent;
+      border-bottom: 22px solid var(--color-accent-primary);
+    }
+    .bullet {
+      position: absolute; left: 50%; bottom: 26%; transform: translateX(-50%);
+      width: 3px; height: 12px; background: var(--color-accent-primary);
+    }
+    .enemy {
+      position: absolute; width: 16px; height: 16px; border-radius: 3px;
+      background: var(--color-danger);
+    }
+
+    /* .screen : 오버레이 공통 */
+    .screen {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; padding: 24px; text-align: center;
+    }
+    .screen__state-name {
+      font-family: ui-monospace, monospace; font-size: 12px; letter-spacing: 2px;
+      text-transform: uppercase;
+      color: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
+    }
+    .screen__title { font-size: var(--font-size-title); font-weight: 800; margin: 0; line-height: 1.1; }
+    .screen__sub { font-size: 14px; margin: 0; color: color-mix(in srgb, var(--color-text-primary) 70%, transparent); }
+
+    .screen--start { background: color-mix(in srgb, var(--color-bg-space) 82%, transparent); }
+    .screen--start .screen__title { color: var(--color-accent-primary); }
+    .screen--pause { background: color-mix(in srgb, var(--color-bg-space) 70%, transparent); backdrop-filter: blur(2px); }
+    .screen--pause .screen__title { color: var(--color-text-primary); }
+    .screen--gameover { background: color-mix(in srgb, var(--color-bg-space) 84%, transparent); }
+    .screen--gameover .screen__title { color: var(--color-danger); }
+
+    /* .btn / .btn--primary : 버튼 공통 + 주 실행 변형 */
+    .btn {
+      font: inherit; font-weight: 700; cursor: pointer;
+      padding: 12px 28px; border: 1px solid transparent;
+      border-radius: var(--radius-panel);
+      background: color-mix(in srgb, var(--color-panel) 60%, transparent);
+      color: var(--color-text-primary);
+    }
+    .btn--primary {
+      background: var(--color-accent-primary);
+      color: var(--color-bg-space);
+      box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent-primary) 45%, transparent);
+    }
+    .btn--primary:hover,
+    .btn--primary:focus-visible {
+      outline: 2px solid var(--color-text-primary);
+      outline-offset: 2px;
+    }
+
+    .final-score {
+      font-size: var(--font-size-score);
+      font-family: ui-monospace, monospace; font-weight: 700;
+      color: var(--color-text-primary);
+    }
+    .final-score strong { color: var(--color-danger); }
+
+    /* ===== 접근성 / 상태 참조 안내 ===== */
+    .notes {
+      margin-top: 44px; padding: 20px 22px;
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+    }
+    .notes h2 { margin: 0 0 12px; font-size: 16px; }
+    .notes ul { margin: 0; padding-left: 20px; font-size: 14px; }
+    .notes li { margin-bottom: 6px; }
+    .notes code {
+      font-family: ui-monospace, monospace; font-size: 12px;
+      color: var(--color-accent-primary);
+    }
+    .kbd {
+      font-family: ui-monospace, monospace; font-size: 12px;
+      padding: 2px 6px; border-radius: 5px;
+      background: color-mix(in srgb, var(--color-bg-space) 60%, var(--color-panel));
+      border: 1px solid color-mix(in srgb, var(--color-text-primary) 18%, transparent);
+    }
+
+    footer.doc-foot {
+      margin-top: 40px; padding-top: 16px;
+      border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+      font-size: 13px; color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+    }
+    footer.doc-foot a { color: var(--color-accent-primary); }
+
+    @media (max-width: 360px) {
+      header.doc-head h1, .screen__title { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="doc-head">
+      <h1>Space Defender · 화면 시안</h1>
+      <p>BF-1714 frozen UI 계약의 4개 상태 정적 시안. 색상·타이포·간격은 <a href="./design-tokens.html">design-tokens.html</a> 와 동일한 CSS 변수를 참조합니다.</p>
+      <span class="badge">start · playing · paused · gameover</span>
+    </header>
+
+    <div class="boards">
+
+      <!-- ============ 1) PLAYING (HUD 라이브) ============ -->
+      <div class="board">
+        <div class="board__caption"><span class="state-tag">status: playing</span> 플레이 HUD</div>
+        <!-- #game-root -->
+        <div class="game-root" id="game-root">
+          <!-- HUD: 점수/목숨/최고점수 텍스트 노출 -->
+          <div class="hud">
+            <div class="hud__stat" id="hud-score">
+              <span class="label">점수 Score</span>
+              <span class="value">1,280</span>
+            </div>
+            <div class="hud__stat hud__stat--lives" id="hud-lives">
+              <span class="label">목숨 Lives</span>
+              <span class="value">♥ 3</span>
+            </div>
+            <div class="hud__stat hud__stat--high" id="hud-highscore">
+              <span class="label">최고점수 High</span>
+              <span class="value">9,640</span>
+            </div>
+          </div>
+          <!-- 캔버스 프레임 + Phaser 렌더 캔버스 자리표시자 -->
+          <div class="canvas-frame">
+            <canvas class="game-canvas" id="game-canvas" width="360" height="540" aria-label="게임 플레이 영역"></canvas>
+            <span class="placeholder-label">#game-canvas · 360×540 (2:3)</span>
+            <span class="enemy" style="left: 28%; top: 18%;"></span>
+            <span class="enemy" style="left: 58%; top: 30%;"></span>
+            <span class="enemy" style="left: 42%; top: 46%;"></span>
+            <span class="bullet"></span>
+            <span class="ship"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 2) START ============ -->
+      <div class="board">
+        <div class="board__caption"><span class="state-tag">status: start</span> 시작 화면</div>
+        <div class="game-root">
+          <div class="hud" aria-hidden="true">
+            <div class="hud__stat"><span class="label">점수 Score</span><span class="value">0</span></div>
+            <div class="hud__stat hud__stat--lives"><span class="label">목숨 Lives</span><span class="value">♥ 3</span></div>
+            <div class="hud__stat hud__stat--high"><span class="label">최고점수 High</span><span class="value">9,640</span></div>
+          </div>
+          <div class="canvas-frame">
+            <div class="game-canvas"></div>
+            <!-- #start-screen 오버레이 -->
+            <div class="screen screen--start" id="start-screen" role="dialog" aria-label="시작 화면">
+              <span class="screen__state-name">화면 상태: 시작 (start)</span>
+              <h2 class="screen__title">SPACE<br>DEFENDER</h2>
+              <p class="screen__sub">방향키로 이동, 스페이스로 발사</p>
+              <button class="btn btn--primary" id="start-button" aria-label="게임 시작">게임 시작</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 3) PAUSED ============ -->
+      <div class="board">
+        <div class="board__caption"><span class="state-tag">status: paused</span> 일시정지</div>
+        <div class="game-root">
+          <div class="hud" aria-hidden="true">
+            <div class="hud__stat"><span class="label">점수 Score</span><span class="value">1,280</span></div>
+            <div class="hud__stat hud__stat--lives"><span class="label">목숨 Lives</span><span class="value">♥ 3</span></div>
+            <div class="hud__stat hud__stat--high"><span class="label">최고점수 High</span><span class="value">9,640</span></div>
+          </div>
+          <div class="canvas-frame">
+            <div class="game-canvas"></div>
+            <span class="ship"></span>
+            <!-- #pause-overlay 오버레이 -->
+            <div class="screen screen--pause" id="pause-overlay" role="dialog" aria-label="일시정지">
+              <span class="screen__state-name">화면 상태: 일시정지 (paused)</span>
+              <h2 class="screen__title">일시정지</h2>
+              <p class="screen__sub"><span class="kbd">P</span> 키로 다시 시작 — 진행 상태 유지</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 4) GAMEOVER ============ -->
+      <div class="board">
+        <div class="board__caption"><span class="state-tag is-danger">status: gameover</span> 게임 오버</div>
+        <div class="game-root">
+          <div class="hud" aria-hidden="true">
+            <div class="hud__stat"><span class="label">점수 Score</span><span class="value">2,150</span></div>
+            <div class="hud__stat hud__stat--lives"><span class="label">목숨 Lives</span><span class="value">♥ 0</span></div>
+            <div class="hud__stat hud__stat--high"><span class="label">최고점수 High</span><span class="value">9,640</span></div>
+          </div>
+          <div class="canvas-frame">
+            <div class="game-canvas"></div>
+            <!-- #gameover-screen 오버레이 -->
+            <div class="screen screen--gameover" id="gameover-screen" role="dialog" aria-label="게임 오버">
+              <span class="screen__state-name">화면 상태: 게임 오버 (gameover)</span>
+              <h2 class="screen__title">게임 오버</h2>
+              <!-- #final-score -->
+              <p class="final-score" id="final-score">최종 점수 <strong>2,150</strong></p>
+              <button class="btn btn--primary" id="restart-button" aria-label="다시 시작">다시 시작</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== 접근성 · 상호작용 · 반응형 계약 요약 ===== -->
+    <section class="notes">
+      <h2>접근성 · 상호작용 계약 (frozen §8~§9)</h2>
+      <ul>
+        <li><strong>키보드</strong>: <span class="kbd">←</span> <span class="kbd">→</span> 함선 이동 · <span class="kbd">Space</span> 발사 · <span class="kbd">P</span> 일시정지 토글</li>
+        <li><strong>버튼 aria-label</strong>: <code>#start-button</code> = "게임 시작", <code>#restart-button</code> = "다시 시작"</li>
+        <li><strong>텍스트 노출</strong>: 점수·목숨·최고점수를 <code>.hud__stat</code> 텍스트로 표기 — 색상만으로 정보 전달하지 않음</li>
+        <li><strong>상태명 노출</strong>: 4개 상태 모두 화면 텍스트(<code>.screen__state-name</code>)와 오버레이 <code>aria-label</code> 로 상태명 제공</li>
+        <li><strong>상태 복귀</strong>: gameover → <code>#restart-button</code> 은 start 초기값(점수 0 / 목숨 초기)으로 복귀, 주 실행 control 재사용</li>
+        <li><strong>반응형</strong>: 320px 이상에서 HUD·오버레이 텍스트 overflow 없음 · 캔버스는 2:3 세로 비율 유지 + 뷰포트 높이에 맞춰 축소(<code>aspect-ratio</code> + <code>max-height</code>)</li>
+      </ul>
+    </section>
+
+    <footer class="doc-foot">
+      계약 출처: <code>docs/plans/BF-1714/implementation-plan.md §5~§9</code> ·
+      토큰 시안: <a href="./design-tokens.html">design-tokens.html</a> ·
+      계약 명세: <code>phaser-space-defender/README.md</code>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Space Defender · 디자인 토큰 (BF-1714)</title>
+  <style>
+    /*
+     * frozen token 계약 (BF-1714 · implementation-plan.md §7)
+     * 9개 토큰을 :root CSS custom property 로 그대로 선언한다.
+     * 값 변경·재정의 금지 — 아래 견본은 모두 이 변수를 실제로 참조한다.
+     */
+    :root {
+      /* --- 색상 (frozen) --- */
+      --color-bg-space: #0b0e1a;
+      --color-panel: #151a2e;
+      --color-accent-primary: #00e5ff;
+      --color-danger: #ff3b6b;
+      --color-text-primary: #e8ecf8;
+      /* --- 간격 (frozen) --- */
+      --space-hud-gap: 12px;
+      /* --- 반경 (frozen) --- */
+      --radius-panel: 8px;
+      /* --- 타이포그래피 (frozen) --- */
+      --font-size-score: 24px;
+      --font-size-title: 40px;
+
+      /* --- 그림자 토큰 (additive) — frozen 색상에서 파생, 재정의 아님 --- */
+      --shadow-panel: 0 10px 30px color-mix(in srgb, var(--color-bg-space) 70%, black),
+                      0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 22%, transparent);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 20px 64px;
+      background:
+        radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--color-accent-primary) 8%, transparent), transparent 70%),
+        var(--color-bg-space);
+      color: var(--color-text-primary);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      line-height: 1.6;
+    }
+
+    .page { max-width: 960px; margin: 0 auto; }
+
+    header.doc-head { margin-bottom: 40px; }
+    header.doc-head h1 {
+      font-size: var(--font-size-title);
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+      color: var(--color-text-primary);
+    }
+    header.doc-head p {
+      margin: 0;
+      color: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+      font-size: 15px;
+    }
+    header.doc-head .badge {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 4px 12px;
+      border-radius: var(--radius-panel);
+      background: color-mix(in srgb, var(--color-accent-primary) 14%, transparent);
+      color: var(--color-accent-primary);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+    }
+
+    section.token-group { margin-bottom: 40px; }
+    section.token-group > h2 {
+      font-size: 18px;
+      margin: 0 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 14%, transparent);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: var(--space-hud-gap);
+    }
+
+    /* 견본 카드 — 각 카드는 대응 frozen 변수를 실제 렌더에 사용한다 */
+    .swatch {
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+      overflow: hidden;
+    }
+    .swatch__preview {
+      height: 88px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .swatch__meta {
+      padding: 12px 14px 14px;
+      border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+    }
+    .swatch__name {
+      font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+      font-size: 13px;
+      color: var(--color-accent-primary);
+      word-break: break-all;
+    }
+    .swatch__value {
+      font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+      font-size: 12px;
+      color: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
+      margin-top: 2px;
+    }
+    .swatch__use {
+      font-size: 12px;
+      color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+      margin-top: 6px;
+    }
+
+    /* 색상 견본 preview: 해당 색 변수를 배경으로 직접 참조 */
+    .preview--bg-space { background: var(--color-bg-space); border: 1px dashed color-mix(in srgb, var(--color-text-primary) 20%, transparent); }
+    .preview--panel { background: var(--color-panel); }
+    .preview--accent { background: var(--color-accent-primary); }
+    .preview--danger { background: var(--color-danger); }
+    .preview--text {
+      background: var(--color-bg-space);
+      color: var(--color-text-primary);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    /* 간격 견본: --space-hud-gap 를 gap 으로 직접 사용 */
+    .gap-demo {
+      display: flex;
+      gap: var(--space-hud-gap);
+      padding: 20px;
+      background: var(--color-bg-space);
+    }
+    .gap-demo span {
+      flex: 1;
+      height: 40px;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--color-accent-primary) 60%, var(--color-panel));
+    }
+    .gap-demo__label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      color: var(--color-accent-primary);
+    }
+
+    /* 반경 견본: --radius-panel 을 border-radius 로 직접 사용 */
+    .radius-demo {
+      width: 96px; height: 56px;
+      background: var(--color-panel);
+      border: 2px solid var(--color-accent-primary);
+      border-radius: var(--radius-panel);
+    }
+
+    /* 타이포 견본: --font-size-title / --font-size-score 를 font-size 로 직접 사용 */
+    .type-title { font-size: var(--font-size-title); font-weight: 800; color: var(--color-text-primary); }
+    .type-score {
+      font-size: var(--font-size-score);
+      font-weight: 700;
+      font-family: ui-monospace, "SFMono-Regular", monospace;
+      color: var(--color-accent-primary);
+    }
+    .type-row {
+      display: flex; align-items: baseline; gap: 16px;
+      padding: 18px 20px; background: var(--color-panel);
+      border-radius: var(--radius-panel); box-shadow: var(--shadow-panel);
+      margin-bottom: var(--space-hud-gap);
+    }
+    .type-row .tag {
+      font-family: ui-monospace, monospace; font-size: 12px;
+      color: color-mix(in srgb, var(--color-text-primary) 60%, transparent);
+      min-width: 150px;
+    }
+
+    footer.doc-foot {
+      margin-top: 48px; padding-top: 16px;
+      border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+      font-size: 13px;
+      color: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+    }
+    footer.doc-foot a { color: var(--color-accent-primary); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="doc-head">
+      <h1>Space Defender · 디자인 토큰</h1>
+      <p>BF-1714 frozen UI 계약의 CSS custom property 시각화. 모든 견본은 <code>:root</code> 에 선언된 변수를 실제로 참조합니다.</p>
+      <span class="badge">frozen · additive · 값 변경 금지</span>
+    </header>
+
+    <!-- ===== 색상 ===== -->
+    <section class="token-group">
+      <h2>1. 색상 (Color)</h2>
+      <div class="grid">
+        <div class="swatch">
+          <div class="swatch__preview preview--bg-space"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">--color-bg-space</div>
+            <div class="swatch__value">#0b0e1a</div>
+            <div class="swatch__use">우주 배경</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__preview preview--panel"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">--color-panel</div>
+            <div class="swatch__value">#151a2e</div>
+            <div class="swatch__use">패널 / 오버레이 배경</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__preview preview--accent"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">--color-accent-primary</div>
+            <div class="swatch__value">#00e5ff</div>
+            <div class="swatch__use">강조 (주 실행 / 함선)</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__preview preview--danger"></div>
+          <div class="swatch__meta">
+            <div class="swatch__name">--color-danger</div>
+            <div class="swatch__value">#ff3b6b</div>
+            <div class="swatch__use">위험 / 게임 오버</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__preview preview--text">Aa 가나다</div>
+          <div class="swatch__meta">
+            <div class="swatch__name">--color-text-primary</div>
+            <div class="swatch__value">#e8ecf8</div>
+            <div class="swatch__use">기본 텍스트</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 타이포그래피 ===== -->
+    <section class="token-group">
+      <h2>2. 타이포그래피 (Typography)</h2>
+      <div class="type-row">
+        <span class="tag">--font-size-title · 40px</span>
+        <span class="type-title">SPACE DEFENDER</span>
+      </div>
+      <div class="type-row">
+        <span class="tag">--font-size-score · 24px</span>
+        <span class="type-score">SCORE 12,480</span>
+      </div>
+    </section>
+
+    <!-- ===== 간격 ===== -->
+    <section class="token-group">
+      <h2>3. 간격 (Spacing)</h2>
+      <div class="swatch">
+        <div class="swatch__meta">
+          <div class="swatch__name">--space-hud-gap</div>
+          <div class="swatch__value">12px</div>
+          <div class="swatch__use">HUD 지표 간격 (아래 블록의 <code>gap</code> 에 직접 적용)</div>
+        </div>
+        <div class="gap-demo">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 반경 ===== -->
+    <section class="token-group">
+      <h2>4. 반경 (Radius)</h2>
+      <div class="grid">
+        <div class="swatch">
+          <div class="swatch__preview" style="background: var(--color-bg-space);">
+            <div class="radius-demo"></div>
+          </div>
+          <div class="swatch__meta">
+            <div class="swatch__name">--radius-panel</div>
+            <div class="swatch__value">8px</div>
+            <div class="swatch__use">패널 / 오버레이 모서리 반경</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 그림자 (additive) ===== -->
+    <section class="token-group">
+      <h2>5. 그림자 (Shadow · additive)</h2>
+      <div class="grid">
+        <div class="swatch">
+          <div class="swatch__preview" style="background: var(--color-bg-space);">
+            <div class="radius-demo" style="box-shadow: var(--shadow-panel); border-color: transparent;"></div>
+          </div>
+          <div class="swatch__meta">
+            <div class="swatch__name">--shadow-panel</div>
+            <div class="swatch__value">frozen 색상 파생 (재정의 아님)</div>
+            <div class="swatch__use">패널 부양감 + accent 링</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="doc-foot">
+      계약 출처: <code>docs/plans/BF-1714/implementation-plan.md §7</code> ·
+      화면 시안: <a href="./design-mockup.html">design-mockup.html</a>
+    </footer>
+  </div>
+</body>
+</html>
