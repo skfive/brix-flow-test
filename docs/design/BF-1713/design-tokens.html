@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Star Collector · 디자인 토큰 카탈로그 (BF-1713)</title>
+  <style>
+    /* =========================================================
+       동결된 디자인 토큰 (frozen UI contract §3.5 — exact 값)
+       designer/developer 는 이 값을 변경/재정의하지 않는다 (additive).
+       각 견본은 아래 :root 변수를 실제로 참조한다.
+       ========================================================= */
+    :root {
+      /* --- frozen tokens (권위: frozen blueprint) --- */
+      --color-bg: #0f172a;
+      --color-player: #38bdf8;
+      --color-star: #fbbf24;
+      --color-hazard: #ef4444;
+      --color-hud-text: #f8fafc;
+      --font-hud-size: 20px;
+      --font-title-size: 40px;
+      --space-hud-gap: 12px;
+      --radius-panel: 12px;
+
+      /* --- additive tokens (프레젠테이션 전용, 프로즌 토큰 재정의 아님) --- */
+      --shadow-panel: 0 10px 30px rgba(2, 6, 23, 0.55);
+      --color-panel: #1e293b;
+      --color-muted: #94a3b8;
+      --font-stack: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      --mono-stack: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: clamp(20px, 4vw, 48px);
+      background: var(--color-bg);
+      color: var(--color-hud-text);
+      font-family: var(--font-stack);
+      line-height: 1.5;
+    }
+
+    header { max-width: 960px; margin: 0 auto 40px; }
+
+    h1 {
+      font-size: var(--font-title-size);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .lede { color: var(--color-muted); margin: 0; max-width: 60ch; }
+
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      gap: 40px;
+    }
+
+    section h2 {
+      font-size: 22px;
+      margin: 0 0 4px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      padding-bottom: 8px;
+    }
+    section .hint { color: var(--color-muted); font-size: 14px; margin: 0 0 20px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: var(--space-hud-gap);
+    }
+
+    /* 토큰 견본 카드 — panel radius/shadow 토큰을 실제 참조 */
+    .swatch {
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    /* 색상 견본의 색 면은 해당 토큰 변수를 직접 참조 */
+    .swatch__chip { height: 96px; }
+    .chip--bg     { background: var(--color-bg); border-bottom: 1px solid rgba(148,163,184,0.25); }
+    .chip--player { background: var(--color-player); }
+    .chip--star   { background: var(--color-star); }
+    .chip--hazard { background: var(--color-hazard); }
+    .chip--text   { background: var(--color-hud-text); }
+
+    .swatch__meta { padding: 12px 14px; }
+    .swatch__name { font-weight: 600; font-size: 15px; margin: 0 0 4px; }
+    .swatch__var  { font-family: var(--mono-stack); font-size: 13px; color: var(--color-muted); }
+    .swatch__val  { font-family: var(--mono-stack); font-size: 13px; color: var(--color-hud-text); }
+
+    /* 타이포 견본 — font-size 토큰을 실제 참조 */
+    .type-row {
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+      padding: 20px 22px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: var(--space-hud-gap);
+    }
+    .type-title { font-size: var(--font-title-size); font-weight: 700; margin: 0; }
+    .type-hud   { font-size: var(--font-hud-size); font-weight: 600; margin: 0; color: var(--color-star); }
+    .type-row .swatch__var { margin-left: auto; }
+
+    /* 간격 토큰 견본 — gap 을 실제 참조 */
+    .space-demo {
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+      padding: 22px;
+      display: flex;
+      gap: var(--space-hud-gap);
+      align-items: center;
+    }
+    .space-demo .block {
+      background: var(--color-player);
+      width: 48px; height: 48px;
+      border-radius: 8px;
+    }
+    .space-demo .caption { margin-left: 12px; color: var(--color-muted); font-family: var(--mono-stack); font-size: 13px; }
+
+    /* 반경 견본 — radius 토큰을 실제 참조 */
+    .radius-demo {
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .radius-demo .box {
+      width: 96px; height: 96px;
+      background: var(--color-hazard);
+      border-radius: var(--radius-panel);
+    }
+
+    /* 그림자 견본 (additive shadow 토큰) */
+    .shadow-demo {
+      background: var(--color-panel);
+      border-radius: var(--radius-panel);
+      padding: 32px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .shadow-demo .box {
+      width: 120px; height: 72px;
+      background: var(--color-bg);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel);
+    }
+
+    footer {
+      max-width: 960px;
+      margin: 48px auto 0;
+      color: var(--color-muted);
+      font-size: 13px;
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+      padding-top: 16px;
+    }
+    footer code { font-family: var(--mono-stack); color: var(--color-hud-text); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Star Collector · 디자인 토큰</h1>
+    <p class="lede">
+      frozen UI contract (BF-1713 §3.5) 의 색상·타이포·간격·반경 토큰을
+      <code style="font-family:var(--mono-stack)">:root</code> CSS custom property 로 선언한 시각 카탈로그입니다.
+      아래 모든 견본은 하드코딩 값이 아니라 선언된 변수를 실제로 참조합니다.
+    </p>
+  </header>
+
+  <main>
+    <!-- ============ 색상 ============ -->
+    <section>
+      <h2>색상 토큰</h2>
+      <p class="hint">각 색 면은 대응하는 <code>var(--color-*)</code> 를 직접 참조합니다.</p>
+      <div class="grid">
+        <div class="swatch">
+          <div class="swatch__chip chip--bg"></div>
+          <div class="swatch__meta">
+            <p class="swatch__name">배경</p>
+            <p class="swatch__var">--color-bg</p>
+            <p class="swatch__val">#0f172a</p>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip chip--player"></div>
+          <div class="swatch__meta">
+            <p class="swatch__name">플레이어</p>
+            <p class="swatch__var">--color-player</p>
+            <p class="swatch__val">#38bdf8</p>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip chip--star"></div>
+          <div class="swatch__meta">
+            <p class="swatch__name">별 (star)</p>
+            <p class="swatch__var">--color-star</p>
+            <p class="swatch__val">#fbbf24</p>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip chip--hazard"></div>
+          <div class="swatch__meta">
+            <p class="swatch__name">위험 (hazard)</p>
+            <p class="swatch__var">--color-hazard</p>
+            <p class="swatch__val">#ef4444</p>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip chip--text"></div>
+          <div class="swatch__meta">
+            <p class="swatch__name">HUD 텍스트</p>
+            <p class="swatch__var">--color-hud-text</p>
+            <p class="swatch__val">#f8fafc</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 타이포그래피 ============ -->
+    <section>
+      <h2>타이포그래피 토큰</h2>
+      <p class="hint">글자 크기는 <code>var(--font-title-size)</code> / <code>var(--font-hud-size)</code> 를 직접 참조합니다.</p>
+      <div class="type-row">
+        <p class="type-title">게임 오버</p>
+        <span class="swatch__var">--font-title-size · 40px</span>
+      </div>
+      <div class="type-row">
+        <p class="type-hud">점수: 0</p>
+        <span class="swatch__var">--font-hud-size · 20px</span>
+      </div>
+    </section>
+
+    <!-- ============ 간격 ============ -->
+    <section>
+      <h2>간격 토큰</h2>
+      <p class="hint">블록 사이 gap 은 <code>var(--space-hud-gap)</code> 를 직접 참조합니다.</p>
+      <div class="space-demo">
+        <span class="block"></span>
+        <span class="block"></span>
+        <span class="block"></span>
+        <span class="caption">--space-hud-gap · 12px</span>
+      </div>
+    </section>
+
+    <!-- ============ 반경 ============ -->
+    <section>
+      <h2>반경 토큰</h2>
+      <p class="hint">패널 모서리 반경은 <code>var(--radius-panel)</code> 를 직접 참조합니다.</p>
+      <div class="radius-demo">
+        <span class="box"></span>
+        <span class="swatch__var">--radius-panel · 12px</span>
+      </div>
+    </section>
+
+    <!-- ============ 그림자 (additive) ============ -->
+    <section>
+      <h2>그림자 토큰 <span style="font-size:13px;color:var(--color-muted);font-weight:400">(additive — 프로즌 토큰 재정의 아님)</span></h2>
+      <p class="hint">패널 그림자는 <code>var(--shadow-panel)</code> 를 직접 참조합니다.</p>
+      <div class="shadow-demo">
+        <span class="box"></span>
+        <span class="swatch__var">--shadow-panel · 0 10px 30px rgba(2,6,23,.55)</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    frozen UI contract 권위: <code>docs/plans/BF-1713/implementation-plan.md §3.5</code> ·
+    동반 시안: <code>docs/design/BF-1713/design-mockup.html</code>
+  </footer>
+</body>
+</html>
