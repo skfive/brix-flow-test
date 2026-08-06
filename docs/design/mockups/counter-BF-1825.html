@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>클릭 카운터 시안 (BF-1825)</title>
+  <style>
+    :root {
+      /* frozen design tokens (ui-contract@v1) */
+      --color-action-primary: #2563eb;
+      --color-count-text: #111827;
+      --space-control-gap: 12px;
+
+      /* 보조 색 (명세용, 계약 아님) */
+      --counter-bg: #f9fafb;
+      --counter-surface: #ffffff;
+      --counter-border: #e5e7eb;
+      --counter-action-primary-hover: #1d4ed8;
+      --counter-reset-fg: #111827;
+
+      --font-stack: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 16px;
+      background: var(--counter-bg);
+      color: var(--color-count-text);
+      font-family: var(--font-stack);
+      line-height: 1.5;
+    }
+
+    .page-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+    .page-sub {
+      text-align: center;
+      font-size: 13px;
+      color: #6b7280;
+      margin: 0 0 28px;
+    }
+
+    /* ── 실제 산출물 골격: #counter-root ───────────────────── */
+    .counter {
+      max-width: 360px;
+      width: 100%;
+      margin: 0 auto;
+      background: var(--counter-surface);
+      border: 1px solid var(--counter-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .counter__value {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--color-count-text);
+    }
+
+    .counter__controls {
+      display: flex;
+      gap: var(--space-control-gap);
+      flex-wrap: wrap;
+    }
+
+    .counter__increment,
+    .counter__reset {
+      font-family: var(--font-stack);
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.2;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .counter__increment {
+      background: var(--color-action-primary);
+      color: #ffffff;
+      border-color: var(--color-action-primary);
+    }
+    .counter__increment:hover {
+      background: var(--counter-action-primary-hover);
+      border-color: var(--counter-action-primary-hover);
+    }
+
+    .counter__reset {
+      background: transparent;
+      color: var(--counter-reset-fg);
+      border-color: var(--counter-border);
+    }
+    .counter__reset:hover {
+      background: var(--counter-border);
+    }
+
+    .counter__increment:focus-visible,
+    .counter__reset:focus-visible {
+      outline: 2px solid var(--color-action-primary);
+      outline-offset: 2px;
+    }
+
+    /* ── 시안 시각화용 상태/뷰포트 갤러리 ───────────────────── */
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      justify-content: center;
+      align-items: flex-start;
+      margin-top: 8px;
+    }
+    .state-card {
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .state-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #374151;
+      background: #eef2ff;
+      border-radius: 999px;
+      padding: 2px 12px;
+    }
+    .state-desc {
+      font-size: 12px;
+      color: #6b7280;
+      max-width: 240px;
+      text-align: center;
+    }
+
+    .section-heading {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #374151;
+      margin: 36px 0 12px;
+    }
+
+    /* 320px 뷰포트 시뮬레이션 프레임 */
+    .viewport-320 {
+      width: 320px;
+      border: 2px dashed #9ca3af;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 0 auto;
+      background: var(--counter-bg);
+    }
+    .viewport-320 .counter { max-width: 100%; }
+    .viewport-320 .caption {
+      text-align: center;
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">클릭 카운터 · 시각 시안 (BF-1825)</h1>
+  <p class="page-sub">frozen selector / token / 상태 텍스트를 그대로 반영한 시각 시뮬레이션 — 실제 dev 산출물 아님</p>
+
+  <!-- 상태별 화면 표현 -->
+  <div class="gallery">
+    <div class="state-card">
+      <span class="state-label">초기</span>
+      <div id="counter-root" class="counter">
+        <p id="counter-value" class="counter__value" aria-live="polite">클릭 횟수: 0</p>
+        <div class="counter__controls">
+          <button id="counter-increment" class="counter__increment" type="button" aria-label="카운트 증가">+1</button>
+          <button id="counter-reset" class="counter__reset" type="button" aria-label="카운트 초기화">초기화</button>
+        </div>
+      </div>
+      <p class="state-desc">페이지 로드 시 <code>클릭 횟수: 0</code> 표시, 두 버튼 활성.</p>
+    </div>
+
+    <div class="state-card">
+      <span class="state-label">증가</span>
+      <div class="counter">
+        <p class="counter__value" aria-live="polite">클릭 횟수: 3</p>
+        <div class="counter__controls">
+          <button class="counter__increment" type="button" aria-label="카운트 증가">+1</button>
+          <button class="counter__reset" type="button" aria-label="카운트 초기화">초기화</button>
+        </div>
+      </div>
+      <p class="state-desc"><code>+1</code> 클릭마다 <code>클릭 횟수: N</code> (N=현재 카운트)으로 갱신.</p>
+    </div>
+
+    <div class="state-card">
+      <span class="state-label">초기화</span>
+      <div class="counter">
+        <p class="counter__value" aria-live="polite">클릭 횟수: 0</p>
+        <div class="counter__controls">
+          <button class="counter__increment" type="button" aria-label="카운트 증가">+1</button>
+          <button class="counter__reset" type="button" aria-label="카운트 초기화">초기화</button>
+        </div>
+      </div>
+      <p class="state-desc"><code>초기화</code> 클릭 시 <code>클릭 횟수: 0</code>으로 복원, 증가 control 재사용 가능.</p>
+    </div>
+  </div>
+
+  <!-- 320px 반응형 -->
+  <p class="section-heading">320px 반응형 — content overflow 없음</p>
+  <div class="viewport-320">
+    <div class="counter">
+      <p class="counter__value" aria-live="polite">클릭 횟수: 12</p>
+      <div class="counter__controls">
+        <button class="counter__increment" type="button" aria-label="카운트 증가">+1</button>
+        <button class="counter__reset" type="button" aria-label="카운트 초기화">초기화</button>
+      </div>
+    </div>
+    <p class="caption">320px 폭에서 카드는 좌우 여백을 두고 축소, 버튼 그룹은 <code>--space-control-gap</code>(12px) 간격 유지, 필요 시 줄바꿈으로 잘림 방지.</p>
+  </div>
+</body>
+</html>
