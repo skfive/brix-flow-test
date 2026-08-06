@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Match — 디자인 토큰 (BF-1715)</title>
+  <style>
+    /* ============================================================
+       Frozen 디자인 토큰 (implementation-plan.md §4 — 값 변경 금지)
+       developer 는 아래 동일 변수명을 그대로 참조한다.
+       ============================================================ */
+    :root {
+      --color-bg: #1a1a2e;
+      --color-card-back: #16213e;
+      --color-card-face: #e94560;
+      --color-accent: #0f3460;
+      --color-text: #f5f5f5;
+      --space-card-gap: 12px;
+      --radius-card: 8px;
+      --font-size-hud: 18px;
+
+      /* 파생 시각 보조값 (frozen 계약 아님 — 문서 렌더링/그림자 데모 전용).
+         developer 는 이 변수에 의존하지 않는다. */
+      --shadow-card: 0 4px 12px rgba(15, 52, 96, 0.55);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 24px 64px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    header p {
+      margin: 0 0 32px;
+      color: var(--color-text);
+      opacity: 0.75;
+      font-size: 14px;
+    }
+
+    section {
+      margin-bottom: 40px;
+    }
+    section > h2 {
+      font-size: 20px;
+      font-weight: 700;
+      border-bottom: 2px solid var(--color-accent);
+      padding-bottom: 8px;
+      margin: 0 0 20px;
+    }
+
+    /* ---------- 색상 견본 ---------- */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: var(--space-card-gap);
+    }
+    .swatch {
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      background: var(--color-accent);
+      box-shadow: var(--shadow-card);
+    }
+    .swatch__chip {
+      height: 88px;
+    }
+    .swatch__meta {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .swatch__meta code {
+      display: block;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+    .swatch__meta .name { font-weight: 600; }
+    .swatch__meta .val { opacity: 0.8; }
+
+    /* ---------- 타이포그래피 ---------- */
+    .type-row {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--color-accent);
+    }
+    .type-row:last-child { border-bottom: none; }
+    .type-label {
+      flex: 0 0 160px;
+      font-size: 13px;
+      opacity: 0.75;
+      font-family: ui-monospace, monospace;
+    }
+    .type-sample-hud { font-size: var(--font-size-hud); font-weight: 600; }
+    .type-sample-heading { font-size: 28px; font-weight: 700; }
+    .type-sample-body { font-size: 16px; font-weight: 400; }
+    .type-sample-caption { font-size: 13px; font-weight: 400; opacity: 0.8; }
+
+    /* ---------- 간격 ---------- */
+    .space-demo {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .space-demo__cards {
+      display: flex;
+      gap: var(--space-card-gap);
+    }
+    .space-demo__cards .box {
+      width: 56px;
+      height: 56px;
+      background: var(--color-card-back);
+      border: 2px solid var(--color-card-face);
+      border-radius: var(--radius-card);
+    }
+
+    /* ---------- 반경 ---------- */
+    .radius-demo {
+      width: 96px;
+      height: 96px;
+      background: var(--color-card-face);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+      color: var(--color-text);
+    }
+
+    /* ---------- 그림자 ---------- */
+    .shadow-demo {
+      width: 200px;
+      height: 96px;
+      background: var(--color-accent);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+    }
+
+    .note {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>Memory Match — 디자인 토큰</h1>
+      <p>BF-1715 · frozen 토큰 계약(implementation-plan.md §4)의 시각 정의. 아래 모든 견본은 <code>:root</code> CSS custom property로 렌더링됩니다.</p>
+    </header>
+
+    <!-- ===================== 색상 견본 ===================== -->
+    <section aria-labelledby="sec-color">
+      <h2 id="sec-color">색상 (Color)</h2>
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-bg);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-bg</code>
+            <code class="val">#1a1a2e · 배경</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-card-back);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-card-back</code>
+            <code class="val">#16213e · 카드 뒷면</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-card-face);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-card-face</code>
+            <code class="val">#e94560 · 카드 앞면</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-accent);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-accent</code>
+            <code class="val">#0f3460 · 강조/테두리</code>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch__chip" style="background: var(--color-text);"></div>
+          <div class="swatch__meta">
+            <code class="name">--color-text</code>
+            <code class="val">#f5f5f5 · 텍스트</code>
+          </div>
+        </div>
+      </div>
+      <p class="note">배경(#1a1a2e) 위 텍스트(#f5f5f5) 대비 &gt; 4.5:1 — WCAG AA 본문 기준 충족.</p>
+    </section>
+
+    <!-- ===================== 타이포그래피 ===================== -->
+    <section aria-labelledby="sec-type">
+      <h2 id="sec-type">타이포그래피 (Typography)</h2>
+      <div class="type-row">
+        <span class="type-label">--font-size-hud<br>(18px / 600)</span>
+        <span class="type-sample-hud">이동: 12 · 시간: 01:23</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">heading<br>(28px / 700)</span>
+        <span class="type-sample-heading">Memory Match</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">body<br>(16px / 400)</span>
+        <span class="type-sample-body">카드를 뒤집어 짝을 맞추세요</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">caption<br>(13px / 400)</span>
+        <span class="type-sample-caption">클리어! 총 24회 이동, 01:45</span>
+      </div>
+      <p class="note">HUD 지표(이동/시간)만 frozen 토큰 <code>--font-size-hud</code>로 고정됩니다. heading/body/caption 크기는 시안 권장값입니다.</p>
+    </section>
+
+    <!-- ===================== 간격 ===================== -->
+    <section aria-labelledby="sec-space">
+      <h2 id="sec-space">간격 (Spacing)</h2>
+      <div class="space-demo">
+        <div class="space-demo__cards">
+          <div class="box"></div>
+          <div class="box"></div>
+          <div class="box"></div>
+        </div>
+        <span style="font-family: ui-monospace, monospace; font-size: 13px;">--space-card-gap = 12px (카드 간 gap)</span>
+      </div>
+    </section>
+
+    <!-- ===================== 반경 ===================== -->
+    <section aria-labelledby="sec-radius">
+      <h2 id="sec-radius">반경 (Radius)</h2>
+      <div class="radius-demo">--radius-card<br>8px</div>
+    </section>
+
+    <!-- ===================== 그림자 ===================== -->
+    <section aria-labelledby="sec-shadow">
+      <h2 id="sec-shadow">그림자 (Shadow)</h2>
+      <div class="shadow-demo">--shadow-card</div>
+      <p class="note">그림자는 frozen 토큰이 아니라 accent 색 기반 파생 시각값입니다. developer 는 의존하지 않아도 됩니다.</p>
+    </section>
+  </div>
+</body>
+</html>

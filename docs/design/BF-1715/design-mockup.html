@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Match — 화면 상태 시안 (BF-1715)</title>
+  <style>
+    /* ============================================================
+       design-tokens.html 과 동일한 frozen 토큰 (하드코딩 없이 var() 참조).
+       implementation-plan.md §4 — 값 변경 금지.
+       ============================================================ */
+    :root {
+      --color-bg: #1a1a2e;
+      --color-card-back: #16213e;
+      --color-card-face: #e94560;
+      --color-accent: #0f3460;
+      --color-text: #f5f5f5;
+      --space-card-gap: 12px;
+      --radius-card: 8px;
+      --font-size-hud: 18px;
+
+      /* 파생 시각 보조값 (frozen 아님, 시안 렌더링 전용) */
+      --shadow-card: 0 4px 12px rgba(15, 52, 96, 0.55);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 20px 64px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      line-height: 1.5;
+    }
+
+    .doc-head {
+      max-width: 1120px;
+      margin: 0 auto 28px;
+    }
+    .doc-head h1 { margin: 0 0 4px; font-size: 26px; }
+    .doc-head p { margin: 0; opacity: 0.75; font-size: 14px; }
+
+    .states {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      align-items: start;
+    }
+
+    .state-panel {
+      background: var(--color-accent);
+      border-radius: var(--radius-card);
+      padding: 16px;
+      box-shadow: var(--shadow-card);
+    }
+    .state-panel__title {
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin: 0 0 12px;
+    }
+
+    /* ---------- 게임 화면 공통(.memory-match) ---------- */
+    .memory-match {
+      background: var(--color-bg);
+      border-radius: var(--radius-card);
+      padding: 14px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* HUD */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-card-gap);
+      flex-wrap: wrap;
+    }
+    .hud__stat {
+      font-size: var(--font-size-hud);
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    .btn-restart {
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text);
+      background: var(--color-card-face);
+      border: none;
+      border-radius: var(--radius-card);
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    .btn-restart:hover,
+    .btn-restart:focus-visible {
+      outline: 2px solid var(--color-text);
+      outline-offset: 2px;
+    }
+
+    /* 안내 텍스트 / aria-live 영역 */
+    .state-caption {
+      font-size: 14px;
+      color: var(--color-text);
+      opacity: 0.9;
+      min-height: 20px;
+    }
+
+    /* 캔버스 영역(#game-root) — 4x4 → 1:1 종횡비 유지 스케일링 */
+    .game-root {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: var(--color-card-back);
+      border-radius: var(--radius-card);
+      padding: var(--space-card-gap);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: var(--space-card-gap);
+    }
+
+    /* 카드 */
+    .card {
+      border: none;
+      border-radius: var(--radius-card);
+      background: var(--color-card-back);
+      box-shadow: inset 0 0 0 2px var(--color-accent);
+      color: var(--color-text);
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .card:focus-visible {
+      outline: 3px solid var(--color-card-face);
+      outline-offset: -3px;
+    }
+    .card--face {              /* 앞면(뒤집힘/매치) */
+      background: var(--color-card-face);
+      box-shadow: var(--shadow-card);
+    }
+    .card--matched {           /* 매치 고정 */
+      background: var(--color-card-face);
+      opacity: 0.55;
+    }
+
+    /* paused 오버레이 */
+    .pause-overlay {
+      position: absolute;
+      inset: 14px;
+      border-radius: var(--radius-card);
+      background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    /* clear 오버레이(#clear-overlay / .clear-screen) */
+    .clear-screen {
+      position: absolute;
+      inset: 14px;
+      border-radius: var(--radius-card);
+      background: color-mix(in srgb, var(--color-accent) 92%, transparent);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 20px;
+    }
+    .clear-screen__title { font-size: 22px; font-weight: 700; }
+    .clear-screen__msg { font-size: var(--font-size-hud); }
+
+    .legend {
+      max-width: 1120px;
+      margin: 32px auto 0;
+      font-size: 13px;
+      opacity: 0.8;
+    }
+    .legend h2 { font-size: 16px; margin: 0 0 8px; }
+    .legend ul { margin: 0; padding-left: 20px; }
+    .legend code {
+      font-family: ui-monospace, monospace;
+      background: var(--color-accent);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-head">
+    <h1>Memory Match — 화면 상태 시안</h1>
+    <p>BF-1715 · start / playing / paused / cleared 네 상태를 frozen selector·token 그대로 표현. 모든 색은 <code>var()</code> 참조(하드코딩 없음), 캔버스(<code>#game-root</code>)는 4×4 → 1:1 종횡비 유지.</p>
+  </div>
+
+  <div class="states">
+
+    <!-- ===================== start ===================== -->
+    <div class="state-panel">
+      <p class="state-panel__title">상태: start (최초 로드 / 리셋 직후)</p>
+      <div class="memory-match">
+        <div class="hud">
+          <span class="hud__stat" id="hud-moves">이동: 0</span>
+          <span class="hud__stat" id="hud-timer">시간: 00:00</span>
+          <button type="button" class="btn-restart" id="restart-button" aria-label="게임 다시 시작">다시 시작</button>
+        </div>
+        <p class="state-caption" role="status" aria-live="polite">카드를 뒤집어 짝을 맞추세요</p>
+        <div class="game-root" id="game-root" role="grid" aria-label="메모리 매치 카드판">
+          <!-- start: 카드 뒷면 대기, 중앙 시작 control -->
+          <div class="clear-screen" style="background: color-mix(in srgb, var(--color-accent) 55%, transparent);">
+            <span class="clear-screen__title">Memory Match</span>
+            <button type="button" class="btn-restart" aria-label="게임 시작">게임 시작</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== playing ===================== -->
+    <div class="state-panel">
+      <p class="state-panel__title">상태: playing (격자 표시, 오버레이 없음)</p>
+      <div class="memory-match">
+        <div class="hud">
+          <span class="hud__stat">이동: 5</span>
+          <span class="hud__stat">시간: 00:37</span>
+          <button type="button" class="btn-restart" aria-label="게임 다시 시작">다시 시작</button>
+        </div>
+        <p class="state-caption" role="status" aria-live="polite">카드가 뒤집혔습니다: 별</p>
+        <div class="game-root" role="grid" aria-label="메모리 매치 카드판">
+          <button class="card card--matched" tabindex="0" aria-label="맞춘 카드 사과">🍎</button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card card--face" tabindex="0" aria-label="뒤집힌 카드 별">⭐</button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card card--matched" tabindex="0" aria-label="맞춘 카드 사과">🍎</button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card card--face" tabindex="0" aria-label="뒤집힌 카드 달">🌙</button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+          <button class="card" tabindex="0" aria-label="뒷면 카드"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== paused ===================== -->
+    <div class="state-panel">
+      <p class="state-panel__title">상태: paused (타이머 정지, 마지막 값 유지)</p>
+      <div class="memory-match">
+        <div class="hud">
+          <span class="hud__stat">이동: 5</span>
+          <span class="hud__stat">시간: 00:37</span>
+          <button type="button" class="btn-restart" aria-label="게임 다시 시작">다시 시작</button>
+        </div>
+        <p class="state-caption" role="status" aria-live="polite">일시정지</p>
+        <div class="game-root" role="grid" aria-label="메모리 매치 카드판">
+          <div class="pause-overlay">일시정지</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== cleared ===================== -->
+    <div class="state-panel">
+      <p class="state-panel__title">상태: cleared (8쌍 모두 matched)</p>
+      <div class="memory-match">
+        <div class="hud">
+          <span class="hud__stat">이동: 24</span>
+          <span class="hud__stat">시간: 01:45</span>
+          <button type="button" class="btn-restart" aria-label="게임 다시 시작">다시 시작</button>
+        </div>
+        <p class="state-caption" role="status" aria-live="polite">클리어! 총 24회 이동, 01:45</p>
+        <div class="game-root" role="grid" aria-label="메모리 매치 카드판">
+          <div class="clear-screen" id="clear-overlay" role="alertdialog" aria-label="클리어">
+            <span class="clear-screen__title">클리어!</span>
+            <span class="clear-screen__msg">클리어! 총 24회 이동, 01:45</span>
+            <button type="button" class="btn-restart" aria-label="게임 다시 시작">다시 시작</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <h2>selector · 토큰 참조</h2>
+    <ul>
+      <li>DOM ID: <code>#game-root</code> <code>#hud-moves</code> <code>#hud-timer</code> <code>#restart-button</code> <code>#clear-overlay</code></li>
+      <li>CSS class: <code>.memory-match</code> <code>.hud</code> <code>.hud__stat</code> <code>.btn-restart</code> <code>.clear-screen</code></li>
+      <li>토큰: <code>--color-bg</code> <code>--color-card-back</code> <code>--color-card-face</code> <code>--color-accent</code> <code>--color-text</code> <code>--space-card-gap</code> <code>--radius-card</code> <code>--font-size-hud</code></li>
+      <li>접근성: <code>#restart-button</code> = <code>aria-label="게임 다시 시작"</code>, 카드 <code>tabindex="0"</code> + 상태 <code>aria-live</code> 안내, 상태명 텍스트 노출(색상만으로 구분 X)</li>
+      <li>반응형: 패널 최소 300px, 게임판 <code>aspect-ratio:1/1</code> 유지 — ≥320px 뷰포트에서 4×4 overflow 없음</li>
+    </ul>
+  </div>
+</body>
+</html>
