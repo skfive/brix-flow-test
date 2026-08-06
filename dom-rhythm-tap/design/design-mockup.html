@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beat Tap — UI 시안 (frozen ui-contract@v1 §3.2~§3.4)</title>
+    <style>
+      /* 동결된 디자인 토큰 §3.5 — 값 변경 금지 */
+      :root {
+        --color-bg: #0f1020;
+        --color-lane: #1b1d3a;
+        --color-note: #38bdf8;
+        --color-judge-perfect: #22c55e;
+        --color-judge-good: #eab308;
+        --color-judge-miss: #ef4444;
+        --color-text-primary: #f8fafc;
+        --space-lane-gap: 8px;
+        --radius-note: 6px;
+        --shadow-note: 0 2px 6px rgba(0, 0, 0, 0.4);
+        --font-size-hud: 20px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #060713;
+        color: var(--color-text-primary);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      h1 {
+        font-size: var(--font-size-hud);
+      }
+      .mock-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+      }
+      .mock-caption {
+        font-size: 0.9em;
+        opacity: 0.8;
+        margin: 8px 0 4px;
+      }
+
+      /* 실제 index.html 과 동일한 selector·class 구조를 미리보기용으로 재현 */
+      .game {
+        position: relative;
+        width: 260px;
+        height: 400px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--color-bg);
+        border-radius: 10px;
+      }
+      .hud {
+        display: flex;
+        align-items: center;
+        gap: var(--space-lane-gap);
+        padding: 10px;
+        font-size: var(--font-size-hud);
+      }
+      .hud__value {
+        font-weight: 700;
+      }
+      .combo-counter {
+        display: flex;
+        gap: 4px;
+      }
+      #judgment-feedback,
+      .feedback {
+        min-height: 1.4em;
+        text-align: center;
+        font-weight: 700;
+        color: var(--color-judge-perfect);
+      }
+      .lane-container {
+        position: relative;
+        flex: 1;
+        display: flex;
+        gap: var(--space-lane-gap);
+        padding: var(--space-lane-gap);
+      }
+      .game__lane {
+        position: relative;
+        flex: 1;
+        background: var(--color-lane);
+        border-radius: var(--radius-note);
+      }
+      .game__lane-key {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 6px;
+        text-align: center;
+        font-weight: 700;
+      }
+      .game__note {
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        height: 20px;
+        background: var(--color-note);
+        border-radius: var(--radius-note);
+        box-shadow: var(--shadow-note);
+      }
+      .note--perfect {
+        background: var(--color-judge-perfect);
+      }
+      .note--good {
+        background: var(--color-judge-good);
+      }
+      .note--miss {
+        background: var(--color-judge-miss);
+      }
+      .judgment-line {
+        position: absolute;
+        left: var(--space-lane-gap);
+        right: var(--space-lane-gap);
+        bottom: 15%;
+        height: 4px;
+        background: var(--color-text-primary);
+        border-radius: 2px;
+      }
+      .screen {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 20px;
+        text-align: center;
+        background: rgba(15, 16, 32, 0.92);
+      }
+      .screen--start {
+        border-top: 3px solid var(--color-note);
+      }
+      .screen--pause {
+        border-top: 3px solid var(--color-judge-good);
+      }
+      .screen--gameover {
+        border-top: 3px solid var(--color-judge-perfect);
+      }
+      button {
+        font: inherit;
+        padding: 8px 16px;
+        border: 0;
+        border-radius: var(--radius-note);
+        background: var(--color-note);
+        color: var(--color-bg);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Beat Tap — 화면 상태 시안</h1>
+    <p>frozen ui-contract@v1의 exact selector(§3.2)·class(§3.3)·상태(§3.4)를 그대로 반영한 정적 시안입니다.</p>
+
+    <div class="mock-grid">
+      <!-- start 상태 -->
+      <div>
+        <p class="mock-caption">상태: start (screen--start)</p>
+        <div class="game" data-state="start">
+          <div class="hud">
+            <span class="hud__value">점수 0</span>
+            <span class="combo-counter">콤보 <span class="hud__value">0</span></span>
+            <span class="hud__value">100%</span>
+          </div>
+          <div class="lane-container">
+            <div class="game__lane"><span class="game__lane-key">D</span></div>
+            <div class="game__lane"><span class="game__lane-key">F</span></div>
+            <div class="game__lane"><span class="game__lane-key">J</span></div>
+            <div class="game__lane"><span class="game__lane-key">K</span></div>
+            <div class="judgment-line"></div>
+          </div>
+          <div class="screen screen--start">
+            <strong>Beat Tap</strong>
+            <span>상태: 시작 대기</span>
+            <button aria-label="게임 시작">게임 시작</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- playing 상태 -->
+      <div>
+        <p class="mock-caption">상태: playing (노트 낙하 + 판정)</p>
+        <div class="game" data-state="playing">
+          <div class="hud">
+            <span class="hud__value">점수 1200</span>
+            <span class="combo-counter">콤보 <span class="hud__value">8</span></span>
+            <span class="hud__value">95%</span>
+          </div>
+          <div class="feedback">PERFECT</div>
+          <div class="lane-container">
+            <div class="game__lane">
+              <span class="game__lane-key">D</span>
+              <div class="game__note" style="top: 20%"></div>
+            </div>
+            <div class="game__lane"><span class="game__lane-key">F</span></div>
+            <div class="game__lane">
+              <span class="game__lane-key">J</span>
+              <div class="game__note note--good" style="top: 60%"></div>
+            </div>
+            <div class="game__lane"><span class="game__lane-key">K</span></div>
+            <div class="judgment-line"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- paused 상태 -->
+      <div>
+        <p class="mock-caption">상태: paused (screen--pause)</p>
+        <div class="game" data-state="paused">
+          <div class="hud">
+            <span class="hud__value">점수 1200</span>
+            <span class="combo-counter">콤보 <span class="hud__value">8</span></span>
+            <span class="hud__value">95%</span>
+          </div>
+          <div class="lane-container">
+            <div class="game__lane"><span class="game__lane-key">D</span></div>
+            <div class="game__lane"><span class="game__lane-key">F</span></div>
+            <div class="game__lane"><span class="game__lane-key">J</span></div>
+            <div class="game__lane"><span class="game__lane-key">K</span></div>
+            <div class="judgment-line"></div>
+          </div>
+          <div class="screen screen--pause">
+            <strong>일시정지</strong>
+            <span>상태: 일시정지됨</span>
+            <button aria-label="게임 재개">계속하기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- gameover 상태 -->
+      <div>
+        <p class="mock-caption">상태: gameover (screen--gameover / result-panel)</p>
+        <div class="game" data-state="gameover">
+          <div class="hud">
+            <span class="hud__value">점수 2400</span>
+            <span class="combo-counter">콤보 <span class="hud__value">0</span></span>
+            <span class="hud__value">92%</span>
+          </div>
+          <div class="lane-container">
+            <div class="game__lane"><span class="game__lane-key">D</span></div>
+            <div class="game__lane"><span class="game__lane-key">F</span></div>
+            <div class="game__lane"><span class="game__lane-key">J</span></div>
+            <div class="game__lane"><span class="game__lane-key">K</span></div>
+            <div class="judgment-line"></div>
+          </div>
+          <div class="screen screen--gameover">
+            <strong>게임 종료</strong>
+            <span>상태: 종료됨</span>
+            <span>Perfect 20 · Good 6 · Miss 2</span>
+            <span>최대 콤보 24 · 정확도 92%</span>
+            <button aria-label="게임 재시작">다시 시작</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
