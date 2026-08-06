@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Space Defender</title>
+    <!-- Phaser 3 (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <style>
+      /* frozen 디자인 토큰 (implementation-plan §7) */
+      :root {
+        --color-bg-space: #0b0e1a;
+        --color-panel: #151a2e;
+        --color-accent-primary: #00e5ff;
+        --color-danger: #ff3b6b;
+        --color-text-primary: #e8ecf8;
+        --space-hud-gap: 12px;
+        --radius-panel: 8px;
+        --font-size-score: 24px;
+        --font-size-title: 40px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: var(--color-bg-space);
+        color: var(--color-text-primary);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 12px;
+      }
+
+      #game-root {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+      }
+
+      .hud {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-hud-gap);
+        padding: var(--space-hud-gap);
+        background: var(--color-panel);
+        border-radius: var(--radius-panel);
+        margin-bottom: var(--space-hud-gap);
+        flex-wrap: wrap;
+      }
+
+      .hud__stat {
+        font-size: var(--font-size-score);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .canvas-frame {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 400 / 600;
+        background: var(--color-bg-space);
+        border: 2px solid var(--color-panel);
+        border-radius: var(--radius-panel);
+        overflow: hidden;
+      }
+
+      #game-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #game-canvas canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* 상태 오버레이 공통 */
+      .screen {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-hud-gap);
+        text-align: center;
+        padding: 16px;
+        background: rgba(11, 14, 26, 0.86);
+        border-radius: var(--radius-panel);
+        z-index: 2;
+      }
+
+      .screen[hidden] {
+        display: none;
+      }
+
+      .screen--start .screen__title,
+      .screen--gameover .screen__title {
+        font-size: var(--font-size-title);
+        margin: 0;
+      }
+
+      .screen--gameover .screen__title {
+        color: var(--color-danger);
+      }
+
+      .screen--pause .screen__title {
+        font-size: var(--font-size-title);
+        color: var(--color-accent-primary);
+        margin: 0;
+      }
+
+      .screen__hint {
+        max-width: 280px;
+        line-height: 1.5;
+        opacity: 0.85;
+      }
+
+      .btn {
+        font: inherit;
+        font-size: var(--font-size-score);
+        padding: 10px 24px;
+        border: none;
+        border-radius: var(--radius-panel);
+        cursor: pointer;
+      }
+
+      .btn--primary {
+        background: var(--color-accent-primary);
+        color: var(--color-bg-space);
+        font-weight: 700;
+      }
+
+      .btn--primary:focus-visible {
+        outline: 3px solid var(--color-text-primary);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="game-root">
+      <div class="hud">
+        <span class="hud__stat" id="hud-score">점수 0</span>
+        <span class="hud__stat" id="hud-lives">목숨 3</span>
+        <span class="hud__stat" id="hud-highscore">최고 0</span>
+      </div>
+
+      <div class="canvas-frame">
+        <div id="game-canvas"></div>
+
+        <!-- start 상태 -->
+        <section
+          class="screen screen--start"
+          id="start-screen"
+          role="dialog"
+          aria-label="시작 화면"
+        >
+          <h1 class="screen__title">Space Defender</h1>
+          <p class="screen__hint">
+            방향키 ←/→ 이동 · 스페이스 발사 · P 일시정지
+          </p>
+          <button
+            class="btn btn--primary"
+            id="start-button"
+            type="button"
+            aria-label="게임 시작"
+          >
+            게임 시작
+          </button>
+        </section>
+
+        <!-- paused 상태 -->
+        <section
+          class="screen screen--pause"
+          id="pause-overlay"
+          role="dialog"
+          aria-label="일시정지"
+          hidden
+        >
+          <p class="screen__title">일시정지</p>
+          <p class="screen__hint">P 키를 눌러 계속</p>
+        </section>
+
+        <!-- gameover 상태 -->
+        <section
+          class="screen screen--gameover"
+          id="gameover-screen"
+          role="dialog"
+          aria-label="게임 오버"
+          hidden
+        >
+          <h2 class="screen__title">게임 오버</h2>
+          <p class="screen__hint" id="final-score">최종 점수 0</p>
+          <button
+            class="btn btn--primary"
+            id="restart-button"
+            type="button"
+            aria-label="다시 시작"
+          >
+            다시 시작
+          </button>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="./src/game.js"></script>
+  </body>
+</html>
