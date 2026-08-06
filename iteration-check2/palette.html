@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>브랜드 팔레트</title>
+    <style>
+      /* frozen design token (§3.4) */
+      :root {
+        --brand-primary: #2563eb;
+        --brand-secondary: #7c3aed;
+        --brand-accent: #f59e0b;
+        --brand-neutral: #111827;
+        --palette-card-gap: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: #111827;
+        background: #f8fafc;
+      }
+
+      .palette {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+
+      .palette__title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+
+      .palette__intro {
+        margin: 0 0 20px;
+        color: #475569;
+        font-size: 14px;
+      }
+
+      /* 320px 이상에서 content overflow 없이 1~4열 재배치 (§5 반응형) */
+      #palette-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: var(--palette-card-gap);
+      }
+
+      .palette__card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #ffffff;
+      }
+
+      .palette__card:focus-visible {
+        outline: 2px solid var(--brand-primary);
+        outline-offset: 2px;
+      }
+
+      .palette__swatch {
+        display: block;
+        height: 88px;
+        border-radius: 8px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+      }
+
+      .palette__name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .palette__value {
+        font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        color: #334155;
+      }
+
+      .palette__copy {
+        font: inherit;
+        font-size: 14px;
+        padding: 8px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #f1f5f9;
+        color: #0f172a;
+        cursor: pointer;
+      }
+
+      .palette__copy:hover {
+        background: #e2e8f0;
+      }
+
+      .palette__copy:focus-visible {
+        outline: 2px solid var(--brand-primary);
+        outline-offset: 2px;
+      }
+
+      .palette__copy:disabled {
+        cursor: default;
+        opacity: 0.7;
+      }
+
+      .palette__status {
+        min-height: 1.4em;
+        margin: 20px 0 0;
+        font-size: 14px;
+        color: #334155;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="palette-root" class="palette">
+      <h1 class="palette__title">브랜드 팔레트</h1>
+      <p class="palette__intro">브랜드 색상 4종의 hex 값을 복사해 코드·디자인에 재사용하세요.</p>
+      <div id="palette-grid"></div>
+      <p id="palette-status" class="palette__status" role="status" aria-live="polite"></p>
+    </main>
+    <script type="module" src="palette.js"></script>
+  </body>
+</html>
