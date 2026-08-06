@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>클릭 카운터</title>
+    <style>
+      /* frozen design token (§4.3) */
+      :root {
+        --color-action-primary: #2563eb;
+        --color-count-text: #111827;
+        --space-control-gap: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--color-count-text);
+        background: #f8fafc;
+      }
+
+      .counter {
+        max-width: 360px;
+        margin: 0 auto;
+        padding: 24px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        text-align: center;
+      }
+
+      .counter__value {
+        margin: 0 0 20px;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--color-count-text);
+      }
+
+      .counter__controls {
+        display: flex;
+        justify-content: center;
+        gap: var(--space-control-gap);
+        flex-wrap: wrap; /* 320px 이상에서 overflow 없이 줄바꿈 */
+      }
+
+      .counter__controls button {
+        font: inherit;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        cursor: pointer;
+      }
+
+      .counter__increment {
+        background: var(--color-action-primary);
+        color: #ffffff;
+      }
+
+      .counter__reset {
+        background: #ffffff;
+        color: var(--color-count-text);
+        border-color: #d1d5db;
+      }
+
+      .counter__controls button:focus-visible {
+        outline: 2px solid var(--color-action-primary);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div id="counter-root" class="counter">
+        <p id="counter-value" class="counter__value" aria-live="polite">클릭 횟수: 0</p>
+        <div class="counter__controls">
+          <button id="counter-increment" class="counter__increment" type="button" aria-label="카운트 증가">+1</button>
+          <button id="counter-reset" class="counter__reset" type="button" aria-label="카운트 초기화">초기화</button>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="./counter.js"></script>
+  </body>
+</html>
