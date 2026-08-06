@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG 슬라이딩 퍼즐 — 디자인 토큰 카탈로그</title>
+    <style>
+      /* frozen 디자인 토큰(설계 §3.4) — 유일 권위, 재정의 금지 */
+      :root {
+        --color-bg: #0f172a;
+        --color-surface: #1e293b;
+        --color-tile: #f8fafc;
+        --color-tile-text: #0f172a;
+        --color-accent: #2563eb;
+        --space-tile-gap: 8px;
+        --radius-tile: 12px;
+        --font-size-tile: 28px;
+        --shadow-tile: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--color-bg);
+        color: var(--color-tile);
+        font-family: system-ui, sans-serif;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      table {
+        width: 100%;
+        max-width: 720px;
+        border-collapse: collapse;
+        background: var(--color-surface);
+        border-radius: var(--radius-tile);
+        overflow: hidden;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(248, 250, 252, 0.1);
+      }
+      code {
+        font-family: ui-monospace, monospace;
+        color: var(--color-accent);
+      }
+      .swatch {
+        display: inline-block;
+        width: 40px;
+        height: 24px;
+        border-radius: 6px;
+        vertical-align: middle;
+        border: 1px solid rgba(248, 250, 252, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>디자인 토큰 카탈로그</h1>
+    <p>아래 값은 frozen UI 계약(설계 §3.4)의 CSS 변수를 그대로 시각화한 참조 자료입니다.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>토큰</th>
+          <th>값</th>
+          <th>미리보기</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>--color-bg</code></td>
+          <td><code>#0f172a</code></td>
+          <td><span class="swatch" style="background: #0f172a"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-surface</code></td>
+          <td><code>#1e293b</code></td>
+          <td><span class="swatch" style="background: #1e293b"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-tile</code></td>
+          <td><code>#f8fafc</code></td>
+          <td><span class="swatch" style="background: #f8fafc"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-tile-text</code></td>
+          <td><code>#0f172a</code></td>
+          <td><span class="swatch" style="background: #0f172a"></span></td>
+        </tr>
+        <tr>
+          <td><code>--color-accent</code></td>
+          <td><code>#2563eb</code></td>
+          <td><span class="swatch" style="background: #2563eb"></span></td>
+        </tr>
+        <tr>
+          <td><code>--space-tile-gap</code></td>
+          <td><code>8px</code></td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><code>--radius-tile</code></td>
+          <td><code>12px</code></td>
+          <td>
+            <span class="swatch" style="background: #f8fafc; border-radius: 12px"></span>
+          </td>
+        </tr>
+        <tr>
+          <td><code>--font-size-tile</code></td>
+          <td><code>28px</code></td>
+          <td style="font-size: 28px; color: #f8fafc">15</td>
+        </tr>
+        <tr>
+          <td><code>--shadow-tile</code></td>
+          <td><code>0 2px 6px rgba(0,0,0,0.3)</code></td>
+          <td>
+            <span
+              class="swatch"
+              style="background: #f8fafc; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3)"
+            ></span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG 슬라이딩 퍼즐 (15-퍼즐)</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="puzzle-page">
+      <section class="puzzle" data-state="start" aria-labelledby="puzzle-title">
+        <h1 id="puzzle-title">SVG 슬라이딩 퍼즐</h1>
+
+        <div class="puzzle__hud">
+          <p class="puzzle__stat">
+            이동 횟수: <span id="move-count">0</span>
+          </p>
+          <p class="puzzle__stat">
+            경과 시간: <span id="elapsed-time">00:00</span>
+          </p>
+          <p class="puzzle__stat" id="puzzle-status" aria-live="polite">상태: 준비</p>
+        </div>
+
+        <div class="puzzle__board-wrap">
+          <svg
+            id="puzzle-board"
+            class="puzzle__board"
+            viewBox="0 0 392 392"
+            role="group"
+            aria-label="4x4 슬라이딩 퍼즐 보드"
+          >
+            <g id="puzzle-tiles"></g>
+          </svg>
+
+          <div id="clear-screen" class="puzzle__clear" role="status" hidden>
+            <p class="puzzle__clear-title">클리어!</p>
+            <p class="puzzle__clear-text">
+              1부터 15까지 모두 정렬했습니다. 상태: 완료
+            </p>
+          </div>
+        </div>
+
+        <div class="puzzle__controls">
+          <button
+            id="restart-button"
+            type="button"
+            class="puzzle__restart"
+            aria-label="퍼즐 재시작"
+          >
+            재시작
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/render.js"></script>
+  </body>
+</html>
