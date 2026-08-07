@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>슈퍼마리오 1-1 시각 mockup (BF-1876)</title>
+  <style>
+    /* ── frozen 계약 토큰 (ui-contract@v1 — 값·이름 재정의 금지) ── */
+    :root{
+      --color-sky:#5c94fc;
+      --color-ground:#c84c0c;
+      --color-brick:#e45c10;
+      --color-mario:#d82800;
+      --space-hud-gap:12px;
+
+      /* ── mockup 보조값 (계약 토큰 아님 — 시각화 전용) ── */
+      --hud-bg:#000000;
+      --hud-fg:#ffffff;
+      --overlay-veil:rgba(0,0,0,0.55);
+      --cleared-accent:#f8d800;
+      --mono:ui-monospace,"SFMono-Regular","Consolas","Menlo",monospace;
+    }
+
+    *{box-sizing:border-box;}
+    body{
+      margin:0; padding:24px;
+      background:#1a1a1a; color:#e6e6e6;
+      font-family:var(--mono);
+    }
+    .page-title{font-size:18px; letter-spacing:.04em; margin:0 0 4px;}
+    .page-sub{font-size:12px; color:#9a9a9a; margin:0 0 20px; line-height:1.5;}
+
+    .grid{
+      display:grid; gap:20px;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    }
+    .cell{background:#242424; border:1px solid #333; border-radius:8px; padding:14px;}
+    .cell h2{
+      font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+      margin:0 0 4px; color:#c8c8c8;
+    }
+    .cell .aria{font-size:11px; color:#8a8a8a; margin:0 0 10px;}
+
+    /* ── frozen DOM 구조: #game-root/.game ── */
+    .game{
+      display:flex; flex-direction:column;
+      width:100%; max-width:512px; margin:0 auto;
+      background:#000; border-radius:4px; overflow:hidden;
+    }
+    /* #game-hud/.game__hud — flex, space-between, gap: var(--space-hud-gap) */
+    .game__hud{
+      display:flex; justify-content:space-between; align-items:center;
+      gap:var(--space-hud-gap);
+      background:var(--hud-bg); color:var(--hud-fg);
+      padding:6px 10px;
+    }
+    /* #game-score/.game__score */
+    .game__score{
+      font-family:var(--mono); font-size:16px; font-weight:700;
+      letter-spacing:.08em; white-space:nowrap;
+    }
+    /* #game-start/.game__start */
+    .game__start{
+      font-family:var(--mono); font-size:14px; font-weight:700;
+      letter-spacing:.06em;
+      background:var(--hud-fg); color:#000;
+      border:2px solid #000; border-radius:3px;
+      padding:4px 12px; cursor:pointer;
+    }
+    .game__start:hover{background:#ffe37a;}
+    .game__start:disabled{opacity:.4; cursor:default;}
+
+    /* #game-canvas/.game__canvas — 논리 256×240, CSS 폭만 축소 */
+    .game__canvas{
+      position:relative;
+      width:100%; aspect-ratio:256/240; max-width:100%;
+      background:var(--color-sky);
+      image-rendering:pixelated;
+      overflow:hidden;
+    }
+
+    /* ── canvas 내부 픽셀 표현 (mockup 시각화: 실제 렌더는 developer) ── */
+    .cloud{position:absolute; width:34px; height:14px; background:#fff; border-radius:8px; opacity:.9;}
+    .brick{position:absolute; width:24px; height:24px; background:var(--color-brick);
+           box-shadow:inset 0 0 0 2px rgba(0,0,0,.25); }
+    .qblock{position:absolute; width:24px; height:24px; background:var(--color-brick);
+            display:flex; align-items:center; justify-content:center;
+            color:#fff; font-weight:700; font-size:16px;
+            box-shadow:inset 0 0 0 2px rgba(0,0,0,.35);}
+    .mario{position:absolute; width:20px; height:26px; background:var(--color-mario);
+           box-shadow:inset 0 -8px 0 rgba(0,0,0,.18);}
+    .ground{position:absolute; left:0; bottom:0; width:100%; height:40px;
+            background:var(--color-ground);
+            box-shadow:inset 0 4px 0 rgba(0,0,0,.18);}
+    .gap{position:absolute; bottom:0; height:40px; width:44px; background:var(--color-sky);}
+    .flag{position:absolute; bottom:40px; width:4px; height:70px; background:#e6e6e6;}
+    .flag::after{content:""; position:absolute; top:2px; left:4px;
+                 border:8px solid transparent; border-left-color:var(--cleared-accent);}
+
+    /* ── 상태 오버레이 ── */
+    .overlay{
+      position:absolute; inset:0;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:8px; text-align:center;
+      background:var(--overlay-veil); color:#fff;
+    }
+    .overlay .state-text{font-size:30px; font-weight:700; letter-spacing:.12em;}
+    .overlay .state-hint{font-size:12px; font-weight:400; letter-spacing:.02em; opacity:.85;}
+    .overlay.gameover .state-text{color:var(--color-mario);}
+    .overlay.cleared .state-text{color:var(--cleared-accent);}
+
+    .legend{margin-top:26px; font-size:12px; color:#9a9a9a; line-height:1.7;}
+    .legend h3{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#c8c8c8; margin:0 0 6px;}
+    .swatch{display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:middle; margin-right:6px; border:1px solid rgba(255,255,255,.2);}
+    code{background:#111; padding:1px 5px; border-radius:3px; color:#d8d8d8;}
+
+    /* 반응형 데모: 좁은 화면에서도 HUD 겹침 없음 · canvas 폭 축소 */
+    @media (max-width:360px){
+      .overlay .state-text{font-size:24px;}
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">슈퍼마리오 1-1 · 시각 mockup (BF-1876)</h1>
+  <p class="page-sub">
+    frozen <code>ui-contract@v1</code> 의 selector·token·상태·접근성·반응형을 시각화한 시안입니다.
+    아래 5개 상태(<code>ready</code>/<code>playing</code>/<code>paused</code>/<code>gameover</code>/<code>cleared</code>)는
+    동일한 <code>#game-root</code> 골격을 공유하며 상태 텍스트·HUD·오버레이만 달라집니다.
+    이 mockup 은 시각화 전용이며 developer 의 runtime 산출물이 아닙니다.
+  </p>
+
+  <div class="grid">
+
+    <!-- ready -->
+    <div class="cell">
+      <h2>ready</h2>
+      <p class="aria">화면 텍스트 <code>READY</code> · aria "준비 상태"</p>
+      <div id="game-root" class="game">
+        <div id="game-hud" class="game__hud">
+          <span id="game-score" class="game__score">SCORE 000000</span>
+          <button id="game-start" class="game__start" aria-label="게임 시작">시작</button>
+        </div>
+        <div id="game-canvas" class="game__canvas" role="img" aria-label="슈퍼마리오 1-1 게임 화면">
+          <div class="cloud" style="top:24px; left:30px;"></div>
+          <div class="qblock" style="top:96px; left:150px;">?</div>
+          <div class="brick" style="top:96px; left:126px;"></div>
+          <div class="mario" style="bottom:40px; left:44px;"></div>
+          <div class="ground"></div>
+          <div class="overlay ready" aria-live="assertive">
+            <span class="state-text">READY</span>
+            <span class="state-hint">시작을 누르세요</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- playing -->
+    <div class="cell">
+      <h2>playing</h2>
+      <p class="aria">오버레이 없음 · HUD SCORE 갱신 · aria "진행 중"</p>
+      <div class="game">
+        <div class="game__hud">
+          <span class="game__score">SCORE 001250</span>
+          <button class="game__start" aria-label="게임 시작" disabled>시작</button>
+        </div>
+        <div class="game__canvas" role="img" aria-label="슈퍼마리오 1-1 게임 화면 (진행 중)">
+          <div class="cloud" style="top:20px; left:120px;"></div>
+          <div class="qblock" style="top:96px; left:150px;">?</div>
+          <div class="brick" style="top:96px; left:126px;"></div>
+          <div class="brick" style="top:96px; left:174px;"></div>
+          <div class="mario" style="bottom:82px; left:96px;"></div>
+          <div class="gap" style="left:150px;"></div>
+          <div class="ground"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- paused -->
+    <div class="cell">
+      <h2>paused</h2>
+      <p class="aria">화면 텍스트 <code>PAUSED</code> · aria "일시정지"</p>
+      <div class="game">
+        <div class="game__hud">
+          <span class="game__score">SCORE 001250</span>
+          <button class="game__start" aria-label="게임 시작">시작</button>
+        </div>
+        <div class="game__canvas" role="img" aria-label="슈퍼마리오 1-1 게임 화면 (일시정지)">
+          <div class="cloud" style="top:20px; left:120px;"></div>
+          <div class="qblock" style="top:96px; left:150px;">?</div>
+          <div class="brick" style="top:96px; left:126px;"></div>
+          <div class="mario" style="bottom:40px; left:110px;"></div>
+          <div class="ground"></div>
+          <div class="overlay paused" aria-live="assertive">
+            <span class="state-text">PAUSED</span>
+            <span class="state-hint">일시정지</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- gameover -->
+    <div class="cell">
+      <h2>gameover</h2>
+      <p class="aria">화면 텍스트 <code>GAME OVER</code> · aria "게임 오버"</p>
+      <div class="game">
+        <div class="game__hud">
+          <span class="game__score">SCORE 001250</span>
+          <button class="game__start" aria-label="게임 시작">시작</button>
+        </div>
+        <div class="game__canvas" role="img" aria-label="슈퍼마리오 1-1 게임 화면 (게임 오버)">
+          <div class="cloud" style="top:24px; left:40px;"></div>
+          <div class="gap" style="left:120px;"></div>
+          <div class="ground"></div>
+          <div class="overlay gameover" aria-live="assertive">
+            <span class="state-text">GAME OVER</span>
+            <span class="state-hint">시작을 눌러 다시 시작</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- cleared -->
+    <div class="cell">
+      <h2>cleared</h2>
+      <p class="aria">화면 텍스트 <code>CLEARED</code> · aria "클리어"</p>
+      <div class="game">
+        <div class="game__hud">
+          <span class="game__score">SCORE 004800</span>
+          <button class="game__start" aria-label="게임 시작">시작</button>
+        </div>
+        <div class="game__canvas" role="img" aria-label="슈퍼마리오 1-1 게임 화면 (클리어)">
+          <div class="cloud" style="top:24px; left:30px;"></div>
+          <div class="flag" style="right:36px;"></div>
+          <div class="mario" style="bottom:40px; right:60px;"></div>
+          <div class="ground"></div>
+          <div class="overlay cleared" aria-live="assertive">
+            <span class="state-text">CLEARED</span>
+            <span class="state-hint">축하합니다 · 시작을 눌러 재시작</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <h3>팔레트 (frozen 계약 토큰)</h3>
+    <div><span class="swatch" style="background:#5c94fc"></span><code>--color-sky #5c94fc</code> — 배경 하늘</div>
+    <div><span class="swatch" style="background:#c84c0c"></span><code>--color-ground #c84c0c</code> — 지면 블록</div>
+    <div><span class="swatch" style="background:#e45c10"></span><code>--color-brick #e45c10</code> — 벽돌·물음표 블록</div>
+    <div><span class="swatch" style="background:#d82800"></span><code>--color-mario #d82800</code> — 마리오</div>
+    <div><span class="swatch" style="background:#000"></span><code>--space-hud-gap 12px</code> — HUD 요소 간격(flex gap)</div>
+    <h3 style="margin-top:14px;">보조값 (계약 아님 · 시각화 전용)</h3>
+    <div><span class="swatch" style="background:#000"></span>HUD 배경 <code>#000000</code> / 텍스트 <code>#ffffff</code></div>
+    <div><span class="swatch" style="background:#f8d800"></span>cleared 강조 <code>#f8d800</code> · gameover 강조는 <code>--color-mario</code> 재사용</div>
+  </div>
+</body>
+</html>
