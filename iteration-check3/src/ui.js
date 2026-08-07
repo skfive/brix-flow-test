@@ -2,13 +2,12 @@
 // BF-1856 · game.js 의 5개 순수 함수만 통해 로직에 접근.
 import {
   createBoard,
-  canMove,
   shuffle,
   checkWin,
   computeScore,
-  CELL_COUNT,
   COLS,
 } from './game.js';
+import { resolveClick } from './interaction.js';
 
 const SUIT_SYMBOL = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
 const SUIT_LABEL = { hearts: '하트', diamonds: '다이아몬드', clubs: '클로버', spades: '스페이드' };
@@ -96,36 +95,24 @@ function render() {
   updateHud();
 }
 
-// 카드 i 가 이동 가능한 빈 칸 대상을 찾는다(없으면 -1).
-function findTarget(i) {
-  for (let to = 0; to < CELL_COUNT; to++) {
-    if (state.board[to] === null && canMove(state.board, i, to)) return to;
-  }
-  return -1;
-}
-
-function tryMove(i) {
+// 클릭/키보드로 지정한 칸 index 를 2단계 모델(선택→이동)로 처리한다.
+// 순수 전이는 resolveClick 이 담당하고, 여기서는 그 결과를 module state 와
+// 부수효과(타이머 시작·승리·렌더)에 반영한다.
+function applyClick(index) {
   if (state.status !== 'playing') return;
-  const card = state.board[i];
-  if (!card) return;
-  if (isAnchorCell(i) && card.rank === 1) return; // 앵커 이동 불가
+  const prevMoves = state.moves;
+  state = resolveClick(state, index);
 
-  const to = findTarget(i);
-  if (to === -1) return; // 유효한 대상 없음
-
-  if (state.startedAt === null) {
-    state.startedAt = Date.now();
-    ensureTimer();
-  }
-  state.board[to] = card;
-  state.board[i] = null;
-  state.moves += 1;
-  state.score = computeScore(state.board);
-  state.selected = null;
-
-  if (checkWin(state.board)) {
-    win();
-    return;
+  if (state.moves > prevMoves) {
+    // 실제 이동이 발생한 경우에만 타이머/승리 판정.
+    if (state.startedAt === null) {
+      state.startedAt = Date.now();
+      ensureTimer();
+    }
+    if (checkWin(state.board)) {
+      win();
+      return;
+    }
   }
   render();
 }
@@ -172,25 +159,18 @@ function restart() {
 }
 
 function onBoardClick(e) {
+  // 카드·빈 칸 모두 처리(빈 칸을 .card 가드로 걸러내던 것이 이동 실패의 원인).
   const cell = e.target.closest('.cell');
-  if (!cell || !cell.classList.contains('card')) return;
-  tryMove(Number(cell.dataset.index));
+  if (!cell) return;
+  applyClick(Number(cell.dataset.index));
 }
 
 function onBoardKeydown(e) {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   const cell = e.target.closest('.cell');
-  if (!cell || !cell.classList.contains('card')) return;
-  e.preventDefault();
-  tryMove(Number(cell.dataset.index));
-}
-
-function onBoardFocusIn(e) {
-  const cell = e.target.closest('.cell');
   if (!cell) return;
-  el('game-board').querySelectorAll('.selected').forEach((c) => c.classList.remove('selected'));
-  cell.classList.add('selected');
-  state.selected = Number(cell.dataset.index);
+  e.preventDefault();
+  applyClick(Number(cell.dataset.index));
 }
 
 function setup() {
@@ -198,7 +178,6 @@ function setup() {
   const boardEl = el('game-board');
   boardEl.addEventListener('click', onBoardClick);
   boardEl.addEventListener('keydown', onBoardKeydown);
-  boardEl.addEventListener('focusin', onBoardFocusIn);
   el('btn-shuffle').addEventListener('click', doShuffle);
   el('btn-restart').addEventListener('click', restart);
   render();

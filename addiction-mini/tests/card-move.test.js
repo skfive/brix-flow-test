@@ -1,16 +1,15 @@
 // Addiction Mini — 카드 이동 클릭 로직 재현 및 회귀 테스트 (BF-1861)
 // 버그: 카드 선택 후 목표 빈 칸을 클릭해도 이동/교체되지 않는다.
 // 재현/회귀 불변식은 docs/plans/BF-1860/implementation-plan.md §2 를 따른다.
+//
+// 브라우저가 실제로 실행하는 경로를 검증한다: iteration-check3/src/ui.js 의
+// onBoardClick → applyClick → resolveClick(interaction.js). 순수 전이 함수
+// resolveClick 을 직접 단언해 DOM 없이 클릭 핸들러의 상태 전이를 확인한다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-  makeCard,
-  canMove,
-  resolveClick,
-  isAnchorCell,
-  CELL_COUNT,
-} from '../game.js';
+import { makeCard, canMove, CELL_COUNT } from '../../iteration-check3/src/game.js';
+import { resolveClick, isAnchorCell } from '../../iteration-check3/src/interaction.js';
 
 // 결정적 테스트 보드 구성.
 // index 0 = ♥A(앵커), index 1 = 빈 칸(목표 T), index 2 = ♥2(이동 카드 C).
