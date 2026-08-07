@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>탭 전환 데모</title>
+  <style>
+    :root {
+      --color-tab-active: #2563eb;
+      --color-tab-inactive: #64748b;
+      --space-tab-gap: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #0f172a;
+    }
+
+    .tabs {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .tabs__tablist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-tab-gap);
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: var(--space-tab-gap);
+    }
+
+    .tabs__tab {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font: inherit;
+      color: var(--color-tab-inactive);
+      cursor: pointer;
+    }
+
+    .tabs__tab--active {
+      color: var(--color-tab-active);
+      border-color: var(--color-tab-active);
+      font-weight: 600;
+    }
+
+    .tabs__tab:focus-visible {
+      outline: 2px solid var(--color-tab-active);
+      outline-offset: 2px;
+    }
+
+    .tabs__panel {
+      padding: 16px 0;
+    }
+
+    .tabs__panel--active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabs">
+    <div class="tabs__tablist" role="tablist" aria-label="탭 데모">
+      <button id="tab-first" class="tabs__tab tabs__tab--active" type="button"
+              role="tab" aria-selected="true" aria-controls="panel-first">첫 번째 탭</button>
+      <button id="tab-second" class="tabs__tab" type="button"
+              role="tab" aria-selected="false" aria-controls="panel-second">두 번째 탭</button>
+    </div>
+    <section id="panel-first" class="tabs__panel tabs__panel--active"
+             role="tabpanel" aria-labelledby="tab-first">첫 번째 탭 내용</section>
+    <section id="panel-second" class="tabs__panel"
+             role="tabpanel" aria-labelledby="tab-second" hidden>두 번째 탭 내용</section>
+  </div>
+
+  <script type="module" src="./tabs.js"></script>
+</body>
+</html>
