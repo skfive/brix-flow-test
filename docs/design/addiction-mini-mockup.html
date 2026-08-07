@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Addiction Mini — 시각 mockup (BF-1855)</title>
+  <style>
+    /* ===== frozen design tokens (docs/plans/BF-1854 §3.4 — exact, 재정의 금지) ===== */
+    :root {
+      --color-bg: #1b1030;
+      --color-board-panel: #1a8a89;
+      --color-hud-bg: #12203a;
+      --color-hud-text: #e8f0f0;
+      --color-card-face: #ffffff;
+      --color-card-anchor: #c9c9c9;
+      --color-suit-red: #d81e2c;
+      --color-suit-black: #1a1a1a;
+      --color-empty-cell: #0f5c5c;
+      --space-card-gap: 8px;
+      /* mockup 시각화 파생값(계약 아님) */
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      --shadow-card: 0 2px 5px rgba(0,0,0,.28);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--color-bg);
+      color: var(--color-hud-text);
+      font-family: var(--font-sans);
+      padding: 24px 12px 48px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page-note {
+      max-width: 560px;
+      margin: 0 auto 20px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #b9c6d6;
+      background: rgba(18,32,58,.55);
+      border: 1px solid rgba(232,240,240,.12);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .page-note strong { color: var(--color-hud-text); }
+
+    .section-label {
+      max-width: 560px;
+      margin: 34px auto 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #8ea6c0;
+    }
+
+    /* ===== game-root ===== */
+    #game-root {
+      max-width: 560px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px;
+      background: rgba(0,0,0,.14);
+      border-radius: 16px;
+    }
+
+    /* ===== HUD (hud / hud__stat) ===== */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--color-hud-bg);
+      color: var(--color-hud-text);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+    }
+    .hud__stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+    .hud__stat .label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      opacity: .82;
+    }
+    .hud__stat .value {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ===== board (board / cell / card / anchor / empty) ===== */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: var(--space-card-gap);
+      background: var(--color-board-panel);
+      border: 1px solid rgba(0,0,0,.25);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .cell {
+      position: relative;
+      aspect-ratio: 5 / 7;
+      min-width: 0;
+      border-radius: 8px;
+      user-select: none;
+    }
+
+    /* 카드 */
+    .card {
+      background: var(--color-card-face);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card .corner {
+      position: absolute;
+      top: 4px;
+      left: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card .pip {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .card--red { color: var(--color-suit-red); }
+    .card--black { color: var(--color-suit-black); }
+
+    /* 앵커(빈 칸이 요구하는 카드 힌트) */
+    .card--anchor {
+      background: var(--color-card-anchor);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed rgba(0,0,0,.28);
+    }
+    .card--anchor .anchor-hint {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.05;
+      text-align: center;
+      opacity: .55;
+    }
+    .card--anchor .anchor-tag {
+      margin-top: 3px;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: #4a4a4a;
+      opacity: .9;
+    }
+
+    /* 빈 칸 실루엣 (dead gap 포함) */
+    .cell--empty {
+      background: var(--color-empty-cell);
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cell--empty .empty-tag {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: rgba(232,240,240,.62);
+    }
+
+    /* selected 상태 (색 비의존: 굵은 outline + ✓ 배지) */
+    .card.selected {
+      outline: 3px solid #ffd24a;
+      outline-offset: -1px;
+      transform: scale(1.04);
+      z-index: 2;
+    }
+    .card.selected::after {
+      content: "✓ 선택됨";
+      position: absolute;
+      bottom: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 8px;
+      font-weight: 800;
+      color: #7a5a00;
+      background: #ffd24a;
+      border-radius: 6px;
+      padding: 1px 4px;
+      white-space: nowrap;
+    }
+
+    /* ===== controls (controls / controls__btn) ===== */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .controls__btn {
+      flex: 1;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--color-hud-bg);
+      color: var(--color-hud-text);
+      border: 1px solid rgba(232,240,240,.16);
+      border-radius: 999px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .controls__btn .ico { font-size: 15px; line-height: 1; }
+    .controls__btn:focus-visible {
+      outline: 3px solid #ffd24a;
+      outline-offset: 2px;
+    }
+    /* shuffle-disabled (색 비의존: 흐림 + '사용함' 텍스트 + aria-disabled) */
+    .controls__btn[aria-disabled="true"] {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    /* ===== win-overlay / win-banner ===== */
+    .stage { position: relative; }
+    #win-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(27,16,48,.86);
+      border-radius: 16px;
+    }
+    #win-overlay[hidden] { display: none; }
+    .win-banner {
+      text-align: center;
+      background: var(--color-hud-bg);
+      border: 1px solid rgba(232,240,240,.18);
+      border-radius: 16px;
+      padding: 22px 26px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    .win-banner h2 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--color-hud-text);
+    }
+    .win-banner p {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: #b9c6d6;
+    }
+    .win-banner .again {
+      min-height: 40px;
+      padding: 0 18px;
+      background: var(--color-board-panel);
+      color: #06231f;
+      border: none;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* 상태 배지 (색 비의존 텍스트) */
+    .state-badge {
+      display: inline-block;
+      margin: 0 auto 8px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(26,138,137,.22);
+      border: 1px solid rgba(26,138,137,.5);
+      color: #7fe3e0;
+    }
+    .center { text-align: center; }
+
+    /* 미니 보드(상태 변형 시연용) */
+    .mini { max-width: 320px; }
+    .legend {
+      max-width: 560px;
+      margin: 12px auto 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      font-size: 11px;
+      color: #b9c6d6;
+    }
+    .legend .item { display: flex; align-items: center; gap: 8px; }
+    .legend .sw {
+      width: 22px; height: 22px; border-radius: 5px; flex: none;
+      border: 1px solid rgba(0,0,0,.3);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-note">
+    <strong>Addiction Mini — 시각 mockup (BF-1855)</strong><br>
+    planner frozen UI 계약(<code>docs/plans/BF-1854</code> §3)의 selector·상태·token 을 그대로 시각화한 <strong>정적 시안</strong>입니다.
+    실제 앱 코드가 아니며 dev 산출물(<code>iteration-check3/</code>)과 별개입니다. 명세: <code>docs/design/addiction-mini-BF-1854.md</code>.
+  </div>
+
+  <!-- ================= 메인 playing 상태 ================= -->
+  <div class="section-label">화면 — playing 상태 (4×7 보드 · HUD · 컨트롤)</div>
+  <div id="game-root" class="stage">
+
+    <!-- HUD -->
+    <div class="hud">
+      <div class="hud__stat"><span class="label">SCORE</span><span class="value" id="hud-score">09</span></div>
+      <div class="hud__stat"><span class="label">TIME</span><span class="value" id="hud-time">02:37</span></div>
+      <div class="hud__stat"><span class="label">MOVES</span><span class="value" id="hud-moves">14</span></div>
+    </div>
+
+    <!-- board 4×7 = 28칸 (row-major) -->
+    <div class="board" id="game-board" aria-label="게임 보드, 4행 7열">
+      <!-- row 0 : H1 H2 H3 [anchor 4♥] S6 [dead-gap empty] C1 -->
+      <div class="cell card card--red"><span class="corner">A<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card card--red"><span class="corner">2<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card card--red"><span class="corner">3<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card--anchor" aria-label="빈 칸, 다음 이동 힌트 4 하트"><span class="anchor-hint" style="color:var(--color-suit-red)">4♥</span><span class="anchor-tag">놓을 곳</span></div>
+      <div class="cell card card--black"><span class="corner">6<span>♠</span></span><span class="pip">♠</span></div>
+      <div class="cell cell--empty" aria-label="빈 칸, 이동 불가"><span class="empty-tag">막힘</span></div>
+      <div class="cell card card--black"><span class="corner">A<span>♣</span></span><span class="pip">♣</span></div>
+
+      <!-- row 1 : S1 S2 S3 S4 [anchor 5♠] H5 C2 -->
+      <div class="cell card card--black"><span class="corner">A<span>♠</span></span><span class="pip">♠</span></div>
+      <div class="cell card card--black"><span class="corner">2<span>♠</span></span><span class="pip">♠</span></div>
+      <div class="cell card card--black"><span class="corner">3<span>♠</span></span><span class="pip">♠</span></div>
+      <div class="cell card card--black"><span class="corner">4<span>♠</span></span><span class="pip">♠</span></div>
+      <div class="cell card--anchor" aria-label="빈 칸, 다음 이동 힌트 5 스페이드"><span class="anchor-hint" style="color:var(--color-suit-black)">5♠</span><span class="anchor-tag">놓을 곳</span></div>
+      <div class="cell card card--red"><span class="corner">5<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card card--black"><span class="corner">2<span>♣</span></span><span class="pip">♣</span></div>
+
+      <!-- row 2 : D1 D2 H6 C3 C4 [anchor 5♣] D6 -->
+      <div class="cell card card--red"><span class="corner">A<span>♦</span></span><span class="pip">♦</span></div>
+      <div class="cell card card--red"><span class="corner">2<span>♦</span></span><span class="pip">♦</span></div>
+      <div class="cell card card--red"><span class="corner">6<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card card--black"><span class="corner">3<span>♣</span></span><span class="pip">♣</span></div>
+      <div class="cell card card--black"><span class="corner">4<span>♣</span></span><span class="pip">♣</span></div>
+      <div class="cell card--anchor" aria-label="빈 칸, 다음 이동 힌트 5 클럽"><span class="anchor-hint" style="color:var(--color-suit-black)">5♣</span><span class="anchor-tag">놓을 곳</span></div>
+      <div class="cell card card--red"><span class="corner">6<span>♦</span></span><span class="pip">♦</span></div>
+
+      <!-- row 3 : H4 S5 C5 C6 D3 D4 D5 -->
+      <div class="cell card card--red"><span class="corner">4<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card card--black"><span class="corner">5<span>♠</span></span><span class="pip">♠</span></div>
+      <div class="cell card card--black"><span class="corner">5<span>♣</span></span><span class="pip">♣</span></div>
+      <div class="cell card card--black"><span class="corner">6<span>♣</span></span><span class="pip">♣</span></div>
+      <div class="cell card card--red"><span class="corner">3<span>♦</span></span><span class="pip">♦</span></div>
+      <div class="cell card card--red"><span class="corner">4<span>♦</span></span><span class="pip">♦</span></div>
+      <div class="cell card card--red"><span class="corner">5<span>♦</span></span><span class="pip">♦</span></div>
+    </div>
+
+    <!-- controls -->
+    <div class="controls">
+      <button type="button" class="controls__btn" id="btn-settings" aria-label="설정"><span class="ico">⚙</span>설정</button>
+      <button type="button" class="controls__btn" id="btn-shuffle" aria-label="카드 섞기"><span class="ico">⤮</span>셔플</button>
+      <button type="button" class="controls__btn" id="btn-restart" aria-label="재시작"><span class="ico">⟲</span>재시작</button>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="item"><span class="sw" style="background:var(--color-board-panel)"></span>보드 패널 #1a8a89</div>
+    <div class="item"><span class="sw" style="background:var(--color-hud-bg)"></span>HUD 남색 #12203a</div>
+    <div class="item"><span class="sw" style="background:var(--color-card-anchor)"></span>앵커 회색 #c9c9c9</div>
+    <div class="item"><span class="sw" style="background:var(--color-empty-cell)"></span>빈 칸 실루엣 #0f5c5c</div>
+    <div class="item"><span class="sw" style="background:var(--color-suit-red)"></span>적색 무늬 #d81e2c</div>
+    <div class="item"><span class="sw" style="background:var(--color-bg);border-color:#555"></span>배경 #1b1030</div>
+  </div>
+
+  <!-- ================= 상태 변형: selected ================= -->
+  <div class="section-label">상태 변형 — selected (선택/포커스 카드)</div>
+  <div class="center">
+    <div class="board mini" style="margin:0 auto; grid-template-columns:repeat(4,1fr);" aria-label="selected 상태 예시">
+      <div class="cell card card--red selected" aria-label="3 하트, 선택됨"><span class="corner">3<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card--anchor"><span class="anchor-hint" style="color:var(--color-suit-red)">4♥</span><span class="anchor-tag">놓을 곳</span></div>
+      <div class="cell card card--black"><span class="corner">A<span>♠</span></span><span class="pip">♠</span></div>
+      <div class="cell cell--empty"><span class="empty-tag">막힘</span></div>
+    </div>
+    <p style="font-size:12px;color:#b9c6d6;max-width:320px;margin:8px auto 0">
+      선택 카드는 색상만이 아니라 <strong>굵은 outline + "✓ 선택됨" 텍스트 배지</strong>로 노출.
+      접근성 이름: "3 하트, 선택됨". Enter/Space 로 이동 실행.
+    </p>
+  </div>
+
+  <!-- ================= 상태 변형: won ================= -->
+  <div class="section-label">상태 변형 — won (승리 오버레이 · win-banner)</div>
+  <div class="stage mini" style="margin:0 auto; max-width:320px;">
+    <div class="board" style="grid-template-columns:repeat(4,1fr);" aria-hidden="true">
+      <div class="cell card card--red"><span class="corner">A<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card card--red"><span class="corner">2<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card card--red"><span class="corner">3<span>♥</span></span><span class="pip">♥</span></div>
+      <div class="cell card card--red"><span class="corner">4<span>♥</span></span><span class="pip">♥</span></div>
+    </div>
+    <!-- won 상태이므로 오버레이 표시 (playing 시엔 [hidden]) -->
+    <div id="win-overlay" role="alertdialog" aria-label="승리">
+      <div class="win-banner">
+        <div class="state-badge">상태: 승리(won)</div>
+        <h2>승리! 🎉</h2>
+        <p>모든 무늬를 A → 6 순서로 정렬 완료했습니다.</p>
+        <button type="button" class="again">다시 하기</button>
+      </div>
+    </div>
+  </div>
+  <p class="center" style="font-size:12px;color:#b9c6d6;max-width:320px;margin:8px auto 0">
+    승리는 색·이모지 단독이 아니라 <strong>"승리!" + "정렬 완료" 텍스트</strong>로 명시. 보드는 잠금.
+  </p>
+
+  <!-- ================= 상태 변형: shuffle-disabled ================= -->
+  <div class="section-label">상태 변형 — shuffle-disabled (셔플 1회 사용 후)</div>
+  <div class="center">
+    <div class="controls" style="max-width:320px;margin:0 auto;">
+      <button type="button" class="controls__btn" aria-label="설정"><span class="ico">⚙</span>설정</button>
+      <button type="button" class="controls__btn" aria-label="카드 섞기" aria-disabled="true"><span class="ico">⤮</span>셔플(사용함)</button>
+      <button type="button" class="controls__btn" aria-label="재시작"><span class="ico">⟲</span>재시작</button>
+    </div>
+    <p style="font-size:12px;color:#b9c6d6;max-width:360px;margin:8px auto 0">
+      셔플 버튼은 흐림 색상만이 아니라 <strong>라벨 "셔플(사용함)" + <code>aria-disabled="true"</code></strong>로 비활성을 텍스트/접근성 이름으로 노출.
+      재클릭은 무시(1회 제약). 재시작 시 다시 활성.
+    </p>
+  </div>
+
+</body>
+</html>
