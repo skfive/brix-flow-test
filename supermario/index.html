@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>슈퍼마리오 1-1</title>
+  <style>
+    :root {
+      --color-sky: #5c94fc;
+      --color-ground: #c84c0c;
+      --color-brick: #e45c10;
+      --color-mario: #d82800;
+      --space-hud-gap: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 16px;
+      background: #000;
+      color: #fff;
+      font-family: "Courier New", monospace;
+    }
+
+    .game {
+      width: 100%;
+      max-width: 512px;
+    }
+
+    /* HUD: flex + gap 으로 좁은 화면에서도 요소가 겹치지 않는다 */
+    .game__hud {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-hud-gap);
+      margin-bottom: 8px;
+    }
+
+    .game__score {
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
+
+    /* 상태 텍스트(additive) — 색상만이 아니라 텍스트/aria 로 상태 노출 */
+    .game__status {
+      font-size: 13px;
+      padding: 2px 8px;
+      border: 1px solid #fff;
+      border-radius: 2px;
+    }
+
+    .game__start {
+      margin-left: auto;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 4px 14px;
+      cursor: pointer;
+    }
+
+    /* 반응형: 논리 해상도는 256×240 고정, CSS 폭만 축소 */
+    .game__canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      aspect-ratio: 256 / 240;
+      image-rendering: pixelated;
+      background: var(--color-sky);
+      border: 2px solid #000;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-root" class="game">
+    <div id="game-hud" class="game__hud">
+      <span id="game-score" class="game__score">SCORE 000000</span>
+      <span id="game-status" class="game__status" role="status" aria-live="polite" aria-label="준비 상태">READY</span>
+      <button id="game-start" class="game__start" aria-label="게임 시작">시작</button>
+    </div>
+    <canvas id="game-canvas" class="game__canvas" width="256" height="240"
+            aria-label="슈퍼마리오 1-1 게임 화면"></canvas>
+  </div>
+
+  <script type="module" src="./src/game.js"></script>
+</body>
+</html>
