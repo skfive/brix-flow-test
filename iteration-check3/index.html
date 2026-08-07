@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Addiction Mini</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="game-root" class="playing">
+      <h1 class="title">Addiction Mini</h1>
+      <p class="status-text">각 행을 한 무늬 A→6 오름차순으로 완성하세요.</p>
+
+      <section class="hud" aria-label="게임 상태">
+        <div class="hud__stat">
+          <span class="hud__label">SCORE</span>
+          <span id="hud-score">0</span>
+        </div>
+        <div class="hud__stat">
+          <span class="hud__label">TIME</span>
+          <span id="hud-time">0:00</span>
+        </div>
+        <div class="hud__stat">
+          <span class="hud__label">MOVES</span>
+          <span id="hud-moves">0</span>
+        </div>
+      </section>
+
+      <div id="game-board" class="board" role="grid" aria-label="카드 보드"></div>
+
+      <section class="controls" aria-label="컨트롤">
+        <button id="btn-settings" class="controls__btn" type="button" aria-label="설정">⚙</button>
+        <button id="btn-shuffle" class="controls__btn" type="button" aria-label="카드 섞기">카드 섞기</button>
+        <button id="btn-restart" class="controls__btn" type="button" aria-label="재시작">재시작</button>
+      </section>
+
+      <div id="win-overlay" class="win-banner" role="status" aria-live="polite" hidden>
+        <p class="win-banner__text">승리!</p>
+      </div>
+    </main>
+
+    <script type="module" src="./src/ui.js"></script>
+  </body>
+</html>

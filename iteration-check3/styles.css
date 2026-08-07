@@ -1,0 +1,189 @@
+/* Addiction Mini — frozen 토큰(§3.4)·class(§3.2) 기반 스타일. BF-1856 */
+:root {
+  --color-bg: #1b1030;
+  --color-board-panel: #1a8a89;
+  --color-hud-bg: #12203a;
+  --color-hud-text: #e8f0f0;
+  --color-card-face: #ffffff;
+  --color-card-anchor: #c9c9c9;
+  --color-suit-red: #d81e2c;
+  --color-suit-black: #1a1a1a;
+  --color-empty-cell: #0f5c5c;
+  --space-card-gap: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  background: var(--color-bg);
+  color: var(--color-hud-text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+#game-root {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.status-text {
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.hud {
+  display: flex;
+  justify-content: space-around;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--color-hud-bg);
+  color: var(--color-hud-text);
+}
+
+.hud__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.hud__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-card-gap);
+  padding: var(--space-card-gap);
+  border-radius: 12px;
+  background: var(--color-board-panel);
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 2 / 3; /* 컨테이너 폭에 맞춰 축소하되 셀 비율 유지 */
+  border-radius: 6px;
+  font-size: clamp(0.75rem, 3vw, 1.4rem);
+  font-weight: 700;
+  user-select: none;
+}
+
+.cell--empty {
+  background: var(--color-empty-cell);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+}
+
+.card {
+  background: var(--color-card-face);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.card--red {
+  color: var(--color-suit-red);
+}
+
+.card--black {
+  color: var(--color-suit-black);
+}
+
+.card--anchor {
+  background: var(--color-card-anchor);
+  cursor: default;
+}
+
+.cell.selected,
+.cell:focus-visible {
+  outline: 3px solid #ffd700;
+  outline-offset: -3px;
+}
+
+.controls {
+  display: flex;
+  gap: var(--space-card-gap);
+  justify-content: center;
+}
+
+.controls__btn {
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: var(--color-hud-bg);
+  color: var(--color-hud-text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.controls__btn[aria-disabled="true"],
+.controls__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+#btn-shuffle.shuffle-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.win-banner {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.win-banner[hidden] {
+  display: none;
+}
+
+.win-banner__text {
+  margin: 0;
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffd700;
+}
+
+#game-root.won .board {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+@media (max-width: 360px) {
+  body {
+    padding: 8px;
+  }
+
+  .hud__stat {
+    font-size: 0.95rem;
+  }
+
+  .controls__btn {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+}
