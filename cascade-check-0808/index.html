@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cascade Check 08-08</title>
+  <style>
+    :root {
+      --color-action-primary: #2563eb;
+      --space-control-gap: 12px;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 24px; }
+    .cascade-check {
+      max-width: 480px; margin: 0 auto;
+      display: flex; flex-direction: column; gap: var(--space-control-gap);
+    }
+    .cascade-check__counter { font-size: 1.25rem; margin: 0; }
+    .cascade-check__button {
+      background: var(--color-action-primary); color: #fff; border: 0;
+      border-radius: 6px; padding: 10px 16px; font-size: 1rem; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main id="cascade-check-root" class="cascade-check">
+    <h1>Cascade Check 08-08</h1>
+    <p class="cascade-check__counter">
+      상태: <span id="cascade-state">initial</span> · 카운터: <span id="cascade-counter-value">0</span>
+    </p>
+    <button id="cascade-increment-btn" class="cascade-check__button" type="button" aria-label="카운터 1 증가">
+      카운터 1 증가
+    </button>
+  </main>
+  <script>
+    (function () {
+      var count = 0;
+      var value = document.getElementById('cascade-counter-value');
+      var state = document.getElementById('cascade-state');
+      var btn = document.getElementById('cascade-increment-btn');
+      btn.addEventListener('click', function () {
+        count += 1;
+        value.textContent = String(count);
+        state.textContent = 'incremented';
+        btn.disabled = false;
+      });
+    })();
+  </script>
+</body>
+</html>
