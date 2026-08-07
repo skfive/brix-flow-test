@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P1 Conflict Check</title>
+<style>
+:root{--color-status-ready:#16a34a;--space-page-pad:16px}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif}
+.p1-conflict{padding:var(--space-page-pad);max-width:100%}
+.p1-conflict__badge{display:inline-block;padding:4px 12px;border-radius:9999px;color:#fff;background:var(--color-status-ready);font-weight:600}
+#p1-run{display:block;margin-top:var(--space-page-pad)}
+</style>
+</head>
+<body>
+<main id="p1-conflict-root" class="p1-conflict">
+<h1>P1 Conflict Check</h1>
+<span id="p1-status-badge" class="p1-conflict__badge" role="status" aria-label="상태: ready">ready</span>
+<button id="p1-run" type="button">Run</button>
+</main>
+<script>
+(function(){var badge=document.getElementById("p1-status-badge"),run=document.getElementById("p1-run");
+function initialize(){badge.textContent="ready";badge.setAttribute("aria-label","상태: ready");run.disabled=false;}
+run.addEventListener("click",function(){run.disabled=true;initialize();});
+initialize();})();
+</script>
+</body>
+</html>
