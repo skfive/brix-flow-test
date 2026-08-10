@@ -1,5 +1,38 @@
 # brix-flow-test
 
+## 시작하기
+
+신규 기여자를 위한 최소 설치·실행 안내입니다. 별도 빌드 도구 없이 정적 파일로 구성된 프로젝트입니다.
+
+### 사전 요구사항
+
+- [Node.js](https://nodejs.org) (npm 포함) — LTS 버전 권장
+
+### 설치
+
+```sh
+git clone <repo-url>
+cd brix-flow-test
+npm install        # http-server devDep 설치 (최초 1회)
+```
+
+### 실행
+
+```sh
+npm start          # → http://localhost:8080/ 기동
+```
+
+브라우저에서 `http://localhost:8080/`으로 접속하면 각 SPA(스네이크, 노트패드, 타이머 등) 목록을 확인할 수 있습니다.
+개별 SPA 실행·라우트 상세는 아래 [로컬 실행](#로컬-실행) 및 [SPA 라우트](#spa-라우트) 섹션을 참고하세요.
+
+### 테스트
+
+```sh
+npm test
+```
+
+---
+
 ## 로컬 실행
 
 ### 방법 A — npm 정적 서버 (권장)
