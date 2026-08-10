@@ -660,3 +660,386 @@ frozen 계약에 타이포그래피 토큰이 없으므로 system font 기반 �
 | 3 | **기존 요소 보존** | 상위 BF-1478 절을 `additive` 정책대로 변경·삭제 없이 보존하고 본 BF-1502 절만 추가. developer 소유 `demo/**` 파일 미생성. |
 | 4 | **컴포넌트 매핑** | 10개 DOM ID·9개 CSS class·6개 상태·5개 token을 각각 §4.1/§5/§5.4/§2.1에 1:1 매핑. |
 | 5 | **모호함 flag** | 조작 안내 배치·목록 wrapper는 frozen selector가 아님(재량)임을 명시. 전역 Space와 버튼 포커스 Space 이중 발동 방지를 구현 유의사항으로 flag(§5.6/§9-7). frozen 값 변경 없음. |
+
+---
+---
+
+# 타이핑 속도 테스트 시각 명세 — typing-test (BF-1917)
+
+## 0. 문서 성격
+
+본 절은 상위 frozen Execution Blueprint(`ui-contract@v1`,
+sha256:076a7d2ed4597a916c367779fe0489ff41c3d9c93f4df5e5d01ee23cccab1f22)와
+planner 실행 설계(`docs/plans/BF-1916/implementation-plan.md`, `planning-contract@v1`
+sha256:98c65e80d185f3f30f9a9ccca8aea1f5a2bf0bf702e7a6ff51ae81ab226a3a5b)의 §3장
+UI 계약을 **재정의 없이** 시각 명세 형태로 서술한다. selector·상태 텍스트·color
+token 값은 frozen 목록 그대로이며, 본 절은 신규 selector·상태·역할·token을
+추가하지 않는다.
+
+이 task(BF-1917)의 산출물 범위는 본 markdown 절(`docs/design/contract.md`에 추가)
+뿐이며, 런타임 HTML/CSS/JS(`typing-test.html`)는 developer(BF-1918) 소유로
+frozen되어 있어 본 task에서 생성하지 않는다. 별도 mockup HTML 파일도 생성하지
+않으며, §10의 와이어프레임으로 시각 mockup을 대체 설명한다(위 BF-1478/BF-1502
+절의 선례와 동일 방식).
+
+> 위 BF-1478(`agent-queue-legend-canary`)·BF-1502(`neon-snake-fullscreen-0802`)
+> 절은 다른 epic의 frozen 산출물이므로 `additive` 정책에 따라 변경·삭제 없이
+> 보존하고, 본 BF-1917 절만 추가한다.
+
+## 1. 시안 개요
+
+- 대상 파일: `typing-test.html`(developer, BF-1918 소유, 단일 파일 — 외부
+  의존성 0건, HTML/CSS/JS inline).
+- 변경 범위: 서버 데이터 모델·API 스키마 변경 없이, 브라우저 메모리 상의
+  타이핑 테스트 런타임 상태(`idle`/`running`/`finished`)의 시각 표현만
+  명세한다.
+- 테마: 다크 테마. 페이지 배경은 frozen `--color-bg`(`#0f172a`), 카드/입력
+  표면은 frozen `--color-surface`(`#1e293b`), 기본 텍스트는 frozen
+  `--color-text`(`#e2e8f0`).
+- 사용자 경험 목표:
+  1. 사용자가 제시된 문장을 입력하면 글자 단위로 정답(`--correct`)/오답
+     (`--incorrect`)/현재 커서(`--current`)를 **색상 + 시각적 표식(밑줄·굵기)
+     이중으로** 구분해, 색각 이상 사용자도 진행 상황을 인지할 수 있게 한다.
+  2. 실시간 지표(경과 시간/WPM/정확도)와 상태 문구를 항상 노출해 측정 진행
+     여부를 텍스트로도 확인할 수 있게 한다.
+  3. 완료 시 결과 요약을 명확히 제시하고, 어느 state에서든 "다시 시작"으로
+     즉시 재도전할 수 있게 한다.
+
+## 2. 컬러 팔레트
+
+### 2.1 frozen 토큰 (변경 금지)
+
+| 토큰 | 값 | 용도 |
+| --- | --- | --- |
+| `--color-char-correct` | `#16a34a` | `.typing-test__char--correct` 텍스트/배경 강조 |
+| `--color-char-incorrect` | `#dc2626` | `.typing-test__char--incorrect` 텍스트/배경 강조 |
+| `--color-char-current` | `#2563eb` | `.typing-test__char--current` 커서 위치 강조 |
+| `--color-bg` | `#0f172a` | 페이지 배경 |
+| `--color-surface` | `#1e293b` | 카드/입력 영역 표면 |
+| `--color-text` | `#e2e8f0` | 기본 텍스트 |
+| `--space-control-gap` | `12px` | `.typing-test__stat` 및 control 간 간격 |
+
+### 2.2 다크 테마 보조 색상 권장 (신규 상태 색상 추가 아님 — frozen 목록과 충돌 없음)
+
+frozen 계약은 위 7개 토큰만 고정하며, 테두리·placeholder·비활성 표현 색은
+명시하지 않는다. `vanilla-static` 스택 규약(외부 의존성 0건, CSS 변수 자체
+정의)에 따라 아래 보조 값을 권장한다. 이 값들은 §2.1 frozen 색상을 대체하거나
+재정의하지 않으며, 신규 CSS 커스텀 프로퍼티 추가는 developer 재량이다.
+
+| 권장 용도 | 권장 값 | 비고 |
+| --- | --- | --- |
+| `typing-test-root`/`typing-test-sentence`/`typing-test-input` 테두리 | `rgba(226, 232, 240, 0.16)` | `--color-text` 저채도 버전, 표면(`--color-surface`) 대비 경계 구분 |
+| `typing-test-restart` 기본 표면 | `--color-surface`(`#1e293b`) | 버튼 배경, hover 시 `rgba(226, 232, 240, 0.08)` 오버레이 권장 |
+| 키보드 포커스 outline | `--color-char-current`(`#2563eb`) | 신규 토큰 추가 없이 기존 frozen 색상 재사용 |
+| `typing-test-input` readonly(`finished`) 표시 | `opacity: 0.72` | 색상 변경 대신 투명도로 비활성 인지(§6-4 원칙 준수) |
+
+## 3. 타이포그래피
+
+frozen 계약에 타이포그래피 토큰이 없으므로 system font 기반 권장값을 아래와
+같이 명세한다(신규 색상/상태 토큰이 아니므로 frozen 제약과 충돌하지 않음).
+
+| 용도 | font-family | size | weight | line-height |
+| --- | --- | --- | --- | --- |
+| `#typing-test-sentence` (문장, `.typing-test__char`) | system-ui, -apple-system, "Segoe UI", sans-serif | clamp(18px, 3.2vw, 26px) | 500 | 1.7 |
+| `#typing-test-input` | system-ui, -apple-system, "Segoe UI", sans-serif | 16px | 400 | 1.5 |
+| `.typing-test__stat` (통계 4종) | system-ui, -apple-system, "Segoe UI", sans-serif | 14px | 600 | 1.4 |
+| `#typing-test-restart` | system-ui, -apple-system, "Segoe UI", sans-serif | 14px | 600 | 1.4 |
+| `#typing-test-result` (`.typing-test__result`) | system-ui, -apple-system, "Segoe UI", sans-serif | clamp(15px, 2.4vw, 18px) | 600 | 1.5 |
+
+- `#typing-test-input`은 최소 16px을 권장한다(모바일 브라우저 자동 확대 방지,
+  비-frozen 구현 권장).
+- `clamp()`는 §7 반응형(320px~768px 이상)에서 overflow 없이 가독성을
+  유지하기 위한 권장이며, frozen 값이 아니다.
+
+## 4. 레이아웃
+
+### 4.1 구조
+
+```
+#typing-test-root (배경 --color-bg)
+├─ #typing-test-sentence                          ── 목표 문장, 글자별
+│   └─ <span class="typing-test__char [--correct|--incorrect|--current]">
+├─ #typing-test-input                              ── aria-label="타이핑 테스트 입력"
+├─ (통계 그룹 wrapper — 비-frozen, 권장 구조)
+│   ├─ #typing-test-status   (.typing-test__stat)  ── 상태 텍스트
+│   ├─ #typing-test-timer    (.typing-test__stat)  ── mm:ss
+│   ├─ #typing-test-wpm      (.typing-test__stat)  ── "{n} WPM"
+│   └─ #typing-test-accuracy (.typing-test__stat)  ── "정확도 {n}%"
+├─ #typing-test-restart                            ── <button> "다시 시작"
+└─ #typing-test-result (.typing-test__result)      ── finished에서만 표시
+```
+
+`typing-test-root`/`typing-test-sentence`/`typing-test-input`/`typing-test-status`/
+`typing-test-timer`/`typing-test-wpm`/`typing-test-accuracy`/`typing-test-restart`/
+`typing-test-result`(ID)와 `typing-test__char`/`typing-test__char--correct`/
+`typing-test__char--incorrect`/`typing-test__char--current`/`typing-test__stat`/
+`typing-test__result`(class)만 frozen이다. 통계 그룹 wrapper에 별도 ID/class를
+둘지는 developer 재량이며(planner §6 모호함 flag와 동일), 본 절의 배치는
+권장 표현일 뿐 frozen selector가 아니다.
+
+### 4.2 spacing / breakpoint (frozen — §7 참조)
+
+- 통계 항목(`.typing-test__stat`) 간 간격: `--space-control-gap`(`12px`).
+- `#typing-test-root`는 최대 폭(예: 640px 권장, 비-frozen)에 카드형 표면
+  (`--color-surface`, 모서리 radius 권장)으로 배치하고 뷰포트 중앙 정렬을
+  권장한다.
+- **320px 이상** 전 뷰포트에서 문장/입력/통계 영역에 content overflow(가로
+  스크롤)가 발생하지 않는다(§7-1).
+
+## 5. 컴포넌트 명세
+
+### 5.1 `#typing-test-sentence` — 문장 표시 영역
+
+| 항목 | 명세 |
+| --- | --- |
+| 렌더 | 문장의 각 글자를 `<span class="typing-test__char">`로 렌더링, 로드/재시작 시마다 §4.1(BF-1919 §4.1) 문장 배열에서 무작위 재선택 |
+| `--correct` | 텍스트/배경 `--color-char-correct`(`#16a34a`) + 밑줄(`text-decoration: underline`) 병행 — 색상만 의존 금지(§6-4) |
+| `--incorrect` | 텍스트/배경 `--color-char-incorrect`(`#dc2626`) + 물결 밑줄(`text-decoration: wavy underline`) 병행 |
+| `--current` | 텍스트/배경 `--color-char-current`(`#2563eb`) + 좌측 caret 형태(예: 얇은 세로 바 `border-left` 또는 배경 강조) 병행 |
+| 미입력(modifier 없음) | `--color-text`(`#e2e8f0`) 기본 색, 표식 없음 |
+
+- `--current`/`--correct`/`--incorrect`의 정확한 시각 형태(밑줄/캐럿 스타일)는
+  planner 문서 §6 모호함 flag(§3.4-4)가 designer/developer 재량으로 위임한
+  항목이며, 위 표가 이 절의 exact 값이다. 색상 값(§2.1) 자체는 frozen이므로
+  변경하지 않는다.
+
+### 5.2 `#typing-test-input` — 입력 영역
+
+| 항목 | 명세 |
+| --- | --- |
+| 마크업 | `<input type="text">` 권장(단일 줄 문장 기준), `aria-label="타이핑 테스트 입력"`(frozen) |
+| 표면 | `--color-surface`, 텍스트 `--color-text`, 테두리 §2.2 보조 값 |
+| `idle`/`running` | 활성, 값 입력·유지 가능 |
+| `finished` | `readonly` 속성 부여(비활성 아님 — 포커스는 가능하되 값 변경 불가), §2.2 `opacity: 0.72`로 시각 구분 |
+| 포커스 | 키보드 포커스 시 §2.2 outline(`--color-char-current`) 노출 |
+
+### 5.3 실시간 지표 영역 — `.typing-test__stat` × 4
+
+| 요소 | frozen 표시 값(§상태별) | 비고 |
+| --- | --- | --- |
+| `#typing-test-status` | §6(state) 표 참조 | 상태명 텍스트, `aria-live="polite"` |
+| `#typing-test-timer` | `00:00` 초기, `running` 중 `mm:ss` 카운트업, `finished` 시 고정 | `aria-live="polite"` |
+| `#typing-test-wpm` | `0 WPM` 초기, `running` 중 실시간 갱신, `finished` 시 최종값 고정 | `aria-live="polite"` |
+| `#typing-test-accuracy` | `정확도 100%` 초기, `running` 중 실시간 갱신, `finished` 시 최종값 고정 | `aria-live="polite"` |
+
+- 4개 요소 모두 `--color-text` 텍스트, `.typing-test__stat` 공통 클래스로
+  통일된 카드/칩 형태(표면 `--color-surface`, 내부 padding) 권장.
+- `#typing-test-status`가 `finished`(완료!)일 때는 `--color-char-correct`로
+  강조 텍스트 색을 줄 수 있으나(선택), 상태 텍스트 자체가 1차 식별 수단이다.
+
+### 5.4 `#typing-test-restart` — 다시 시작 버튼
+
+| 속성/상태 | 명세 |
+| --- | --- |
+| 마크업 | 네이티브 `<button>`(frozen 원칙 §3.4-3, Enter/Space 기본 지원) |
+| 텍스트 | `다시 시작` |
+| 표면 | §2.2 권장 표면, hover/focus 시 §2.2 outline |
+| 활성 상태 | 모든 state(`idle`/`running`/`finished`)에서 상시 활성(비활성 고착 금지, §8) |
+| 동작 | 클릭 시 새 문장 선택 + `state=idle` 복귀 + 모든 지표 초기화(§8) |
+
+### 5.5 `#typing-test-result` (.typing-test__result) — 결과 요약
+
+| 속성/상태 | 명세 |
+| --- | --- |
+| 표시 조건 | `state=finished`에서만 노출, 그 외(`idle`/`running`) 숨김 |
+| 텍스트 | `완료 — {WPM} WPM, 정확도 {정확도}%`(frozen 포맷, §3.2) |
+| 표면 | `--color-surface` 카드, 텍스트 `--color-text`, 강조 포인트로 `--color-char-correct` 사용 가능(선택) |
+| 위치 | `#typing-test-restart` 인접(위/아래) 배치 권장 — 완료 직후 결과와 재시작 control을 함께 인지 |
+
+## 6. state 및 화면 텍스트 (frozen — 변경 금지)
+
+| state | `#typing-test-status` | `#typing-test-input` | `#typing-test-restart` | `#typing-test-result` |
+| --- | --- | --- | --- | --- |
+| `idle` | `입력을 시작하면 측정이 시작됩니다` | 비어 있음, 활성 | 활성 | 숨김 |
+| `running` | `입력 중…` | 활성, 입력값 유지 | 활성 | 숨김 |
+| `finished` | `완료!` | readonly, 값 유지 | 활성(즉시 재사용) | 표시: `완료 — {WPM} WPM, 정확도 {정확도}%` |
+
+- 초기값(모든 state 진입 직후 `idle`): `#typing-test-timer`=`00:00`,
+  `#typing-test-wpm`=`0 WPM`, `#typing-test-accuracy`=`정확도 100%`.
+- 위 화면 텍스트는 frozen이며 문구를 변경하지 않는다(BF-1919 §3.2 그대로).
+
+## 7. 반응형 (frozen)
+
+1. **320px 폭**에서 `#typing-test-sentence`, `#typing-test-input`, 통계 영역
+   (`.typing-test__stat` 그룹)이 가로 스크롤 없이 **세로로 순서대로 쌓인다**
+   (`flex-direction: column` 또는 동등 구현). §3 타이포그래피의 `clamp()`로
+   문장 글자 크기가 좁은 폭에서 줄어들어 줄바꿈이 자연스럽게 흡수된다.
+2. **768px 이상**에서는 `#typing-test-timer`, `#typing-test-wpm`,
+   `#typing-test-accuracy` 3개 통계 항목이 `--space-control-gap`(`12px`)
+   간격을 두고 **가로 정렬**로 표시된다. `#typing-test-status`는 통계 항목
+   행 위 또는 좌측에 별도 배치(developer 재량, 320px 규칙 유지 전제).
+3. 320px~767px 사이 모든 폭에서 content overflow(가로 스크롤)가 발생하지
+   않는다.
+
+## 8. 접근성 (frozen)
+
+1. `#typing-test-input`은 `aria-label="타이핑 테스트 입력"`을 가진다.
+2. `#typing-test-status`, `#typing-test-timer`, `#typing-test-wpm`,
+   `#typing-test-accuracy` 4개 요소는 각각 `aria-live="polite"`를 가져 state
+   전이·통계 갱신을 스크린리더가 읽어준다.
+3. `#typing-test-restart`는 네이티브 `<button>`이며 Tab 이동 후 Enter 또는
+   Space만으로 실행 가능하다(별도 키 핸들러 불필요).
+4. 모든 state(§6)와 글자별 정오답(`--correct`/`--incorrect`/`--current`)은
+   색상만으로 구분하지 않는다 — state는 화면 텍스트로, 글자 상태는 §5.1의
+   밑줄/캐럿 시각 표식을 색상과 함께 병행한다.
+
+## 9. 상태 후조건 / 복구 (frozen)
+
+- 초기화·취소(진행 중 다시 시작)·완료 후 다시 시작 뒤에는 `state`와 진행
+  표시(타이머, WPM, 정확도, 글자별 정오답 표식)를 **초기값**(`idle`,
+  `00:00`, `0 WPM`, `정확도 100%`, 표식 없음)으로 되돌리고, 새 문장을
+  표시하며, `#typing-test-input`과 `#typing-test-restart`가 **즉시 다시
+  사용 가능**해야 한다(비활성 고착 금지).
+
+## 10. dev 구현 가이드 (BF-1918)
+
+1. `#typing-test-root`를 `--color-bg` 배경 위 카드형 컨테이너로 두고, 그
+   안에 `#typing-test-sentence`, `#typing-test-input`, 통계 그룹(4개
+   `.typing-test__stat`), `#typing-test-restart`, `#typing-test-result`를
+   §4.1 순서로 배치한다. selector(ID/class)는 §4.1 목록 그대로 사용한다.
+2. `:root`에 frozen 토큰 7개(`--color-char-correct`, `--color-char-incorrect`,
+   `--color-char-current`, `--color-bg`, `--color-surface`, `--color-text`,
+   `--space-control-gap`)와 §2.2 보조 값만 CSS 커스텀 프로퍼티로 정의한다.
+   하드코딩 색상 금지, 신규 상태 색상 토큰 추가 금지.
+3. `#typing-test-sentence`는 문장의 각 글자를 `<span class="typing-test__char">`
+   로 렌더링하고, 입력 이벤트마다 §5.1 표대로 `--correct`/`--incorrect`/
+   `--current` modifier(색상 + 밑줄/캐럿 시각 표식)를 갱신한다.
+4. `#typing-test-input`은 `aria-label="타이핑 테스트 입력"`을 부여하고,
+   `idle`/`running`에서 활성, `finished`에서 `readonly` + §2.2 `opacity`로
+   비활성을 시각 구분한다(포커스 자체는 유지 가능).
+5. `#typing-test-status`/`#typing-test-timer`/`#typing-test-wpm`/
+   `#typing-test-accuracy` 4개 요소에 `aria-live="polite"`를 부여하고, §6
+   표의 state별 frozen 텍스트를 그대로 반영한다.
+6. `#typing-test-restart`는 네이티브 `<button>`으로 구현하고, 어느 state
+   에서든 클릭 시 새 문장 선택 + `state=idle` 복귀 + 지표 초기화(§9)를
+   수행하며 항상 활성 상태를 유지한다.
+7. `#typing-test-result`는 `state=finished`에서만 노출하고 `완료 — {WPM}
+   WPM, 정확도 {정확도}%` frozen 포맷 텍스트를 표시하며, 그 외 state에서
+   숨긴다.
+8. 320px 이상에서 §7-1(세로 스택) overflow 없음을 확인하고, 768px 이상에서
+   §7-2(통계 3항목 가로 정렬 + `--space-control-gap`)를 구현한다.
+9. WPM·정확도 계산식, 문장 목록, 런타임 상태 모델은 planner 문서
+   (`docs/plans/BF-1916/implementation-plan.md`) §4를 따르며 `typing-test.html`
+   (developer 소유, 단일 파일)에서 구현한다. 본 문서는 시각 표현만 명세한다.
+
+## 11. mockup 참조 (와이어프레임)
+
+§0에 따라 본 task는 별도 mockup HTML 파일을 생성하지 않는다(AC #4: 시각
+명세 범위는 `docs/design/contract.md`, 런타임 HTML/CSS/JS 미생성). 아래
+와이어프레임으로 시각 mockup을 대체 설명한다. 실제 실행 가능한 산출물은
+`typing-test.html`(developer, BF-1918 소유)이다.
+
+### 11.1 `idle` 상태 (초기 로드)
+
+```
+┌─ #typing-test-root (카드, --color-surface 위 --color-bg 배경) ────────────┐
+│                                                                            │
+│  #typing-test-sentence:                                                   │
+│   가을 하늘은 높고 파랗다   (전부 --color-text, 표식 없음)                │
+│                                                                            │
+│  ┌─ #typing-test-input (aria-label="타이핑 테스트 입력") ──────────────┐  │
+│  │                                                                     │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌──────────────────────┐┌──────────────┐┌──────────┐┌────────────────┐ │
+│  │#typing-test-status:   ││#typing-test-  ││#typing-  ││#typing-test-   │ │
+│  │입력을 시작하면 측정이 ││timer: 00:00  ││test-wpm: ││accuracy:       │ │
+│  │시작됩니다             ││              ││0 WPM     ││정확도 100%     │ │
+│  └──────────────────────┘└──────────────┘└──────────┘└────────────────┘ │
+│                                    ← --space-control-gap(12px) →          │
+│  [ #typing-test-restart 다시 시작 ]                                       │
+│  (#typing-test-result 숨김)                                               │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 11.2 `running` 상태 (입력 중, 오타 1건 포함)
+
+```
+┌─ #typing-test-root ───────────────────────────────────────────────────────┐
+│  #typing-test-sentence:                                                    │
+│   가을 하늘은 [높]고 파랗다                                                │
+│   └ "가을 하늘은 " = --correct(#16a34a, 밑줄)                              │
+│   └ "높" = --incorrect(#dc2626, 물결 밑줄, 오타 입력됨)                    │
+│   └ "고" = --current(#2563eb, 좌측 caret) ← 다음 입력 위치                 │
+│   └ " 파랗다" = 미입력(--color-text, 표식 없음)                            │
+│                                                                             │
+│  ┌─ #typing-test-input: "가을 하늘은 놉" ────────────────────────────┐     │
+│  └───────────────────────────────────────────────────────────────────┘     │
+│                                                                             │
+│  status: 입력 중…   timer: 00:03   wpm: 42 WPM   accuracy: 정확도 88%      │
+│  [ 다시 시작 ]  (result 숨김)                                              │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 11.3 `finished` 상태 (완료)
+
+```
+┌─ #typing-test-root ───────────────────────────────────────────────────────┐
+│  #typing-test-sentence: 가을 하늘은 높고 파랗다  (전부 --correct/--incorrect 확정, --current 없음) │
+│                                                                             │
+│  ┌─ #typing-test-input(readonly, opacity 0.72): "가을 하늘은 놉고 파랗다" ─┐│
+│  └───────────────────────────────────────────────────────────────────────┘│
+│                                                                             │
+│  status: 완료!   timer: 00:08(고정)   wpm: 38 WPM(고정)   accuracy: 정확도 92%(고정) │
+│                                                                             │
+│  ┌─ #typing-test-result (.typing-test__result) ───────────────────────┐   │
+│  │ 완료 — 38 WPM, 정확도 92%                                          │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
+│  [ #typing-test-restart 다시 시작 ] ← 즉시 재사용 가능                    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 11.4 320px 좁은 뷰포트 (세로 스택, `running` 상태 예시)
+
+```
+┌─ #typing-test-root (≥320px, 세로 스택) ─┐
+│ #typing-test-sentence:                    │
+│  가을 하늘은 [높]고                       │
+│  파랗다  (clamp() 줄바꿈)                 │
+│ ┌────────────────────────────────────┐   │
+│ │ #typing-test-input                  │   │
+│ └────────────────────────────────────┘   │
+│ ┌────────────────────────────────────┐   │
+│ │ #typing-test-status: 입력 중…       │   │
+│ └────────────────────────────────────┘   │
+│ ┌────────────────────────────────────┐   │
+│ │ #typing-test-timer: 00:03           │   │
+│ └────────────────────────────────────┘   │
+│ ┌────────────────────────────────────┐   │
+│ │ #typing-test-wpm: 42 WPM            │   │
+│ └────────────────────────────────────┘   │
+│ ┌────────────────────────────────────┐   │
+│ │ #typing-test-accuracy: 정확도 88%   │   │
+│ └────────────────────────────────────┘   │
+│ [ 다시 시작 ]                             │
+└────────────────────────────────────────────┘
+```
+
+### 11.5 768px 이상 (통계 3항목 가로 정렬)
+
+```
+┌─ #typing-test-root (≥768px) ──────────────────────────────────────────────┐
+│ #typing-test-sentence: 가을 하늘은 [높]고 파랗다                          │
+│ ┌────────────────────────────────────────────────────────────────────┐   │
+│ │ #typing-test-input                                                  │   │
+│ └────────────────────────────────────────────────────────────────────┘   │
+│ #typing-test-status: 입력 중…                                             │
+│ [ timer: 00:03 ] ←12px→ [ wpm: 42 WPM ] ←12px→ [ accuracy: 정확도 88% ]   │
+│ [ 다시 시작 ]                                                              │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+글자별 정오답·커서 표식은 색상뿐 아니라 밑줄/물결 밑줄/caret 형태로도
+구분되고, state는 항상 `#typing-test-status` 화면 텍스트로 노출되어, 색상
+인지가 어려운 환경(스크린리더·흑백 렌더링·색약 포함)에서도 진행 상황과
+결과를 식별할 수 있다.
+
+## 12. Self-critique (BF-1917)
+
+| # | 점검 항목 | 결과 |
+| --- | --- | --- |
+| 1 | **AC 매핑** | AC1(§4.1/§5에 문장 표시·입력·실시간 지표(`#typing-test-timer`/`#typing-test-wpm`/`#typing-test-accuracy`)·결과 요약(`#typing-test-result`) 레이아웃 반영), AC2(§6에 idle/running/finished 각 state의 `#typing-test-status` exact 화면 텍스트, §5.1에 `--correct`/`--incorrect` exact 색상+표식 반영), AC3(§7에 320px 세로 스택 + 768px 이상 통계 3항목 가로 정렬, selector/token 재정의 없음), AC4(§0·§11에 시각 명세 범위=`docs/design/contract.md`, 런타임 HTML/CSS/JS 미생성 명시) 모두 충족. |
+| 2 | **dev 구현 가이드** | §10에 selector/token 매핑·글자 표식 렌더·입력 readonly 처리·지표 aria-live·재시작 후조건·반응형 구현을 단계별로 제시. 계산식·문장 목록·상태 모델은 planner §4 참조로 위임. |
+| 3 | **기존 요소 보존** | 상위 BF-1478·BF-1502 절을 `additive` 정책대로 변경·삭제 없이 보존하고 본 BF-1917 절만 추가. developer 소유 `typing-test.html` 미생성. |
+| 4 | **컴포넌트 매핑** | 9개 DOM ID·6개 CSS class·3개 state·7개 색상 token을 각각 §4.1/§6/§2.1에 1:1 매핑, 신규 selector/token 추가 없음. |
+| 5 | **모호함 flag** | planner §6이 위임한 `--current`/`--correct`/`--incorrect` 정확한 시각 형태(밑줄/캐럿)를 §5.1에서 exact 값으로 확정. 통계 그룹 wrapper·`#typing-test-status` 배치(768px)는 frozen selector가 아니므로 developer 재량임을 §4.1/§7-2에 명시. frozen 값(색상 token·selector·화면 텍스트) 변경 없음. |
