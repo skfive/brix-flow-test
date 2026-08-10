@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>벽돌깨기</title>
+<style>
+  :root {
+    --color-bg: #111827;
+    --color-paddle: #38bdf8;
+    --color-ball: #f8fafc;
+    --color-brick: #f97316;
+    --color-text: #e5e7eb;
+    --space-hud-gap: 12px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 16px;
+  }
+
+  .game-container {
+    max-width: 480px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-hud-gap);
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  #game-canvas {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    background: var(--color-bg);
+    border: 1px solid var(--color-text);
+  }
+
+  .overlay {
+    display: none;
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .overlay--visible {
+    display: flex;
+  }
+
+  #restart-button {
+    background: var(--color-paddle);
+    color: var(--color-bg);
+    border: none;
+    border-radius: 4px;
+    padding: 10px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="hud">
+      <span>점수: <span id="score-value" aria-live="polite">0</span></span>
+      <p id="status-message" aria-live="polite">스페이스바 또는 아래 버튼을 눌러 시작하세요.</p>
+    </div>
+    <canvas id="game-canvas" role="img" aria-label="벽돌깨기 게임 화면" width="480" height="600"></canvas>
+    <div class="overlay overlay--visible">
+      <button id="restart-button" aria-label="게임 다시 시작">시작</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("game-canvas");
+  var ctx = canvas.getContext("2d");
+  var scoreEl = document.getElementById("score-value");
+  var statusEl = document.getElementById("status-message");
+  var overlayEl = document.querySelector(".overlay");
+  var restartButton = document.getElementById("restart-button");
+
+  var rootStyle = getComputedStyle(document.documentElement);
+  var COLOR_BG = rootStyle.getPropertyValue("--color-bg").trim() || "#111827";
+  var COLOR_PADDLE = rootStyle.getPropertyValue("--color-paddle").trim() || "#38bdf8";
+  var COLOR_BALL = rootStyle.getPropertyValue("--color-ball").trim() || "#f8fafc";
+  var COLOR_BRICK = rootStyle.getPropertyValue("--color-brick").trim() || "#f97316";
+
+  var CANVAS_WIDTH = canvas.width;
+  var CANVAS_HEIGHT = canvas.height;
+
+  var BRICK_ROWS = 5;
+  var BRICK_COLS = 8;
+  var BRICK_WIDTH = 50;
+  var BRICK_HEIGHT = 18;
+  var BRICK_PADDING = 8;
+  var BRICK_OFFSET_TOP = 40;
+  var BRICK_OFFSET_LEFT =
+    (CANVAS_WIDTH - (BRICK_COLS * BRICK_WIDTH + (BRICK_COLS - 1) * BRICK_PADDING)) / 2;
+
+  var STATUS_TEXT = {
+    idle: "스페이스바 또는 아래 버튼을 눌러 시작하세요.",
+    playing: "게임 진행 중",
+    win: "승리했습니다! 다시 시작하려면 버튼을 누르세요.",
+    gameover: "게임 오버. 다시 시작하려면 버튼을 누르세요."
+  };
+
+  var state = "idle";
+  var score = 0;
+  var bricks = [];
+  var paddle = { x: 0, width: 80, height: 12, speed: 6 };
+  var ball = { x: 0, y: 0, dx: 0, dy: 0, radius: 8 };
+  var leftPressed = false;
+  var rightPressed = false;
+
+  paddle.y = CANVAS_HEIGHT - 30;
+
+  function createBricks() {
+    var list = [];
+    for (var r = 0; r < BRICK_ROWS; r++) {
+      for (var c = 0; c < BRICK_COLS; c++) {
+        list.push({
+          x: BRICK_OFFSET_LEFT + c * (BRICK_WIDTH + BRICK_PADDING),
+          y: BRICK_OFFSET_TOP + r * (BRICK_HEIGHT + BRICK_PADDING),
+          width: BRICK_WIDTH,
+          height: BRICK_HEIGHT,
+          active: true
+        });
+      }
+    }
+    return list;
+  }
+
+  function resetPaddle() {
+    paddle.x = (CANVAS_WIDTH - paddle.width) / 2;
+  }
+
+  function resetBall() {
+    ball.x = CANVAS_WIDTH / 2;
+    ball.y = paddle.y - ball.radius - 1;
+    ball.dx = 3;
+    ball.dy = -3;
+  }
+
+  function setState(next) {
+    state = next;
+    statusEl.textContent = STATUS_TEXT[next];
+    if (next === "playing") {
+      overlayEl.classList.remove("overlay--visible");
+    } else {
+      overlayEl.classList.add("overlay--visible");
+    }
+  }
+
+  function setScore(next) {
+    score = next < 0 ? 0 : next;
+    scoreEl.textContent = String(score);
+  }
+
+  function startGame() {
+    setScore(0);
+    bricks = createBricks();
+    resetPaddle();
+    resetBall();
+    leftPressed = false;
+    rightPressed = false;
+    setState("playing");
+  }
+
+  function activeBrickCount() {
+    var count = 0;
+    for (var i = 0; i < bricks.length; i++) {
+      if (bricks[i].active) count++;
+    }
+    return count;
+  }
+
+  function updatePaddle() {
+    if (rightPressed) {
+      paddle.x += paddle.speed;
+    } else if (leftPressed) {
+      paddle.x -= paddle.speed;
+    }
+    if (paddle.x < 0) paddle.x = 0;
+    if (paddle.x > CANVAS_WIDTH - paddle.width) paddle.x = CANVAS_WIDTH - paddle.width;
+  }
+
+  function updateBall() {
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    if (ball.x + ball.radius > CANVAS_WIDTH || ball.x - ball.radius < 0) {
+      ball.dx = -ball.dx;
+    }
+    if (ball.y - ball.radius < 0) {
+      ball.dy = -ball.dy;
+    }
+
+    if (ball.y + ball.radius > CANVAS_HEIGHT) {
+      setState("gameover");
+      return;
+    }
+
+    if (
+      ball.dy > 0 &&
+      ball.y + ball.radius >= paddle.y &&
+      ball.y + ball.radius <= paddle.y + paddle.height &&
+      ball.x >= paddle.x &&
+      ball.x <= paddle.x + paddle.width
+    ) {
+      ball.dy = -ball.dy;
+      var hitPos = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+      ball.dx = hitPos * 4;
+    }
+
+    for (var i = 0; i < bricks.length; i++) {
+      var brick = bricks[i];
+      if (!brick.active) continue;
+      if (
+        ball.x + ball.radius > brick.x &&
+        ball.x - ball.radius < brick.x + brick.width &&
+        ball.y + ball.radius > brick.y &&
+        ball.y - ball.radius < brick.y + brick.height
+      ) {
+        brick.active = false;
+        ball.dy = -ball.dy;
+        setScore(score + 1);
+        break;
+      }
+    }
+
+    if (activeBrickCount() === 0) {
+      setState("win");
+    }
+  }
+
+  function update() {
+    if (state !== "playing") return;
+    updatePaddle();
+    updateBall();
+  }
+
+  function render() {
+    ctx.fillStyle = COLOR_BG;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.fillStyle = COLOR_BRICK;
+    for (var i = 0; i < bricks.length; i++) {
+      var brick = bricks[i];
+      if (!brick.active) continue;
+      ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+    }
+
+    ctx.fillStyle = COLOR_PADDLE;
+    ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+
+    ctx.fillStyle = COLOR_BALL;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  function loop() {
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+      rightPressed = true;
+    } else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+      leftPressed = true;
+    } else if (e.key === " " || e.key === "Spacebar") {
+      if (state !== "playing") {
+        startGame();
+      }
+    }
+  }
+
+  function handleKeyUp(e) {
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+      rightPressed = false;
+    } else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+      leftPressed = false;
+    }
+  }
+
+  document.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("keyup", handleKeyUp);
+  restartButton.addEventListener("click", startGame);
+
+  bricks = createBricks();
+  resetPaddle();
+  resetBall();
+  render();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
