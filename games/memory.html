@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>카드 짝맞추기</title>
+<style>
+  :root {
+    --color-card-back: #1e293b;
+    --color-card-face: #f8fafc;
+    --color-card-matched: #22c55e;
+    --space-board-gap: 12px;
+  }
+
+  html, body {
+    margin: 0;
+    overflow-x: hidden;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #0f172a;
+    color: #f8fafc;
+  }
+
+  main {
+    padding: 16px;
+    box-sizing: border-box;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  #score-display,
+  #status-display {
+    text-align: center;
+    font-size: 1.1rem;
+    margin: 8px 0;
+  }
+
+  #memory-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+    gap: var(--space-board-gap);
+    width: 100%;
+    box-sizing: border-box;
+    margin: 16px 0;
+  }
+
+  .memory-card {
+    aspect-ratio: 1 / 1;
+    background: var(--color-card-back);
+    color: var(--color-card-face);
+    border: none;
+    border-radius: 8px;
+    font-size: 1.8rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .memory-card--flipped,
+  .memory-card--matched {
+    background: var(--color-card-face);
+    color: #0f172a;
+  }
+
+  .memory-card--matched {
+    background: var(--color-card-matched);
+    border: 2px solid #15803d;
+  }
+
+  .memory-card:disabled {
+    cursor: default;
+  }
+
+  #restart-button {
+    display: block;
+    margin: 16px auto 0;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    border: none;
+    background: #3b82f6;
+    color: #ffffff;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>카드 짝맞추기</h1>
+  <div id="score-display">점수: 0</div>
+  <div id="status-display" role="status" aria-live="polite">진행 중</div>
+  <div id="memory-board" role="group" aria-label="카드 보드"></div>
+  <button type="button" id="restart-button" aria-label="게임 다시 시작">다시 시작</button>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var SYMBOLS = [
+    { emoji: "🍎", name: "사과" },
+    { emoji: "🍌", name: "바나나" },
+    { emoji: "🍇", name: "포도" },
+    { emoji: "🍓", name: "딸기" },
+    { emoji: "🍒", name: "체리" },
+    { emoji: "🍍", name: "파인애플" },
+    { emoji: "🥝", name: "키위" },
+    { emoji: "🍉", name: "수박" }
+  ];
+
+  var boardEl = document.getElementById("memory-board");
+  var scoreEl = document.getElementById("score-display");
+  var statusEl = document.getElementById("status-display");
+  var restartBtn = document.getElementById("restart-button");
+
+  var state = "playing";
+  var score = 0;
+  var cards = [];
+  var cardButtons = [];
+  var flippedIndices = [];
+  var mismatchTimer = null;
+
+  function shuffle(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = array[i];
+      array[i] = array[j];
+      array[j] = tmp;
+    }
+    return array;
+  }
+
+  function buildDeck() {
+    var ids = [];
+    for (var i = 0; i < SYMBOLS.length; i++) {
+      ids.push(i, i);
+    }
+    shuffle(ids);
+    return ids.map(function (pairId) {
+      return { pairId: pairId, flipped: false, matched: false };
+    });
+  }
+
+  function updateScoreDisplay() {
+    scoreEl.textContent = "점수: " + score;
+  }
+
+  function updateStatusDisplay() {
+    if (state === "playing") {
+      statusEl.textContent = "진행 중";
+    } else if (state === "checking") {
+      statusEl.textContent = "확인 중";
+    } else if (state === "won") {
+      statusEl.textContent = "승리! 점수: " + score + "점";
+    }
+  }
+
+  function updateCardUI(index) {
+    var card = cards[index];
+    var btn = cardButtons[index];
+    var num = index + 1;
+
+    btn.classList.toggle("memory-card--flipped", card.flipped && !card.matched);
+    btn.classList.toggle("memory-card--matched", card.matched);
+    btn.disabled = card.matched;
+    btn.textContent = (card.flipped || card.matched) ? SYMBOLS[card.pairId].emoji : "";
+
+    if (card.matched) {
+      btn.setAttribute("aria-label", "카드 " + num + ", " + SYMBOLS[card.pairId].name + ", 매칭됨");
+    } else if (card.flipped) {
+      btn.setAttribute("aria-label", "카드 " + num + ", " + SYMBOLS[card.pairId].name + ", 뒤집기");
+    } else {
+      btn.setAttribute("aria-label", "카드 " + num + ", 뒤집기");
+    }
+  }
+
+  function renderBoard() {
+    boardEl.innerHTML = "";
+    cardButtons = [];
+    cards.forEach(function (card, index) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "memory-card";
+      btn.setAttribute("data-card-index", String(index));
+      btn.setAttribute("data-pair-id", String(card.pairId));
+      btn.addEventListener("click", function () {
+        handleCardClick(index);
+      });
+      boardEl.appendChild(btn);
+      cardButtons.push(btn);
+      updateCardUI(index);
+    });
+  }
+
+  function allMatched() {
+    return cards.every(function (card) {
+      return card.matched;
+    });
+  }
+
+  function handleCardClick(index) {
+    if (state !== "playing") {
+      return;
+    }
+    var card = cards[index];
+    if (card.flipped || card.matched) {
+      return;
+    }
+
+    card.flipped = true;
+    flippedIndices.push(index);
+    updateCardUI(index);
+
+    if (flippedIndices.length === 2) {
+      state = "checking";
+      updateStatusDisplay();
+
+      var i1 = flippedIndices[0];
+      var i2 = flippedIndices[1];
+
+      if (cards[i1].pairId === cards[i2].pairId) {
+        cards[i1].matched = true;
+        cards[i2].matched = true;
+        updateCardUI(i1);
+        updateCardUI(i2);
+
+        score += 10;
+        updateScoreDisplay();
+        flippedIndices = [];
+
+        state = allMatched() ? "won" : "playing";
+        updateStatusDisplay();
+      } else {
+        mismatchTimer = setTimeout(function () {
+          cards[i1].flipped = false;
+          cards[i2].flipped = false;
+          updateCardUI(i1);
+          updateCardUI(i2);
+          flippedIndices = [];
+          state = "playing";
+          updateStatusDisplay();
+          mismatchTimer = null;
+        }, 600);
+      }
+    }
+  }
+
+  function init() {
+    if (mismatchTimer) {
+      clearTimeout(mismatchTimer);
+      mismatchTimer = null;
+    }
+    cards = buildDeck();
+    flippedIndices = [];
+    score = 0;
+    state = "playing";
+    renderBoard();
+    updateScoreDisplay();
+    updateStatusDisplay();
+  }
+
+  restartBtn.addEventListener("click", init);
+
+  init();
+})();
+</script>
+</body>
+</html>
