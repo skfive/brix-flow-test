@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2048</title>
+<style>
+  :root {
+    --board-bg: #bbada0;
+    --cell-bg: #cdc1b4;
+    --tile-bg-2: #eee4da;
+    --tile-bg-2048: #edc22e;
+    --tile-text-light: #f9f6f2;
+    --tile-text-dark: #776e65;
+    /* additive intermediate tile colors (developer 재량, frozen 6개 토큰 아님) */
+    --tile-bg-4: #ede0c8;
+    --tile-bg-8: #f2b179;
+    --tile-bg-16: #f59563;
+    --tile-bg-32: #f67c5f;
+    --tile-bg-64: #f65e3b;
+    --tile-bg-128: #edcf72;
+    --tile-bg-256: #edcc61;
+    --tile-bg-512: #edc850;
+    --tile-bg-1024: #edc53f;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #faf8ef;
+    color: var(--tile-text-dark);
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .game-container {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  h1 {
+    font-size: clamp(24px, 6vw, 40px);
+    margin: 0 0 12px;
+    text-align: center;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .score-panel {
+    background: var(--board-bg);
+    color: var(--tile-text-light);
+    border-radius: 6px;
+    padding: 6px 16px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 72px;
+  }
+
+  .score-label {
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  #score-value {
+    font-size: 22px;
+    font-weight: bold;
+  }
+
+  #restart-button {
+    background: #8f7a66;
+    color: var(--tile-text-light);
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  #restart-button:hover {
+    background: #9c8a76;
+  }
+
+  #restart-button:focus-visible {
+    outline: 3px solid #4a90d9;
+    outline-offset: 2px;
+  }
+
+  #game-board {
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 1 / 1;
+    background: var(--board-bg);
+    border-radius: 6px;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .cell {
+    position: relative;
+    background: var(--cell-bg);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tile {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: clamp(16px, 6vw, 32px);
+  }
+
+  @keyframes tile-appear {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+  }
+
+  @keyframes tile-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  .tile-new {
+    animation: tile-appear 0.15s ease-in-out;
+  }
+
+  .tile-merged {
+    animation: tile-pop 0.15s ease-in-out;
+  }
+
+  .message-overlay {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 6px;
+    background: #8f7a66;
+    color: var(--tile-text-light);
+    font-weight: bold;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  .message-overlay.visible {
+    opacity: 1;
+  }
+
+  .hint {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--tile-text-dark);
+    text-align: center;
+  }
+
+  @media (max-width: 360px) {
+    #restart-button {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>2048</h1>
+    <div class="top-bar">
+      <div class="score-panel">
+        <span class="score-label">SCORE</span>
+        <span id="score-value">0</span>
+      </div>
+      <button id="restart-button" aria-label="다시 시작" type="button">다시 시작</button>
+    </div>
+
+    <div id="game-board" aria-label="2048 게임판"></div>
+
+    <div id="game-message" class="message-overlay" role="status"></div>
+
+    <p class="hint">방향키(←↑→↓)로 타일을 이동하세요.</p>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var DIRECTIONS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+
+    var MESSAGES = {
+      idle: '게임 준비',
+      playing: '게임 진행 중',
+      won: '2048 달성! 승리했습니다',
+      gameover: '더 이상 이동할 수 없습니다. 게임 오버'
+    };
+
+    var TILE_BG = {
+      2: 'var(--tile-bg-2)',
+      4: 'var(--tile-bg-4)',
+      8: 'var(--tile-bg-8)',
+      16: 'var(--tile-bg-16)',
+      32: 'var(--tile-bg-32)',
+      64: 'var(--tile-bg-64)',
+      128: 'var(--tile-bg-128)',
+      256: 'var(--tile-bg-256)',
+      512: 'var(--tile-bg-512)',
+      1024: 'var(--tile-bg-1024)',
+      2048: 'var(--tile-bg-2048)'
+    };
+
+    var boardEl = document.getElementById('game-board');
+    var scoreEl = document.getElementById('score-value');
+    var messageEl = document.getElementById('game-message');
+    var restartButton = document.getElementById('restart-button');
+
+    var board = [];
+    var score = 0;
+    var state = 'idle';
+    var lastNewPositions = [];
+    var lastMergedPositions = [];
+
+    function createEmptyBoard() {
+      var b = [];
+      for (var r = 0; r < 4; r++) {
+        b.push([0, 0, 0, 0]);
+      }
+      return b;
+    }
+
+    function coordsFor(direction, lineIndex, pos) {
+      switch (direction) {
+        case 'ArrowLeft':
+          return { r: lineIndex, c: pos };
+        case 'ArrowRight':
+          return { r: lineIndex, c: 3 - pos };
+        case 'ArrowUp':
+          return { r: pos, c: lineIndex };
+        case 'ArrowDown':
+          return { r: 3 - pos, c: lineIndex };
+        default:
+          return { r: lineIndex, c: pos };
+      }
+    }
+
+    function slideLine(line) {
+      var nonZero = line.filter(function (v) { return v !== 0; });
+      var result = [];
+      var mergedFlags = [];
+      var scoreGained = 0;
+      var i = 0;
+      while (i < nonZero.length) {
+        if (i + 1 < nonZero.length && nonZero[i] === nonZero[i + 1]) {
+          var mergedValue = nonZero[i] * 2;
+          result.push(mergedValue);
+          mergedFlags.push(true);
+          scoreGained += mergedValue;
+          i += 2;
+        } else {
+          result.push(nonZero[i]);
+          mergedFlags.push(false);
+          i += 1;
+        }
+      }
+      while (result.length < 4) {
+        result.push(0);
+        mergedFlags.push(false);
+      }
+      return { result: result, mergedFlags: mergedFlags, scoreGained: scoreGained };
+    }
+
+    function arraysEqual(a, b) {
+      if (a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+      }
+      return true;
+    }
+
+    function move(direction) {
+      var changed = false;
+      var scoreGained = 0;
+      var mergedCoords = [];
+
+      for (var lineIndex = 0; lineIndex < 4; lineIndex++) {
+        var original = [];
+        var pos;
+        for (pos = 0; pos < 4; pos++) {
+          var oc = coordsFor(direction, lineIndex, pos);
+          original.push(board[oc.r][oc.c]);
+        }
+
+        var slid = slideLine(original);
+
+        if (!arraysEqual(original, slid.result)) {
+          changed = true;
+        }
+        scoreGained += slid.scoreGained;
+
+        for (pos = 0; pos < 4; pos++) {
+          var nc = coordsFor(direction, lineIndex, pos);
+          board[nc.r][nc.c] = slid.result[pos];
+          if (slid.mergedFlags[pos]) {
+            mergedCoords.push({ r: nc.r, c: nc.c });
+          }
+        }
+      }
+
+      return { changed: changed, scoreGained: scoreGained, mergedCoords: mergedCoords };
+    }
+
+    function emptyCells() {
+      var cells = [];
+      for (var r = 0; r < 4; r++) {
+        for (var c = 0; c < 4; c++) {
+          if (board[r][c] === 0) {
+            cells.push({ r: r, c: c });
+          }
+        }
+      }
+      return cells;
+    }
+
+    function spawnTile() {
+      var empties = emptyCells();
+      if (empties.length === 0) return null;
+      var choice = empties[Math.floor(Math.random() * empties.length)];
+      var value = Math.random() < 0.9 ? 2 : 4;
+      board[choice.r][choice.c] = value;
+      return choice;
+    }
+
+    function canMove(b) {
+      for (var r = 0; r < 4; r++) {
+        for (var c = 0; c < 4; c++) {
+          if (b[r][c] === 0) return true;
+          if (c < 3 && b[r][c] === b[r][c + 1]) return true;
+          if (r < 3 && b[r][c] === b[r + 1][c]) return true;
+        }
+      }
+      return false;
+    }
+
+    function isSamePos(a, b) {
+      return a.r === b.r && a.c === b.c;
+    }
+
+    function isInList(list, r, c) {
+      for (var i = 0; i < list.length; i++) {
+        if (isSamePos(list[i], { r: r, c: c })) return true;
+      }
+      return false;
+    }
+
+    function tileBackground(value) {
+      return TILE_BG[value] || TILE_BG[2048];
+    }
+
+    function tileColor(value) {
+      return value <= 4 ? 'var(--tile-text-dark)' : 'var(--tile-text-light)';
+    }
+
+    function render() {
+      scoreEl.textContent = String(score);
+
+      boardEl.innerHTML = '';
+      for (var r = 0; r < 4; r++) {
+        for (var c = 0; c < 4; c++) {
+          var cell = document.createElement('div');
+          cell.className = 'cell';
+
+          var value = board[r][c];
+          if (value !== 0) {
+            var tile = document.createElement('div');
+            var cls = 'tile';
+            if (isInList(lastNewPositions, r, c)) cls += ' tile-new';
+            if (isInList(lastMergedPositions, r, c)) cls += ' tile-merged';
+            tile.className = cls;
+            tile.textContent = String(value);
+            tile.style.background = tileBackground(value);
+            tile.style.color = tileColor(value);
+            cell.appendChild(tile);
+          }
+
+          boardEl.appendChild(cell);
+        }
+      }
+
+      messageEl.textContent = MESSAGES[state];
+      if (state === 'won' || state === 'gameover') {
+        messageEl.classList.add('visible');
+      } else {
+        messageEl.classList.remove('visible');
+      }
+    }
+
+    function initGame() {
+      board = createEmptyBoard();
+      score = 0;
+      state = 'idle';
+      lastMergedPositions = [];
+
+      var first = spawnTile();
+      var second = spawnTile();
+      lastNewPositions = [first, second].filter(function (p) { return p !== null; });
+
+      render();
+    }
+
+    function handleKey(e) {
+      if (DIRECTIONS.indexOf(e.key) === -1) return;
+      e.preventDefault();
+
+      if (state === 'won' || state === 'gameover') return;
+
+      var result = move(e.key);
+      if (!result.changed) return;
+
+      score += result.scoreGained;
+      if (state === 'idle') state = 'playing';
+
+      lastMergedPositions = result.mergedCoords;
+      var spawned = spawnTile();
+      lastNewPositions = spawned ? [spawned] : [];
+
+      var reached2048 = result.mergedCoords.some(function (pos) {
+        return board[pos.r][pos.c] === 2048;
+      });
+
+      if (reached2048) {
+        state = 'won';
+      } else if (!canMove(board)) {
+        state = 'gameover';
+      }
+
+      render();
+    }
+
+    window.addEventListener('keydown', handleKey);
+    restartButton.addEventListener('click', initGame);
+
+    initGame();
+  })();
+  </script>
+</body>
+</html>
