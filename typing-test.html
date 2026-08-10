@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>타이핑 속도 테스트</title>
+<style>
+  :root {
+    --color-char-correct: #16a34a;
+    --color-char-incorrect: #dc2626;
+    --color-char-current: #2563eb;
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-text: #e2e8f0;
+    --space-control-gap: 12px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  #typing-test-root {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  #typing-test-sentence {
+    margin: 0;
+    background: var(--color-surface);
+    padding: 20px;
+    border-radius: 8px;
+    font-size: 20px;
+    line-height: 1.8;
+    letter-spacing: 0.5px;
+    overflow-wrap: break-word;
+  }
+
+  .typing-test__char--correct {
+    color: var(--color-char-correct);
+    text-decoration: underline;
+  }
+
+  .typing-test__char--incorrect {
+    color: var(--color-char-incorrect);
+    text-decoration: underline wavy;
+    font-weight: 700;
+  }
+
+  .typing-test__char--current {
+    color: var(--color-char-current);
+    border-bottom: 2px solid var(--color-char-current);
+  }
+
+  #typing-test-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 8px;
+    border: 1px solid var(--color-surface);
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  #typing-test-input:focus {
+    outline: 2px solid var(--color-char-current);
+    outline-offset: 2px;
+  }
+
+  #typing-test-input[readonly] {
+    opacity: 0.7;
+  }
+
+  .typing-test__stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  .typing-test__stat {
+    background: var(--color-surface);
+    padding: 10px 14px;
+    border-radius: 8px;
+  }
+
+  #typing-test-restart {
+    align-self: flex-start;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: var(--color-char-current);
+    color: #ffffff;
+    font-size: 16px;
+  }
+
+  #typing-test-restart:focus {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+
+  #typing-test-result {
+    margin: 0;
+    background: var(--color-surface);
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: 700;
+  }
+
+  #typing-test-result[hidden] {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .typing-test__stats {
+      flex-direction: row;
+    }
+  }
+</style>
+</head>
+<body>
+<main id="typing-test-root">
+  <p id="typing-test-sentence"></p>
+
+  <input
+    id="typing-test-input"
+    type="text"
+    aria-label="타이핑 테스트 입력"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
+  />
+
+  <div class="typing-test__stats">
+    <div id="typing-test-status" class="typing-test__stat" aria-live="polite"></div>
+    <div id="typing-test-timer" class="typing-test__stat" aria-live="polite"></div>
+    <div id="typing-test-wpm" class="typing-test__stat" aria-live="polite"></div>
+    <div id="typing-test-accuracy" class="typing-test__stat" aria-live="polite"></div>
+  </div>
+
+  <button id="typing-test-restart" type="button">다시 시작</button>
+
+  <p id="typing-test-result" class="typing-test__result" hidden></p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var SENTENCES = [
+    "가을 하늘은 높고 파랗다",
+    "타이핑 연습은 매일 조금씩 하는 것이 중요하다",
+    "빠른 갈색 여우가 게으른 개를 뛰어넘는다",
+    "오늘도 좋은 하루 되세요",
+    "꾸준한 연습이 실력을 만든다",
+    "커피 한 잔의 여유를 즐겨보세요"
+  ];
+
+  var STATUS_TEXT = {
+    idle: "입력을 시작하면 측정이 시작됩니다",
+    running: "입력 중…",
+    finished: "완료!"
+  };
+
+  var sentenceEl = document.getElementById("typing-test-sentence");
+  var inputEl = document.getElementById("typing-test-input");
+  var statusEl = document.getElementById("typing-test-status");
+  var timerEl = document.getElementById("typing-test-timer");
+  var wpmEl = document.getElementById("typing-test-wpm");
+  var accuracyEl = document.getElementById("typing-test-accuracy");
+  var restartBtn = document.getElementById("typing-test-restart");
+  var resultEl = document.getElementById("typing-test-result");
+
+  var state = {
+    state: "idle",
+    sentence: "",
+    startTimestamp: null,
+    typedChars: 0,
+    correctChars: 0,
+    incorrectChars: 0,
+    wpm: 0,
+    accuracy: 100
+  };
+
+  var tickIntervalId = null;
+  var lastSentence = null;
+
+  function pickSentence() {
+    if (SENTENCES.length < 2) {
+      return SENTENCES[0];
+    }
+    var next = SENTENCES[Math.floor(Math.random() * SENTENCES.length)];
+    var guard = 0;
+    while (next === lastSentence && guard < 10) {
+      next = SENTENCES[Math.floor(Math.random() * SENTENCES.length)];
+      guard++;
+    }
+    return next;
+  }
+
+  function renderSentence() {
+    sentenceEl.textContent = "";
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < state.sentence.length; i++) {
+      var span = document.createElement("span");
+      span.className = "typing-test__char";
+      span.textContent = state.sentence[i];
+      frag.appendChild(span);
+    }
+    sentenceEl.appendChild(frag);
+  }
+
+  function formatTime(totalSeconds) {
+    var safeSeconds = Math.max(0, totalSeconds);
+    var m = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
+    var s = String(Math.floor(safeSeconds % 60)).padStart(2, "0");
+    return m + ":" + s;
+  }
+
+  function updateCharMarks() {
+    var chars = sentenceEl.children;
+    var value = inputEl.value;
+    for (var i = 0; i < chars.length; i++) {
+      var span = chars[i];
+      span.classList.remove(
+        "typing-test__char--correct",
+        "typing-test__char--incorrect",
+        "typing-test__char--current"
+      );
+      if (i < state.typedChars) {
+        if (value[i] === state.sentence[i]) {
+          span.classList.add("typing-test__char--correct");
+        } else {
+          span.classList.add("typing-test__char--incorrect");
+        }
+      } else if (i === state.typedChars && state.state !== "finished") {
+        span.classList.add("typing-test__char--current");
+      }
+    }
+  }
+
+  function recalcStats() {
+    var value = inputEl.value;
+    state.typedChars = value.length;
+
+    var correct = 0;
+    var incorrect = 0;
+    for (var i = 0; i < state.typedChars; i++) {
+      if (value[i] === state.sentence[i]) {
+        correct++;
+      } else {
+        incorrect++;
+      }
+    }
+    state.correctChars = correct;
+    state.incorrectChars = incorrect;
+
+    var elapsedSecondsRaw = state.startTimestamp
+      ? (Date.now() - state.startTimestamp) / 1000
+      : 0;
+    var elapsedSecondsForWpm = Math.max(elapsedSecondsRaw, 1);
+    var elapsedMinutes = elapsedSecondsForWpm / 60;
+
+    state.wpm = Math.round(
+      Math.max(0, state.typedChars / 5 - state.incorrectChars) / elapsedMinutes
+    );
+    state.accuracy =
+      state.typedChars === 0
+        ? 100
+        : Math.round((state.correctChars / state.typedChars) * 100);
+
+    wpmEl.textContent = state.wpm + " WPM";
+    accuracyEl.textContent = "정확도 " + state.accuracy + "%";
+    timerEl.textContent = formatTime(elapsedSecondsRaw);
+  }
+
+  function stopTicking() {
+    if (tickIntervalId !== null) {
+      clearInterval(tickIntervalId);
+      tickIntervalId = null;
+    }
+  }
+
+  function finish() {
+    state.state = "finished";
+    stopTicking();
+    recalcStats();
+    updateCharMarks();
+    statusEl.textContent = STATUS_TEXT.finished;
+    inputEl.readOnly = true;
+    resultEl.hidden = false;
+    resultEl.textContent =
+      "완료 — " + state.wpm + " WPM, 정확도 " + state.accuracy + "%";
+  }
+
+  function handleInput() {
+    if (state.state === "finished") {
+      inputEl.value = state.sentence.slice(0, state.typedChars);
+      return;
+    }
+
+    if (state.state === "idle") {
+      state.state = "running";
+      state.startTimestamp = Date.now();
+      statusEl.textContent = STATUS_TEXT.running;
+      stopTicking();
+      tickIntervalId = setInterval(recalcStats, 250);
+    }
+
+    recalcStats();
+    updateCharMarks();
+
+    if (state.typedChars >= state.sentence.length) {
+      finish();
+    }
+  }
+
+  function reset() {
+    stopTicking();
+
+    var sentence = pickSentence();
+    lastSentence = sentence;
+
+    state = {
+      state: "idle",
+      sentence: sentence,
+      startTimestamp: null,
+      typedChars: 0,
+      correctChars: 0,
+      incorrectChars: 0,
+      wpm: 0,
+      accuracy: 100
+    };
+
+    renderSentence();
+
+    inputEl.value = "";
+    inputEl.readOnly = false;
+    inputEl.maxLength = sentence.length;
+
+    statusEl.textContent = STATUS_TEXT.idle;
+    timerEl.textContent = "00:00";
+    wpmEl.textContent = "0 WPM";
+    accuracyEl.textContent = "정확도 100%";
+
+    resultEl.hidden = true;
+    resultEl.textContent = "";
+
+    inputEl.focus();
+  }
+
+  inputEl.addEventListener("input", handleInput);
+  restartBtn.addEventListener("click", reset);
+
+  reset();
+})();
+</script>
+</body>
+</html>
