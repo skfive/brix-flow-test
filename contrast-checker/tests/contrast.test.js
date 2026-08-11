@@ -183,13 +183,18 @@ test('P3: 정규화 키가 같으면 메모이제이션 캐시를 재사용하�
   assert.equal(cache.get('aabbcc:ffffff').ratio, first.ratio);
 });
 
-test('AC3/F2: 잘못된 hex 입력 시 디바운스를 우회해 즉시 오류 문구를 표시하고 직전 유효 결과(대비율/배지/미리보기)를 지운다', () => {
+test('AC3/F2: 잘못된 hex 입력 시 디바운스를 우회해 즉시 오류 문구를 표시하되 직전 유효 결과(대비율/배지/미리보기)는 유지한다(contract.md §6)', () => {
   const el = mountFakeApp();
 
   // 마운트 시 기본값(#000000/#ffffff)은 디바운스 없이 즉시 계산되어 있어야 한다.
   assert.equal(el['contrast-ratio-value'].textContent, '21.00:1');
   assert.ok(el['badge-aa'].classList.contains('contrast-badge--pass'));
   assert.equal(el['input-error-message'].textContent, '');
+
+  const previousRatioText = el['contrast-ratio-value'].textContent;
+  const previousBadgeAAText = el['badge-aa'].textContent;
+  const previousBg = el['preview-sample'].style.backgroundColor;
+  const previousFg = el['preview-sample'].style.color;
 
   el['fg-color-hex'].value = 'zzz';
   el['fg-color-hex'].trigger('input');
@@ -201,21 +206,23 @@ test('AC3/F2: 잘못된 hex 입력 시 디바운스를 우회해 즉시 오류 �
     '',
     '오류 문구가 즉시 표시되어야 한다'
   );
-  assert.equal(el['contrast-ratio-value'].textContent, '–', '직전 대비율 값이 지워져야 한다');
+  // invalid-input 상태에서도 마지막 유효 결과를 유지한다(contract.md §6 —
+  // "마지막 유효 결과 유지", 구현 설계 §2.1-3). 초기화하지 않는다.
   assert.equal(
-    el['badge-aa'].classList.contains('contrast-badge--pass'),
-    false,
-    '직전 AA 배지의 pass 상태가 지워져야 한다'
+    el['contrast-ratio-value'].textContent,
+    previousRatioText,
+    '직전 대비율 값이 유지되어야 한다'
   );
-  assert.equal(el['badge-aa'].classList.contains('contrast-badge--fail'), false);
-  assert.equal(el['badge-aa'].textContent, 'AA: –');
-  assert.equal(el['badge-aa-large'].textContent, 'AA (large): –');
-  assert.equal(el['badge-aaa'].textContent, 'AAA: –');
-  assert.equal(el['preview-sample'].style.backgroundColor, '', '미리보기 배경이 지워져야 한다');
-  assert.equal(el['preview-sample'].style.color, '');
+  assert.ok(
+    el['badge-aa'].classList.contains('contrast-badge--pass'),
+    '직전 AA 배지의 pass 상태가 유지되어야 한다'
+  );
+  assert.equal(el['badge-aa'].textContent, previousBadgeAAText);
+  assert.equal(el['preview-sample'].style.backgroundColor, previousBg, '미리보기 배경이 유지되어야 한다');
+  assert.equal(el['preview-sample'].style.color, previousFg, '미리보기 전경색이 유지되어야 한다');
 });
 
-test('AC3: 잘못된 입력이 있는 동안 swap-colors-btn(주 실행 control)이 비활성화된다', () => {
+test('AC3: 잘못된 입력이 있는 동안에도 swap-colors-btn(주 실행 control)은 비활성화되지 않는다(contract.md §6 — 활성, 비활성화 금지)', () => {
   const el = mountFakeApp();
   assert.equal(el['swap-colors-btn'].disabled, false, '유효 상태에서는 활성화되어 있어야 한다');
 
@@ -224,18 +231,18 @@ test('AC3: 잘못된 입력이 있는 동안 swap-colors-btn(주 실행 control)
 
   assert.equal(
     el['swap-colors-btn'].disabled,
-    true,
-    '잘못된 입력 동안에는 swap-colors-btn이 비활성화되어야 한다'
+    false,
+    '잘못된 입력 동안에도 swap-colors-btn은 계속 활성화되어 있어야 한다'
   );
 });
 
-test('AC3: 잘못된 입력 뒤 유효한 값으로 복구되면(P2: 150ms 이내) input-error-message가 제거되고 결과/swap-colors-btn이 재표시·재활성화된다', async () => {
+test('AC3: 잘못된 입력 뒤 유효한 값으로 복구되면(P2: 150ms 이내) input-error-message가 제거되고 결과가 최신값으로 재표시된다', async () => {
   const el = mountFakeApp();
 
   el['fg-color-hex'].value = 'zzz';
   el['fg-color-hex'].trigger('input');
   assert.notEqual(el['input-error-message'].textContent, '');
-  assert.equal(el['swap-colors-btn'].disabled, true);
+  assert.equal(el['swap-colors-btn'].disabled, false, '오류 동안에도 비활성화되지 않는다');
 
   el['fg-color-hex'].value = '#123456';
   el['fg-color-hex'].trigger('input');
@@ -262,7 +269,7 @@ test('AC3: 잘못된 입력 뒤 유효한 값으로 복구되면(P2: 150ms 이�
   assert.equal(
     el['swap-colors-btn'].disabled,
     false,
-    '복구 후 swap-colors-btn이 재활성화되어야 한다'
+    '복구 후에도 swap-colors-btn은 계속 활성화되어 있어야 한다'
   );
 });
 
