@@ -107,6 +107,11 @@
     outline-offset: 2px;
   }
 
+  #swap-colors-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   #input-error-message {
     min-height: 1.2em;
     color: var(--color-fail);
@@ -369,6 +374,9 @@
       errors[field] = message;
       renderErrors();
       clearResultDisplay();
+      // AC: 잘못된 입력 동안 주 실행 control(swap-colors-btn)을 비활성화한다.
+      // 유효한 값으로 복구되어 재계산이 성공하면 performRecalculation()에서 재활성화한다.
+      swapBtn.disabled = true;
       if (debounceTimer) {
         clearTimeout(debounceTimer);
         debounceTimer = null;
@@ -403,6 +411,8 @@
       var bgRaw = bgHexInput.value;
       var result = getContrastResult(fgRaw, bgRaw);
       renderResult(result, fgRaw, bgRaw);
+      // 두 입력이 모두 유효해 재계산이 성공했으므로 주 실행 control을 재활성화한다.
+      swapBtn.disabled = false;
     }
 
     function scheduleRecalculation() {
