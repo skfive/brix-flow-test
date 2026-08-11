@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>텍스트 통계 분석기 — 시각 mockup (BF-1946)</title>
+<style>
+  :root {
+    /* 동결 토큰 (docs/plans/BF-1945/implementation-plan.md 3.4절 — 이름/값 재정의 금지) */
+    --color-action-primary: #2563eb;
+    --color-surface-card: #f8fafc;
+    --space-card-gap: 16px;
+    --font-size-stat-value: 28px;
+
+    /* 제안 확장 토큰 (동결 아님, docs/design/text-stats-BF-1945.md 2.2절) */
+    --color-action-primary-hover: #1d4ed8;
+    --color-app-background: #eef2f6;
+    --color-border: #e2e8f0;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #64748b;
+    --color-text-placeholder: #94a3b8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: var(--color-app-background);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+    color: var(--color-text-primary);
+  }
+
+  .mockup-meta {
+    max-width: 640px;
+    margin: 0 auto 32px;
+    padding: 16px 20px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #7c2d12;
+  }
+  .mockup-meta strong { color: #7c2d12; }
+
+  .mockup-section-title {
+    max-width: 640px;
+    margin: 40px auto 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.02em;
+  }
+  .mockup-section-title span {
+    font-weight: 400;
+    color: var(--color-text-secondary);
+  }
+
+  /* ===== .text-stats-app 공통 스타일 (동결 class 사용) ===== */
+  .text-stats-app {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .text-stats-app h1 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .app-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 24px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+  .app-status .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-text-secondary);
+    flex-shrink: 0;
+  }
+  .app-status.is-populated { color: var(--color-action-primary); }
+  .app-status.is-populated .status-dot { background: var(--color-action-primary); }
+
+  .input-section { margin-bottom: 24px; }
+
+  .input-section label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .text-stats-app textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--color-text-primary);
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    resize: vertical;
+  }
+  .text-stats-app textarea::placeholder { color: var(--color-text-placeholder); }
+  .text-stats-app textarea:focus {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+  }
+
+  .input-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+
+  .text-stats-app button.clear-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--color-text-primary);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .text-stats-app button.clear-btn:hover {
+    background: var(--color-app-background);
+    color: var(--color-action-primary-hover);
+    border-color: var(--color-action-primary-hover);
+  }
+
+  .text-stats-app h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .stats-section { margin-bottom: 24px; }
+
+  /* ===== #stats-grid / .stats-card (동결 id/class) ===== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: var(--space-card-gap);
+  }
+
+  .stats-card {
+    min-width: 0;
+    padding: 14px 12px;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stats-card__value {
+    font-size: var(--font-size-stat-value);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-action-primary);
+    overflow-wrap: break-word;
+  }
+
+  .stats-card__label {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--color-text-secondary);
+  }
+
+  /* ===== #top-words-list / .top-words__item (동결 id/class) ===== */
+  .top-words-section p.empty-hint {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
+
+  ol.top-words-list {
+    list-style: decimal;
+    margin: 0;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .top-words__item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+  .top-words__item .count {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+
+  /* ===== 320px 프레임 참고용 ===== */
+  .frame-320 {
+    width: 320px;
+    margin: 0 auto;
+    border: 2px dashed #94a3b8;
+    border-radius: 16px;
+    padding: 12px;
+    background: #ffffff;
+  }
+  .frame-320 .text-stats-app {
+    max-width: none;
+    padding: 16px;
+    border: none;
+    box-shadow: none;
+  }
+  .frame-320 .text-stats-app h1 { font-size: 18px; }
+  .frame-320-caption {
+    max-width: 640px;
+    margin: 12px auto 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+</style>
+</head>
+<body>
+
+  <div class="mockup-meta">
+    <strong>참고</strong> — 이 파일은 시각 시뮬레이션용 mockup이며 dev(BF-1947)의 실제 산출물이 아닙니다.
+    DOM id(<code>text-input</code>, <code>clear-button</code>, <code>stats-grid</code>,
+    <code>stat-*</code>, <code>top-words-list</code>)와 class(<code>text-stats-app</code>,
+    <code>stats-card</code>, <code>stats-card__value</code>, <code>stats-card__label</code>,
+    <code>top-words__item</code>), design token 4종은
+    <code>docs/plans/BF-1945/implementation-plan.md</code> 3절에서 동결된 값을 그대로 사용했습니다.
+    통계 수치는 레이아웃 예시용 placeholder이며 실제 계산 로직의 근거가 아닙니다
+    (계산 규칙은 계획 문서 2절 참조). HTML id 유일성 제약으로 아래 상태별/반응형 미리보기 중
+    "실행 예시" 1개에만 실제 id를 부여했고, 나머지는 class만 재사용한 참고 스케치입니다.
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 1) populated 상태 — 실행 예시 (동결 id 전체 부여) -->
+  <!-- ============================================================ -->
+  <p class="mockup-section-title">1. 실행 예시 <span>— populated 상태 (동결 id/class 실사용)</span></p>
+
+  <div class="text-stats-app">
+    <h1>텍스트 통계 분석기</h1>
+    <p role="status" aria-live="polite" class="app-status is-populated">
+      <span class="status-dot" aria-hidden="true"></span>
+      상태: 입력됨
+    </p>
+
+    <div class="input-section">
+      <label for="text-input">분석할 텍스트</label>
+      <textarea id="text-input" aria-label="분석할 텍스트 입력" placeholder="분석할 텍스트를 입력하세요">디자인은 사용자의 문제를 해결하는 과정입니다. 좋은 디자인은 눈에 띄지 않지만 나쁜 디자인은 사용성을 해칩니다.
+
+텍스트 통계 분석기는 문자수와 단어수와 문장수와 문단수와 읽기시간을 실시간으로 계산해서 보여줍니다. 자주 등장한 단어도 함께 확인할 수 있습니다.</textarea>
+      <div class="input-actions">
+        <button id="clear-button" class="clear-btn" type="button" aria-label="입력 지우기">지우기</button>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <h2>통계</h2>
+      <div id="stats-grid" class="stats-grid">
+        <div class="stats-card">
+          <span id="stat-chars-with-spaces" class="stats-card__value">186</span>
+          <span class="stats-card__label">공백 포함 문자수</span>
+        </div>
+        <div class="stats-card">
+          <span id="stat-chars-without-spaces" class="stats-card__value">152</span>
+          <span class="stats-card__label">공백 제외 문자수</span>
+        </div>
+        <div class="stats-card">
+          <span id="stat-words" class="stats-card__value">32</span>
+          <span class="stats-card__label">단어수</span>
+        </div>
+        <div class="stats-card">
+          <span id="stat-sentences" class="stats-card__value">4</span>
+          <span class="stats-card__label">문장수</span>
+        </div>
+        <div class="stats-card">
+          <span id="stat-paragraphs" class="stats-card__value">2</span>
+          <span class="stats-card__label">문단수</span>
+        </div>
+        <div class="stats-card">
+          <span id="stat-reading-time" class="stats-card__value">1분 미만</span>
+          <span class="stats-card__label">예상 읽기 시간</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="top-words-section">
+      <h2>자주 쓰인 단어</h2>
+      <ol id="top-words-list" class="top-words-list">
+        <li class="top-words__item"><span>디자인</span><span class="count">5회</span></li>
+        <li class="top-words__item"><span>텍스트</span><span class="count">3회</span></li>
+        <li class="top-words__item"><span>통계</span><span class="count">3회</span></li>
+        <li class="top-words__item"><span>사용자</span><span class="count">2회</span></li>
+        <li class="top-words__item"><span>문제</span><span class="count">2회</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 2) empty 상태 — 참고 스케치 (class만 재사용, id 없음) -->
+  <!-- ============================================================ -->
+  <p class="mockup-section-title">2. 상태 참고 스케치 <span>— empty (id 미부여, class만 재사용)</span></p>
+
+  <div class="text-stats-app">
+    <h1>텍스트 통계 분석기</h1>
+    <p role="status" aria-live="polite" class="app-status">
+      <span class="status-dot" aria-hidden="true"></span>
+      상태: 비어 있음
+    </p>
+
+    <div class="input-section">
+      <label for="text-input-empty-ref">분석할 텍스트</label>
+      <textarea id="text-input-empty-ref" aria-label="분석할 텍스트 입력" placeholder="분석할 텍스트를 입력하세요"></textarea>
+      <div class="input-actions">
+        <button class="clear-btn" type="button" aria-label="입력 지우기">지우기</button>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <h2>통계</h2>
+      <div class="stats-grid">
+        <div class="stats-card">
+          <span class="stats-card__value">0</span>
+          <span class="stats-card__label">공백 포함 문자수</span>
+        </div>
+        <div class="stats-card">
+          <span class="stats-card__value">0</span>
+          <span class="stats-card__label">공백 제외 문자수</span>
+        </div>
+        <div class="stats-card">
+          <span class="stats-card__value">0</span>
+          <span class="stats-card__label">단어수</span>
+        </div>
+        <div class="stats-card">
+          <span class="stats-card__value">0</span>
+          <span class="stats-card__label">문장수</span>
+        </div>
+        <div class="stats-card">
+          <span class="stats-card__value">0</span>
+          <span class="stats-card__label">문단수</span>
+        </div>
+        <div class="stats-card">
+          <span class="stats-card__value">0분</span>
+          <span class="stats-card__label">예상 읽기 시간</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="top-words-section">
+      <h2>자주 쓰인 단어</h2>
+      <p class="empty-hint">표시할 단어가 없습니다.</p>
+      <ol class="top-words-list"></ol>
+      <!-- empty 상태에서 #top-words-list는 자식 없이 완전히 빈 목록을 유지한다(계획 문서 3.3절).
+           안내 문구는 목록 바깥의 별도 <p>에 배치한다. -->
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 3) 320px 반응형 미리보기 (class만 재사용, id 없음) -->
+  <!-- ============================================================ -->
+  <p class="mockup-section-title">3. 320px 반응형 미리보기 <span>— 참고 프레임 (id 미부여)</span></p>
+
+  <div class="frame-320">
+    <div class="text-stats-app">
+      <h1>텍스트 통계 분석기</h1>
+      <p role="status" aria-live="polite" class="app-status is-populated">
+        <span class="status-dot" aria-hidden="true"></span>
+        상태: 입력됨
+      </p>
+
+      <div class="input-section">
+        <label for="text-input-320-ref">분석할 텍스트</label>
+        <textarea id="text-input-320-ref" aria-label="분석할 텍스트 입력" placeholder="분석할 텍스트를 입력하세요">디자인은 사용자의 문제를 해결하는 과정입니다.</textarea>
+        <div class="input-actions">
+          <button class="clear-btn" type="button" aria-label="입력 지우기">지우기</button>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <h2>통계</h2>
+        <div class="stats-grid">
+          <div class="stats-card">
+            <span class="stats-card__value">24</span>
+            <span class="stats-card__label">공백 포함 문자수</span>
+          </div>
+          <div class="stats-card">
+            <span class="stats-card__value">19</span>
+            <span class="stats-card__label">공백 제외 문자수</span>
+          </div>
+          <div class="stats-card">
+            <span class="stats-card__value">5</span>
+            <span class="stats-card__label">단어수</span>
+          </div>
+          <div class="stats-card">
+            <span class="stats-card__value">1</span>
+            <span class="stats-card__label">문장수</span>
+          </div>
+          <div class="stats-card">
+            <span class="stats-card__value">1</span>
+            <span class="stats-card__label">문단수</span>
+          </div>
+          <div class="stats-card">
+            <span class="stats-card__value">1분 미만</span>
+            <span class="stats-card__label">예상 읽기 시간</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-words-section">
+        <h2>자주 쓰인 단어</h2>
+        <ol class="top-words-list">
+          <li class="top-words__item"><span>디자인은</span><span class="count">1회</span></li>
+          <li class="top-words__item"><span>사용자의</span><span class="count">1회</span></li>
+          <li class="top-words__item"><span>문제를</span><span class="count">1회</span></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <p class="frame-320-caption">
+    폭 320px · 앱 패딩 16px 기준 가용 폭 288px → 카드 2열(130px×2 + gap 16px = 276px)로
+    겹침·잘림 없이 줄바꿈됨 (docs/design/text-stats-BF-1945.md 4.3절 계산 근거)
+  </p>
+
+</body>
+</html>
