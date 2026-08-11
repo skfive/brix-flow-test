@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>색상 대비 검사기 — 시각 mockup (BF-1964)</title>
+<style>
+  :root {
+    /* frozen 토큰 (docs/design/contract.md §2.1, 값 변경 금지) */
+    --color-pass: #15803d;
+    --color-fail: #b91c1c;
+    --space-control-gap: 12px;
+    --font-size-preview: 2rem;
+
+    /* 보조 토큰 (비-frozen, contract.md §2.2) */
+    --cc-color-bg: #f8fafc;
+    --cc-color-surface: #ffffff;
+    --cc-color-text-primary: #0f172a;
+    --cc-color-text-secondary: #475569;
+    --cc-color-border: #e2e8f0;
+    --cc-color-accent: #2563eb;
+    --cc-color-error-border: #b91c1c;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: var(--cc-color-bg);
+    color: var(--cc-color-text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+
+  header {
+    max-width: 560px;
+    margin: 0 auto 24px;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 8px;
+  }
+
+  header p {
+    margin: 0;
+    color: var(--cc-color-text-secondary);
+    font-size: 0.9375rem;
+  }
+
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    background: var(--cc-color-surface);
+    border: 1px solid var(--cc-color-border);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* 320px~479px: 세로 스택(frozen 반응형 규칙, contract.md §8) */
+  .layout-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  @media (min-width: 480px) {
+    .layout-row--inputs {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+    .layout-row--inputs .color-input-group {
+      flex: 1;
+    }
+  }
+
+  .color-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+    padding: 16px;
+    border: 1px solid var(--cc-color-border);
+    border-radius: 8px;
+    background: var(--cc-color-bg);
+  }
+
+  .color-input-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--cc-color-text-secondary);
+  }
+
+  .color-input-group .input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-control-gap);
+  }
+
+  .color-input-group input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    font-size: 1rem;
+    padding: 8px 10px;
+    border: 1px solid var(--cc-color-border);
+    border-radius: 6px;
+    font-family: inherit;
+    color: var(--cc-color-text-primary);
+    background: var(--cc-color-surface);
+  }
+
+  .color-input-group input[type="text"]:focus,
+  #swap-colors-btn:focus {
+    outline: 2px solid var(--cc-color-accent);
+    outline-offset: 2px;
+  }
+
+  .color-input-group input[type="color"] {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--cc-color-border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  #swap-colors-btn {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--cc-color-accent);
+    border-radius: 999px;
+    background: var(--cc-color-surface);
+    color: var(--cc-color-accent);
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  #swap-colors-btn:hover {
+    background: var(--cc-color-accent);
+    color: #ffffff;
+  }
+
+  #input-error-message {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-fail);
+  }
+
+  #input-error-message:empty {
+    display: none;
+  }
+
+  .result-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  #contrast-ratio-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-control-gap);
+  }
+
+  .contrast-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .contrast-badge--pass {
+    color: var(--color-pass);
+    background: color-mix(in srgb, var(--color-pass) 12%, white);
+    border: 1px solid var(--color-pass);
+  }
+
+  .contrast-badge--fail {
+    color: var(--color-fail);
+    background: color-mix(in srgb, var(--color-fail) 12%, white);
+    border: 1px solid var(--color-fail);
+  }
+
+  .preview-panel {
+    padding: 16px;
+    border: 1px solid var(--cc-color-border);
+    border-radius: 8px;
+    background: var(--cc-color-bg);
+  }
+
+  .preview-panel > p {
+    margin: 0 0 8px;
+    font-size: 0.8125rem;
+    color: var(--cc-color-text-secondary);
+  }
+
+  #preview-sample {
+    font-size: var(--font-size-preview);
+    font-weight: 500;
+    padding: 20px;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  /* --- 상태 갤러리 (참고용 — frozen ID는 위 데모에서 1회만 사용하므로
+     아래는 class 기반 정적 스냅샷이며 frozen ID를 재사용하지 않는다) --- */
+  .state-gallery {
+    max-width: 560px;
+    margin: 40px auto 0;
+  }
+
+  .state-gallery h2 {
+    font-size: 1.125rem;
+    margin: 0 0 4px;
+  }
+
+  .state-gallery > p {
+    margin: 0 0 16px;
+    color: var(--cc-color-text-secondary);
+    font-size: 0.875rem;
+  }
+
+  .state-snapshot {
+    background: var(--cc-color-surface);
+    border: 1px solid var(--cc-color-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .state-snapshot h3 {
+    margin: 0 0 12px;
+    font-size: 0.9375rem;
+  }
+
+  .state-snapshot__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+    padding: 16px;
+    border-radius: 8px;
+    background: var(--cc-color-bg);
+  }
+
+  .state-snapshot__group--error {
+    border: 1px solid var(--cc-color-error-border);
+  }
+
+  .state-snapshot__group .input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-control-gap);
+  }
+
+  .state-snapshot__group input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    font-size: 1rem;
+    padding: 8px 10px;
+    border: 1px solid var(--cc-color-border);
+    border-radius: 6px;
+    font-family: inherit;
+  }
+
+  .state-snapshot__group--error input[type="text"] {
+    border-color: var(--cc-color-error-border);
+  }
+
+  .state-snapshot__error-text {
+    margin: 8px 0 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-fail);
+  }
+
+  .state-snapshot__badge-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: var(--cc-color-bg);
+    color: var(--cc-color-text-secondary);
+    border: 1px dashed var(--cc-color-border);
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <h1>색상 대비 검사기</h1>
+    <p>전경색·배경색 hex를 입력하거나 색상 picker로 골라 WCAG 대비비와 AA / AA (large) / AAA 판정을 확인하세요.</p>
+  </header>
+
+  <!-- 주 인터랙션 데모: frozen DOM ID 11개를 실제로 1회 사용.
+       경계값 예시(fg=#777777, bg=#ffffff, ratio=4.48:1)로 pass/fail 배지를 동시에 시각화한다. -->
+  <main aria-label="색상 대비 검사기 (valid-result 상태 데모)">
+
+    <div class="layout-row layout-row--inputs">
+      <section class="color-input-group">
+        <label for="fg-color-hex">전경색 (텍스트)</label>
+        <div class="input-row">
+          <input type="text" id="fg-color-hex" aria-label="전경색 hex" value="#777777" placeholder="#000000">
+          <input type="color" id="fg-color-picker" value="#777777" aria-label="전경색 picker">
+        </div>
+      </section>
+
+      <button type="button" id="swap-colors-btn" aria-label="전경색과 배경색 교환">⇅ 색상 교환</button>
+
+      <section class="color-input-group">
+        <label for="bg-color-hex">배경색 (텍스트)</label>
+        <div class="input-row">
+          <input type="text" id="bg-color-hex" aria-label="배경색 hex" value="#ffffff" placeholder="#ffffff">
+          <input type="color" id="bg-color-picker" value="#ffffff" aria-label="배경색 picker">
+        </div>
+      </section>
+    </div>
+
+    <p id="input-error-message" role="alert"></p>
+
+    <div class="result-row">
+      <span id="contrast-ratio-value">4.48:1</span>
+      <div class="badge-row">
+        <span id="badge-aa" class="contrast-badge contrast-badge--fail" aria-live="polite">AA · 실패</span>
+        <span id="badge-aa-large" class="contrast-badge contrast-badge--pass" aria-live="polite">AA (large) · 통과</span>
+        <span id="badge-aaa" class="contrast-badge contrast-badge--fail" aria-live="polite">AAA · 실패</span>
+      </div>
+    </div>
+
+    <section class="preview-panel">
+      <p>미리보기</p>
+      <div id="preview-sample" style="background-color:#ffffff; color:#777777;">Aa 예시 텍스트</div>
+    </section>
+
+  </main>
+
+  <!-- 상태 갤러리(참고용): invalid-input / recalculating 정적 스냅샷.
+       frozen ID는 위 데모에서 1회만 존재해야 하므로 class 기반 마크업만 사용한다. -->
+  <section class="state-gallery" aria-label="상태 참고 갤러리 (참고용, 실제 페이지 요소 아님)">
+    <h2>상태 참고 (참고용 — 실제 ID 아님)</h2>
+    <p>아래 두 스냅샷은 <code>invalid-input</code> / <code>recalculating</code> 상태를 정적으로 보여주는 참고용 시각 자료다. frozen DOM ID(<code>fg-color-hex</code> 등)는 화면당 1개만 존재해야 하므로 여기서는 재사용하지 않는다.</p>
+
+    <div class="state-snapshot">
+      <h3>invalid-input — 형식 오류 즉시 표시</h3>
+      <div class="state-snapshot__group state-snapshot__group--error">
+        <label>전경색 (텍스트)</label>
+        <div class="input-row">
+          <input type="text" value="#gg1" disabled>
+        </div>
+      </div>
+      <p class="state-snapshot__error-text" role="alert">유효한 hex 색상 형식이 아닙니다 (#, 3자리 또는 6자리 16진수).</p>
+      <p style="margin:8px 0 0; font-size:0.8125rem; color:var(--cc-color-text-secondary);">배지·대비율·미리보기는 마지막 유효 결과를 그대로 유지한다(급격한 초기화 방지).</p>
+    </div>
+
+    <div class="state-snapshot">
+      <h3>recalculating — 100ms 디바운스 대기 중</h3>
+      <div class="state-snapshot__group">
+        <label>배경색 (텍스트)</label>
+        <div class="input-row">
+          <input type="text" value="#f0f0f0" disabled>
+        </div>
+      </div>
+      <p style="margin:8px 0; font-size:0.8125rem; color:var(--cc-color-text-secondary);">디바운스 타이머 만료 시 계산 결과가 갱신된다. 그 사이 배지는 이전 유효 결과를 유지한다.</p>
+      <span class="state-snapshot__badge-note">재계산 중…</span>
+    </div>
+  </section>
+
+</body>
+</html>
