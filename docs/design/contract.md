@@ -1043,3 +1043,266 @@ frozen 계약에 타이포그래피 토큰이 없으므로 system font 기반 �
 | 3 | **기존 요소 보존** | 상위 BF-1478·BF-1502 절을 `additive` 정책대로 변경·삭제 없이 보존하고 본 BF-1917 절만 추가. developer 소유 `typing-test.html` 미생성. |
 | 4 | **컴포넌트 매핑** | 9개 DOM ID·6개 CSS class·3개 state·7개 색상 token을 각각 §4.1/§6/§2.1에 1:1 매핑, 신규 selector/token 추가 없음. |
 | 5 | **모호함 flag** | planner §6이 위임한 `--current`/`--correct`/`--incorrect` 정확한 시각 형태(밑줄/캐럿)를 §5.1에서 exact 값으로 확정. 통계 그룹 wrapper·`#typing-test-status` 배치(768px)는 frozen selector가 아니므로 developer 재량임을 §4.1/§7-2에 명시. frozen 값(색상 token·selector·화면 텍스트) 변경 없음. |
+
+---
+---
+
+# 비밀번호 강도 검사기 시각 명세 — password-strength (BF-1958)
+
+## 0. 문서 성격
+
+본 절은 상위 frozen Execution Blueprint(`ui-contract@v1`,
+sha256:cced67d448d11e26dd753ee6d7196a6737597118de4b0daeac7c2ea9d699ca59)와
+planner 실행 설계(`docs/plans/BF-1957/implementation-plan.md`, `planning-contract@v1`
+sha256:8dd12cda65d080a944a57df323a6eabe9e844029a70e975cdbcb52b486feb483)의 §3장
+UI 계약을 **재정의 없이** 시각 명세 형태로 서술한다. selector·상태·색상
+token·접근성·반응형 값은 frozen 목록 그대로이며, 본 절은 신규 selector·상태·
+token·역할을 추가하지 않는다.
+
+이 task(BF-1958)의 산출물 범위는 본 markdown 절(`docs/design/contract.md`에
+추가)과 `docs/design/mockup-password-strength.html`(정적 참고 목업) 2개
+파일이다. 런타임 HTML/CSS/JS(`password-strength.html`,
+`tests/password-strength.test.js`)는 developer(BF-1959)가 `additive` 정책으로
+구현하며 본 task에서 생성하지 않는다.
+
+> 위 BF-1478(`agent-queue-legend-canary`)·BF-1502(`neon-snake-fullscreen-0802`)·
+> BF-1917(`typing-test`) 절은 다른 epic의 frozen 산출물이므로 `additive` 정책에
+> 따라 변경·삭제 없이 보존하고, 본 BF-1958 절만 추가한다. 저장소 루트에는
+> 이전 사이클(BF-1939~BF-1941)의 선례 구현이 이미 존재하지만(§9 참고), 그
+> 선례는 `pw-input`/`pw-strength-meter`/`pw-checklist` 등 **다른 ID 체계**를
+> 쓰는 별개 산출물이며 본 절이 정의하는 frozen selector(`password-input`,
+> `strength-bar` 등)를 대체·재정의하지 않는다.
+
+## 1. 시안 개요
+
+- 대상 파일: `password-strength.html`(developer, BF-1959 소유, 단일 파일 —
+  외부 의존성 0건, HTML/CSS/JS inline, `vanilla-static` 스택 규약 준수).
+- 변경 범위: 서버 데이터 모델·API 스키마 변경 없이, 클라이언트 전용
+  `scorePassword` 판정 결과(`empty`/`weak`/`medium`/`strong` 4개 state)의
+  시각 표현만 명세한다.
+- 테마: 라이트 테마.
+- 사용자 경험 목표:
+  1. 사용자가 `#password-input`에 타이핑하는 즉시(매 `input` 이벤트) 강도
+     상태(약함/보통/강함)를 진행 막대(`#strength-bar`)와 라벨
+     (`#strength-label`) 양쪽으로 즉각 인지할 수 있게 한다.
+  2. 미충족 규칙(`#unmet-rules-list`)을 항상 텍스트로 노출해, 강도를 어떻게
+     올릴 수 있는지 즉시 알 수 있게 한다.
+  3. 5개 규칙을 모두 충족하면 규칙 목록 대신 완료 메시지
+     (`#all-rules-met-message`)를 노출해 목표 달성을 명확히 알린다.
+  4. 입력을 전부 지우면 모든 시각 요소가 즉시 `empty` 초기 상태로 복귀하고
+     `#password-input`은 계속 입력 가능해야 한다(§4·§8, frozen invariant).
+
+## 2. 컬러 팔레트
+
+### 2.1 frozen 토큰 (변경 금지)
+
+| 토큰 | 값 | 용도 |
+| --- | --- | --- |
+| `--color-strength-weak` | `#dc2626` | `.strength-weak` 강조색 (`#strength-bar`) |
+| `--color-strength-medium` | `#f59e0b` | `.strength-medium` 강조색 (`#strength-bar`) |
+| `--color-strength-strong` | `#16a34a` | `.strength-strong` 강조색 (`#strength-bar`), `#all-rules-met-message` 강조 |
+| `--color-text-primary` | `#1f2937` | 기본 텍스트(`#strength-label`, `.strength-meter__rule` 등) |
+| `--space-control-gap` | `12px` | `.strength-meter` 내부 요소 간 간격 |
+
+`empty` 상태는 위 3개 상태색 토큰을 사용하지 않고 `--color-text-primary`로
+중립 표시한다(신규 색상 토큰 추가 금지, §6 상태 표 참고).
+
+### 2.2 라이트 테마 보조 토큰 (신규 상태 색상 추가 아님 — frozen 목록과 충돌 없음)
+
+frozen 계약은 §2.1의 5개 토큰만 고정하며, 페이지 배경·카드 표면·테두리·
+비활성 표현 색은 명시하지 않는다. `vanilla-static` 스택 규약(외부 의존성
+0건, CSS 변수 자체 정의)에 따라 아래 보조 값을 권장한다. 이 값들은 §2.1
+frozen 색상을 대체하지 않으며, 신규 CSS 커스텀 프로퍼티 추가는 developer
+재량이다.
+
+| 권장 용도 | 권장 값 | 비고 |
+| --- | --- | --- |
+| `.strength-meter` 카드 표면 | `#ffffff` | 페이지 배경(`#f3f4f6` 등) 대비 카드 구분 |
+| `#strength-bar` 트랙(미충전) 배경 | `#e5e7eb` | `empty`/미충전 구간 중립색 |
+| `.strength-meter__rule` 보조 텍스트 | `#6b7280` | 미충족 규칙 목록 항목 |
+| 키보드 포커스 outline | `--color-text-primary`(`#1f2937`) | 신규 토큰 추가 없이 기존 frozen 색상 재사용 |
+
+## 3. 타이포그래피
+
+frozen 계약에 타이포그래피 토큰이 없으므로 system font 기반 권장값을 아래와
+같이 명세한다(신규 색상/상태 토큰이 아니므로 frozen 제약과 충돌하지 않음).
+외부 폰트 CDN 사용 금지(`vanilla-static` 규약).
+
+| 용도 | font-family | size | weight | line-height |
+| --- | --- | --- | --- | --- |
+| heading (위젯 제목, 선택) | system-ui, -apple-system, "Segoe UI", sans-serif | 18px | 700 | 1.4 |
+| `#password-input` | 동일 system stack | 16px | 400 | 1.5 |
+| `#strength-label` | 동일 system stack | 14px | 600 | 1.4 |
+| `.strength-meter__rule` / `#all-rules-met-message` | 동일 system stack | 13px | 400 / 600 | 1.4 |
+
+- `#password-input`은 16px 이상을 권장한다(모바일 브라우저 자동 확대 방지,
+  비-frozen 구현 권장).
+
+## 4. 레이아웃
+
+### 4.1 섹션 구조 (DOM ID/class 기준, §5·§6 그대로 사용)
+
+```
+.strength-meter (root 컨테이너, id는 비-frozen·재량)
+├─ <label for="password-input"> 비밀번호
+├─ #password-input                          (input[type=password])
+├─ #strength-bar (.strength-meter__bar)     (role="progressbar")
+├─ #strength-label (.strength-meter__label) (aria-live="polite")
+├─ #unmet-rules-list (.strength-meter__rules, <ul>)
+│   └─ .strength-meter__rule × 0~5 (<li>, §1.2 규칙 순서 고정, 미충족 규칙만)
+└─ #all-rules-met-message                   (5개 규칙 모두 충족 시에만 노출)
+```
+
+- frozen DOM ID: `password-input`, `strength-bar`, `strength-label`,
+  `unmet-rules-list`, `all-rules-met-message`. 5개 외 신규 ID 추가는
+  가능하나(비-frozen 보조 요소) 위 5개의 명칭·역할은 변경 금지.
+- frozen CSS class: `strength-meter`(root), `strength-meter__bar`,
+  `strength-meter__label`, `strength-meter__rules`, `strength-meter__rule`,
+  `strength-weak`/`strength-medium`/`strength-strong`(상태 modifier,
+  `#strength-bar`에 토글).
+
+### 4.2 spacing
+
+- `.strength-meter` 내부 요소(입력 → 진행 막대 → 라벨 → 규칙 목록) 사이
+  간격: `--space-control-gap`(12px).
+- `.strength-meter__rule` 항목 간 세로 간격: 4px(비-frozen 권장값).
+- 카드 내부 padding: 24px(비-frozen 권장값).
+
+### 4.3 breakpoint 별 동작 (frozen §3.5 재서술)
+
+- **320px 이상**: `.strength-meter` 컨테이너가 가로 overflow 없이 표시된다.
+  좁은 폭에서는 `#unmet-rules-list` 항목 텍스트 줄바꿈으로 흡수한다(고정
+  `white-space: nowrap` 금지). `.strength-meter`, `#password-input`은
+  `box-sizing: border-box` + `max-width: 100%`로 overflow를 방지한다.
+- **480px 이상(권장, 비-frozen)**: 카드 최대 폭 420px, 중앙 정렬 가능.
+
+## 5. 컴포넌트 명세
+
+### 5.1 `#password-input`
+
+- 요소: `<input id="password-input" type="password">`.
+- props/attr: `aria-describedby="strength-label unmet-rules-list"`(§7-3,
+  값 고정 — `unmet-rules-list`가 시각적으로 숨겨져도 attribute는 유지).
+- 상태: 값 변경(`input` 이벤트)마다 `scorePassword` 재평가 → §6 상태 표에
+  따라 `#strength-bar`/`#strength-label`/`#unmet-rules-list`/
+  `#all-rules-met-message` 즉시 갱신.
+- 후조건: 값을 전부 지우면 §8에 따라 즉시 `empty`로 복원되고, 입력 필드
+  자체는 비활성화되지 않는다(주 실행 control 고착 금지).
+
+### 5.2 `#strength-bar` (`.strength-meter__bar`)
+
+- 요소: 예) `<div id="strength-bar" class="strength-meter__bar">`.
+- props/attr: `role="progressbar"`, `aria-valuenow`(현재 score, `empty`일
+  때 `0`), `aria-valuemin="0"`, `aria-valuemax="5"`(§7-1, frozen).
+- 상태: `empty`는 modifier class 없음(폭 0%). `weak`/`medium`/`strong`은
+  각각 `.strength-weak`/`.strength-medium`/`.strength-strong`를 배타적으로
+  토글(§2.1 색상 적용). 폭은 `(score / 5) * 100%`(비-frozen 구현 세부).
+
+### 5.3 `#strength-label` (`.strength-meter__label`)
+
+- 요소: `<div id="strength-label" class="strength-meter__label" aria-live="polite">`.
+- 상태별 표기(§6 표와 동일, 색상 + 텍스트 항상 함께 노출 — §7-4):
+
+  | state | 텍스트 | 색상 |
+  | --- | --- | --- |
+  | `empty` | `비밀번호를 입력하세요` | `--color-text-primary` |
+  | `weak` | `약함` | `--color-strength-weak` |
+  | `medium` | `보통` | `--color-strength-medium` |
+  | `strong` | `강함` | `--color-strength-strong` |
+
+### 5.4 `#unmet-rules-list` (`.strength-meter__rules`)
+
+- 요소: `<ul id="unmet-rules-list" class="strength-meter__rules">`.
+- 항목: `<li class="strength-meter__rule">`, §1.2 규칙 순서(길이→소문자→
+  대문자→숫자→특수문자) 고정, 미충족 규칙만 표시. 화면 텍스트는 `8자 이상`/
+  `소문자 포함`/`대문자 포함`/`숫자 포함`/`특수문자 포함`(구현 설계 §1.2
+  그대로).
+- `empty` 상태에서는 5개 규칙이 모두 미충족이므로 5개 항목 전부 표시.
+  `strong` 상태에서는 항목이 0개이므로 목록 자체를 숨긴다(§6).
+
+### 5.5 `#all-rules-met-message`
+
+- 요소: 예) `<p id="all-rules-met-message">`.
+- 텍스트: `모든 조건을 충족했습니다`.
+- 노출 조건: `strong` 상태(5개 규칙 모두 충족)에서만 노출. 그 외 3개
+  상태에서는 숨김. `#unmet-rules-list`와 상호 배타적(§6).
+
+## 6. 상태(state) 4종 — DOM ID/class · 색상 token · 라벨 텍스트 (frozen)
+
+| state | 트리거 | `#strength-bar` class / `aria-valuenow` | `#strength-label` 텍스트(색상 token) | `#unmet-rules-list` | `#all-rules-met-message` |
+| --- | --- | --- | --- | --- | --- |
+| `empty` | `password.length === 0` | modifier 없음 / `0` | `비밀번호를 입력하세요` (`--color-text-primary`) | 5개 규칙 모두 표시 | 숨김 |
+| `weak` | score 0~2 (길이 > 0) | `.strength-weak` / `score` | `약함` (`--color-strength-weak`) | 미충족 규칙만 표시 | 숨김 |
+| `medium` | score 3~4 | `.strength-medium` / `score` | `보통` (`--color-strength-medium`) | 미충족 규칙만 표시 | 숨김 |
+| `strong` | score 5 | `.strength-strong` / `score` | `강함` (`--color-strength-strong`) | 비어있음, 숨김 | 노출(`모든 조건을 충족했습니다`) |
+
+## 7. 접근성 (frozen)
+
+1. `#strength-bar`는 `role="progressbar"`이며 `aria-valuenow`(현재 score,
+   `empty`일 때 `0`), `aria-valuemin="0"`, `aria-valuemax="5"`를 가진다.
+2. `#strength-label`은 `aria-live="polite"` 영역 안에서 갱신된다(상태 전환
+   시 스크린리더가 즉시 안내).
+3. `#password-input`은 `aria-describedby="strength-label unmet-rules-list"`
+   로 두 요소를 항상 연결한다(값 고정).
+4. 4개 상태(`empty`/`weak`/`medium`/`strong`) 모두 색상만으로 구분하지
+   않고, §6 표의 상태명을 `#strength-label`의 화면 텍스트와 접근성 이름
+   (스크린리더 낭독) 양쪽으로 노출한다.
+
+## 8. 초기화(입력 전체 삭제) 동작 (frozen invariant)
+
+- **Given** `#password-input`에 값을 입력해 `weak`/`medium`/`strong` 중
+  한 상태에 있다.
+- **When** 입력값을 전부 지워 `password.length === 0`이 된다.
+- **Then** `input` 이벤트 처리 즉시(추가 지연·확인 없이) `empty` 상태로
+  복원된다: `#strength-bar`(폭 0%, `aria-valuenow="0"`, 상태 modifier
+  class 전부 제거), `#strength-label`(`비밀번호를 입력하세요`),
+  `#unmet-rules-list`(5개 규칙 전부 표시), `#all-rules-met-message`
+  숨김. `#password-input`은 계속 입력 가능한 상태를 유지한다(비활성 고착
+  금지).
+
+## 9. dev 구현 가이드 (BF-1959)
+
+1. §4.1의 DOM 구조와 §6 상태 표를 그대로 마크업한다. frozen ID 5개
+   (`password-input`/`strength-bar`/`strength-label`/`unmet-rules-list`/
+   `all-rules-met-message`)와 frozen class 8개(§4.1)를 정확한 문자열로
+   사용한다.
+2. `#strength-bar`의 상태 modifier class(`strength-weak`/`strength-medium`/
+   `strength-strong`)는 매 `input` 이벤트마다 전부 제거 후 현재 state에
+   해당하는 class만 추가한다(§5.2). `empty`는 셋 다 제거.
+3. `#unmet-rules-list`는 `scorePassword(...).rules`에서 `false`인 항목만,
+   §1.2 순서(길이→소문자→대문자→숫자→특수문자)대로 `<li class="strength-meter__rule">`
+   를 렌더한다. `#all-rules-met-message`와 표시/숨김을 상호 배타적으로
+   토글한다(§5.4/§5.5).
+4. `aria-valuenow`는 매 갱신마다 `score`(0~5, `empty`는 0)로 설정한다.
+   `aria-valuemin`/`aria-valuemax`는 정적 `"0"`/`"5"`로 고정한다(§7-1).
+5. `#password-input`의 `aria-describedby="strength-label unmet-rules-list"`
+   는 초기 마크업에 고정하고 상태 변화와 무관하게 제거하지 않는다(§7-3).
+6. §8 초기화 동작(입력 전체 삭제 → 즉시 `empty` 복원, `#password-input`
+   재사용 가능)을 `input` 이벤트 핸들러 공통 경로로 구현해 별도 분기
+   누락이 없게 한다.
+7. 저장소 루트에 이미 존재하는 `password-strength.html`(BF-1939~1941
+   선례, `pw-*` ID 체계)은 본 frozen 계약과 다른 selector를 쓰는 별개
+   구현이다. `additive` 정책에 따라 developer는 본 §4~§8의 frozen
+   selector/token으로 해당 파일을 갱신하며, 임의로 두 ID 체계를 혼용하지
+   않는다(구현 설계 §2·§3 참고).
+8. CSS 변수명은 §2.1 frozen 토큰 5개(`--color-strength-weak`,
+   `--color-strength-medium`, `--color-strength-strong`,
+   `--color-text-primary`, `--space-control-gap`)를 `:root`에 그대로
+   선언해 사용한다.
+
+## 10. mockup 참조
+
+시각 mockup은 `docs/design/mockup-password-strength.html`에 별도 파일로
+작성했다(§4~§7 selector·token·상태 4종을 그대로 반영한 정적 참고용 —
+기능 없는 4개 상태 스냅샷 나열). 이 mockup은 `password-strength.html`(dev
+실제 산출물)을 대체하지 않으며, dev는 픽셀 단위로 일치시킬 의무가 없다.
+
+## 11. Self-critique (BF-1958)
+
+| # | 점검 항목 | 결과 |
+| --- | --- | --- |
+| 1 | **AC 매핑** | AC1(§4.1·§6·§7·§4.3에 DOM ID/class, 4개 state별 색상 token·라벨 텍스트, aria 속성, 320px 반응형 규칙을 모두 문서화), AC2(§10에 mockup 경로·selector/token 재사용·`password-strength.html` 비대체 명시), AC3(§0·본 문서·mockup 2개 파일로 산출물 범위 한정, 런타임 앱 코드 미생성) 모두 충족. |
+| 2 | **dev 구현 가이드** | §9에 마크업·modifier class 토글·규칙 목록 렌더·aria-valuenow 갱신·aria-describedby 고정·초기화 경로·기존 `pw-*` 선례와의 관계·CSS 변수 선언까지 8단계로 제시. |
+| 3 | **기존 요소 보존** | 상위 BF-1478·BF-1502·BF-1917 절을 `additive` 정책대로 변경·삭제 없이 보존하고 본 BF-1958 절만 추가. developer 소유 `password-strength.html`/`tests/password-strength.test.js` 미생성(수정). |
+| 4 | **컴포넌트 매핑** | 5개 DOM ID·8개 CSS class·4개 state·5개 색상/간격 token을 각각 §4.1/§6/§2.1에 1:1 매핑, 신규 selector·token 추가 없음. |
+| 5 | **모호함 flag** | `.strength-meter` root의 id, 카드 padding·breakpoint 480px 이상 레이아웃, 포커스 outline 색은 frozen selector·token이 아니므로 developer 재량임을 §2.2/§4.2/§4.3에 명시. 저장소에 이미 존재하는 BF-1939 선례(`pw-*` ID)는 본 frozen 계약과 무관한 별개 구현임을 §0/§9-7에서 명확히 구분해 developer의 ID 체계 혼용을 방지. frozen 값(색상 token·selector·상태·접근성·반응형) 변경 없음. |
