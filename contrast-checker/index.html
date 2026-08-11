@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>색상 대비 검사기</title>
+<style>
+  :root {
+    --color-pass: #15803d;
+    --color-fail: #b91c1c;
+    --space-control-gap: 12px;
+    --font-size-preview: 2rem;
+    --cc-bg: #f8fafc;
+    --cc-surface: #ffffff;
+    --cc-border: #e2e8f0;
+    --cc-text: #0f172a;
+    --cc-muted: #64748b;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--cc-bg);
+    color: var(--cc-text);
+    padding: 24px 16px 48px;
+  }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+
+  .color-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-control-gap);
+  }
+
+  .color-input-group {
+    flex: 1 1 220px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--cc-surface);
+    border: 1px solid var(--cc-border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .color-input-group label {
+    font-size: 0.85rem;
+    color: var(--cc-muted);
+  }
+
+  .color-input-group .hex-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .color-input-group input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    font-size: 1rem;
+    border: 1px solid var(--cc-border);
+    border-radius: 6px;
+  }
+
+  .color-input-group input[type="color"] {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--cc-border);
+    border-radius: 6px;
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+
+  #swap-colors-btn {
+    align-self: center;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    border: 1px solid var(--cc-border);
+    border-radius: 6px;
+    background: var(--cc-surface);
+    color: var(--cc-text);
+    cursor: pointer;
+  }
+
+  #swap-colors-btn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  #input-error-message {
+    min-height: 1.2em;
+    color: var(--color-fail);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  #input-error-message:empty {
+    display: none;
+  }
+
+  .result-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  #contrast-ratio-value {
+    font-weight: 700;
+  }
+
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .contrast-badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    border: 1px solid var(--cc-border);
+    background: #f1f5f9;
+    color: var(--cc-muted);
+  }
+
+  .contrast-badge--pass {
+    border-color: var(--color-pass);
+    color: var(--color-pass);
+    background: #f0fdf4;
+  }
+
+  .contrast-badge--fail {
+    border-color: var(--color-fail);
+    color: var(--color-fail);
+    background: #fef2f2;
+  }
+
+  .preview-panel {
+    border: 1px solid var(--cc-border);
+    border-radius: 8px;
+    padding: var(--space-control-gap);
+    background: var(--cc-surface);
+  }
+
+  #preview-sample {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 96px;
+    border-radius: 6px;
+    font-size: var(--font-size-preview);
+    font-weight: 600;
+    padding: 12px;
+    text-align: center;
+    word-break: break-word;
+  }
+
+  @media (max-width: 480px) {
+    .color-inputs {
+      flex-direction: column;
+    }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>색상 대비 검사기</h1>
+  <p id="input-error-message" role="alert"></p>
+
+  <div class="color-inputs">
+    <div class="color-input-group">
+      <label for="fg-color-hex">전경색 (텍스트)</label>
+      <div class="hex-row">
+        <input
+          type="text"
+          id="fg-color-hex"
+          aria-label="전경색 hex"
+          value="#000000"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <input type="color" id="fg-color-picker" value="#000000" aria-label="전경색 색상 선택기" />
+      </div>
+    </div>
+
+    <div class="color-input-group">
+      <label for="bg-color-hex">배경색</label>
+      <div class="hex-row">
+        <input
+          type="text"
+          id="bg-color-hex"
+          aria-label="배경색 hex"
+          value="#ffffff"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <input type="color" id="bg-color-picker" value="#ffffff" aria-label="배경색 색상 선택기" />
+      </div>
+    </div>
+  </div>
+
+  <button type="button" id="swap-colors-btn">전경/배경 색상 교환</button>
+
+  <section class="result-panel" aria-label="대비 결과">
+    <p>대비율: <span id="contrast-ratio-value">–</span></p>
+    <div class="badges" aria-live="polite">
+      <span id="badge-aa" class="contrast-badge">AA: –</span>
+      <span id="badge-aa-large" class="contrast-badge">AA (large): –</span>
+      <span id="badge-aaa" class="contrast-badge">AAA: –</span>
+    </div>
+  </section>
+
+  <div class="preview-panel">
+    <div id="preview-sample">가나다 Aa</div>
+  </div>
+</main>
+<script>
+(function () {
+  'use strict';
+
+  var HEX_PATTERN = /^#?[0-9a-fA-F]{3}$|^#?[0-9a-fA-F]{6}$/;
+  var DEBOUNCE_MS = 100;
+  var CACHE_LIMIT = 100;
+
+  function isValidHex(value) {
+    return typeof value === 'string' && HEX_PATTERN.test(value);
+  }
+
+  function normalizeHex(value) {
+    var h = value.replace(/^#/, '').toLowerCase();
+    if (h.length === 3) {
+      h = h.split('').map(function (c) {
+        return c + c;
+      }).join('');
+    }
+    return h;
+  }
+
+  function hexToRgb(hex6) {
+    return {
+      r: parseInt(hex6.slice(0, 2), 16),
+      g: parseInt(hex6.slice(2, 4), 16),
+      b: parseInt(hex6.slice(4, 6), 16),
+    };
+  }
+
+  function channelLinear(channel255) {
+    var c = channel255 / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+
+  function relativeLuminance(rgb) {
+    return (
+      0.2126 * channelLinear(rgb.r) +
+      0.7152 * channelLinear(rgb.g) +
+      0.0722 * channelLinear(rgb.b)
+    );
+  }
+
+  function contrastRatio(fgHex6, bgHex6) {
+    var lFg = relativeLuminance(hexToRgb(fgHex6));
+    var lBg = relativeLuminance(hexToRgb(bgHex6));
+    var l1 = Math.max(lFg, lBg);
+    var l2 = Math.min(lFg, lBg);
+    return (l1 + 0.05) / (l2 + 0.05);
+  }
+
+  // §2.2 정규화 캐시 키 기반 메모이제이션 (P3). 최대 CACHE_LIMIT개, LRU eviction.
+  var cache = new Map();
+
+  function getContrastResult(fgRaw, bgRaw) {
+    var nFg = normalizeHex(fgRaw);
+    var nBg = normalizeHex(bgRaw);
+    var key = nFg + ':' + nBg;
+
+    if (cache.has(key)) {
+      var hit = cache.get(key);
+      cache.delete(key);
+      cache.set(key, hit);
+      return hit;
+    }
+
+    var ratio = contrastRatio(nFg, nBg);
+    var result = {
+      ratio: ratio,
+      aa: ratio >= 4.5,
+      aaLarge: ratio >= 3.0,
+      aaa: ratio >= 7.0,
+    };
+
+    cache.set(key, result);
+    if (cache.size > CACHE_LIMIT) {
+      var oldestKey = cache.keys().next().value;
+      cache.delete(oldestKey);
+    }
+    return result;
+  }
+
+  // 테스트(node --test)가 DOM 없이 계산 로직만 검증할 수 있도록 노출한다.
+  if (typeof globalThis !== 'undefined') {
+    globalThis.__contrastChecker = {
+      isValidHex: isValidHex,
+      normalizeHex: normalizeHex,
+      hexToRgb: hexToRgb,
+      relativeLuminance: relativeLuminance,
+      contrastRatio: contrastRatio,
+      getContrastResult: getContrastResult,
+      cache: cache,
+    };
+  }
+
+  function initApp() {
+    var fgHexInput = document.getElementById('fg-color-hex');
+    var fgColorPicker = document.getElementById('fg-color-picker');
+    var bgHexInput = document.getElementById('bg-color-hex');
+    var bgColorPicker = document.getElementById('bg-color-picker');
+    var swapBtn = document.getElementById('swap-colors-btn');
+    var errorEl = document.getElementById('input-error-message');
+    var ratioEl = document.getElementById('contrast-ratio-value');
+    var badgeAA = document.getElementById('badge-aa');
+    var badgeAALarge = document.getElementById('badge-aa-large');
+    var badgeAAA = document.getElementById('badge-aaa');
+    var previewSample = document.getElementById('preview-sample');
+
+    var debounceTimer = null;
+    var errors = { fg: null, bg: null };
+
+    function renderErrors() {
+      var messages = [];
+      if (errors.fg) messages.push(errors.fg);
+      if (errors.bg) messages.push(errors.bg);
+      errorEl.textContent = messages.join(' ');
+    }
+
+    // F2: 직전 유효 결과를 지운다 — 대비율/배지/미리보기를 초기 표시로 되돌린다.
+    function clearResultDisplay() {
+      ratioEl.textContent = '–';
+      [badgeAA, badgeAALarge, badgeAAA].forEach(function (el) {
+        el.classList.remove('contrast-badge--pass', 'contrast-badge--fail');
+      });
+      badgeAA.textContent = 'AA: –';
+      badgeAALarge.textContent = 'AA (large): –';
+      badgeAAA.textContent = 'AAA: –';
+      previewSample.style.backgroundColor = '';
+      previewSample.style.color = '';
+    }
+
+    function setFieldError(field, message) {
+      errors[field] = message;
+      renderErrors();
+      clearResultDisplay();
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+        debounceTimer = null;
+      }
+    }
+
+    function clearFieldError(field) {
+      if (errors[field]) {
+        errors[field] = null;
+        renderErrors();
+      }
+    }
+
+    function applyBadge(el, label, passed) {
+      el.classList.remove('contrast-badge--pass', 'contrast-badge--fail');
+      el.classList.add(passed ? 'contrast-badge--pass' : 'contrast-badge--fail');
+      el.textContent = label + ': ' + (passed ? '통과' : '실패');
+    }
+
+    function renderResult(result, fgRaw, bgRaw) {
+      ratioEl.textContent = result.ratio.toFixed(2) + ':1';
+      applyBadge(badgeAA, 'AA', result.aa);
+      applyBadge(badgeAALarge, 'AA (large)', result.aaLarge);
+      applyBadge(badgeAAA, 'AAA', result.aaa);
+      previewSample.style.backgroundColor = '#' + normalizeHex(bgRaw);
+      previewSample.style.color = '#' + normalizeHex(fgRaw);
+    }
+
+    function performRecalculation() {
+      if (errors.fg || errors.bg) return;
+      var fgRaw = fgHexInput.value;
+      var bgRaw = bgHexInput.value;
+      var result = getContrastResult(fgRaw, bgRaw);
+      renderResult(result, fgRaw, bgRaw);
+    }
+
+    function scheduleRecalculation() {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function () {
+        debounceTimer = null;
+        performRecalculation();
+      }, DEBOUNCE_MS);
+    }
+
+    function fieldErrorMessage(field) {
+      return field === 'fg'
+        ? '전경색 hex 형식이 올바르지 않습니다. #abc 또는 #aabbcc 형식으로 입력하세요.'
+        : '배경색 hex 형식이 올바르지 않습니다. #abc 또는 #aabbcc 형식으로 입력하세요.';
+    }
+
+    function handleHexInput(field, inputEl, pickerEl) {
+      var raw = inputEl.value.trim();
+      if (!isValidHex(raw)) {
+        setFieldError(field, fieldErrorMessage(field));
+        return;
+      }
+      clearFieldError(field);
+      var normalized = normalizeHex(raw);
+      pickerEl.value = '#' + normalized;
+      scheduleRecalculation();
+    }
+
+    function handlePickerInput(field, inputEl, pickerEl) {
+      inputEl.value = pickerEl.value;
+      clearFieldError(field);
+      scheduleRecalculation();
+    }
+
+    function handleSwap() {
+      var fgRaw = fgHexInput.value;
+      var bgRaw = bgHexInput.value;
+      fgHexInput.value = bgRaw;
+      bgHexInput.value = fgRaw;
+      handleHexInput('fg', fgHexInput, fgColorPicker);
+      handleHexInput('bg', bgHexInput, bgColorPicker);
+    }
+
+    fgHexInput.addEventListener('input', function () {
+      handleHexInput('fg', fgHexInput, fgColorPicker);
+    });
+    bgHexInput.addEventListener('input', function () {
+      handleHexInput('bg', bgHexInput, bgColorPicker);
+    });
+    fgColorPicker.addEventListener('input', function () {
+      handlePickerInput('fg', fgHexInput, fgColorPicker);
+    });
+    bgColorPicker.addEventListener('input', function () {
+      handlePickerInput('bg', bgHexInput, bgColorPicker);
+    });
+    swapBtn.addEventListener('click', handleSwap);
+
+    // idle → valid-result: 마운트 시 기본값(#000000/#ffffff)은 디바운스 없이 즉시 계산한다.
+    fgHexInput.value = '#000000';
+    bgHexInput.value = '#ffffff';
+    fgColorPicker.value = '#000000';
+    bgColorPicker.value = '#ffffff';
+    performRecalculation();
+  }
+
+  if (typeof document !== 'undefined' && document && typeof document.getElementById === 'function') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  }
+})();
+</script>
+</body>
+</html>
