@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>단위 변환기</title>
+<style>
+  :root {
+    --color-error-text: #b91c1c;
+    --color-border-default: #cbd5e1;
+    --space-field-gap: 12px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f8fafc;
+    color: #0f172a;
+    padding: 16px;
+  }
+
+  .unit-converter {
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .unit-converter h1 {
+    font-size: 1.25rem;
+    margin: 0 0 var(--space-field-gap);
+  }
+
+  .unit-converter__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-field-gap);
+    margin-bottom: var(--space-field-gap);
+  }
+
+  .unit-converter__row .unit-converter__field {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  @media (max-width: 599px) {
+    .unit-converter__row {
+      flex-direction: column;
+    }
+  }
+
+  .unit-converter__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: var(--space-field-gap);
+  }
+
+  .unit-converter__field label {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .unit-converter__field input,
+  .unit-converter__field select {
+    width: 100%;
+    padding: 8px;
+    font-size: 1rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: 4px;
+    background: #ffffff;
+    color: inherit;
+  }
+
+  .unit-converter__field input[readonly] {
+    background: #f1f5f9;
+  }
+
+  .unit-converter__swap-btn {
+    display: block;
+    margin: 0 0 var(--space-field-gap);
+    padding: 8px 16px;
+    border: 1px solid var(--color-border-default);
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .unit-converter__swap-btn:hover,
+  .unit-converter__swap-btn:focus-visible {
+    background: #cbd5e1;
+  }
+
+  .unit-converter__status {
+    font-size: 0.875rem;
+    color: #334155;
+    margin: 0 0 4px;
+  }
+
+  .unit-converter__error {
+    color: var(--color-error-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    min-height: 1.2em;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="unit-converter-app" class="unit-converter" data-state="idle">
+    <h1>단위 변환기</h1>
+
+    <div class="unit-converter__field">
+      <label for="category-select">변환 종류</label>
+      <select id="category-select">
+        <option value="length">길이</option>
+        <option value="weight">무게</option>
+        <option value="temperature">온도</option>
+      </select>
+    </div>
+
+    <div class="unit-converter__row">
+      <div class="unit-converter__field">
+        <label for="input-value">입력 값</label>
+        <input type="text" id="input-value" inputmode="decimal" autocomplete="off" placeholder="숫자를 입력하세요">
+      </div>
+      <div class="unit-converter__field">
+        <label for="input-unit">입력 단위</label>
+        <select id="input-unit"></select>
+      </div>
+    </div>
+
+    <div class="unit-converter__field">
+      <label for="swap-button">입력/출력 단위 맞바꾸기</label>
+      <button type="button" id="swap-button" class="unit-converter__swap-btn" aria-label="입력과 출력 단위 맞바꾸기">⇄ 맞바꾸기</button>
+    </div>
+
+    <div class="unit-converter__row">
+      <div class="unit-converter__field">
+        <label for="output-value">결과 값</label>
+        <input type="text" id="output-value" readonly aria-readonly="true">
+      </div>
+      <div class="unit-converter__field">
+        <label for="output-unit">출력 단위</label>
+        <select id="output-unit"></select>
+      </div>
+    </div>
+
+    <p id="status-text" class="unit-converter__status" aria-live="polite">상태: idle (대기 중)</p>
+    <p id="error-message" class="unit-converter__error" role="alert"></p>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // 5.1 / 5.2 변환 계수 (기준 단위 경유) — 5.3 온도는 공식(섭씨 경유) 사용
+      var CATEGORIES = {
+        length: {
+          label: "길이",
+          units: [
+            { value: "m", label: "미터 (m)" },
+            { value: "km", label: "킬로미터 (km)" },
+            { value: "cm", label: "센티미터 (cm)" },
+            { value: "inch", label: "인치 (inch)" },
+            { value: "feet", label: "피트 (feet)" }
+          ],
+          factors: { m: 1, km: 1000, cm: 0.01, inch: 0.0254, feet: 0.3048 }
+        },
+        weight: {
+          label: "무게",
+          units: [
+            { value: "kg", label: "킬로그램 (kg)" },
+            { value: "g", label: "그램 (g)" },
+            { value: "lb", label: "파운드 (lb)" },
+            { value: "oz", label: "온스 (oz)" }
+          ],
+          factors: { kg: 1, g: 0.001, lb: 0.45359237, oz: 0.028349523125 }
+        },
+        temperature: {
+          label: "온도",
+          units: [
+            { value: "C", label: "섭씨 (°C)" },
+            { value: "F", label: "화씨 (°F)" },
+            { value: "K", label: "켈빈 (K)" }
+          ]
+        }
+      };
+
+      var ABSOLUTE_ZERO_C = -273.15;
+      var EPSILON = 1e-9;
+
+      var appEl = document.getElementById("unit-converter-app");
+      var categorySelect = document.getElementById("category-select");
+      var inputValueEl = document.getElementById("input-value");
+      var inputUnitEl = document.getElementById("input-unit");
+      var outputValueEl = document.getElementById("output-value");
+      var outputUnitEl = document.getElementById("output-unit");
+      var swapButton = document.getElementById("swap-button");
+      var statusTextEl = document.getElementById("status-text");
+      var errorMessageEl = document.getElementById("error-message");
+
+      function isNumeric(str) {
+        if (typeof str !== "string") {
+          return false;
+        }
+        var trimmed = str.trim();
+        if (trimmed === "") {
+          return false;
+        }
+        var num = Number(trimmed);
+        return Number.isFinite(num);
+      }
+
+      function toCelsius(value, unit) {
+        if (unit === "C") {
+          return value;
+        }
+        if (unit === "F") {
+          return (value - 32) * 5 / 9;
+        }
+        return value - 273.15; // K
+      }
+
+      function fromCelsius(celsius, unit) {
+        if (unit === "C") {
+          return celsius;
+        }
+        if (unit === "F") {
+          return celsius * 9 / 5 + 32;
+        }
+        return celsius + 273.15; // K
+      }
+
+      function convertLinear(value, category, fromUnit, toUnit) {
+        var factors = CATEGORIES[category].factors;
+        return (value * factors[fromUnit]) / factors[toUnit];
+      }
+
+      function convertTemperature(value, fromUnit, toUnit) {
+        var celsius = toCelsius(value, fromUnit);
+        return fromCelsius(celsius, toUnit);
+      }
+
+      function formatNumber(num) {
+        if (!Number.isFinite(num)) {
+          return "";
+        }
+        var value = Object.is(num, -0) ? 0 : num;
+        var rounded = Math.round(value * 1e6) / 1e6;
+        return String(rounded);
+      }
+
+      function populateUnitSelect(selectEl, category, defaultIndex) {
+        var units = CATEGORIES[category].units;
+        selectEl.innerHTML = "";
+        for (var i = 0; i < units.length; i++) {
+          var option = document.createElement("option");
+          option.value = units[i].value;
+          option.textContent = units[i].label;
+          selectEl.appendChild(option);
+        }
+        selectEl.value = units[defaultIndex] ? units[defaultIndex].value : units[0].value;
+      }
+
+      function setState(state) {
+        appEl.setAttribute("data-state", state);
+        if (state === "idle") {
+          statusTextEl.textContent = "상태: idle (대기 중)";
+        } else if (state === "result-updated") {
+          statusTextEl.textContent = "상태: result-updated (변환 완료)";
+        } else {
+          statusTextEl.textContent = "상태: invalid-input (오류)";
+        }
+      }
+
+      function setIdle() {
+        outputValueEl.value = "";
+        errorMessageEl.textContent = "";
+        setState("idle");
+      }
+
+      function setResult(result) {
+        outputValueEl.value = formatNumber(result);
+        errorMessageEl.textContent = "";
+        setState("result-updated");
+      }
+
+      function setInvalid(message) {
+        outputValueEl.value = "";
+        errorMessageEl.textContent = message;
+        setState("invalid-input");
+      }
+
+      function updateResult() {
+        var category = categorySelect.value;
+        var rawValue = inputValueEl.value;
+        var fromUnit = inputUnitEl.value;
+        var toUnit = outputUnitEl.value;
+
+        if (!isNumeric(rawValue)) {
+          setInvalid("숫자를 입력하세요.");
+          return;
+        }
+
+        var numValue = Number(rawValue.trim());
+
+        if (category === "temperature") {
+          var celsius = toCelsius(numValue, fromUnit);
+          if (celsius < ABSOLUTE_ZERO_C - EPSILON) {
+            setInvalid("절대영도 미만은 입력할 수 없습니다.");
+            return;
+          }
+          setResult(convertTemperature(numValue, fromUnit, toUnit));
+          return;
+        }
+
+        if (numValue < 0) {
+          setInvalid("음수는 입력할 수 없습니다.");
+          return;
+        }
+
+        setResult(convertLinear(numValue, category, fromUnit, toUnit));
+      }
+
+      function initCategory(category) {
+        populateUnitSelect(inputUnitEl, category, 0);
+        populateUnitSelect(outputUnitEl, category, 1);
+        inputValueEl.value = "";
+        setIdle();
+      }
+
+      categorySelect.addEventListener("change", function () {
+        initCategory(categorySelect.value);
+      });
+
+      inputValueEl.addEventListener("input", updateResult);
+      inputUnitEl.addEventListener("change", updateResult);
+      outputUnitEl.addEventListener("change", updateResult);
+
+      swapButton.addEventListener("click", function () {
+        var fromUnit = inputUnitEl.value;
+        var toUnit = outputUnitEl.value;
+        inputUnitEl.value = toUnit;
+        outputUnitEl.value = fromUnit;
+
+        var outputRaw = outputValueEl.value;
+        if (isNumeric(outputRaw)) {
+          inputValueEl.value = outputRaw;
+        }
+
+        updateResult();
+      });
+
+      initCategory(categorySelect.value);
+    })();
+  </script>
+</body>
+</html>
