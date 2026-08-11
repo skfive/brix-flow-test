@@ -1306,3 +1306,237 @@ frozen 계약에 타이포그래피 토큰이 없으므로 system font 기반 �
 | 3 | **기존 요소 보존** | 상위 BF-1478·BF-1502·BF-1917 절을 `additive` 정책대로 변경·삭제 없이 보존하고 본 BF-1958 절만 추가. developer 소유 `password-strength.html`/`tests/password-strength.test.js` 미생성(수정). |
 | 4 | **컴포넌트 매핑** | 5개 DOM ID·8개 CSS class·4개 state·5개 색상/간격 token을 각각 §4.1/§6/§2.1에 1:1 매핑, 신규 selector·token 추가 없음. |
 | 5 | **모호함 flag** | `.strength-meter` root의 id, 카드 padding·breakpoint 480px 이상 레이아웃, 포커스 outline 색은 frozen selector·token이 아니므로 developer 재량임을 §2.2/§4.2/§4.3에 명시. 저장소에 이미 존재하는 BF-1939 선례(`pw-*` ID)는 본 frozen 계약과 무관한 별개 구현임을 §0/§9-7에서 명확히 구분해 developer의 ID 체계 혼용을 방지. frozen 값(색상 token·selector·상태·접근성·반응형) 변경 없음. |
+
+# 색상 대비 검사기(Contrast Checker) 시각 명세 — contrast-checker (BF-1963/BF-1964)
+
+## 0. 문서 성격
+
+본 절은 상위 frozen `ui-contract@v1`(sha256:6b58bd54af99e27ee9f89adf2d5dec8c620da304ced1516f586d26df977b4608)과
+planner 실행 설계(`docs/plans/BF-1963/implementation-plan.md`,
+`planning-contract@v1` sha256:8a05d579301baec63ea4ce44fcc4d1155732743d09db980af9f28ee9a6c9fa1b)
+§3~§4의 계약을 **재정의 없이** 시각 명세 형태로 서술한다. selector·상태·token
+값은 frozen 목록 그대로이며, 본 절은 신규 selector·상태·역할을 추가하지
+않는다. `additive` 정책에 따라 상위 BF-1478·BF-1502·BF-1917·BF-1958 절은
+변경·삭제하지 않고 본 절만 추가한다.
+
+이 task(BF-1964)의 산출물 범위는 본 절(`docs/design/contract.md`)과 별도
+mockup 파일(`docs/design/mockup.html`, §11) 2개이며, 런타임
+`contrast-checker/index.html` / `contrast-checker/tests/contrast.test.js`는
+developer(BF-1965) 소유로 frozen되어 있어 본 task에서 생성하지 않는다.
+
+## 1. 시안 개요
+
+- 대상 위치: `contrast-checker/index.html`(developer 소유, frozen 신규 생성).
+- 성격: 전경색/배경색 hex 입력(텍스트+picker)으로 WCAG 대비비를 계산해
+  AA/AA-large/AAA 배지와 실시간 미리보기를 보여주는 단일 화면 유틸리티.
+  서버 통신 없는 순수 클라이언트 계산 도구.
+- 테마: 라이트 테마. frozen 토큰(`--color-pass`/`--color-fail`)은 배지
+  강조에만 쓰이므로, 페이지 배경·카드 표면·보조 텍스트 색상은 §2.2의 보조
+  토큰으로 채도 낮은 라이트 팔레트를 권장한다(`vanilla-static` 스택 규약 —
+  외부 의존성 0건, system font).
+- 사용자 경험 목표: (1) hex 텍스트 입력과 색상 picker를 항상 함께 제공해
+  타이핑에 익숙한 사용자와 시각적으로 고르는 사용자 모두를 지원하고, (2)
+  대비비를 소수 둘째 자리까지 명확히 표시하며, (3) AA/AA-large/AAA 판정을
+  색상뿐 아니라 문구로도 즉시 식별 가능하게 하고, (4) 실제 전경/배경 색
+  조합을 렌더한 미리보기로 판정을 체감할 수 있게 한다. 오류 입력 시
+  디바운스 없이 즉시 오류를 알리되(§6 `invalid-input`), 이전 유효 결과는
+  화면에 남겨 맥락을 잃지 않게 한다(구현 설계 §2.1-3).
+
+## 2. 컬러 팔레트
+
+### 2.1 frozen 토큰 (변경 금지, 구현 설계 §4.5 그대로)
+
+| 토큰 | 값 | 용도 |
+| --- | --- | --- |
+| `--color-pass` | `#15803d` | `contrast-badge--pass` 강조(배지 텍스트/배경) |
+| `--color-fail` | `#b91c1c` | `contrast-badge--fail` 강조(배지 텍스트/배경) |
+| `--space-control-gap` | `12px` | `color-input-group` 등 control 간 간격 |
+| `--font-size-preview` | `2rem` | `preview-sample` 텍스트 크기 |
+
+이 4개 값은 재정의하지 않는다. `badge-aa`/`badge-aa-large`/`badge-aaa`는
+`contrast-badge` 기본 class에 판정에 따라 `contrast-badge--pass` 또는
+`contrast-badge--fail` 중 하나를 함께 가진다.
+
+### 2.2 라이트 테마 보조 토큰 (신규 상태 색상 추가 아님 — frozen 목록과 충돌 없음)
+
+frozen 계약은 배지 강조색·간격·폰트 크기만 고정하며 페이지 배경·카드
+표면·본문 텍스트·테두리·포커스 강조색은 명시하지 않는다. 아래 보조 토큰을
+`contrast-checker` 절 자체 팔레트로 권장한다(§4.5 각주: "developer가
+비-frozen 보조 색상이 필요하면 신규 토큰을 추가로 정의할 수 있다"에 근거).
+
+| 토큰(제안) | 값 | 용도 |
+| --- | --- | --- |
+| `--cc-color-bg` | `#f8fafc` | 페이지 배경 |
+| `--cc-color-surface` | `#ffffff` | 카드/패널 표면(`color-input-group`, `preview-panel`) |
+| `--cc-color-text-primary` | `#0f172a` | 본문/라벨 텍스트 |
+| `--cc-color-text-secondary` | `#475569` | 보조 설명 텍스트 |
+| `--cc-color-border` | `#e2e8f0` | 입력·패널 테두리 |
+| `--cc-color-accent` | `#2563eb` | `swap-colors-btn` 강조, 포커스 outline |
+| `--cc-color-error-border` | `#b91c1c` | `invalid-input` 시 입력 테두리(값은 `--color-fail`과 동일하나 배지 전용 frozen 토큰을 비-배지 요소에 재사용하지 않기 위해 별도 선언) |
+
+## 3. 타이포그래피
+
+| 용도 | font-family | size | weight | line-height |
+| --- | --- | --- | --- | --- |
+| heading(페이지 제목) | system-ui, -apple-system, "Segoe UI", Roboto, sans-serif | 1.5rem | 700 | 1.3 |
+| body(라벨/입력/설명) | 위와 동일 | 1rem | 400 | 1.5 |
+| caption(`input-error-message`, 배지 보조 문구) | 위와 동일 | 0.875rem | 600 | 1.4 |
+| `preview-sample` | 위와 동일 | `--font-size-preview`(2rem, frozen) | 500 | 1.4 |
+| `contrast-ratio-value` | 위와 동일 | 1.75rem | 700 | 1.2 |
+
+`vanilla-static` 규약에 따라 system font stack만 사용하고 외부 웹폰트를
+로드하지 않는다.
+
+## 4. 레이아웃
+
+### 4.1 섹션 구조
+
+```
+<body>
+  <header>페이지 제목 + 한 줄 설명</header>
+  <main>
+    <section class="color-input-group">  <!-- 전경색 -->
+      label + fg-color-hex(text) + fg-color-picker(color)
+    </section>
+    <button id="swap-colors-btn">⇅ 색상 교환</button>
+    <section class="color-input-group">  <!-- 배경색 -->
+      label + bg-color-hex(text) + bg-color-picker(color)
+    </section>
+    <p id="input-error-message" role="alert"></p>
+    <div class="result-row">
+      <span id="contrast-ratio-value">4.48:1</span>
+      <div class="badge-row">
+        <span id="badge-aa" class="contrast-badge …">AA</span>
+        <span id="badge-aa-large" class="contrast-badge …">AA (large)</span>
+        <span id="badge-aaa" class="contrast-badge …">AAA</span>
+      </div>
+    </div>
+    <section class="preview-panel">
+      <div id="preview-sample">Aa 예시 텍스트</div>
+    </section>
+  </main>
+</body>
+```
+
+### 4.2 spacing
+
+- `color-input-group` 내부 label/입력/picker 사이 간격, 그리고
+  `color-input-group` 간 간격, 배지 간 간격 모두 `--space-control-gap`(12px,
+  frozen)을 사용한다.
+- 카드/패널 padding은 24px(비-frozen, developer 재량), `main` 최대 폭
+  560px 중앙 정렬(비-frozen).
+
+### 4.3 breakpoint 별 동작 (frozen, 320px 이상)
+
+- **≥480px**: 전경색/배경색 `color-input-group` 2개를 나란히(가로 배치),
+  하단에 `preview-panel`을 전체 폭으로 배치.
+- **320px~479px**: `color-input-group` 2개와 `preview-panel`을 세로로
+  스택한다(구현 설계 §4.7). `swap-colors-btn`은 두 그룹 사이 중앙에 위치해
+  세로 스택에서도 자연스럽게 동작한다. 320px 이상 전 구간에서
+  `color-input-group`/`preview-panel`이 겹치거나 가로 스크롤을 유발하지
+  않는다(frozen invariant).
+
+## 5. 컴포넌트 명세
+
+| 컴포넌트(id/class) | props/속성 | 상태 | 인터랙션 |
+| --- | --- | --- | --- |
+| `#fg-color-hex`(`.color-input-group` 안) | `type="text"`, `aria-label="전경색 hex"`, placeholder `#000000` | 항상 활성(비활성화 없음, 구현 설계 §2.1-4) | 매 `input` 이벤트마다 형식 검증(디바운스 없음, §6 `invalid-input`으로 즉시 전이 가능) |
+| `#fg-color-picker`(`.color-input-group` 안) | `type="color"`, hex 텍스트와 값 동기화 | 항상 활성 | 선택 시 대응하는 `*-color-hex`에 6자리 hex 반영, 이후 `recalculating` 경로(§6) |
+| `#bg-color-hex` | `type="text"`, `aria-label="배경색 hex"`, placeholder `#ffffff` | `#fg-color-hex`와 동일 규칙 | 동일 |
+| `#bg-color-picker` | `type="color"` | 동일 | 동일 |
+| `#swap-colors-btn` | 네이티브 `<button>`, 텍스트 "색상 교환"(아이콘 병기 가능) | 항상 활성 | 클릭 시 fg/bg 값 교환 후 `recalculating → valid-result` 경로(한쪽만 유효했다면 오류가 교환된 필드를 따라 즉시 `invalid-input` 유지); Tab 포커스 가능, Enter/Space로 활성화 |
+| `#contrast-ratio-value` | 텍스트 노드, 소수 둘째 자리 고정(예: `4.48:1`) | `valid-result`에서만 최신값, `recalculating`/`invalid-input`에서는 마지막 유효값 유지 | 없음(읽기 전용 표시) |
+| `#badge-aa` / `#badge-aa-large` / `#badge-aaa`(`.contrast-badge`) | 판정에 따라 `.contrast-badge--pass` 또는 `.contrast-badge--fail` 부여, 컨테이너 `aria-live="polite"` | pass/fail 2종 | 색상 변경 시 스크린리더에 상태 변경 안내(aria-live) |
+| `#input-error-message`(`role="alert"`) | 형식 오류 시 오류 문구 노출, 유효 시 빈 문자열/숨김 | 노출/숨김 | `invalid-input` 전이 즉시 노출, 값이 다시 유효해지면 즉시 제거 |
+| `#preview-sample`(`.preview-panel` 안) | 인라인 스타일로 `background-color: bg`, `color: fg` 실제 렌더, `font-size: var(--font-size-preview)` | `valid-result`/`recalculating`/`invalid-input` 모두 마지막 유효 색 조합을 렌더(급격한 초기화 방지) | 없음(시각적 확인용) |
+
+## 6. 상태(state) 4종 — frozen (구현 설계 §2.1/§4.4 그대로)
+
+| state | 트리거 | `input-error-message` | 배지/`contrast-ratio-value`/`preview-sample` | control 활성 여부 |
+| --- | --- | --- | --- | --- |
+| `idle` | 최초 마운트 직후, 초기값(`fg=#000000`/`bg=#ffffff`) 계산 전 짧은 순간 | 숨김 | 미표시(즉시 `valid-result`로 대체되어 사용자가 인지할 필요 없음) | 활성 |
+| `valid-result` | 형식 검증 통과 후 디바운스(100ms) 만료 + 계산 완료 | 숨김 | 최신 값 표시 | 활성 |
+| `invalid-input` | 형식 검증 실패(디바운스 없이 즉시) | 노출(`role="alert"`) | 마지막 유효 결과 유지(깜빡임/맥락 상실 방지) | 활성(비활성화 금지) |
+| `recalculating` | 유효한 새 입력 발생 후 100ms 디바운스 대기 중 | 숨김 | 마지막 유효 결과 유지(디바운스 만료 시 갱신) | 활성 |
+
+모든 상태는 색상만으로 구분하지 않고, 배지 텍스트("AA"/"AA (large)"/"AAA" +
+pass/fail 문구)와 `input-error-message` 문구로 상태명을 노출한다(frozen
+접근성 요구, §7).
+
+## 7. 접근성 (frozen, 구현 설계 §4.6 그대로)
+
+1. `#fg-color-hex`/`#bg-color-hex`는 각각 `aria-label="전경색 hex"`/
+   `aria-label="배경색 hex"`를 가진다.
+2. `#badge-aa`/`#badge-aa-large`/`#badge-aaa` 컨테이너는 `aria-live="polite"`로
+   통과/실패 상태 변경을 스크린리더에 알린다.
+3. `#swap-colors-btn`은 네이티브 `<button>`으로 구현해 키보드 Tab 포커스 및
+   Enter/Space로 활성화 가능해야 한다.
+4. `#input-error-message`는 `role="alert"`로 노출된다.
+5. 모든 상태는 색상만으로 구분하지 않고 상태명을 화면 텍스트와 접근성
+   이름으로 노출한다(배지는 "AA"/"AA (large)"/"AAA" 텍스트 + pass/fail
+   문구를 색상과 함께 노출, `#preview-sample`은 배경/전경색 실제 렌더로
+   대비를 시각적으로도 보여준다).
+
+## 8. 반응형 (frozen)
+
+320px 이상 뷰포트에서 `.color-input-group`과 `.preview-panel`이 겹치거나
+가로 스크롤을 유발하지 않는다. §4.3의 breakpoint(480px)에서 가로 배치로
+전환되며, 그 이하에서는 세로 스택을 권장한다(구체적 breakpoint 값 자체는
+비-frozen, developer 재량이나 320px 이상 전 구간 overflow 금지는 준수).
+
+## 9. AC 매핑 (화면 요구 대비)
+
+| 화면 요구(AC) | 명세 위치 | mockup 반영 |
+| --- | --- | --- |
+| hex 입력 + picker 동시 제공 | §4.1(구조), §5(`#fg/bg-color-hex`, `#fg/bg-color-picker` 컴포넌트 명세) | §11 mockup — 각 `.color-input-group`에 text input과 `type="color"` picker를 항상 함께 배치 |
+| 대비율 소수점 둘째 자리 표시 | §5(`#contrast-ratio-value`), 구현 설계 §3.6(반올림 규칙) | §11 mockup — `4.48:1` 형식으로 정적 표기 |
+| AA / AA Large / AAA 배지 | §5(`#badge-aa`/`#badge-aa-large`/`#badge-aaa`), §2.1(frozen 토큰), §6(상태) | §11 mockup — 경계값 예시(`fg=#777777`/`bg=#ffffff`, ratio 4.48)로 pass(`badge-aa-large`)·fail(`badge-aa`/`badge-aaa`) 스타일을 동시에 시각화 |
+| 샘플 미리보기 | §5(`#preview-sample`/`.preview-panel`), §4.1(구조) | §11 mockup — 실제 fg/bg 색 인라인 렌더 |
+| 오류 즉시 표시(`invalid-input`) | §6, §7-4 | §11 mockup — 상태 갤러리에 `role="alert"` 오류 스냅샷 포함 |
+| 디바운스 대기(`recalculating`) | §6, 구현 설계 §2.1-2 | §11 mockup — 상태 갤러리에 "재계산 중" 스냅샷 포함 |
+
+## 10. dev 구현 가이드 (BF-1965)
+
+1. §4.1의 DOM 구조와 §6 상태 표를 그대로 마크업한다. frozen ID 11개
+   (`fg-color-hex`/`fg-color-picker`/`bg-color-hex`/`bg-color-picker`/
+   `swap-colors-btn`/`contrast-ratio-value`/`badge-aa`/`badge-aa-large`/
+   `badge-aaa`/`preview-sample`/`input-error-message`)와 frozen class 5개
+   (`contrast-badge`/`contrast-badge--pass`/`contrast-badge--fail`/
+   `color-input-group`/`preview-panel`)를 정확한 문자열로 사용한다.
+2. 형식 검증(디바운스 없음)과 대비 계산(100ms 디바운스)을 별도 함수로
+   분리한다(구현 설계 §2.1). 형식 오류 시 `input-error-message` 노출과 함께
+   진행 중이던 디바운스 타이머를 취소한다.
+3. 각 배지는 매 갱신마다 `contrast-badge--pass`/`contrast-badge--fail` 중
+   현재 판정에 해당하는 class만 갖도록 토글한다(반대 class는 제거).
+4. `contrast-ratio-value`는 `Number.prototype.toFixed(2)` 등으로 소수
+   둘째 자리까지 고정 표기하고 `:1` 접미사를 붙인다(예: `4.48:1`).
+5. `preview-sample`은 인라인 스타일(`background-color`/`color`)로 실제
+   fg/bg를 렌더하며, `invalid-input`/`recalculating` 상태에서도 마지막
+   유효 조합을 유지한다(§6).
+6. CSS 변수명은 §2.1 frozen 토큰 4개(`--color-pass`, `--color-fail`,
+   `--space-control-gap`, `--font-size-preview`)를 `:root`에 그대로
+   선언하고, 필요 시 §2.2 보조 토큰(`--cc-*` 접두)을 추가로 선언해 사용한다.
+7. hex 정규화·메모이제이션 캐시(구현 설계 §2.2)는 계산 로직 영역이며 본
+   시각 명세의 selector/token과 무관하게 그대로 구현 설계를 따른다.
+
+## 11. mockup 참조
+
+시각 mockup은 `docs/design/mockup.html`에 별도 파일로 작성했다(§4~§8
+selector·class·token·상태 4종을 그대로 반영한 정적 참고용). 상단은 frozen
+DOM ID 11개를 실제로 사용하는 단일 인터랙션 데모(경계값 예시
+`fg=#777777`/`bg=#ffffff`, `ratio=4.48:1`로 pass/fail 배지를 동시 시각화)이며,
+하단은 `invalid-input`/`recalculating` 상태를 보여주는 정적 상태 갤러리다
+(frozen ID는 화면당 1회만 존재해야 하므로 갤러리는 별도 class 기반 마크업을
+사용하고 frozen ID를 재사용하지 않는다). 이 mockup은 `contrast-checker/index.html`
+(dev 실제 산출물)을 대체하지 않으며, dev는 픽셀 단위로 일치시킬 의무가 없다.
+동작하는 JS 로직은 포함하지 않는다(정적 HTML/CSS만).
+
+## 12. Self-critique (BF-1964)
+
+| # | 점검 항목 | 결과 |
+| --- | --- | --- |
+| 1 | **AC 매핑** | §9에 화면 요구 4항목(hex 입력+picker, 소수 둘째 자리 대비율, AA/AA Large/AAA 배지, 샘플 미리보기) + 상태 2항목(오류 즉시 표시, 디바운스 대기)을 명세 위치·mockup 반영 열로 1:1 매핑. |
+| 2 | **dev 구현 가이드** | §10에 마크업·검증/계산 분리·배지 class 토글·소수 둘째 자리 포맷·preview 유지 규칙·token 선언·계산 로직 경계까지 7단계로 제시. |
+| 3 | **기존 요소 보존** | 상위 BF-1478·BF-1502·BF-1917·BF-1958 절을 `additive` 정책대로 변경·삭제 없이 보존하고 본 BF-1964 절만 추가. developer 소유 `contrast-checker/index.html`/`contrast-checker/tests/contrast.test.js` 미생성. |
+| 4 | **컴포넌트 매핑** | 11개 DOM ID·5개 CSS class·4개 state·4개 frozen token을 각각 §5/§6/§2.1에 1:1 매핑, 신규 selector·token 추가 없음(§2.2 보조 토큰은 비-frozen 배경/텍스트/테두리 용도로만 사용, frozen 4종과 값 충돌 없음). |
+| 5 | **모호함 flag** | 카드 padding(24px)·480px breakpoint·포커스 outline 색·`--cc-*` 보조 토큰 값은 frozen selector·token이 아니므로 developer 재량임을 §2.2/§4.2/§4.3에 명시. 디바운스 100ms·초기 `idle` 처리·캐시 상한은 상위 구현 설계(BF-1963) §2의 설계 결정이며 본 절이 재정의하지 않음을 §0/§6에서 명확히 함. frozen 값(색상 token·selector·상태·접근성·반응형) 변경 없음. |
