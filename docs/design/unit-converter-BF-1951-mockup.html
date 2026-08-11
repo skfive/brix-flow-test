@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>단위 변환기 UI 명세 mockup (BF-1951 / BF-1952)</title>
+<style>
+  :root {
+    /* frozen 디자인 토큰 (docs/plans/BF-1951/implementation-plan.md §1.5) — 값 변경/재정의 금지 */
+    --color-bg-light: #ffffff;
+    --color-bg-dark: #121212;
+    --color-text-light: #1a1a1a;
+    --color-text-dark: #f5f5f5;
+    --color-accent: #2563eb;
+    --color-error: #dc2626;
+    --space-control-gap: 12px;
+    --radius-control: 8px;
+
+    /* 현재 컬러스킴에서 실제 사용할 값 (기본 = 라이트) */
+    --bg: var(--color-bg-light);
+    --text: var(--color-text-light);
+    --panel-bg: #f8fafc;
+    --border: #cbd5e1;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: var(--color-bg-dark);
+      --text: var(--color-text-dark);
+      --panel-bg: #1c1c1c;
+      --border: #3a3a3a;
+    }
+  }
+
+  /* mockup 전용 수동 다크모드 데모 토글 (frozen 계약 요소 아님 — 리뷰 편의용) */
+  html.theme-dark {
+    --bg: var(--color-bg-dark);
+    --text: var(--color-text-dark);
+    --panel-bg: #1c1c1c;
+    --border: #3a3a3a;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px 16px 64px;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .doc-note {
+    max-width: 640px;
+    margin: 0 auto 24px;
+    padding: 12px 16px;
+    background: var(--panel-bg);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-control);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .doc-note strong {
+    color: var(--color-accent);
+  }
+
+  .demo-toolbar {
+    max-width: 640px;
+    margin: 0 auto 16px;
+    display: flex;
+    gap: var(--space-control-gap);
+    flex-wrap: wrap;
+  }
+
+  .demo-toolbar button {
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border);
+    background: var(--panel-bg);
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .demo-toolbar button:hover,
+  .demo-toolbar button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+
+  /* ===== frozen UI 계약 영역 (#app-root) ===== */
+
+  #app-root {
+    max-width: 640px;
+    margin: 0 auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    padding: 20px;
+  }
+
+  #app-root h1 {
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 var(--space-control-gap);
+  }
+
+  .state-live {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    margin: 0 0 var(--space-control-gap);
+    color: var(--text);
+  }
+
+  .state-live .state-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+
+  #app-root[data-state="idle"] .state-live .state-badge {
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--color-accent);
+  }
+
+  #app-root[data-state="error"] .state-live .state-badge {
+    background: rgba(220, 38, 38, 0.15);
+    color: var(--color-error);
+  }
+
+  /* .tabs / .tab / .tab--active — frozen 클래스 */
+  .tabs {
+    display: flex;
+    gap: var(--space-control-gap);
+    margin-bottom: var(--space-control-gap);
+  }
+
+  .tab {
+    flex: 1 1 0;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--panel-bg);
+    color: var(--text);
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .tab:hover,
+  .tab:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+
+  .tab--active {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    box-shadow: inset 0 -2px 0 var(--color-accent);
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  /* .panel / .panel--active — frozen 클래스 */
+  .panel {
+    display: none;
+  }
+
+  .panel.panel--active {
+    display: block;
+  }
+
+  .panel-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  @media (min-width: 768px) {
+    .panel-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* .unit-row / .unit-input — frozen 클래스 */
+  .unit-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .unit-row label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .unit-input {
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.4;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+  }
+
+  .unit-input:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+
+  .unit-row.unit-row--error-source .unit-input {
+    border-color: var(--color-error);
+    border-width: 2px;
+  }
+
+  /* .error-text — frozen 클래스 (#error-message) */
+  .error-text {
+    color: var(--color-error);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    min-height: 1.2em;
+    margin: var(--space-control-gap) 0 0;
+  }
+
+  .error-text:empty {
+    margin-top: 0;
+  }
+
+  .section-heading {
+    max-width: 640px;
+    margin: 40px auto 12px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .snapshot-row {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    gap: var(--space-control-gap);
+    flex-wrap: wrap;
+  }
+
+  .snapshot {
+    flex: 1 1 260px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    padding: 16px;
+    background: var(--panel-bg);
+  }
+
+  .snapshot h3 {
+    margin: 0 0 8px;
+    font-size: 0.875rem;
+  }
+
+  .snapshot .tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .snapshot.is-idle .tag {
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--color-accent);
+  }
+
+  .snapshot.is-error .tag {
+    background: rgba(220, 38, 38, 0.15);
+    color: var(--color-error);
+  }
+</style>
+</head>
+<body>
+
+  <div class="doc-note">
+    <strong>디자인 시안 mockup</strong> — 실제 앱 코드가 아닙니다. DOM id/class/토큰은
+    <code>docs/plans/BF-1951/implementation-plan.md</code>의 frozen <code>ui-contract@v1</code>를
+    그대로 사용했습니다. 상세 명세는 <code>docs/design/unit-converter-BF-1951.md</code> 참고.
+    변환 계산은 실제 로직이 아닌 placeholder 값입니다(계산 로직은 developer(BF-1953) 구현 범위).
+  </div>
+
+  <div class="demo-toolbar">
+    <button type="button" id="demo-theme-toggle" aria-pressed="false">🌓 다크모드 미리보기 전환 (mockup 전용)</button>
+    <button type="button" id="demo-error-toggle" aria-pressed="false">⚠️ 에러 상태 시연 (mockup 전용)</button>
+  </div>
+
+  <!-- ===================================================================
+       frozen ui-contract@v1 데모 영역: app-root / tab-* / panel-* / error-message
+       =================================================================== -->
+  <div id="app-root" data-state="idle">
+    <h1>단위 변환기</h1>
+
+    <p class="state-live" aria-live="polite">
+      현재 상태: <span id="state-badge-text" class="state-badge">idle (정상)</span>
+    </p>
+
+    <div class="tabs" role="tablist" aria-label="변환 카테고리">
+      <button type="button" class="tab tab--active" id="tab-length" role="tab"
+        aria-selected="true" aria-controls="panel-length" tabindex="0">길이</button>
+      <button type="button" class="tab" id="tab-weight" role="tab"
+        aria-selected="false" aria-controls="panel-weight" tabindex="-1">무게</button>
+      <button type="button" class="tab" id="tab-temperature" role="tab"
+        aria-selected="false" aria-controls="panel-temperature" tabindex="-1">온도</button>
+    </div>
+
+    <div class="panel panel--active" id="panel-length" role="tabpanel" aria-labelledby="tab-length">
+      <div class="panel-grid">
+        <div class="unit-row">
+          <label for="unit-length-m">미터 (m)</label>
+          <input class="unit-input" id="unit-length-m" type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="미터 (m) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-length-km">킬로미터 (km)</label>
+          <input class="unit-input" id="unit-length-km" type="text" inputmode="decimal" autocomplete="off" value="0.001" aria-label="킬로미터 (km) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-length-cm">센티미터 (cm)</label>
+          <input class="unit-input" id="unit-length-cm" type="text" inputmode="decimal" autocomplete="off" value="100" aria-label="센티미터 (cm) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-length-mm">밀리미터 (mm)</label>
+          <input class="unit-input" id="unit-length-mm" type="text" inputmode="decimal" autocomplete="off" value="1000" aria-label="밀리미터 (mm) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-length-inch">인치 (inch)</label>
+          <input class="unit-input" id="unit-length-inch" type="text" inputmode="decimal" autocomplete="off" value="39.370079" aria-label="인치 (inch) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-length-feet">피트 (feet)</label>
+          <input class="unit-input" id="unit-length-feet" type="text" inputmode="decimal" autocomplete="off" value="3.28084" aria-label="피트 (feet) 값">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-weight" role="tabpanel" aria-labelledby="tab-weight" hidden>
+      <div class="panel-grid">
+        <div class="unit-row">
+          <label for="unit-weight-g">그램 (g)</label>
+          <input class="unit-input" id="unit-weight-g" type="text" inputmode="decimal" autocomplete="off" value="100" aria-label="그램 (g) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-weight-kg">킬로그램 (kg)</label>
+          <input class="unit-input" id="unit-weight-kg" type="text" inputmode="decimal" autocomplete="off" value="0.1" aria-label="킬로그램 (kg) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-weight-mg">밀리그램 (mg)</label>
+          <input class="unit-input" id="unit-weight-mg" type="text" inputmode="decimal" autocomplete="off" value="100000" aria-label="밀리그램 (mg) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-weight-lb">파운드 (lb)</label>
+          <input class="unit-input" id="unit-weight-lb" type="text" inputmode="decimal" autocomplete="off" value="0.220462" aria-label="파운드 (lb) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-weight-oz">온스 (oz)</label>
+          <input class="unit-input" id="unit-weight-oz" type="text" inputmode="decimal" autocomplete="off" value="3.527396" aria-label="온스 (oz) 값">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-temperature" role="tabpanel" aria-labelledby="tab-temperature" hidden>
+      <div class="panel-grid">
+        <div class="unit-row">
+          <label for="unit-temperature-c">섭씨 (°C)</label>
+          <input class="unit-input" id="unit-temperature-c" type="text" inputmode="decimal" autocomplete="off" value="25" aria-label="섭씨 (°C) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-temperature-f">화씨 (°F)</label>
+          <input class="unit-input" id="unit-temperature-f" type="text" inputmode="decimal" autocomplete="off" value="77" aria-label="화씨 (°F) 값">
+        </div>
+        <div class="unit-row">
+          <label for="unit-temperature-k">켈빈 (K)</label>
+          <input class="unit-input" id="unit-temperature-k" type="text" inputmode="decimal" autocomplete="off" value="298.15" aria-label="켈빈 (K) 값">
+        </div>
+      </div>
+    </div>
+
+    <p id="error-message" class="error-text" role="alert"></p>
+  </div>
+  <!-- ===================================================================
+       frozen ui-contract@v1 데모 영역 끝
+       =================================================================== -->
+
+  <p class="section-heading">상태 스냅샷 (idle / error 비교 — 정적 참고용)</p>
+  <div class="snapshot-row">
+    <div class="snapshot is-idle">
+      <span class="tag">idle</span>
+      <h3>정상 — 온도 25°C 입력</h3>
+      <p style="font-size:0.8125rem;line-height:1.5;margin:0;">
+        섭씨 25 → 화씨 77 / 켈빈 298.15로 즉시 재계산되어 채워짐.<br>
+        <code>error-message</code>는 비어 있음. <code>data-state="idle"</code>.
+      </p>
+    </div>
+    <div class="snapshot is-error">
+      <span class="tag">error</span>
+      <h3>오류 — 켈빈에 -10 입력 (절대영도 미만)</h3>
+      <p style="font-size:0.8125rem;line-height:1.5;margin:0;">
+        트리거 필드(K)는 값 유지, 나머지 필드(°C/°F)는 비움.<br>
+        <code>error-message</code>: "절대영도(-273.15°C) 미만은 입력할 수 없습니다."
+        (<code>role="alert"</code>). <code>data-state="error"</code>.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // mockup 전용 시각 시연 스크립트 — 실제 변환 로직 없음(placeholder 값 토글만 수행).
+    (function () {
+      "use strict";
+
+      var appRoot = document.getElementById("app-root");
+      var stateBadge = document.getElementById("state-badge-text");
+      var errorMessage = document.getElementById("error-message");
+
+      var tabs = {
+        length: document.getElementById("tab-length"),
+        weight: document.getElementById("tab-weight"),
+        temperature: document.getElementById("tab-temperature")
+      };
+      var panels = {
+        length: document.getElementById("panel-length"),
+        weight: document.getElementById("panel-weight"),
+        temperature: document.getElementById("panel-temperature")
+      };
+
+      function resetErrorDemo() {
+        appRoot.setAttribute("data-state", "idle");
+        stateBadge.textContent = "idle (정상)";
+        errorMessage.textContent = "";
+        document.getElementById("demo-error-toggle").setAttribute("aria-pressed", "false");
+        var kInput = document.getElementById("unit-temperature-k");
+        var cInput = document.getElementById("unit-temperature-c");
+        var fInput = document.getElementById("unit-temperature-f");
+        kInput.closest(".unit-row").classList.remove("unit-row--error-source");
+        kInput.value = "298.15";
+        cInput.value = "25";
+        fInput.value = "77";
+      }
+
+      function activateTab(key) {
+        Object.keys(tabs).forEach(function (k) {
+          var isActive = k === key;
+          tabs[k].classList.toggle("tab--active", isActive);
+          tabs[k].setAttribute("aria-selected", isActive ? "true" : "false");
+          tabs[k].tabIndex = isActive ? 0 : -1;
+          panels[k].classList.toggle("panel--active", isActive);
+          if (isActive) {
+            panels[k].removeAttribute("hidden");
+          } else {
+            panels[k].setAttribute("hidden", "");
+          }
+        });
+        // frozen 규칙: 탭 전환 시 상태는 idle로 초기화
+        resetErrorDemo();
+      }
+
+      Object.keys(tabs).forEach(function (key) {
+        tabs[key].addEventListener("click", function () {
+          activateTab(key);
+        });
+      });
+
+      document.getElementById("demo-theme-toggle").addEventListener("click", function (evt) {
+        var isDark = document.documentElement.classList.toggle("theme-dark");
+        evt.currentTarget.setAttribute("aria-pressed", isDark ? "true" : "false");
+      });
+
+      document.getElementById("demo-error-toggle").addEventListener("click", function (evt) {
+        var pressed = evt.currentTarget.getAttribute("aria-pressed") === "true";
+        if (pressed) {
+          resetErrorDemo();
+          return;
+        }
+        // 온도 탭으로 전환 후 절대영도 미만 에러 상태를 시연
+        activateTab("temperature");
+        var kInput = document.getElementById("unit-temperature-k");
+        var cInput = document.getElementById("unit-temperature-c");
+        var fInput = document.getElementById("unit-temperature-f");
+        kInput.value = "-10";
+        kInput.closest(".unit-row").classList.add("unit-row--error-source");
+        cInput.value = "";
+        fInput.value = "";
+        appRoot.setAttribute("data-state", "error");
+        stateBadge.textContent = "error (오류)";
+        errorMessage.textContent = "절대영도(-273.15°C) 미만은 입력할 수 없습니다.";
+        evt.currentTarget.setAttribute("aria-pressed", "true");
+      });
+    })();
+  </script>
+</body>
+</html>
