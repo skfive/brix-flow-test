@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>텍스트 통계 분석기</title>
+<style>
+  :root {
+    --color-action-primary: #2563eb;
+    --color-surface-card: #f8fafc;
+    --space-card-gap: 16px;
+    --font-size-stat-value: 28px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 24px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  .text-stats-app {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+
+  .app-status {
+    font-size: 14px;
+    color: #475569;
+    margin: 0 0 16px;
+  }
+
+  .input-hint {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0 0 8px;
+  }
+
+  #text-input {
+    width: 100%;
+    min-height: 160px;
+    padding: 12px;
+    font-size: 16px;
+    font-family: inherit;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    resize: vertical;
+  }
+
+  #text-input:focus {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 2px;
+  }
+
+  .controls {
+    margin-top: 12px;
+    margin-bottom: 20px;
+  }
+
+  #clear-button {
+    background: var(--color-action-primary);
+    color: #ffffff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  #clear-button:hover {
+    opacity: 0.9;
+  }
+
+  #clear-button:focus {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 2px;
+  }
+
+  #stats-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-card-gap);
+    margin-bottom: 24px;
+  }
+
+  .stats-card {
+    background: var(--color-surface-card);
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    flex: 1 1 140px;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stats-card__value {
+    font-size: var(--font-size-stat-value);
+    font-weight: 700;
+    line-height: 1.2;
+    color: #0f172a;
+    word-break: break-word;
+  }
+
+  .stats-card__label {
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  .top-words-section h2 {
+    font-size: 16px;
+    margin: 0 0 8px;
+  }
+
+  #top-words-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .top-words__item {
+    background: var(--color-surface-card);
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+
+  @media (max-width: 360px) {
+    body {
+      padding: 12px;
+    }
+
+    .stats-card {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="text-stats-app" id="text-stats-app" data-state="empty">
+    <h1>텍스트 통계 분석기</h1>
+    <p class="app-status" id="app-status" role="status" aria-live="polite">상태: 비어 있음 (empty)</p>
+
+    <p class="input-hint" id="text-input-hint">분석할 텍스트를 입력하세요.</p>
+    <textarea
+      id="text-input"
+      aria-label="분석할 텍스트 입력"
+      placeholder="여기에 텍스트를 입력하세요..."
+    ></textarea>
+
+    <div class="controls">
+      <button id="clear-button" type="button" aria-label="입력 지우기">지우기</button>
+    </div>
+
+    <div id="stats-grid">
+      <div class="stats-card">
+        <span class="stats-card__value" id="stat-chars-with-spaces">0</span>
+        <span class="stats-card__label">글자 수 (공백 포함)</span>
+      </div>
+      <div class="stats-card">
+        <span class="stats-card__value" id="stat-chars-without-spaces">0</span>
+        <span class="stats-card__label">글자 수 (공백 제외)</span>
+      </div>
+      <div class="stats-card">
+        <span class="stats-card__value" id="stat-words">0</span>
+        <span class="stats-card__label">단어 수</span>
+      </div>
+      <div class="stats-card">
+        <span class="stats-card__value" id="stat-sentences">0</span>
+        <span class="stats-card__label">문장 수</span>
+      </div>
+      <div class="stats-card">
+        <span class="stats-card__value" id="stat-paragraphs">0</span>
+        <span class="stats-card__label">문단 수</span>
+      </div>
+      <div class="stats-card">
+        <span class="stats-card__value" id="stat-reading-time">0분</span>
+        <span class="stats-card__label">예상 읽기 시간</span>
+      </div>
+    </div>
+
+    <div class="top-words-section">
+      <h2>상위 5개 단어</h2>
+      <ul id="top-words-list"></ul>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var WORDS_PER_MINUTE = 200;
+
+      var textInput = document.getElementById("text-input");
+      var clearButton = document.getElementById("clear-button");
+      var appRoot = document.getElementById("text-stats-app");
+      var appStatus = document.getElementById("app-status");
+      var statCharsWithSpaces = document.getElementById("stat-chars-with-spaces");
+      var statCharsWithoutSpaces = document.getElementById("stat-chars-without-spaces");
+      var statWords = document.getElementById("stat-words");
+      var statSentences = document.getElementById("stat-sentences");
+      var statParagraphs = document.getElementById("stat-paragraphs");
+      var statReadingTime = document.getElementById("stat-reading-time");
+      var topWordsList = document.getElementById("top-words-list");
+
+      function countSentences(text) {
+        return text
+          .split(/[.?!]+/)
+          .map(function (segment) {
+            return segment.trim();
+          })
+          .filter(function (segment) {
+            return segment.length > 0;
+          }).length;
+      }
+
+      function countParagraphs(text) {
+        return text
+          .split(/\n\s*\n/)
+          .map(function (paragraph) {
+            return paragraph.trim();
+          })
+          .filter(function (paragraph) {
+            return paragraph.length > 0;
+          }).length;
+      }
+
+      function getReadingTimeText(wordCount) {
+        if (wordCount === 0) {
+          return "0분";
+        }
+        if (wordCount < WORDS_PER_MINUTE) {
+          return "1분 미만";
+        }
+        return Math.ceil(wordCount / WORDS_PER_MINUTE) + "분";
+      }
+
+      function getTopWords(words) {
+        var freq = new Map();
+        words.forEach(function (rawWord) {
+          var normalized = rawWord.toLowerCase();
+          if (normalized.length <= 1) {
+            return;
+          }
+          freq.set(normalized, (freq.get(normalized) || 0) + 1);
+        });
+
+        var entries = Array.from(freq.entries());
+        entries.sort(function (a, b) {
+          return b[1] - a[1];
+        });
+
+        return entries.slice(0, 5);
+      }
+
+      function renderTopWords(topWords) {
+        topWordsList.innerHTML = "";
+        topWords.forEach(function (entry) {
+          var li = document.createElement("li");
+          li.className = "top-words__item";
+          li.textContent = entry[0] + "(" + entry[1] + ")";
+          topWordsList.appendChild(li);
+        });
+      }
+
+      function resetStatsToEmpty() {
+        statCharsWithSpaces.textContent = "0";
+        statCharsWithoutSpaces.textContent = "0";
+        statWords.textContent = "0";
+        statSentences.textContent = "0";
+        statParagraphs.textContent = "0";
+        statReadingTime.textContent = "0분";
+        topWordsList.innerHTML = "";
+      }
+
+      function updateStats() {
+        var text = textInput.value;
+        var isEmpty = text.trim() === "";
+
+        appRoot.setAttribute("data-state", isEmpty ? "empty" : "populated");
+
+        if (isEmpty) {
+          appStatus.textContent = "상태: 비어 있음 (empty)";
+          resetStatsToEmpty();
+          return;
+        }
+
+        appStatus.textContent = "상태: 입력됨 (populated)";
+
+        var charsWithSpaces = text.length;
+        var charsWithoutSpaces = text.replace(/\s/g, "").length;
+        var words = text.trim().split(/\s+/).filter(function (token) {
+          return token.length > 0;
+        });
+
+        statCharsWithSpaces.textContent = String(charsWithSpaces);
+        statCharsWithoutSpaces.textContent = String(charsWithoutSpaces);
+        statWords.textContent = String(words.length);
+        statSentences.textContent = String(countSentences(text));
+        statParagraphs.textContent = String(countParagraphs(text));
+        statReadingTime.textContent = getReadingTimeText(words.length);
+
+        renderTopWords(getTopWords(words));
+      }
+
+      textInput.addEventListener("input", updateStats);
+
+      clearButton.addEventListener("click", function () {
+        textInput.value = "";
+        updateStats();
+        textInput.focus();
+      });
+
+      updateStats();
+    })();
+  </script>
+</body>
+</html>
