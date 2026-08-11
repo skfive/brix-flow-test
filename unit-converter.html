@@ -146,7 +146,6 @@
       <label class="unit-row"><span>밀리미터 (mm)</span><input type="text" inputmode="decimal" autocomplete="off" class="unit-input" data-unit="mm"></label>
       <label class="unit-row"><span>인치 (in)</span><input type="text" inputmode="decimal" autocomplete="off" class="unit-input" data-unit="inch"></label>
       <label class="unit-row"><span>피트 (ft)</span><input type="text" inputmode="decimal" autocomplete="off" class="unit-input" data-unit="feet"></label>
-      <label class="unit-row"><span>마일 (mi)</span><input type="text" inputmode="decimal" autocomplete="off" class="unit-input" data-unit="mile"></label>
     </div>
 
     <div id="panel-weight" class="panel" role="tabpanel" aria-labelledby="tab-weight">
@@ -172,7 +171,7 @@
 
       // §2 계수 테이블 (기준 단위: length=m, weight=g) — §3 온도는 오프셋 포함 공식 사용
       var FACTORS = {
-        length: { m: 1, km: 1000, cm: 0.01, mm: 0.001, inch: 0.0254, feet: 0.3048, mile: 1609.344 },
+        length: { m: 1, km: 1000, cm: 0.01, mm: 0.001, inch: 0.0254, feet: 0.3048 },
         weight: { g: 1, kg: 1000, mg: 0.001, lb: 453.59237, oz: 28.349523125 }
       };
 
@@ -358,6 +357,11 @@
 
         tab.tabEl.addEventListener("click", function () {
           activeCategory = tab.category;
+          // §5 탭 전환 시: 새 패널은 idle로 초기화하고 모든 unit-input 값과 error-message를 초기화한다.
+          categoryState[tab.category] = { error: false, message: "" };
+          tab.panelEl.querySelectorAll(".unit-input").forEach(function (el) {
+            el.value = "";
+          });
           TABS.forEach(function (t) {
             var isActive = t.category === activeCategory;
             t.tabEl.classList.toggle("tab--active", isActive);
