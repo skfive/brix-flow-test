@@ -1,10 +1,14 @@
 // BF-1977: 색상 대비 검사기 — 상대 휘도·대비비 순수 함수 및 상태 판정 단위 테스트.
-// contrast.js 는 ES 모듈로 순수 함수를 export 하므로(구현 설계 §5, §6, §10),
-// 브라우저 DOM 없이 node --test 에서 그대로 import 해 검증한다.
+//
+// [리뷰 수정 — file:// CORS 회귀 대응] contrast.js 는 더 이상 ES 모듈이 아니다.
+// 브라우저가 file:// 로 열 때 <script type="module"> 이 CORS 정책상 차단되는
+// 문제를 피하기 위해 contrast.js 를 import/export 없는 classic script 로
+// 전환했다. 이 서브트리(contrast-checker/package.json, "type": "commonjs")
+// 에서는 require() 로 동일 파일을 그대로 불러와 순수 함수를 검증한다.
 
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import {
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const {
   isValidHex,
   normalizeHex,
   hexToRgb,
@@ -12,7 +16,7 @@ import {
   contrastRatio,
   evaluateThresholds,
   evaluateContrast,
-} from '../contrast.js';
+} = require('../contrast.js');
 
 test('relativeLuminance: #FFFFFF는 1.0, #000000은 0.0이다', () => {
   assert.equal(relativeLuminance(hexToRgb('ffffff')), 1);
