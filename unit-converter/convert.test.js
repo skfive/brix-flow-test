@@ -2,96 +2,50 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { convert, formatNumber } = require('./convert.js');
+const { convert } = require('./convert.js');
 
-// convert() — 길이
+// convert(category, direction, value) — docs/plans/BF-1999/implementation-plan.md §4 TC-01..TC-10
 
-test('convert: 길이 m -> cm', () => {
-  assert.equal(convert(1, 'm', 'cm'), 100);
+test('TC-01: length forward(m->ft) 1 -> 3.2808', () => {
+  assert.equal(convert('length', 'forward', 1), '3.2808');
 });
 
-test('convert: 길이 km -> m', () => {
-  assert.equal(convert(2, 'km', 'm'), 2000);
+test('TC-02: length reverse(ft->m) 1 -> 0.3048', () => {
+  assert.equal(convert('length', 'reverse', 1), '0.3048');
 });
 
-test('convert: 길이 inch -> cm', () => {
-  assert.ok(Math.abs(convert(1, 'inch', 'cm') - 2.54) < 1e-9);
+test('TC-03: length forward(m->ft) 0.3048 -> 1 (반올림/후행 0 제거)', () => {
+  assert.equal(convert('length', 'forward', 0.3048), '1');
 });
 
-test('convert: 길이 ft -> m', () => {
-  assert.ok(Math.abs(convert(1, 'ft', 'm') - 0.3048) < 1e-9);
+test('TC-04: weight forward(kg->lb) 1 -> 2.2046', () => {
+  assert.equal(convert('weight', 'forward', 1), '2.2046');
 });
 
-// convert() — 무게
-
-test('convert: 무게 kg -> g', () => {
-  assert.equal(convert(1, 'kg', 'g'), 1000);
+test('TC-05: weight reverse(lb->kg) 1 -> 0.4536', () => {
+  assert.equal(convert('weight', 'reverse', 1), '0.4536');
 });
 
-test('convert: 무게 lb -> kg', () => {
-  assert.ok(Math.abs(convert(1, 'lb', 'kg') - 0.45359237) < 1e-9);
+test('TC-06: temperature forward(C->F) 0 -> 32', () => {
+  assert.equal(convert('temperature', 'forward', 0), '32');
 });
 
-test('convert: 무게 oz -> g', () => {
-  assert.ok(Math.abs(convert(1, 'oz', 'g') - 28.349523125) < 1e-9);
+test('TC-07: temperature forward(C->F) -40 -> -40 (교차점 경계값)', () => {
+  assert.equal(convert('temperature', 'forward', -40), '-40');
 });
 
-// convert() — 공통 규칙
-
-test('convert: 같은 단위는 값 그대로 반환', () => {
-  assert.equal(convert(5, 'm', 'm'), 5);
+test('TC-08: temperature reverse(F->C) 98.6 -> 37 (체온, 왕복 확인)', () => {
+  assert.equal(convert('temperature', 'reverse', 98.6), '37');
 });
 
-test('convert: 0 값은 허용된다', () => {
-  assert.equal(convert(0, 'm', 'cm'), 0);
+test('TC-09: length forward(m->ft) 0 -> 0', () => {
+  assert.equal(convert('length', 'forward', 0), '0');
 });
 
-test('convert: 음수 값은 예외를 던진다', () => {
-  assert.throws(() => convert(-1, 'm', 'cm'));
+test('TC-10: 알 수 없는 category는 TypeError', () => {
+  assert.throws(() => convert('volume', 'forward', 1), TypeError);
 });
 
-test('convert: 숫자가 아닌 값은 예외를 던진다', () => {
-  assert.throws(() => convert(NaN, 'm', 'cm'));
-  assert.throws(() => convert('1', 'm', 'cm'));
-});
-
-test('convert: 길이-무게 등 다른 카테고리 간 변환은 예외를 던진다', () => {
-  assert.throws(() => convert(1, 'm', 'g'));
-});
-
-test('convert: 알 수 없는 단위는 예외를 던진다', () => {
-  assert.throws(() => convert(1, 'm', 'xyz'));
-  assert.throws(() => convert(1, 'xyz', 'm'));
-});
-
-// formatNumber()
-
-test('formatNumber: 정수는 소수점 없이 표시', () => {
-  assert.equal(formatNumber(100), '100');
-});
-
-test('formatNumber: 소수점은 최대 4자리까지 표시', () => {
-  assert.equal(formatNumber(1 / 3), '0.3333');
-});
-
-test('formatNumber: 불필요한 trailing 0을 제거한다', () => {
-  assert.equal(formatNumber(0.30000000000000004), '0.3');
-});
-
-test('formatNumber: 0은 "0"으로 표시', () => {
-  assert.equal(formatNumber(0), '0');
-});
-
-test('formatNumber: 정수형 변환 결과 예시(AC-3)', () => {
-  assert.equal(formatNumber(convert(1, 'm', 'cm')), '100');
-});
-
-test('formatNumber: 매우 작은 값의 반올림 경계(4자리 초과분 버림)', () => {
-  assert.equal(formatNumber(0.00005), '0.0001');
-  assert.equal(formatNumber(0.00004), '0');
-});
-
-test('formatNumber: 1e21 이상의 매우 큰 값도 지수 표기 없이 표시', () => {
-  assert.equal(formatNumber(1e21), '1000000000000000000000');
-  assert.equal(formatNumber(1.23456e21), '1234560000000000000000');
+test('알 수 없는 direction은 TypeError', () => {
+  assert.throws(() => convert('length', 'sideways', 1), TypeError);
 });
