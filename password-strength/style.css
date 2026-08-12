@@ -1,0 +1,123 @@
+:root {
+  --color-strength-very-weak: #dc2626;
+  --color-strength-weak: #f97316;
+  --color-strength-medium: #eab308;
+  --color-strength-strong: #84cc16;
+  --color-strength-very-strong: #16a34a;
+  --color-bar-track: #e5e7eb;
+  --font-family-base: system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: var(--font-family-base);
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.container {
+  max-width: 420px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#password-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+#toggle-visibility {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  font-size: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.strength-bar {
+  height: 8px;
+  width: 100%;
+  border-radius: 4px;
+  background: var(--color-bar-track);
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.strength-bar__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+
+#strength-label {
+  margin: 8px 0 16px;
+  font-weight: 600;
+}
+
+#rules-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rule {
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.rule--met {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+.rule--unmet {
+  color: #9ca3af;
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 16px;
+  }
+
+  .input-row {
+    flex-wrap: wrap;
+  }
+}
