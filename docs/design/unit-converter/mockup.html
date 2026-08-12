@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>단위 변환기 — 디자인 mockup (BF-1988)</title>
+<style>
+  :root {
+    /* frozen token — implementation-plan.md §4.5 값 그대로, 재정의 금지 */
+    --color-text-primary: #1f2937;
+    --color-bg-panel: #ffffff;
+    --color-action-primary: #2563eb;
+    --color-tab-active-bg: #2563eb;
+    --color-error: #dc2626;
+    --space-control-gap: 12px;
+    --radius-control: 8px;
+    --font-family-base: system-ui;
+
+    /* additive token — 기존 frozen 토큰과 이름 충돌 없음 */
+    --color-bg-page: #f3f4f6;
+    --color-border: #d1d5db;
+    --color-border-focus: #2563eb;
+    --color-text-muted: #6b7280;
+    --color-tab-inactive-text: #4b5563;
+    --color-error-bg: #fef2f2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-family-base);
+    background: var(--color-bg-page);
+    color: var(--color-text-primary);
+    padding: 16px;
+  }
+
+  @media (min-width: 480px) {
+    body { padding: 24px; }
+  }
+
+  .page-heading {
+    max-width: 640px;
+    margin: 0 auto 20px;
+  }
+  .page-heading h1 {
+    font-size: 18px;
+    margin: 0 0 4px;
+  }
+  .page-heading p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+
+  /* ===== 위젯 카드: #unit-converter-root ===== */
+  .app-card {
+    max-width: 480px;
+    margin: 0 auto 32px;
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 16px;
+    max-width: 100%;
+    width: min(480px, 100%);
+  }
+  @media (min-width: 480px) {
+    .app-card { padding: 20px; }
+  }
+
+  .app-card h1 {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 var(--space-control-gap);
+    color: var(--color-text-primary);
+  }
+
+  /* ===== 탭 ===== */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: var(--space-control-gap);
+  }
+  .tab {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 8px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-tab-inactive-text);
+    cursor: pointer;
+  }
+  .tab--active {
+    background: var(--color-tab-active-bg);
+    border-color: var(--color-tab-active-bg);
+    color: #ffffff;
+  }
+  .tab:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  /* ===== 컨트롤 패널 (반응형 핵심) ===== */
+  .converter-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+    width: 100%;
+  }
+  @media (min-width: 480px) {
+    .converter-panel {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .converter-panel .field { flex: 1 1 130px; }
+    .converter-panel .swap-button { flex: 0 0 auto; }
+    .converter-panel .result { flex: 1 1 160px; }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .field__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+  .field__input,
+  .field__select {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--color-text-primary);
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-bg-panel);
+    width: 100%;
+    max-width: 100%;
+  }
+  .field__input:focus-visible,
+  .field__select:focus-visible {
+    outline: none;
+    border-color: var(--color-border-focus);
+  }
+
+  .swap-button {
+    font-family: inherit;
+    font-size: 18px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-bg-panel);
+    color: var(--color-action-primary);
+    cursor: pointer;
+    align-self: center;
+  }
+  .swap-button:hover { background: var(--color-bg-page); }
+  .swap-button:active { transform: scale(0.96); }
+  .swap-button:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  .result {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-bg-panel);
+    width: 100%;
+    max-width: 100%;
+  }
+  .result--error {
+    border-color: var(--color-error);
+    background: var(--color-error-bg);
+  }
+  .result__value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--color-text-primary);
+  }
+  .result__error {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-error);
+  }
+
+  /* ===== 상태 갤러리 (참고용 — frozen ID 미재사용, class만 재사용) ===== */
+  .gallery-heading {
+    max-width: 640px;
+    margin: 32px auto 12px;
+  }
+  .gallery-heading h2 { font-size: 15px; margin: 0 0 4px; }
+  .gallery-heading p { margin: 0; font-size: 13px; color: var(--color-text-muted); }
+
+  .state-gallery {
+    max-width: 960px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .state-card {
+    background: var(--color-bg-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 16px;
+  }
+  .state-card__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin: 0 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+</style>
+</head>
+<body>
+
+  <div class="page-heading">
+    <h1>단위 변환기 — 시안 mockup (BF-1988)</h1>
+    <p>실사용 스냅샷 1개(frozen DOM ID 포함) + 상태 갤러리(참고용). 브라우저 폭을 320px~480px로 조절해
+      반응형 전환을 확인하세요.</p>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 실사용 스냅샷 — Frozen UI 계약의 DOM ID 9개를 모두 포함     -->
+  <!-- 상태: category-length, valid-result (from=m, to=cm, 값=1)  -->
+  <!-- ========================================================= -->
+  <section id="unit-converter-root" class="app-card">
+    <h1>단위 변환기</h1>
+
+    <div class="tabs" role="tablist" aria-label="변환 카테고리">
+      <button id="unit-converter-tab-length" class="tab tab--active" type="button" role="tab" aria-selected="true">길이</button>
+      <button id="unit-converter-tab-weight" class="tab" type="button" role="tab" aria-selected="false">무게</button>
+    </div>
+
+    <div class="converter-panel">
+      <div class="field">
+        <label class="field__label" for="unit-converter-input-value">값</label>
+        <input id="unit-converter-input-value" class="field__input" type="text" inputmode="decimal" placeholder="값을 입력하세요" value="1">
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="unit-converter-from-unit">단위</label>
+        <select id="unit-converter-from-unit" class="field__select">
+          <option value="m" selected>m</option>
+          <option value="km">km</option>
+          <option value="cm">cm</option>
+          <option value="inch">inch</option>
+          <option value="ft">ft</option>
+        </select>
+      </div>
+
+      <button id="unit-converter-swap-button" class="swap-button" type="button" aria-label="단위 맞바꾸기">⇄</button>
+
+      <div class="field">
+        <label class="field__label" for="unit-converter-to-unit">변환 단위</label>
+        <select id="unit-converter-to-unit" class="field__select">
+          <option value="m">m</option>
+          <option value="km">km</option>
+          <option value="cm" selected>cm</option>
+          <option value="inch">inch</option>
+          <option value="ft">ft</option>
+        </select>
+      </div>
+
+      <div class="result">
+        <span id="unit-converter-result" class="result__value">100</span>
+        <p id="unit-converter-error" class="result__error" role="alert"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= -->
+  <!-- 상태 갤러리 — 참고용. frozen ID 중복을 피하기 위해 id 미부여 -->
+  <!-- ========================================================= -->
+  <div class="gallery-heading">
+    <h2>상태 갤러리 (참고용)</h2>
+    <p>실제 구현은 위젯 1개가 아래 상태 사이를 전환합니다 — id는 위 스냅샷에만 존재하므로 갤러리 카드는
+      class만 재사용합니다.</p>
+  </div>
+
+  <section class="state-gallery">
+
+    <!-- idle -->
+    <div class="state-card">
+      <p class="state-card__label">idle — 길이, 값 미입력</p>
+      <div class="tabs" role="tablist" aria-hidden="true">
+        <span class="tab tab--active">길이</span>
+        <span class="tab">무게</span>
+      </div>
+      <div class="converter-panel">
+        <div class="field">
+          <span class="field__label">값</span>
+          <input class="field__input" type="text" placeholder="값을 입력하세요" value="">
+        </div>
+        <div class="field">
+          <span class="field__label">단위</span>
+          <select class="field__select"><option>m</option></select>
+        </div>
+        <span class="swap-button" aria-hidden="true">⇄</span>
+        <div class="field">
+          <span class="field__label">변환 단위</span>
+          <select class="field__select"><option>cm</option></select>
+        </div>
+        <div class="result">
+          <span class="result__value"></span>
+          <p class="result__error"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- invalid-input: 숫자 아님 -->
+    <div class="state-card">
+      <p class="state-card__label">invalid-input — 숫자가 아님</p>
+      <div class="tabs" role="tablist" aria-hidden="true">
+        <span class="tab tab--active">길이</span>
+        <span class="tab">무게</span>
+      </div>
+      <div class="converter-panel">
+        <div class="field">
+          <span class="field__label">값</span>
+          <input class="field__input" type="text" value="abc">
+        </div>
+        <div class="field">
+          <span class="field__label">단위</span>
+          <select class="field__select"><option>m</option></select>
+        </div>
+        <span class="swap-button" aria-hidden="true">⇄</span>
+        <div class="field">
+          <span class="field__label">변환 단위</span>
+          <select class="field__select"><option>cm</option></select>
+        </div>
+        <div class="result result--error">
+          <span class="result__value"></span>
+          <p class="result__error">⚠ 숫자를 입력하세요</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- invalid-input: 음수 -->
+    <div class="state-card">
+      <p class="state-card__label">invalid-input — 음수</p>
+      <div class="tabs" role="tablist" aria-hidden="true">
+        <span class="tab tab--active">길이</span>
+        <span class="tab">무게</span>
+      </div>
+      <div class="converter-panel">
+        <div class="field">
+          <span class="field__label">값</span>
+          <input class="field__input" type="text" value="-1">
+        </div>
+        <div class="field">
+          <span class="field__label">단위</span>
+          <select class="field__select"><option>m</option></select>
+        </div>
+        <span class="swap-button" aria-hidden="true">⇄</span>
+        <div class="field">
+          <span class="field__label">변환 단위</span>
+          <select class="field__select"><option>cm</option></select>
+        </div>
+        <div class="result result--error">
+          <span class="result__value"></span>
+          <p class="result__error">⚠ 0 이상의 값을 입력하세요</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- category-weight, valid-result -->
+    <div class="state-card">
+      <p class="state-card__label">valid-result — 무게, kg→lb</p>
+      <div class="tabs" role="tablist" aria-hidden="true">
+        <span class="tab">길이</span>
+        <span class="tab tab--active">무게</span>
+      </div>
+      <div class="converter-panel">
+        <div class="field">
+          <span class="field__label">값</span>
+          <input class="field__input" type="text" value="2">
+        </div>
+        <div class="field">
+          <span class="field__label">단위</span>
+          <select class="field__select"><option>kg</option></select>
+        </div>
+        <span class="swap-button" aria-hidden="true">⇄</span>
+        <div class="field">
+          <span class="field__label">변환 단위</span>
+          <select class="field__select"><option>lb</option></select>
+        </div>
+        <div class="result">
+          <span class="result__value">4.4092</span>
+          <p class="result__error"></p>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</body>
+</html>
