@@ -1,0 +1,126 @@
+:root {
+  --color-text-primary: #1f2937;
+  --color-bg-panel: #ffffff;
+  --color-action-primary: #2563eb;
+  --color-tab-active-bg: #2563eb;
+  --color-error: #dc2626;
+  --space-control-gap: 12px;
+  --radius-control: 8px;
+  --font-family-base: system-ui;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--space-control-gap);
+  font-family: var(--font-family-base);
+  color: var(--color-text-primary);
+  background: #f3f4f6;
+}
+
+.converter-panel {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-control-gap);
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-control);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-control-gap);
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-control);
+  background: #ffffff;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.tab--active {
+  background: var(--color-tab-active-bg);
+  border-color: var(--color-tab-active-bg);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.unit-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-control-gap);
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.field__input,
+.field__select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-control);
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  min-width: 0;
+}
+
+.swap-button {
+  align-self: center;
+  border: 1px solid var(--color-action-primary);
+  background: #ffffff;
+  color: var(--color-action-primary);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.result {
+  min-height: 1.5em;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  word-break: break-word;
+}
+
+.result--error {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-error);
+  min-height: 1.25em;
+}
+
+@media (min-width: 480px) {
+  .unit-row {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .unit-row .field {
+    flex: 1;
+  }
+}
