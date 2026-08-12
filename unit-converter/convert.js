@@ -149,15 +149,18 @@
     function clearOutputs() {
       result.textContent = '';
       error.textContent = '';
+      error.classList.remove('result--error');
     }
 
     function showError(message) {
       result.textContent = '';
       error.textContent = message;
+      error.classList.add('result--error');
     }
 
     function showResult(value) {
       error.textContent = '';
+      error.classList.remove('result--error');
       result.textContent = api.formatNumber(value);
     }
 
