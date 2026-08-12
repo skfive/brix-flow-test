@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "commonjs",
+  "description": "interval-timer(BF-1983) 서브트리 전용 모듈 타입 고정 — timer.js가 file://로 열리는 classic <script>와 node --test(CommonJS require) 양쪽에서 동일하게 동작하도록 export/import 문법을 쓰지 않는다.",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}
