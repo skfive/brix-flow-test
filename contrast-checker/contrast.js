@@ -1,15 +1,24 @@
 // BF-1977: 색상 대비 검사기 — 상대 휘도·대비비 순수 함수 및 DOM 바인딩.
 // frozen 계약: docs/plans/BF-1975/implementation-plan.md §5, §6.
-// CDN·프레임워크·빌드 도구 없이 브라우저가 <script type="module"> 로 직접
-// import 하고, node --test 도 동일 파일을 그대로 import 해 순수 함수를 검증한다.
+//
+// [리뷰 수정 — file:// CORS 회귀 대응]
+// `<script type="module">` 로 로드하면 Chrome 계열 브라우저가 file:// origin
+// 에서 module script fetch 를 CORS 정책상 차단해 AC1(file:// 에서도 정상 렌더)
+// 을 깨뜨린다. 이를 피하기 위해 이 파일은 import/export 구문을 전혀 쓰지 않는
+// classic script 로 작성한다 — 브라우저는 <script src="contrast.js"> (비-module)
+// 로 그대로 로드하고, 전역 함수 선언만으로 동작한다.
+// node --test 쪽은 옆의 contrast-checker/package.json 에서 이 서브트리를
+// "type": "commonjs" 로 고정했으므로, 아래 module.exports 를 통해 동일 파일을
+// require() 로 그대로 불러와 순수 함수를 검증한다. 브라우저에는 `module` 전역이
+// 없으므로 typeof 가드로 안전하게 건너뛴다.
 
 const HEX_PATTERN = /^#?[0-9a-fA-F]{3}$|^#?[0-9a-fA-F]{6}$/;
 
-export function isValidHex(value) {
+function isValidHex(value) {
   return typeof value === 'string' && HEX_PATTERN.test(value.trim());
 }
 
-export function normalizeHex(value) {
+function normalizeHex(value) {
   const stripped = value.trim().replace(/^#/, '').toLowerCase();
   if (stripped.length === 3) {
     return stripped
@@ -20,7 +29,7 @@ export function normalizeHex(value) {
   return stripped;
 }
 
-export function hexToRgb(hex6) {
+function hexToRgb(hex6) {
   return {
     r: parseInt(hex6.slice(0, 2), 16),
     g: parseInt(hex6.slice(2, 4), 16),
@@ -29,13 +38,13 @@ export function hexToRgb(hex6) {
 }
 
 // §5.1 sRGB 채널 선형화
-export function channelToLinear(channel255) {
+function channelToLinear(channel255) {
   const c = channel255 / 255;
   return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
 // §5.2 상대 휘도
-export function relativeLuminance(rgb) {
+function relativeLuminance(rgb) {
   return (
     0.2126 * channelToLinear(rgb.r) +
     0.7152 * channelToLinear(rgb.g) +
@@ -44,7 +53,7 @@ export function relativeLuminance(rgb) {
 }
 
 // §5.3 대비비 — L1(밝은 쪽) >= L2(어두운 쪽) 로 정렬
-export function contrastRatio(fgHex, bgHex) {
+function contrastRatio(fgHex, bgHex) {
   const lA = relativeLuminance(hexToRgb(normalizeHex(fgHex)));
   const lB = relativeLuminance(hexToRgb(normalizeHex(bgHex)));
   const l1 = Math.max(lA, lB);
@@ -53,7 +62,7 @@ export function contrastRatio(fgHex, bgHex) {
 }
 
 // §6 판정 기준 — 임계값과 정확히 일치하는 경우도 통과로 판정한다.
-export function evaluateThresholds(ratio) {
+function evaluateThresholds(ratio) {
   return {
     aa: ratio >= 4.5,
     aaa: ratio >= 7,
@@ -64,7 +73,7 @@ export function evaluateThresholds(ratio) {
 // §4 상태 모델 — idle / valid / error.
 // 두 입력 모두 공백이면 idle, 둘 다 유효한 hex 이면 valid, 그 외(한쪽이라도
 // 무효하거나 한쪽만 채워진 경우 포함)는 error 로 판정하고 계산을 중단한다.
-export function evaluateContrast(foregroundRaw, backgroundRaw) {
+function evaluateContrast(foregroundRaw, backgroundRaw) {
   const fg = typeof foregroundRaw === 'string' ? foregroundRaw.trim() : '';
   const bg = typeof backgroundRaw === 'string' ? backgroundRaw.trim() : '';
 
@@ -180,4 +189,19 @@ if (typeof document !== 'undefined' && document && typeof document.getElementByI
   } else {
     initApp();
   }
+}
+
+// node --test 전용 export. 브라우저 classic script 컨텍스트에는 `module` 전역이
+// 없으므로 typeof 가드로 안전하게 건너뛴다(§ 파일 상단 주석 참고).
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    isValidHex,
+    normalizeHex,
+    hexToRgb,
+    channelToLinear,
+    relativeLuminance,
+    contrastRatio,
+    evaluateThresholds,
+    evaluateContrast,
+  };
 }
