@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>비밀번호 강도 검사기 — 시안 mockup (BF-1994)</title>
+<style>
+  :root {
+    --color-strength-very-weak: #dc2626;
+    --color-strength-weak: #f97316;
+    --color-strength-medium: #eab308;
+    --color-strength-strong: #84cc16;
+    --color-strength-very-strong: #16a34a;
+    --color-bar-track: #e5e7eb;
+    --font-family-base: system-ui, -apple-system, sans-serif;
+
+    --color-text: #1f2937;
+    --color-text-muted: #6b7280;
+    --color-card-bg: #ffffff;
+    --color-page-bg: #f9fafb;
+    --color-border: #d1d5db;
+    --color-met: #16a34a;
+    --color-unmet: #9ca3af;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-family-base);
+    background: var(--color-page-bg);
+    color: var(--color-text);
+    padding: 32px 16px;
+  }
+
+  h1.page-title {
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 8px;
+  }
+
+  p.page-desc {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    margin: 0 0 32px;
+  }
+
+  .mockup-note {
+    max-width: 860px;
+    margin: 0 auto 32px;
+    padding: 12px 16px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #7c2d12;
+  }
+
+  .state-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto 40px;
+  }
+
+  .state-grid-label {
+    max-width: 900px;
+    margin: 0 auto 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  /* ---- card (password-strength/index.html 구조 대응) ---- */
+  .card {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 24px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  .card__title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    margin: 0 0 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .password-input {
+    flex: 1;
+    height: 44px;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: var(--font-family-base);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text);
+    background: #fff;
+  }
+
+  .password-input::placeholder { color: #9ca3af; }
+
+  .toggle-visibility {
+    height: 44px;
+    min-width: 64px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-family: var(--font-family-base);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .toggle-visibility:hover { background: #f3f4f6; }
+
+  .strength-meter-block { margin-bottom: 20px; }
+
+  .strength-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--color-bar-track);
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .strength-bar__fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .2s ease, background-color .2s ease;
+  }
+
+  .strength-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .rules-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .rule__marker {
+    width: 16px;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .rule--met { color: var(--color-met); }
+  .rule--met .rule__marker { color: var(--color-met); }
+
+  .rule--unmet { color: var(--color-unmet); }
+  .rule--unmet .rule__marker { color: var(--color-unmet); }
+
+  /* ---- 반응형 섹션 데모 ---- */
+  .responsive-demo-label {
+    max-width: 900px;
+    margin: 40px auto 12px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .responsive-frame {
+    max-width: 360px;
+    margin: 0 auto 40px;
+    border: 2px dashed #9ca3af;
+    border-radius: 12px;
+    padding: 12px;
+    background: #fff;
+  }
+
+  .responsive-frame .card {
+    max-width: 100%;
+    padding: 16px;
+  }
+
+  .responsive-frame-caption {
+    text-align: center;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 8px 0 0;
+  }
+
+  /* ---- 토글 인터랙션(정적) 데모 ---- */
+  .toggle-demo-row {
+    display: flex;
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto 40px;
+    flex-wrap: wrap;
+  }
+
+  .toggle-demo-row .card { flex: 1; min-width: 280px; }
+</style>
+</head>
+<body>
+
+  <h1 class="page-title">비밀번호 강도 검사기</h1>
+  <p class="page-desc">BF-1994 UI 시안 mockup — 정적 스냅샷 (실제 인터랙션은 dev 구현)</p>
+
+  <div class="mockup-note">
+    이 mockup은 <code>docs/plans/BF-1993/implementation-plan.md</code>에서 동결된 UI 계약
+    (DOM id/class/상태/토큰/접근성)을 그대로 반영한 시각 시안입니다. 6개 상태
+    (empty / very-weak / weak / medium / strong / very-strong)를 각각 정적 카드로
+    나열했습니다. 실제 실시간 채점 로직과 클릭 인터랙션은 dev-1이 <code>strength.js</code>로
+    구현합니다.
+  </div>
+
+  <p class="state-grid-label">상태별 화면 (state 6종)</p>
+  <div class="state-grid">
+
+    <!-- empty -->
+    <div class="card">
+      <p class="card__title">state: empty</p>
+      <div class="field-row">
+        <input class="password-input" type="password" placeholder="비밀번호를 입력하세요"
+               aria-label="비밀번호" value="">
+        <button class="toggle-visibility" type="button" aria-pressed="false"
+                aria-label="비밀번호 표시">표시</button>
+      </div>
+      <div class="strength-meter-block" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0">
+        <div class="strength-bar">
+          <div class="strength-bar__fill" style="width:0%; background-color: transparent;"></div>
+        </div>
+        <p class="strength-label">비밀번호를 입력하세요</p>
+      </div>
+      <ul class="rules-list">
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>8자 이상 (미충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>대문자 포함 (미충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>소문자 포함 (미충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>숫자 포함 (미충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>특수문자 포함 (미충족)</li>
+      </ul>
+    </div>
+
+    <!-- very-weak -->
+    <div class="card">
+      <p class="card__title">state: very-weak</p>
+      <div class="field-row">
+        <input class="password-input" type="password" aria-label="비밀번호" value="password">
+        <button class="toggle-visibility" type="button" aria-pressed="false"
+                aria-label="비밀번호 표시">표시</button>
+      </div>
+      <div class="strength-meter-block" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0">
+        <div class="strength-bar">
+          <div class="strength-bar__fill" style="width:25%; background-color: var(--color-strength-very-weak);"></div>
+        </div>
+        <p class="strength-label">매우 약함</p>
+      </div>
+      <ul class="rules-list">
+        <li class="rule rule--met"><span class="rule__marker">✓</span>8자 이상 (충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>대문자 포함 (미충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>소문자 포함 (미충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>숫자 포함 (미충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>특수문자 포함 (미충족)</li>
+      </ul>
+      <p style="font-size:12px; color:#7c2d12; margin:12px 0 0;">
+        예시: 흔한 비밀번호("password") 강등 케이스 — 개별 규칙(length만 충족)은 실제 문자
+        구성대로 표시, 종합 상태만 very-weak로 강제됨
+      </p>
+    </div>
+
+    <!-- weak -->
+    <div class="card">
+      <p class="card__title">state: weak</p>
+      <div class="field-row">
+        <input class="password-input" type="password" aria-label="비밀번호" value="abcdefgh">
+        <button class="toggle-visibility" type="button" aria-pressed="false"
+                aria-label="비밀번호 표시">표시</button>
+      </div>
+      <div class="strength-meter-block" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="1">
+        <div class="strength-bar">
+          <div class="strength-bar__fill" style="width:50%; background-color: var(--color-strength-weak);"></div>
+        </div>
+        <p class="strength-label">약함</p>
+      </div>
+      <ul class="rules-list">
+        <li class="rule rule--met"><span class="rule__marker">✓</span>8자 이상 (충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>대문자 포함 (미충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>소문자 포함 (충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>숫자 포함 (미충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>특수문자 포함 (미충족)</li>
+      </ul>
+    </div>
+
+    <!-- medium -->
+    <div class="card">
+      <p class="card__title">state: medium</p>
+      <div class="field-row">
+        <input class="password-input" type="password" aria-label="비밀번호" value="abcdefg1">
+        <button class="toggle-visibility" type="button" aria-pressed="false"
+                aria-label="비밀번호 표시">표시</button>
+      </div>
+      <div class="strength-meter-block" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="2">
+        <div class="strength-bar">
+          <div class="strength-bar__fill" style="width:75%; background-color: var(--color-strength-medium);"></div>
+        </div>
+        <p class="strength-label">보통</p>
+      </div>
+      <ul class="rules-list">
+        <li class="rule rule--met"><span class="rule__marker">✓</span>8자 이상 (충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>대문자 포함 (미충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>소문자 포함 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>숫자 포함 (충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>특수문자 포함 (미충족)</li>
+      </ul>
+    </div>
+
+    <!-- strong -->
+    <div class="card">
+      <p class="card__title">state: strong</p>
+      <div class="field-row">
+        <input class="password-input" type="text" aria-label="비밀번호" value="Abcdefg1">
+        <button class="toggle-visibility" type="button" aria-pressed="true"
+                aria-label="비밀번호 숨김">숨김</button>
+      </div>
+      <div class="strength-meter-block" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="3">
+        <div class="strength-bar">
+          <div class="strength-bar__fill" style="width:90%; background-color: var(--color-strength-strong);"></div>
+        </div>
+        <p class="strength-label">강함</p>
+      </div>
+      <ul class="rules-list">
+        <li class="rule rule--met"><span class="rule__marker">✓</span>8자 이상 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>대문자 포함 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>소문자 포함 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>숫자 포함 (충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>특수문자 포함 (미충족)</li>
+      </ul>
+      <p style="font-size:12px; color:#6b7280; margin:12px 0 0;">
+        예시: toggle-visibility 클릭 후 상태 — type=text, aria-pressed=true,
+        aria-label="비밀번호 숨김", 버튼 표시 텍스트 "숨김"
+      </p>
+    </div>
+
+    <!-- very-strong -->
+    <div class="card">
+      <p class="card__title">state: very-strong</p>
+      <div class="field-row">
+        <input class="password-input" type="password" aria-label="비밀번호" value="Abcdefg1!">
+        <button class="toggle-visibility" type="button" aria-pressed="false"
+                aria-label="비밀번호 표시">표시</button>
+      </div>
+      <div class="strength-meter-block" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="4">
+        <div class="strength-bar">
+          <div class="strength-bar__fill" style="width:100%; background-color: var(--color-strength-very-strong);"></div>
+        </div>
+        <p class="strength-label">매우 강함</p>
+      </div>
+      <ul class="rules-list">
+        <li class="rule rule--met"><span class="rule__marker">✓</span>8자 이상 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>대문자 포함 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>소문자 포함 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>숫자 포함 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>특수문자 포함 (충족)</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- 반응형 데모 (320px~480px 모바일 뷰 정적 시뮬레이션) -->
+  <p class="responsive-demo-label">반응형 데모 — 모바일 뷰 (320px~480px 시뮬레이션, medium 상태 예시)</p>
+  <div class="responsive-frame">
+    <div class="card">
+      <p class="card__title">state: medium (mobile)</p>
+      <div class="field-row">
+        <input class="password-input" type="password" aria-label="비밀번호" value="abcdefg1">
+        <button class="toggle-visibility" type="button" aria-pressed="false"
+                aria-label="비밀번호 표시">표시</button>
+      </div>
+      <div class="strength-meter-block" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="2">
+        <div class="strength-bar">
+          <div class="strength-bar__fill" style="width:75%; background-color: var(--color-strength-medium);"></div>
+        </div>
+        <p class="strength-label">보통</p>
+      </div>
+      <ul class="rules-list">
+        <li class="rule rule--met"><span class="rule__marker">✓</span>8자 이상 (충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>대문자 포함 (미충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>소문자 포함 (충족)</li>
+        <li class="rule rule--met"><span class="rule__marker">✓</span>숫자 포함 (충족)</li>
+        <li class="rule rule--unmet"><span class="rule__marker">—</span>특수문자 포함 (미충족)</li>
+      </ul>
+    </div>
+  </div>
+  <p class="responsive-frame-caption">
+    360px 프레임 예시 — strength-bar / rules-list는 breakpoint와 무관하게 세로 정렬 유지,
+    카드 padding만 16px로 축소, overflow 없음
+  </p>
+
+</body>
+</html>
