@@ -1,0 +1,183 @@
+/* BF-2007 · 뽀모도로 타이머 스타일
+ * 명세: docs/plans/BF-2005/implementation-plan.md §7 (frozen ui-contract@v1)
+ * 토큰: --color-focus-bg, --color-break-bg, --color-accent, --color-error,
+ *       --color-text, --space-control-gap, --radius-button
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", "Pretendard", sans-serif;
+}
+
+.pomodoro-app {
+  --color-focus-bg: #1f2937;
+  --color-break-bg: #065f46;
+  --color-accent: #f97316;
+  --color-error: #dc2626;
+  --color-text: #f9fafb;
+  --space-control-gap: 16px;
+  --radius-button: 8px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 32px 16px;
+  background: var(--color-focus-bg);
+  color: var(--color-text);
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.pomodoro-app--break {
+  background: var(--color-break-bg);
+}
+
+.pomodoro-app__title {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.status-label {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.progress-ring {
+  --progress: 0;
+  position: relative;
+  width: min(220px, 60vw);
+  height: min(220px, 60vw);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(
+    var(--color-accent) calc(var(--progress) * 360deg),
+    rgba(249, 250, 251, 0.16) 0deg
+  );
+}
+
+.progress-ring::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: var(--color-focus-bg);
+}
+
+.pomodoro-app--break .progress-ring::before {
+  background: var(--color-break-bg);
+}
+
+.timer-display {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 2.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-count-label {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-control-gap);
+  width: 100%;
+}
+
+.control-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: var(--radius-button);
+  border: 1px solid rgba(249, 250, 251, 0.32);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.control-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.control-button--primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.settings {
+  width: 100%;
+  border: 1px solid rgba(249, 250, 251, 0.24);
+  border-radius: var(--radius-button);
+  padding: 12px 16px 16px;
+  text-align: left;
+}
+
+.settings__field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.settings__field input {
+  width: 4.5rem;
+  min-height: 44px;
+  border-radius: var(--radius-button);
+  border: 1px solid rgba(249, 250, 251, 0.32);
+  background: transparent;
+  color: var(--color-text);
+  padding: 4px 8px;
+}
+
+.settings__field input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.settings-error {
+  display: none;
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--color-error);
+}
+
+.settings-error--visible {
+  display: block;
+}
+
+@media (max-width: 480px) {
+  .controls {
+    flex-direction: column;
+  }
+
+  .control-button {
+    width: 100%;
+  }
+}
