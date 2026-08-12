@@ -1,0 +1,185 @@
+// markdown-preview/markdown.js (ESM)
+// 근거: docs/plans/BF-2011/implementation-plan.md §5(문법 변환 규칙표), §6(renderMarkdown 처리 순서)
+
+const ALLOWED_LINK_SCHEMES = ['http:', 'https:', 'mailto:'];
+
+/**
+ * HTML 특수문자(& < > " ')를 이스케이프한다.
+ * @param {string} raw
+ * @returns {string}
+ */
+function escapeHtml(raw) {
+  return raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * 링크 href의 스킴이 허용 목록(http/https/mailto)에 속하는지 판정한다.
+ * 상대 경로 등 스킴이 없는 href는 허용하지 않는다(URL 파싱 실패 시 false).
+ * @param {string} href
+ * @returns {boolean}
+ */
+function isAllowedLinkScheme(href) {
+  try {
+    const url = new URL(href);
+    return ALLOWED_LINK_SCHEMES.includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 이스케이프된 텍스트 조각에 인라인 변환을 순서대로 적용한다:
+ * 인라인 코드 -> 굵게 -> 기울임 -> 링크.
+ * (코드 블록/인라인 코드가 아닌 텍스트는 호출 전에 이미 escapeHtml 처리됨)
+ * @param {string} escaped
+ * @returns {string}
+ */
+function applyInlineTransforms(escaped) {
+  // 1. 인라인 코드를 먼저 추출해 플레이스홀더로 치환한다.
+  //    코드 안의 별표/대괄호 문법이 이후 단계에서 오작동하지 않도록 보호한다.
+  //    플레이스홀더 구분자는 인쇄 가능한 일반 문자만 사용한다(제어문자/NUL 미사용).
+  //    escaped는 이미 escapeHtml을 거쳤으므로 원본 텍스트에는 홑화살괄호 문자가
+  //    그대로 남아있을 수 없다(엔티티로 치환됨) -- 그래서 홑화살괄호로 감싼 숫자
+  //    패턴은 원본 텍스트와 절대 충돌하지 않는 안전한 구분자다.
+  const OPEN = String.fromCharCode(60); // <
+  const CLOSE = String.fromCharCode(62); // >
+  const codeSegments = [];
+  let out = escaped.replace(/`([^`]+)`/g, (_match, code) => {
+    const index = codeSegments.push(`<code>${code}</code>`) - 1;
+    return OPEN + String(index) + CLOSE;
+  });
+
+  // 2. 굵게: **text** (짝이 맞을 때만)
+  out = out.replace(/\*\*([^*]+)\*\*/g, (_match, text) => `<strong>${text}</strong>`);
+
+  // 3. 기울임: *text* (짝이 맞을 때만, 남은 단일 *)
+  out = out.replace(/\*([^*]+)\*/g, (_match, text) => `<em>${text}</em>`);
+
+  // 4. 링크: [텍스트](url)
+  out = out.replace(/\[([^\]]*)\]\(([^)]*)\)/g, (_match, label, href) => {
+    if (isAllowedLinkScheme(href)) {
+      return `<a href="${href}" rel="noopener noreferrer">${label}</a>`;
+    }
+    return label;
+  });
+
+  // 5. 인라인 코드 플레이스홀더 복원
+  const placeholderPattern = new RegExp(OPEN + '(\\d+)' + CLOSE, 'g');
+  out = out.replace(placeholderPattern, (_match, idx) => codeSegments[Number(idx)]);
+
+  return out;
+}
+
+/**
+ * 마크다운 소스 문자열을 sanitized HTML 문자열로 변환하는 순수 함수.
+ * DOM 접근/부수효과 없음. 동일 입력 -> 항상 동일 출력.
+ * @param {string} text - 원본 마크다운 소스 (예: #markdown-input.value)
+ * @returns {string} - 렌더링 가능한 HTML 문자열 (XSS 안전)
+ */
+export function renderMarkdown(text) {
+  if (typeof text !== 'string' || text.trim() === '') {
+    return '';
+  }
+
+  const lines = text.split('\n');
+  const htmlParts = [];
+  let listBuffer = [];
+  let i = 0;
+
+  function flushList() {
+    if (listBuffer.length > 0) {
+      htmlParts.push(`<ul>${listBuffer.join('')}</ul>`);
+      listBuffer = [];
+    }
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // 코드 블록 시작
+    if (/^```/.test(line)) {
+      flushList();
+      const codeLines = [];
+      i += 1;
+      while (i < lines.length && !/^```/.test(lines[i])) {
+        codeLines.push(lines[i]);
+        i += 1;
+      }
+      // i가 종료 fence를 가리키거나(있으면 skip) 문서 끝(없으면 그대로 종료)
+      if (i < lines.length) {
+        i += 1; // 종료 fence 소비
+      }
+      htmlParts.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+      continue;
+    }
+
+    // 목록 항목
+    const listMatch = /^- (.*)$/.exec(line);
+    if (listMatch) {
+      listBuffer.push(`<li>${applyInlineTransforms(escapeHtml(listMatch[1]))}</li>`);
+      i += 1;
+      continue;
+    }
+    flushList();
+
+    // 헤딩
+    const headingMatch = /^(#{1,3}) (.*)$/.exec(line);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      htmlParts.push(`<h${level}>${applyInlineTransforms(escapeHtml(headingMatch[2]))}</h${level}>`);
+      i += 1;
+      continue;
+    }
+
+    // 빈 줄은 무시
+    if (line.trim() === '') {
+      i += 1;
+      continue;
+    }
+
+    // 일반 문단
+    htmlParts.push(`<p>${applyInlineTransforms(escapeHtml(line))}</p>`);
+    i += 1;
+  }
+
+  flushList();
+
+  return htmlParts.join('');
+}
+
+const EMPTY_PLACEHOLDER_TEXT = '마크다운을 입력하면 미리보기가 표시됩니다';
+
+/**
+ * #markdown-input의 input 이벤트를 받아 #markdown-preview-output을 갱신한다.
+ * 입력이 비어있으면 empty-placeholder 상태로, 그 외에는 live-preview 상태로 전환한다.
+ * DOM 접근이 필요하므로 브라우저 환경에서만 바인딩한다(node --test에서는 document가 없어 실행되지 않음).
+ */
+function bindMarkdownPreview() {
+  const input = document.getElementById('markdown-input');
+  const output = document.getElementById('markdown-preview-output');
+  if (!input || !output) {
+    return;
+  }
+
+  function render() {
+    const value = input.value;
+    if (value.trim() === '') {
+      output.textContent = EMPTY_PLACEHOLDER_TEXT;
+      output.setAttribute('data-state', 'empty-placeholder');
+      return;
+    }
+    output.innerHTML = renderMarkdown(value);
+    output.setAttribute('data-state', 'live-preview');
+  }
+
+  input.addEventListener('input', render);
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', bindMarkdownPreview);
+}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>마크다운 미리보기</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="markdown-app" class="app-shell">
+    <div class="editor-pane">
+      <label for="markdown-input">마크다운 입력</label>
+      <textarea id="markdown-input" aria-label="마크다운 소스 입력"></textarea>
+    </div>
+    <div class="preview-pane">
+      <div id="markdown-preview-output" aria-live="polite" data-state="empty-placeholder">
+        마크다운을 입력하면 미리보기가 표시됩니다
+      </div>
+    </div>
+  </div>
+  <script type="module" src="markdown.js"></script>
+</body>
+</html>
