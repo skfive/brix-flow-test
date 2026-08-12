@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기간 표기 변환기</title>
+<style>
+  :root {
+    --color-field-active: #2563eb;
+    --color-field-error: #dc2626;
+    --color-action-primary: #2563eb;
+    --space-control-gap: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    max-width: 480px;
+    margin: 40px auto;
+    padding: 0 16px;
+    color: #1f2937;
+    background: #f9fafb;
+  }
+  h1 { font-size: 1.25rem; margin: 0 0 var(--space-control-gap); }
+  .converter {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+  #status-text {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: var(--space-control-gap);
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    transition: border-color 0.15s ease;
+  }
+  .field label {
+    font-size: 0.85rem;
+    color: #4b5563;
+  }
+  .field input {
+    width: 100%;
+    font-size: 1rem;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+  }
+  .field--active {
+    border-color: var(--color-field-active);
+  }
+  .field--active input {
+    outline: none;
+    border-color: var(--color-field-active);
+  }
+  .field--error {
+    border-color: var(--color-field-error);
+  }
+  .field--error input {
+    border-color: var(--color-field-error);
+  }
+  #error-message {
+    min-height: 1.2em;
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-field-error);
+  }
+  .quick-select-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+  .quick-select-btn {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--color-action-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .quick-select-btn:hover {
+    opacity: 0.9;
+  }
+  .quick-select-btn:focus-visible {
+    outline: 2px solid #1e3a8a;
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+  <h1>기간 표기 변환기</h1>
+  <div class="converter">
+    <p id="status-text" aria-live="polite">상태: 대기 중</p>
+    <div class="field" id="seconds-field">
+      <label for="seconds-input">초 단위 값</label>
+      <input id="seconds-input" type="text" inputmode="numeric" aria-label="초 단위 값 입력">
+    </div>
+    <div class="field" id="duration-field">
+      <label for="duration-input">기간 표현</label>
+      <input id="duration-input" type="text" aria-label="기간 표현 입력 (예: 1시간 30분)">
+    </div>
+    <p id="error-message" role="alert" aria-live="assertive"></p>
+    <div class="quick-select-group">
+      <button type="button" id="quick-select-30s" class="quick-select-btn">30초</button>
+      <button type="button" id="quick-select-5m" class="quick-select-btn">5분</button>
+      <button type="button" id="quick-select-1h" class="quick-select-btn">1시간</button>
+      <button type="button" id="quick-select-1d" class="quick-select-btn">1일</button>
+    </div>
+  </div>
+  <!-- classic script(비-module): file://로 직접 열어도 CORS 없이 로드됨 (type="module"은 file://에서 차단됨) -->
+  <script src="./src/duration.js"></script>
+</body>
+</html>
