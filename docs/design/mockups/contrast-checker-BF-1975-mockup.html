@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>색상 대비 검사기 시각 mockup — BF-1976</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    /* frozen 토큰 (docs/plans/BF-1975/implementation-plan.md §7 그대로 인용, 재정의 금지) */
+    --color-text-primary: #1f2933;
+    --color-bg-page: #ffffff;
+    --color-border-input: #cbd5e1;
+    --color-error: #b91c1c;
+    --color-pass: #15803d;
+    --space-section-gap: 16px;
+    --font-family-base: system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    /* 보조 팔레트 (designer 재량, docs/design/contrast-checker-BF-1975.md §3.2) */
+    --color-bg-surface: #f8fafc;
+    --color-bg-card: #ffffff;
+    --color-text-secondary: #52606d;
+    --color-fail: #b91c1c;
+    --color-error-bg: #fef2f2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: var(--color-bg-page);
+    font-family: var(--font-family-base);
+    color: var(--color-text-primary);
+  }
+
+  .mockup-intro {
+    max-width: 980px;
+    margin: 0 auto 32px;
+  }
+
+  .mockup-intro h1 {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 8px;
+  }
+
+  .mockup-intro p {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+    margin: 4px 0;
+  }
+
+  .mockup-note {
+    font-size: 13px;
+    line-height: 1.5;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 16px 0 0;
+  }
+
+  .mockup-snapshots {
+    max-width: 980px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+
+  .mockup-snapshot-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* ---- contrast-checker 위젯 (frozen DOM/class 계약, docs/plans/BF-1975/implementation-plan.md §3) ---- */
+
+  .contrast-checker {
+    max-width: 480px;
+    margin: 0;
+    padding: 24px;
+    background: var(--color-bg-surface);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-section-gap);
+  }
+
+  .contrast-checker h2 {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  .contrast-checker__field-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-section-gap);
+  }
+
+  @media (min-width: 480px) {
+    .contrast-checker__field-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .contrast-checker__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .contrast-checker__field label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  .contrast-checker__input {
+    font-family: var(--font-family-base);
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--color-text-primary);
+    padding: 8px 10px;
+    border: 1px solid var(--color-border-input);
+    border-radius: 6px;
+    background: var(--color-bg-card);
+  }
+
+  .contrast-checker__input:focus-visible {
+    outline: 2px solid var(--color-text-primary);
+    outline-offset: 1px;
+  }
+
+  .contrast-checker__error {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    min-height: 1.4em;
+    margin: 0;
+    color: var(--color-error);
+  }
+
+  .contrast-checker__error--filled {
+    background: var(--color-error-bg);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+
+  .contrast-checker__result-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-input);
+    border-radius: 8px;
+    padding: var(--space-section-gap);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .contrast-checker__result-card p.ratio-line {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+  }
+
+  .contrast-checker__result-card .ratio-line strong {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+    margin-left: 6px;
+  }
+
+  .contrast-checker__result-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .contrast-checker__result-badge {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-input);
+    color: var(--color-text-secondary);
+  }
+
+  .contrast-checker__result-badge--pass {
+    border-color: var(--color-pass);
+    color: var(--color-pass);
+  }
+
+  .contrast-checker__result-badge--fail {
+    border-color: var(--color-fail);
+    color: var(--color-fail);
+  }
+
+  .contrast-checker__preview {
+    min-height: 96px;
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  @media (max-width: 479px) {
+    .contrast-checker {
+      padding: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-intro">
+  <h1>색상 대비 검사기(contrast-checker) 시각 mockup — BF-1976</h1>
+  <p>명세 문서: <code>docs/design/contrast-checker-BF-1975.md</code> · frozen 계약 근거: <code>docs/plans/BF-1975/implementation-plan.md</code></p>
+  <p>정적 mockup입니다. 실제 대비율 계산·상태 전이·이벤트 리스너는 developer(contrast-checker/contrast.js)가 구현합니다.</p>
+  <div class="mockup-note">
+    devnote: 아래 3개 스냅샷(idle / valid / error)은 한 문서 안에서 나란히 비교하기 위해 frozen DOM id에 상태 접미사(<code>-idle</code>/<code>-valid</code>/<code>-error</code>)를 붙였습니다.
+    실제 런타임 페이지(<code>contrast-checker/index.html</code>)는 위젯 인스턴스가 하나뿐이므로 접미사 없이 frozen id
+    (<code>contrast-foreground-input</code>, <code>contrast-background-input</code>, <code>contrast-ratio-value</code>,
+    <code>contrast-aa-result</code>, <code>contrast-aa-large-result</code>, <code>contrast-aaa-result</code>,
+    <code>contrast-preview</code>, <code>contrast-error</code>)를 그대로 1회씩만 사용해야 합니다(mockup 전용 예외).
+  </div>
+</div>
+
+<div class="mockup-snapshots">
+
+  <!-- ================= idle 상태 ================= -->
+  <section data-mock-state="idle">
+    <p class="mockup-snapshot-label">idle (초기 로드)</p>
+    <div class="contrast-checker">
+      <h2>색상 대비 검사기</h2>
+
+      <div class="contrast-checker__field-group">
+        <div class="contrast-checker__field">
+          <label for="contrast-foreground-input-idle">전경색</label>
+          <input
+            type="text"
+            id="contrast-foreground-input-idle"
+            class="contrast-checker__input"
+            aria-label="전경색 (hex)"
+            value=""
+            placeholder="#000000"
+          />
+        </div>
+        <div class="contrast-checker__field">
+          <label for="contrast-background-input-idle">배경색</label>
+          <input
+            type="text"
+            id="contrast-background-input-idle"
+            class="contrast-checker__input"
+            aria-label="배경색 (hex)"
+            value=""
+            placeholder="#ffffff"
+          />
+        </div>
+      </div>
+
+      <p id="contrast-error-idle" class="contrast-checker__error" role="alert"></p>
+
+      <div class="contrast-checker__result-card">
+        <p class="ratio-line">대비율: <strong id="contrast-ratio-value-idle">–</strong></p>
+        <div class="contrast-checker__result-badges">
+          <span id="contrast-aa-result-idle" class="contrast-checker__result-badge">AA: 미입력</span>
+          <span id="contrast-aa-large-result-idle" class="contrast-checker__result-badge">AA (큰 텍스트): 미입력</span>
+          <span id="contrast-aaa-result-idle" class="contrast-checker__result-badge">AAA: 미입력</span>
+        </div>
+      </div>
+
+      <div id="contrast-preview-idle" class="contrast-checker__preview" style="background-color:#ffffff;color:#1f2933;">
+        가나다 Aa 텍스트 미리보기
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= valid 상태 ================= -->
+  <section data-mock-state="valid">
+    <p class="mockup-snapshot-label">valid (계산 결과 표시)</p>
+    <div class="contrast-checker">
+      <h2>색상 대비 검사기</h2>
+
+      <div class="contrast-checker__field-group">
+        <div class="contrast-checker__field">
+          <label for="contrast-foreground-input-valid">전경색</label>
+          <input
+            type="text"
+            id="contrast-foreground-input-valid"
+            class="contrast-checker__input"
+            aria-label="전경색 (hex)"
+            value="#1f2933"
+          />
+        </div>
+        <div class="contrast-checker__field">
+          <label for="contrast-background-input-valid">배경색</label>
+          <input
+            type="text"
+            id="contrast-background-input-valid"
+            class="contrast-checker__input"
+            aria-label="배경색 (hex)"
+            value="#ffffff"
+          />
+        </div>
+      </div>
+
+      <p id="contrast-error-valid" class="contrast-checker__error" role="alert"></p>
+
+      <div class="contrast-checker__result-card">
+        <p class="ratio-line">대비율: <strong id="contrast-ratio-value-valid">14.68:1</strong></p>
+        <div class="contrast-checker__result-badges">
+          <span id="contrast-aa-result-valid" class="contrast-checker__result-badge contrast-checker__result-badge--pass">AA: 통과</span>
+          <span id="contrast-aa-large-result-valid" class="contrast-checker__result-badge contrast-checker__result-badge--pass">AA (큰 텍스트): 통과</span>
+          <span id="contrast-aaa-result-valid" class="contrast-checker__result-badge contrast-checker__result-badge--pass">AAA: 통과</span>
+        </div>
+      </div>
+
+      <div id="contrast-preview-valid" class="contrast-checker__preview" style="background-color:#ffffff;color:#1f2933;">
+        가나다 Aa 텍스트 미리보기
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= error 상태 ================= -->
+  <section data-mock-state="error">
+    <p class="mockup-snapshot-label">error (유효하지 않은 hex 입력)</p>
+    <div class="contrast-checker">
+      <h2>색상 대비 검사기</h2>
+
+      <div class="contrast-checker__field-group">
+        <div class="contrast-checker__field">
+          <label for="contrast-foreground-input-error">전경색</label>
+          <input
+            type="text"
+            id="contrast-foreground-input-error"
+            class="contrast-checker__input"
+            aria-label="전경색 (hex)"
+            value="#12"
+          />
+        </div>
+        <div class="contrast-checker__field">
+          <label for="contrast-background-input-error">배경색</label>
+          <input
+            type="text"
+            id="contrast-background-input-error"
+            class="contrast-checker__input"
+            aria-label="배경색 (hex)"
+            value="#ffffff"
+          />
+        </div>
+      </div>
+
+      <p id="contrast-error-error" class="contrast-checker__error contrast-checker__error--filled" role="alert">
+        전경색 형식이 올바르지 않습니다. #RGB 또는 #RRGGBB 형식으로 입력하세요.
+      </p>
+
+      <div class="contrast-checker__result-card">
+        <p class="ratio-line">대비율: <strong id="contrast-ratio-value-error">–</strong></p>
+        <div class="contrast-checker__result-badges">
+          <span id="contrast-aa-result-error" class="contrast-checker__result-badge">AA: 미입력</span>
+          <span id="contrast-aa-large-result-error" class="contrast-checker__result-badge">AA (큰 텍스트): 미입력</span>
+          <span id="contrast-aaa-result-error" class="contrast-checker__result-badge">AAA: 미입력</span>
+        </div>
+      </div>
+
+      <div id="contrast-preview-error" class="contrast-checker__preview" style="background-color:#ffffff;color:#1f2933;">
+        가나다 Aa 텍스트 미리보기
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>
