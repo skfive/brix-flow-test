@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인터벌 타이머 mockup — BF-1982</title>
+<style>
+  :root {
+    /* frozen design tokens (docs/plans/BF-1981/implementation-plan.md §4.4) */
+    --color-phase-work: #2563eb;
+    --color-phase-rest: #16a34a;
+    --color-phase-idle: #6b7280;
+    --space-control-gap: 12px;
+
+    /* designer 재량 색상 (frozen 아님, design-spec.md §2.2) */
+    --page-bg: #f8fafc;
+    --surface: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #e2e8f0;
+    --btn-primary-bg: #0f172a;
+    --btn-primary-bg-hover: #1e293b;
+    --btn-secondary-border: #cbd5e1;
+    --btn-secondary-text: #334155;
+    --focus-ring: #2563eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 20px 80px;
+    background: var(--page-bg);
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    color: var(--text-primary);
+  }
+
+  header.page-header {
+    max-width: 960px;
+    margin: 0 auto 40px;
+  }
+
+  header.page-header h1 {
+    font-size: 1.4rem;
+    margin: 0 0 8px;
+  }
+
+  header.page-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .gallery {
+    max-width: 960px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 32px;
+  }
+
+  .state-panel h2 {
+    font-size: 0.95rem;
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+    font-weight: 700;
+  }
+
+  .state-panel h2 code {
+    background: var(--border-color);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 0.85em;
+  }
+
+  /* ---- .timer 컴포넌트 (frozen class: timer, timer__display, timer__control,
+         timer__phase--work, timer__phase--rest) ---- */
+
+  .timer {
+    max-width: 400px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 40px 32px;
+    background: var(--surface);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    border-top: 4px solid var(--color-phase-idle);
+  }
+
+  .timer.timer__phase--work { border-top-color: var(--color-phase-work); }
+  .timer.timer__phase--rest { border-top-color: var(--color-phase-rest); }
+
+  #timer-phase-label,
+  [id^="timer-phase-label"] {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: #f1f5f9;
+    color: var(--color-phase-idle);
+  }
+
+  .timer.timer__phase--work [id^="timer-phase-label"] {
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--color-phase-work);
+  }
+
+  .timer.timer__phase--rest [id^="timer-phase-label"] {
+    background: rgba(22, 163, 74, 0.12);
+    color: var(--color-phase-rest);
+  }
+
+  .timer__display {
+    font-family: ui-monospace, "SF Mono", "Consolas", "Menlo", monospace;
+    font-size: clamp(2.75rem, 9vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    position: relative;
+  }
+
+  .timer__display .complete-caption {
+    position: absolute;
+    left: 50%;
+    bottom: -28px;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-phase-idle);
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  [id^="timer-round-count"] {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .timer__control {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-control-gap);
+    width: 100%;
+  }
+
+  .timer__control button {
+    flex: 1 1 130px;
+    min-width: 120px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  [id^="timer-start-pause"] {
+    background: var(--btn-primary-bg);
+    color: #ffffff;
+    border: 1px solid var(--btn-primary-bg);
+  }
+
+  [id^="timer-start-pause"]:hover { background: var(--btn-primary-bg-hover); }
+
+  [id^="timer-reset"] {
+    background: #ffffff;
+    color: var(--btn-secondary-text);
+    border: 1px solid var(--btn-secondary-border);
+  }
+
+  [id^="timer-reset"]:hover { background: #f8fafc; }
+
+  .timer__control button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* 320px 반응형 확인용 프레임 (mockup 전용 — frozen 계약 아님) */
+  .viewport-320 {
+    width: 320px;
+    margin: 0 auto;
+    padding: 12px;
+    border: 1px dashed var(--btn-secondary-border);
+    border-radius: 12px;
+  }
+
+  .viewport-320 .timer {
+    padding: 24px 20px;
+    max-width: none;
+  }
+
+  footer.legend {
+    max-width: 960px;
+    margin: 56px auto 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  footer.legend code {
+    background: #eef2f7;
+    padding: 1px 5px;
+    border-radius: 5px;
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>인터벌 타이머 — 상태별 mockup (BF-1982 / 계약 원천: BF-1984)</h1>
+  <p>
+    아래 각 패널은 동일한 <code>.timer</code> 컴포넌트가 idle / work / rest / paused 상태일 때의
+    시각 스냅샷이다. 정적 갤러리 목적상 frozen DOM ID가 패널마다 반복되지만
+    (JS 없는 순수 시각 mockup), 실제 앱(<code>apps/interval-timer/index.html</code>)에서는
+    각 ID가 문서 전체에서 1회만 존재해야 한다. 상세 문구/색상 매핑은
+    <code>docs/design/BF-1981/design-spec.md</code> §5 참조.
+  </p>
+</header>
+
+<div class="gallery">
+
+  <!-- 1. idle -->
+  <section class="state-panel">
+    <h2>idle — 최초 진입 / 리셋 직후 <code>#timer-root.timer</code></h2>
+    <div id="timer-root" class="timer">
+      <span id="timer-phase-label">대기</span>
+      <div id="timer-display" class="timer__display" aria-live="polite">25:00</div>
+      <div id="timer-round-count">1 / 4 라운드</div>
+      <div class="timer__control">
+        <button id="timer-start-pause" type="button" aria-label="시작">시작</button>
+        <button id="timer-reset" type="button">리셋</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. work -->
+  <section class="state-panel">
+    <h2>work — 작업 구간 진행 중 <code>.timer__phase--work</code></h2>
+    <div id="timer-root-work" class="timer timer__phase--work">
+      <span id="timer-phase-label-work">작업</span>
+      <div id="timer-display-work" class="timer__display" aria-live="polite">18:42</div>
+      <div id="timer-round-count-work">2 / 4 라운드</div>
+      <div class="timer__control">
+        <button id="timer-start-pause-work" type="button" aria-label="일시정지">일시정지</button>
+        <button id="timer-reset-work" type="button">리셋</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. rest -->
+  <section class="state-panel">
+    <h2>rest — 휴식 구간 진행 중 <code>.timer__phase--rest</code></h2>
+    <div id="timer-root-rest" class="timer timer__phase--rest">
+      <span id="timer-phase-label-rest">휴식</span>
+      <div id="timer-display-rest" class="timer__display" aria-live="polite">04:12</div>
+      <div id="timer-round-count-rest">2 / 4 라운드</div>
+      <div class="timer__control">
+        <button id="timer-start-pause-rest" type="button" aria-label="일시정지">일시정지</button>
+        <button id="timer-reset-rest" type="button">리셋</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. paused (직전 phase = work) -->
+  <section class="state-panel">
+    <h2>paused — work 중 일시정지 <code>(직전 .timer__phase--work 유지)</code></h2>
+    <div id="timer-root-paused-work" class="timer timer__phase--work">
+      <span id="timer-phase-label-paused-work">일시정지</span>
+      <div id="timer-display-paused-work" class="timer__display" aria-live="polite">12:07</div>
+      <div id="timer-round-count-paused-work">2 / 4 라운드</div>
+      <div class="timer__control">
+        <button id="timer-start-pause-paused-work" type="button" aria-label="시작">시작</button>
+        <button id="timer-reset-paused-work" type="button">리셋</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. paused (직전 phase = rest) -->
+  <section class="state-panel">
+    <h2>paused — rest 중 일시정지 <code>(직전 .timer__phase--rest 유지)</code></h2>
+    <div id="timer-root-paused-rest" class="timer timer__phase--rest">
+      <span id="timer-phase-label-paused-rest">일시정지</span>
+      <div id="timer-display-paused-rest" class="timer__display" aria-live="polite">02:30</div>
+      <div id="timer-round-count-paused-rest">3 / 4 라운드</div>
+      <div class="timer__control">
+        <button id="timer-start-pause-paused-rest" type="button" aria-label="시작">시작</button>
+        <button id="timer-reset-paused-rest" type="button">리셋</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. 세션 완료 announce 보조 표기 (idle과 동일 상태 + 보조 캡션) -->
+  <section class="state-panel">
+    <h2>세션 완료 직후 — idle과 동일 + <code>aria-live</code> 1회 announce 보조 표기</h2>
+    <div id="timer-root-complete" class="timer">
+      <span id="timer-phase-label-complete">대기</span>
+      <div id="timer-display-complete" class="timer__display" aria-live="polite">
+        25:00
+        <span class="complete-caption">모든 라운드를 완료했습니다</span>
+      </div>
+      <div id="timer-round-count-complete">1 / 4 라운드</div>
+      <div class="timer__control">
+        <button id="timer-start-pause-complete" type="button" aria-label="시작">시작</button>
+        <button id="timer-reset-complete" type="button">리셋</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- 7. 320px 반응형 확인 — .timer__control 줄바꿈 검증 (frozen §4.6 / AC10) -->
+<section class="state-panel" style="max-width:960px; margin:48px auto 0;">
+  <h2>반응형 — 320px 뷰포트에서 <code>.timer__control</code> 줄바꿈 확인</h2>
+  <div class="viewport-320">
+    <div id="timer-root-320" class="timer timer__phase--work">
+      <span id="timer-phase-label-320">작업</span>
+      <div id="timer-display-320" class="timer__display" aria-live="polite">18:42</div>
+      <div id="timer-round-count-320">2 / 4 라운드</div>
+      <div class="timer__control">
+        <button id="timer-start-pause-320" type="button" aria-label="일시정지">일시정지</button>
+        <button id="timer-reset-320" type="button">리셋</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="legend">
+  frozen 계약 참조: <code>docs/plans/BF-1981/implementation-plan.md</code> §2·§4 —
+  DOM ID(<code>timer-root</code>, <code>timer-display</code>, <code>timer-phase-label</code>,
+  <code>timer-round-count</code>, <code>timer-start-pause</code>, <code>timer-reset</code>),
+  CSS class(<code>timer</code>, <code>timer__display</code>, <code>timer__control</code>,
+  <code>timer__phase--work</code>, <code>timer__phase--rest</code>),
+  token(<code>--color-phase-work</code>, <code>--color-phase-rest</code>,
+  <code>--color-phase-idle</code>, <code>--space-control-gap</code>)는 변경·재정의하지 않았다.
+  상세 텍스트/색상 매핑 및 dev 구현 가이드는 <code>docs/design/BF-1981/design-spec.md</code> 참조.
+</footer>
+
+</body>
+</html>
