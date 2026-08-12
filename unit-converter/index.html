@@ -15,27 +15,31 @@
     <button type="button" id="unit-converter-tab-weight" class="tab" role="tab" aria-selected="false">무게</button>
   </div>
 
-  <div class="unit-row">
-    <div class="field">
-      <label for="unit-converter-input-value">값</label>
-      <input type="text" id="unit-converter-input-value" class="field__input" placeholder="값을 입력하세요" inputmode="decimal" autocomplete="off" maxlength="18">
+  <div class="converter-row">
+    <div class="unit-row">
+      <div class="field">
+        <label for="unit-converter-input-value">값</label>
+        <input type="text" id="unit-converter-input-value" class="field__input" placeholder="값을 입력하세요" inputmode="decimal" autocomplete="off" maxlength="18">
+      </div>
+
+      <div class="field">
+        <label for="unit-converter-from-unit">원래 단위</label>
+        <select id="unit-converter-from-unit" class="field__select"></select>
+      </div>
+
+      <button type="button" id="unit-converter-swap-button" class="swap-button" aria-label="단위 맞바꾸기">⇄</button>
+
+      <div class="field">
+        <label for="unit-converter-to-unit">변환할 단위</label>
+        <select id="unit-converter-to-unit" class="field__select"></select>
+      </div>
     </div>
 
-    <div class="field">
-      <label for="unit-converter-from-unit">원래 단위</label>
-      <select id="unit-converter-from-unit" class="field__select"></select>
-    </div>
-
-    <button type="button" id="unit-converter-swap-button" class="swap-button" aria-label="단위 맞바꾸기">⇄</button>
-
-    <div class="field">
-      <label for="unit-converter-to-unit">변환할 단위</label>
-      <select id="unit-converter-to-unit" class="field__select"></select>
+    <div class="result-group">
+      <p id="unit-converter-result" class="result"></p>
+      <p id="unit-converter-error" class="result result--error" role="alert"></p>
     </div>
   </div>
-
-  <p id="unit-converter-result" class="result"></p>
-  <p id="unit-converter-error" class="result result--error" role="alert"></p>
 </main>
 <script src="convert.js"></script>
 </body>

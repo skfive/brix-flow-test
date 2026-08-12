@@ -56,10 +56,24 @@ body {
   font-weight: 600;
 }
 
+.converter-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-control-gap);
+  min-width: 0;
+}
+
 .unit-row {
   display: flex;
   flex-direction: column;
   gap: var(--space-control-gap);
+  min-width: 0;
+}
+
+.result-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -115,12 +129,24 @@ body {
 }
 
 @media (min-width: 480px) {
-  .unit-row {
+  .converter-row {
     flex-direction: row;
     align-items: flex-end;
   }
 
+  .unit-row {
+    flex-direction: row;
+    align-items: flex-end;
+    flex: 2;
+    min-width: 0;
+  }
+
   .unit-row .field {
     flex: 1;
+  }
+
+  .result-group {
+    flex: 1;
+    min-width: 0;
   }
 }
