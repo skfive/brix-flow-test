@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>타이핑 속도 테스트</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="typing-app" class="typing-app" data-state="idle" aria-label="타이핑 속도 테스트 - 대기">
+    <h1 class="typing-app__title">타이핑 속도 테스트</h1>
+
+    <p id="status-text" class="typing-app__status" role="status">상태: 대기</p>
+
+    <div class="stats-bar">
+      <span class="stats-bar__item">남은 시간: <span id="timer-value" aria-live="polite">60</span>초</span>
+    </div>
+
+    <p id="target-sentence" class="typing-app__sentence"></p>
+
+    <input
+      id="typed-input"
+      class="typing-app__input"
+      type="text"
+      aria-label="타이핑 입력"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+    />
+
+    <div id="result-panel" class="result-panel">
+      <h2 class="result-panel__title">결과</h2>
+      <p class="result-panel__row">WPM: <span id="wpm-value" aria-live="polite">0</span></p>
+      <p class="result-panel__row">정확도: <span id="accuracy-value" aria-live="polite">0</span>%</p>
+      <p class="result-panel__row">오타 수: <span id="typo-count-value">0</span>개</p>
+    </div>
+
+    <button id="restart-button" class="typing-app__restart" type="button">다시 시작</button>
+  </main>
+
+  <script src="typing.js"></script>
+</body>
+</html>
