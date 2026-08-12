@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>타이핑 속도 테스트 UI mockup — BF-2029 / BF-2030</title>
+<style>
+  :root {
+    /* frozen design tokens (docs/plans/BF-2029/implementation-plan.md 2.4 — 변경 금지) */
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-text: #e2e8f0;
+    --color-char-current: #facc15;
+    --color-char-correct: #22c55e;
+    --color-char-incorrect: #ef4444;
+    --font-family-base: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --space-control-gap: 12px;
+
+    /* designer 보충 토큰 (non-frozen — dev 재량으로 조정 가능) */
+    --color-char-pending: #64748b;
+    --color-text-muted: #94a3b8;
+    --color-border: #334155;
+    --color-focus-ring: #93c5fd;
+    --color-danger-bg: rgba(239, 68, 68, 0.12);
+    --color-accent-bg: rgba(34, 197, 94, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 16px 80px;
+    background: #020617;
+    font-family: var(--font-family-base);
+    color: var(--color-text);
+  }
+
+  h1.page-title {
+    max-width: 1040px;
+    margin: 0 auto 8px;
+    font-size: 1.5rem;
+  }
+
+  p.lede {
+    max-width: 1040px;
+    margin: 0 auto 40px;
+    color: var(--color-text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .legend {
+    max-width: 1040px;
+    margin: 0 auto 40px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+  }
+
+  .legend__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+  }
+
+  .legend__swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .state-gallery {
+    max-width: 1040px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 32px;
+  }
+
+  .state-block {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .state-block__label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .state-block__note {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* #typing-app (frozen id) — 컨테이너 카드 */
+  .typing-app {
+    width: 100%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  h2.app-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .state-indicator {
+    margin: -16px 0 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  /* #target-sentence (frozen id) */
+  .target-sentence {
+    font-size: 1.375rem;
+    font-weight: 500;
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+    overflow-wrap: break-word;
+  }
+
+  /* char-pending / char-current / char-correct / char-incorrect (frozen class) */
+  .char-pending { color: var(--color-char-pending); }
+  .char-current {
+    color: var(--color-char-current);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .char-correct { color: var(--color-char-correct); }
+  .char-incorrect {
+    color: var(--color-char-incorrect);
+    text-decoration: line-through;
+  }
+
+  /* #typed-input (frozen id) */
+  .typed-input {
+    width: 100%;
+    max-width: 100%;
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: var(--font-family-base);
+    font-size: 1.125rem;
+  }
+
+  .typed-input:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .typed-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* .stats-bar (frozen class) */
+  .stats-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-control-gap);
+  }
+
+  .stat-item {
+    flex: 1 1 120px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+
+  .stat-item__label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+  }
+
+  .stat-item__value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* #restart-button (frozen id) */
+  .restart-button {
+    appearance: none;
+    align-self: flex-start;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    background: var(--color-char-correct);
+    color: var(--color-bg);
+    font-family: var(--font-family-base);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .restart-button:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* #result-panel (frozen id) — result-panel--visible 없으면 숨김 */
+  .result-panel {
+    display: none;
+  }
+
+  .result-panel--visible {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-control-gap);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .result-item {
+    flex: 1 1 140px;
+    border-radius: 10px;
+    padding: 12px 16px;
+    background: rgba(148, 163, 184, 0.08);
+  }
+
+  .result-item--accuracy { background: var(--color-accent-bg); }
+  .result-item--typo { background: var(--color-danger-bg); }
+
+  .result-item__label {
+    display: block;
+    font-size: 1.125rem;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+  }
+
+  .result-item__value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .footnote {
+    max-width: 1040px;
+    margin: 48px auto 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  code {
+    background: rgba(148, 163, 184, 0.15);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 480px) {
+    .typing-app { padding: 20px; }
+    .stat-item { flex: 1 1 45%; }
+  }
+</style>
+</head>
+<body>
+
+  <h1 class="page-title">타이핑 속도 테스트 UI mockup — BF-2029 / BF-2030</h1>
+  <p class="lede">
+    frozen UI 계약(DOM ID / class / token / 상태)을 그대로 반영한 시각 mockup. idle / running / finished
+    3개 상태를 정적 스냅샷으로 나열했다. 실제 인터랙션(JS)은 없으며, 문장·입력값·통계는 placeholder 예시다.
+    실제 구현은 <code>typing/index.html</code>, <code>typing/style.css</code>, <code>typing/typing.js</code>
+    (developer 소유)에서 진행한다.
+  </p>
+
+  <div class="legend">
+    <span class="legend__item"><span class="legend__swatch" style="background: var(--color-char-pending);"></span>char-pending (미입력)</span>
+    <span class="legend__item"><span class="legend__swatch" style="background: var(--color-char-current);"></span>char-current (현재 위치)</span>
+    <span class="legend__item"><span class="legend__swatch" style="background: var(--color-char-correct);"></span>char-correct (정확)</span>
+    <span class="legend__item"><span class="legend__swatch" style="background: var(--color-char-incorrect);"></span>char-incorrect (오타)</span>
+  </div>
+
+  <div class="state-gallery">
+
+    <!-- 상태 1: idle -->
+    <div class="state-block">
+      <span class="state-block__label">1. idle (대기) — 타이머 시작 전, 문장 첫 글자만 char-current</span>
+      <div class="typing-app" id="typing-app">
+        <h2 class="app-title">타이핑 속도 테스트</h2>
+        <p class="state-indicator">상태: 대기 중</p>
+        <p class="target-sentence" id="target-sentence"><span class="char-current">T</span><span class="char-pending">h</span><span class="char-pending">e</span><span class="char-pending"> </span><span class="char-pending">q</span><span class="char-pending">u</span><span class="char-pending">i</span><span class="char-pending">c</span><span class="char-pending">k</span><span class="char-pending"> </span><span class="char-pending">b</span><span class="char-pending">r</span><span class="char-pending">o</span><span class="char-pending">w</span><span class="char-pending">n</span><span class="char-pending"> </span><span class="char-pending">f</span><span class="char-pending">o</span><span class="char-pending">x</span><span class="char-pending"> </span><span class="char-pending">j</span><span class="char-pending">u</span><span class="char-pending">m</span><span class="char-pending">p</span><span class="char-pending">s</span><span class="char-pending"> </span><span class="char-pending">o</span><span class="char-pending">v</span><span class="char-pending">e</span><span class="char-pending">r</span><span class="char-pending"> </span><span class="char-pending">t</span><span class="char-pending">h</span><span class="char-pending">e</span><span class="char-pending"> </span><span class="char-pending">l</span><span class="char-pending">a</span><span class="char-pending">z</span><span class="char-pending">y</span><span class="char-pending"> </span><span class="char-pending">d</span><span class="char-pending">o</span><span class="char-pending">g</span><span class="char-pending">.</span></p>
+        <input class="typed-input" id="typed-input" type="text" aria-label="타이핑 입력" placeholder="여기에 입력을 시작하세요" value="">
+        <div class="stats-bar">
+          <div class="stat-item">
+            <span class="stat-item__label">WPM</span>
+            <span class="stat-item__value" id="wpm-value" aria-live="polite">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">정확도</span>
+            <span class="stat-item__value" id="accuracy-value" aria-live="polite">100%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">남은 시간</span>
+            <span class="stat-item__value" id="timer-value" aria-live="polite">60s</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">오타 수</span>
+            <span class="stat-item__value" id="typo-count-value" aria-live="polite">0</span>
+          </div>
+        </div>
+        <button class="restart-button" id="restart-button" type="button">다시 시작</button>
+        <div class="result-panel" id="result-panel"></div>
+      </div>
+      <p class="state-block__note">#result-panel은 result-panel--visible class가 없어 화면에 렌더링되지 않는다(display: none).</p>
+    </div>
+
+    <!-- 상태 2: running -->
+    <div class="state-block">
+      <span class="state-block__label">2. running (진행 중) — 예: 15초 경과, 8번째 글자(k) 오타 1건</span>
+      <div class="typing-app">
+        <h2 class="app-title">타이핑 속도 테스트</h2>
+        <p class="state-indicator">상태: 진행 중</p>
+        <p class="target-sentence"><span class="char-correct">T</span><span class="char-correct">h</span><span class="char-correct">e</span><span class="char-correct"> </span><span class="char-correct">q</span><span class="char-correct">u</span><span class="char-correct">i</span><span class="char-correct">c</span><span class="char-incorrect">k</span><span class="char-correct"> </span><span class="char-correct">b</span><span class="char-correct">r</span><span class="char-correct">o</span><span class="char-correct">w</span><span class="char-correct">n</span><span class="char-correct"> </span><span class="char-current">f</span><span class="char-pending">o</span><span class="char-pending">x</span><span class="char-pending"> </span><span class="char-pending">j</span><span class="char-pending">u</span><span class="char-pending">m</span><span class="char-pending">p</span><span class="char-pending">s</span><span class="char-pending"> </span><span class="char-pending">o</span><span class="char-pending">v</span><span class="char-pending">e</span><span class="char-pending">r</span><span class="char-pending"> </span><span class="char-pending">t</span><span class="char-pending">h</span><span class="char-pending">e</span><span class="char-pending"> </span><span class="char-pending">l</span><span class="char-pending">a</span><span class="char-pending">z</span><span class="char-pending">y</span><span class="char-pending"> </span><span class="char-pending">d</span><span class="char-pending">o</span><span class="char-pending">g</span><span class="char-pending">.</span></p>
+        <input class="typed-input" type="text" aria-label="타이핑 입력" value="The quicc brown ">
+        <div class="stats-bar">
+          <div class="stat-item">
+            <span class="stat-item__label">WPM</span>
+            <span class="stat-item__value" aria-live="polite">12</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">정확도</span>
+            <span class="stat-item__value" aria-live="polite">94%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">남은 시간</span>
+            <span class="stat-item__value" aria-live="polite">45s</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">오타 수</span>
+            <span class="stat-item__value" aria-live="polite">1</span>
+          </div>
+        </div>
+        <button class="restart-button" type="button">다시 시작</button>
+        <div class="result-panel"></div>
+      </div>
+      <p class="state-block__note">typed = "The quicc brown " (16자), target[8]='k'를 'c'로 오타 — char-incorrect 1건. 다음 입력 위치(f)가 char-current.</p>
+    </div>
+
+    <!-- 상태 3: finished -->
+    <div class="state-block">
+      <span class="state-block__label">3. finished (완료) — 예: 38초에 문장 완료, 오타 2건</span>
+      <div class="typing-app">
+        <h2 class="app-title">타이핑 속도 테스트</h2>
+        <p class="state-indicator">상태: 완료</p>
+        <p class="target-sentence"><span class="char-correct">T</span><span class="char-correct">h</span><span class="char-correct">e</span><span class="char-correct"> </span><span class="char-correct">q</span><span class="char-correct">u</span><span class="char-correct">i</span><span class="char-correct">c</span><span class="char-incorrect">k</span><span class="char-correct"> </span><span class="char-correct">b</span><span class="char-correct">r</span><span class="char-correct">o</span><span class="char-correct">w</span><span class="char-correct">n</span><span class="char-correct"> </span><span class="char-correct">f</span><span class="char-correct">o</span><span class="char-correct">x</span><span class="char-correct"> </span><span class="char-correct">j</span><span class="char-correct">u</span><span class="char-correct">m</span><span class="char-correct">p</span><span class="char-correct">s</span><span class="char-correct"> </span><span class="char-correct">o</span><span class="char-correct">v</span><span class="char-correct">e</span><span class="char-correct">r</span><span class="char-correct"> </span><span class="char-correct">t</span><span class="char-correct">h</span><span class="char-correct">e</span><span class="char-correct"> </span><span class="char-correct">l</span><span class="char-correct">a</span><span class="char-incorrect">z</span><span class="char-correct">y</span><span class="char-correct"> </span><span class="char-correct">d</span><span class="char-correct">o</span><span class="char-correct">g</span><span class="char-correct">.</span></p>
+        <input class="typed-input" type="text" aria-label="타이핑 입력" value="The quicc brown fox jumps over the laxy dog." disabled>
+        <div class="stats-bar">
+          <div class="stat-item">
+            <span class="stat-item__label">WPM</span>
+            <span class="stat-item__value" aria-live="polite">13</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">정확도</span>
+            <span class="stat-item__value" aria-live="polite">95%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">남은 시간</span>
+            <span class="stat-item__value" aria-live="polite">22s</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-item__label">오타 수</span>
+            <span class="stat-item__value" aria-live="polite">2</span>
+          </div>
+        </div>
+        <button class="restart-button" type="button">다시 시작</button>
+        <div class="result-panel result-panel--visible">
+          <div class="result-item">
+            <span class="result-item__label">WPM</span>
+            <span class="result-item__value">13</span>
+          </div>
+          <div class="result-item result-item--accuracy">
+            <span class="result-item__label">정확도</span>
+            <span class="result-item__value">95%</span>
+          </div>
+          <div class="result-item result-item--typo">
+            <span class="result-item__label">오타 수</span>
+            <span class="result-item__value">2</span>
+          </div>
+        </div>
+      </div>
+      <p class="state-block__note">문장 44자를 전부 입력(target.length === typed.length)해 60초 전에 즉시 finished로 전환된 예시. #typed-input은 disabled, #result-panel에 result-panel--visible 적용.</p>
+    </div>
+
+  </div>
+
+  <p class="footnote">
+    참고: 이 mockup은 designer 시안의 시각 시뮬레이션이며 dev의 실제 산출물이 아니다. 픽셀 단위 일치 의무 없음.
+    frozen 계약(DOM ID / class / token / 상태 / 접근성 / 반응형)의 권위 있는 원본은
+    <code>docs/plans/BF-2029/implementation-plan.md</code> 2장이다. 상세 컬러/타이포/레이아웃/컴포넌트 명세는
+    <code>docs/design/typing-BF-2029.md</code> 참조.
+  </p>
+
+</body>
+</html>
