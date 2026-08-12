@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BF-2023 색상 팔레트 생성기 — 시안 mockup</title>
+<style>
+  :root {
+    /* frozen 토큰 (docs/plans/BF-2023/implementation-plan.md §3.3) */
+    --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --color-error-text: #dc2626;
+    --color-swatch-border: #e2e8f0;
+    --space-swatch-gap: 12px;
+
+    /* additive 시안 전용 값 (docs/design/BF-2023-palette.md §2) */
+    --color-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-text: #1e293b;
+    --color-text-muted: #64748b;
+    --color-accent: #3b82f6;
+    --color-accent-hover: #2563eb;
+    --color-focus-ring: #93c5fd;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 16px;
+    background: var(--color-bg);
+    font-family: var(--font-family-base);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+  }
+
+  .mockup-note {
+    max-width: 480px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .mockup-note strong { color: var(--color-text); }
+
+  .scenario-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .scenario {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ---- .palette (frozen DOM: #palette-root) ---- */
+  .palette {
+    width: 100%;
+    max-width: 480px;
+    background: var(--color-surface);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+
+  .palette__heading {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .palette__input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .palette__input-group input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
+    font-family: var(--font-family-base);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-swatch-border);
+    border-radius: 8px;
+  }
+
+  .palette__input-group input[type="text"]:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 1px;
+  }
+
+  .palette__input-group input[type="text"].is-error {
+    border-color: var(--color-error-text);
+  }
+
+  .palette__input-group input[type="color"] {
+    width: 40px;
+    height: 40px;
+    padding: 2px;
+    border: 1px solid var(--color-swatch-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+  }
+
+  .palette__input-group button {
+    height: 40px;
+    padding: 0 16px;
+    font-family: var(--font-family-base);
+    font-size: 14px;
+    font-weight: 500;
+    color: #ffffff;
+    background: var(--color-accent);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .palette__input-group button:hover { background: var(--color-accent-hover); }
+
+  .palette__input-group button:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 1px;
+  }
+
+  .palette__input-group button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .palette__error {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-error-text);
+  }
+
+  .palette__error[hidden] { display: none; }
+
+  #palette-swatches,
+  .palette__swatches {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-swatch-gap);
+  }
+
+  .palette__swatch {
+    position: relative;
+    flex: 1 1 calc(20% - var(--space-swatch-gap));
+    min-width: 72px;
+    height: 88px;
+    border: 1px solid var(--color-swatch-border);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 6px;
+    font-family: var(--font-family-base);
+  }
+
+  .palette__swatch:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .palette__swatch-hex {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    color: #1e293b;
+  }
+
+  .palette__copied-badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #16a34a;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+
+  /* 480px 미만: 세로 스택 / 480px 이상: 가로 5열 (frozen §3.5) */
+  @media (max-width: 479px) {
+    #palette-swatches, .palette__swatches { flex-direction: column; }
+    .palette__swatch { width: 100%; flex-basis: auto; }
+  }
+
+  @media (min-width: 480px) {
+    #palette-swatches, .palette__swatches { flex-direction: row; }
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-note">
+  이 페이지는 <strong>BF-2023 색상 팔레트 생성기</strong>의 시각 시안 mockup입니다.
+  실제 dev 산출물이 아니며, 상태 전이(idle → generating → idle, error, copied)를
+  4개의 정적 스냅샷으로 나열해 UI 계약을 시각적으로 보여줍니다.
+</div>
+
+<!-- ============ 시나리오 1: idle (기본 상태) ============ -->
+<div class="scenario">
+  <div class="scenario-label">상태: idle (기본)</div>
+  <div id="palette-root" class="palette">
+    <h1 class="palette__heading">색상 팔레트 생성기</h1>
+    <div class="palette__input-group">
+      <input id="hex-input" type="text" value="#3B82F6" aria-label="기준 색상 hex 코드">
+      <input id="color-picker" type="color" value="#3b82f6">
+      <button id="random-btn" type="button">랜덤 색상</button>
+    </div>
+    <div id="error-message" class="palette__error" role="alert" hidden></div>
+    <div id="palette-swatches">
+      <button class="palette__swatch" style="background-color:#f6a33b" aria-label="#F6A33B 복사">
+        <span class="palette__swatch-hex">#F6A33B</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#3bd8f6" aria-label="#3BD8F6 복사">
+        <span class="palette__swatch-hex">#3BD8F6</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#8f3bf6" aria-label="#8F3BF6 복사">
+        <span class="palette__swatch-hex">#8F3BF6</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#7fb1f9" aria-label="#7FB1F9 복사">
+        <span class="palette__swatch-hex">#7FB1F9</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#1a56c4" aria-label="#1A56C4 복사">
+        <span class="palette__swatch-hex">#1A56C4</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 시나리오 2: error ============ -->
+<div class="scenario">
+  <div class="scenario-label">상태: error (잘못된 hex 입력)</div>
+  <div class="palette">
+    <h1 class="palette__heading">색상 팔레트 생성기</h1>
+    <div class="palette__input-group">
+      <input type="text" class="is-error" value="#3B82" aria-label="기준 색상 hex 코드">
+      <input type="color" value="#3b82f6">
+      <button type="button">랜덤 색상</button>
+    </div>
+    <div class="palette__error" role="alert">올바른 hex 코드를 입력하세요 (예: #3B82F6)</div>
+    <div class="palette__swatches">
+      <button class="palette__swatch" style="background-color:#f6a33b" aria-label="#F6A33B 복사">
+        <span class="palette__swatch-hex">#F6A33B</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#3bd8f6" aria-label="#3BD8F6 복사">
+        <span class="palette__swatch-hex">#3BD8F6</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#8f3bf6" aria-label="#8F3BF6 복사">
+        <span class="palette__swatch-hex">#8F3BF6</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#7fb1f9" aria-label="#7FB1F9 복사">
+        <span class="palette__swatch-hex">#7FB1F9</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#1a56c4" aria-label="#1A56C4 복사">
+        <span class="palette__swatch-hex">#1A56C4</span>
+      </button>
+    </div>
+    <div class="mockup-note" style="margin-top:12px; max-width:none;">
+      직전 유효 상태의 swatch 5개는 그대로 유지된다 (implementation-plan.md §3.2).
+    </div>
+  </div>
+</div>
+
+<!-- ============ 시나리오 3: copied ============ -->
+<div class="scenario">
+  <div class="scenario-label">상태: copied (swatch 클릭 후)</div>
+  <div class="palette">
+    <h1 class="palette__heading">색상 팔레트 생성기</h1>
+    <div class="palette__input-group">
+      <input type="text" value="#3B82F6" aria-label="기준 색상 hex 코드">
+      <input type="color" value="#3b82f6">
+      <button type="button">랜덤 색상</button>
+    </div>
+    <div class="palette__error" role="alert" hidden></div>
+    <div class="palette__swatches">
+      <button class="palette__swatch" style="background-color:#f6a33b" aria-label="#F6A33B 복사">
+        <span class="palette__copied-badge">복사됨</span>
+        <span class="palette__swatch-hex">#F6A33B</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#3bd8f6" aria-label="#3BD8F6 복사">
+        <span class="palette__swatch-hex">#3BD8F6</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#8f3bf6" aria-label="#8F3BF6 복사">
+        <span class="palette__swatch-hex">#8F3BF6</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#7fb1f9" aria-label="#7FB1F9 복사">
+        <span class="palette__swatch-hex">#7FB1F9</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#1a56c4" aria-label="#1A56C4 복사">
+        <span class="palette__swatch-hex">#1A56C4</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 시나리오 4: generating ============ -->
+<div class="scenario">
+  <div class="scenario-label">상태: generating (랜덤 생성 직후 과도 상태)</div>
+  <div class="palette">
+    <h1 class="palette__heading">색상 팔레트 생성기</h1>
+    <div class="palette__input-group">
+      <input type="text" value="#3B82F6" aria-label="기준 색상 hex 코드">
+      <input type="color" value="#3b82f6">
+      <button type="button" aria-busy="true" disabled>랜덤 색상</button>
+    </div>
+    <div class="palette__error" role="alert" hidden></div>
+    <div class="palette__swatches">
+      <button class="palette__swatch" style="background-color:#f6a33b" aria-label="#F6A33B 복사">
+        <span class="palette__swatch-hex">#F6A33B</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#3bd8f6" aria-label="#3BD8F6 복사">
+        <span class="palette__swatch-hex">#3BD8F6</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#8f3bf6" aria-label="#8F3BF6 복사">
+        <span class="palette__swatch-hex">#8F3BF6</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#7fb1f9" aria-label="#7FB1F9 복사">
+        <span class="palette__swatch-hex">#7FB1F9</span>
+      </button>
+      <button class="palette__swatch" style="background-color:#1a56c4" aria-label="#1A56C4 복사">
+        <span class="palette__swatch-hex">#1A56C4</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
