@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>단위 변환기</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="unit-converter-root" class="converter-panel">
+  <h1>단위 변환기</h1>
+
+  <div class="tabs" role="tablist" aria-label="변환 카테고리">
+    <button type="button" id="unit-converter-tab-length" class="tab tab--active" role="tab" aria-selected="true">길이</button>
+    <button type="button" id="unit-converter-tab-weight" class="tab" role="tab" aria-selected="false">무게</button>
+  </div>
+
+  <div class="field">
+    <label for="unit-converter-input-value">값</label>
+    <input type="text" id="unit-converter-input-value" class="field__input" placeholder="값을 입력하세요" inputmode="decimal" autocomplete="off" maxlength="18">
+  </div>
+
+  <div class="field">
+    <label for="unit-converter-from-unit">원래 단위</label>
+    <select id="unit-converter-from-unit" class="field__select"></select>
+  </div>
+
+  <button type="button" id="unit-converter-swap-button" class="swap-button" aria-label="단위 맞바꾸기">⇄</button>
+
+  <div class="field">
+    <label for="unit-converter-to-unit">변환할 단위</label>
+    <select id="unit-converter-to-unit" class="field__select"></select>
+  </div>
+
+  <div class="result-group">
+    <p id="unit-converter-result" class="result"></p>
+    <p id="unit-converter-error" class="result" role="alert"></p>
+  </div>
+</main>
+<script src="convert.js"></script>
+</body>
+</html>
