@@ -1,0 +1,140 @@
+/* calculator/style.css — BF-2019 사칙연산 계산기 */
+
+:root {
+  --color-display-bg: #1e293b;
+  --color-display-text: #f8fafc;
+  --color-button-bg: #e2e8f0;
+  --color-button-operator-bg: #2563eb;
+  --space-button-gap: 8px;
+
+  --color-page-bg: #f1f5f9;
+  --color-button-text: #0f172a;
+  --color-button-operator-text: #f8fafc;
+  --color-error-text: #f87171;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-page-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
+  padding: 16px;
+}
+
+.calculator {
+  width: 100%;
+  max-width: 320px;
+  min-width: 280px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+.calculator__title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-button-text);
+  text-align: center;
+}
+
+.calculator__status {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  text-align: right;
+}
+
+.calculator[data-state="error"] .calculator__status {
+  color: var(--color-error-text);
+}
+
+.calculator__display {
+  background: var(--color-display-bg);
+  color: var(--color-display-text);
+  border-radius: 12px;
+  padding: 20px 16px;
+  margin-bottom: var(--space-button-gap);
+  min-height: 1.5em;
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.calculator[data-state="error"] .calculator__display {
+  color: var(--color-error-text);
+  font-size: 1.1rem;
+}
+
+.calculator__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-button-gap);
+}
+
+.calculator__spacer {
+  visibility: hidden;
+}
+
+.calculator__button {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-button-bg);
+  color: var(--color-button-text);
+  font-size: 1.1rem;
+  font-weight: 500;
+  padding: 14px 0;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.calculator__button:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.calculator__button:active:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.calculator__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calculator__button--operator {
+  background: var(--color-button-operator-bg);
+  color: var(--color-button-operator-text);
+}
+
+.calculator__button--zero {
+  grid-column: span 1;
+}
+
+@media (max-width: 360px) {
+  .calculator {
+    padding: 14px;
+  }
+
+  .calculator__display {
+    font-size: 1.4rem;
+    padding: 16px 12px;
+  }
+
+  .calculator__button {
+    font-size: 1rem;
+    padding: 12px 0;
+  }
+}

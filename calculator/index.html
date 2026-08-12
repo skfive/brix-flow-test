@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>계산기</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="calculator-root" class="calculator" data-state="idle">
+    <h1 class="calculator__title">계산기</h1>
+
+    <p id="calculator-status" class="calculator__status">대기</p>
+
+    <div
+      id="calculator-display"
+      class="calculator__display"
+      aria-live="polite"
+      role="status"
+    >0</div>
+
+    <div class="calculator__grid">
+      <button
+        id="btn-clear"
+        type="button"
+        class="calculator__button"
+        aria-label="전체 지우기"
+      >AC</button>
+      <button
+        id="btn-backspace"
+        type="button"
+        class="calculator__button"
+        aria-label="마지막 입력 삭제"
+      >←</button>
+      <div class="calculator__spacer" aria-hidden="true"></div>
+      <button
+        type="button"
+        class="calculator__button calculator__button--operator"
+        data-operator="/"
+        aria-label="나누기"
+      >÷</button>
+
+      <button type="button" class="calculator__button" data-digit="7" aria-label="7">7</button>
+      <button type="button" class="calculator__button" data-digit="8" aria-label="8">8</button>
+      <button type="button" class="calculator__button" data-digit="9" aria-label="9">9</button>
+      <button
+        type="button"
+        class="calculator__button calculator__button--operator"
+        data-operator="*"
+        aria-label="곱하기"
+      >×</button>
+
+      <button type="button" class="calculator__button" data-digit="4" aria-label="4">4</button>
+      <button type="button" class="calculator__button" data-digit="5" aria-label="5">5</button>
+      <button type="button" class="calculator__button" data-digit="6" aria-label="6">6</button>
+      <button
+        type="button"
+        class="calculator__button calculator__button--operator"
+        data-operator="-"
+        aria-label="빼기"
+      >-</button>
+
+      <button type="button" class="calculator__button" data-digit="1" aria-label="1">1</button>
+      <button type="button" class="calculator__button" data-digit="2" aria-label="2">2</button>
+      <button type="button" class="calculator__button" data-digit="3" aria-label="3">3</button>
+      <button
+        type="button"
+        class="calculator__button calculator__button--operator"
+        data-operator="+"
+        aria-label="더하기"
+      >+</button>
+
+      <button
+        type="button"
+        class="calculator__button calculator__button--zero"
+        data-digit="0"
+        aria-label="0"
+      >0</button>
+      <button type="button" class="calculator__button" data-decimal aria-label="소수점">.</button>
+      <button
+        id="btn-equals"
+        type="button"
+        class="calculator__button calculator__button--operator"
+        aria-label="결과 계산"
+      >=</button>
+    </div>
+  </main>
+
+  <script src="calc.js"></script>
+</body>
+</html>
