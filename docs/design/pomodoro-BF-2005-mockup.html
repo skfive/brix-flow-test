@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>뽀모도로 타이머 — 디자인 mockup (BF-2006)</title>
+    <style>
+      /* frozen ui-contract@v1 토큰 — 이름/값 재정의 금지 */
+      :root {
+        --color-focus-bg: #1f2937;
+        --color-break-bg: #065f46;
+        --color-accent: #f97316;
+        --color-error: #dc2626;
+        --color-text: #f9fafb;
+        --space-control-gap: 16px;
+        --radius-button: 8px;
+
+        /* 보조 토큰 (frozen 목록에 없음 — additive) */
+        --color-idle-bg: #111827;
+        --color-track: rgba(249, 250, 251, 0.14);
+        --color-muted-text: rgba(249, 250, 251, 0.64);
+        --color-border: rgba(249, 250, 251, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px 16px 64px;
+        background: #0b0f16;
+        color: var(--color-text);
+        font-family:
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Noto Sans KR",
+          sans-serif;
+      }
+
+      .mockup-shell {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .mockup-shell__intro h1 {
+        font-size: 22px;
+        margin: 0 0 4px;
+      }
+
+      .mockup-shell__intro p {
+        color: var(--color-muted-text);
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0 0 32px;
+      }
+
+      .mockup-panel {
+        margin-bottom: 40px;
+      }
+
+      .mockup-panel > h2 {
+        font-size: 15px;
+        margin: 0 0 4px;
+      }
+
+      .mockup-panel__note {
+        color: var(--color-muted-text);
+        font-size: 12.5px;
+        line-height: 1.5;
+        margin: 0 0 16px;
+      }
+
+      .state-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+      }
+
+      .state-gallery article > h3 {
+        font-size: 13px;
+        color: var(--color-muted-text);
+        margin: 0 0 8px;
+        font-weight: 600;
+      }
+
+      /* ---- pomodoro-app (frozen selector) ---- */
+      .pomodoro-app {
+        background: var(--color-idle-bg);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+        border-radius: 16px;
+        padding: 24px;
+        max-width: min(420px, 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .pomodoro-app--focus {
+        background: var(--color-focus-bg);
+      }
+
+      .pomodoro-app--break {
+        background: var(--color-break-bg);
+      }
+
+      /* ---- progress-ring (frozen selector) ---- */
+      .progress-ring {
+        position: relative;
+        width: clamp(160px, 55vw, 220px);
+        height: clamp(160px, 55vw, 220px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .progress-ring svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+      }
+
+      .progress-ring circle {
+        fill: none;
+        stroke-width: 10;
+      }
+
+      .progress-ring__track {
+        stroke: var(--color-track);
+      }
+
+      .progress-ring__value {
+        stroke: var(--color-accent);
+        stroke-linecap: round;
+      }
+
+      /* ---- timer-display (frozen selector) — progress-ring 중앙 오버레이 ---- */
+      .timer-display {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-family:
+          ui-monospace,
+          "SFMono-Regular",
+          Menlo,
+          Consolas,
+          monospace;
+        font-variant-numeric: tabular-nums;
+        font-size: clamp(36px, 10vw, 48px);
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .status-label {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 500;
+      }
+
+      .session-count-line {
+        margin: -12px 0 0;
+        font-size: 13px;
+        color: var(--color-muted-text);
+      }
+
+      /* ---- controls / control-button (frozen selector) ---- */
+      .controls {
+        display: flex;
+        flex-direction: row;
+        gap: var(--space-control-gap);
+        width: 100%;
+      }
+
+      .control-button {
+        flex: 1;
+        min-height: 44px;
+        padding: 12px 16px;
+        border-radius: var(--radius-button);
+        border: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      .control-button--primary {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+        color: #1f2937;
+        font-weight: 700;
+      }
+
+      .control-button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .control-button:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+      }
+
+      /* ---- settings ---- */
+      .settings {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border-top: 1px solid var(--color-border);
+        padding-top: 16px;
+      }
+
+      .settings__field {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .settings__field label {
+        font-size: 13px;
+        color: var(--color-muted-text);
+      }
+
+      .settings__field input {
+        width: 72px;
+        min-height: 36px;
+        border-radius: var(--radius-button);
+        border: 1px solid var(--color-border);
+        background: rgba(249, 250, 251, 0.06);
+        color: var(--color-text);
+        padding: 6px 10px;
+        font-size: 14px;
+        text-align: right;
+      }
+
+      .settings__field input:disabled {
+        opacity: 0.5;
+      }
+
+      /* ---- settings-error (frozen selector) ---- */
+      .settings-error {
+        display: none;
+        margin: 0;
+        font-size: 12.5px;
+        color: var(--color-error);
+        border-left: 3px solid var(--color-error);
+        padding-left: 8px;
+      }
+
+      .settings-error--visible {
+        display: block;
+      }
+
+      /* ---- 반응형 (frozen §7.7) ---- */
+      @media (max-width: 480px) {
+        .controls {
+          flex-direction: column;
+        }
+
+        .control-button {
+          width: 100%;
+          min-height: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="mockup-shell">
+      <div class="mockup-shell__intro">
+        <h1>뽀모도로 타이머 — 디자인 mockup (BF-2006)</h1>
+        <p>
+          이 페이지는 시각 시뮬레이션 전용 정적 mockup이며 dev 최종 산출물이 아닙니다. 패널
+          제목·안내 문구·갤러리 id 접미사는 mockup 전용 장치로 frozen 계약이 아닙니다. "기본
+          구조" 패널의 <code>#pomodoro-app</code> 이하 DOM만 <code>pomodoro/index.html</code>이
+          그대로 구현할 정본입니다. 자세한 내용은
+          <code>docs/design/pomodoro-BF-2005.md</code> 참조.
+        </p>
+      </div>
+
+      <!-- =========================================================
+           패널 1. 기본 구조 (idle) — pomodoro/index.html이 그대로 참조할 정본 DOM
+           ========================================================= -->
+      <section class="mockup-panel">
+        <h2>1. 기본 구조 — idle 상태 (pomodoro/index.html 구조와 동일)</h2>
+        <p class="mockup-panel__note">
+          frozen id 전체(<code>pomodoro-app</code>, <code>timer-display</code>,
+          <code>progress-ring</code>, <code>start-button</code>, <code>pause-button</code>,
+          <code>reset-button</code>, <code>status-label</code>, <code>session-count</code>,
+          <code>focus-duration-input</code>, <code>break-duration-input</code>,
+          <code>settings-error</code>)를 실제로 부여한 단일 정본 인스턴스입니다.
+        </p>
+
+        <div class="pomodoro-app" id="pomodoro-app" data-mode="idle">
+          <div class="progress-ring" id="progress-ring">
+            <svg viewBox="0 0 220 220">
+              <circle class="progress-ring__track" cx="110" cy="110" r="98"></circle>
+              <circle
+                class="progress-ring__value"
+                cx="110"
+                cy="110"
+                r="98"
+                stroke-dasharray="615.75"
+                stroke-dashoffset="615.75"
+              ></circle>
+            </svg>
+            <div class="timer-display" id="timer-display" role="timer" aria-live="off" aria-label="남은 시간">
+              25:00
+            </div>
+          </div>
+
+          <p class="status-label" id="status-label" aria-live="polite">대기 중</p>
+          <p class="session-count-line">세션 완료: <span id="session-count">0</span></p>
+
+          <div class="controls">
+            <button type="button" class="control-button control-button--primary" id="start-button" aria-label="시작">
+              시작
+            </button>
+            <button type="button" class="control-button" id="pause-button" aria-label="일시정지" disabled>
+              일시정지
+            </button>
+            <button type="button" class="control-button" id="reset-button" aria-label="리셋">리셋</button>
+          </div>
+
+          <div class="settings">
+            <div class="settings__field">
+              <label for="focus-duration-input">집중 시간(분)</label>
+              <input
+                type="number"
+                id="focus-duration-input"
+                min="1"
+                max="60"
+                value="25"
+                aria-describedby="settings-error"
+              />
+            </div>
+            <div class="settings__field">
+              <label for="break-duration-input">휴식 시간(분)</label>
+              <input
+                type="number"
+                id="break-duration-input"
+                min="1"
+                max="60"
+                value="5"
+                aria-describedby="settings-error"
+              />
+            </div>
+            <p class="settings-error" id="settings-error" role="alert">
+              1~60 사이의 정수를 입력해 주세요.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           패널 2. 상태 갤러리 — focus / break / paused 시각 스냅샷
+           (id 유일성 확보를 위해 -focus/-break/-paused 접미사 사용, class는 frozen 이름 그대로)
+           ========================================================= -->
+      <section class="mockup-panel">
+        <h2>2. 상태별 시각 미리보기</h2>
+        <p class="mockup-panel__note">
+          각 패널은 시각 비교용 복제본입니다. id에 상태 접미사(<code>-focus</code>,
+          <code>-break</code>, <code>-paused</code>)가 붙어 있는 것은 한 페이지에 여러 상태를
+          동시에 표시하기 위한 mockup 전용 처리이며, class는 접미사 없이 frozen 이름을 그대로
+          사용합니다.
+        </p>
+
+        <div class="state-gallery">
+          <!-- focus -->
+          <article>
+            <h3>focus (집중 중, 진행 40%)</h3>
+            <div class="pomodoro-app pomodoro-app--focus" id="pomodoro-app-focus" data-mode="focus">
+              <div class="progress-ring" id="progress-ring-focus">
+                <svg viewBox="0 0 220 220">
+                  <circle class="progress-ring__track" cx="110" cy="110" r="98"></circle>
+                  <circle
+                    class="progress-ring__value"
+                    cx="110"
+                    cy="110"
+                    r="98"
+                    stroke-dasharray="615.75"
+                    stroke-dashoffset="369.45"
+                  ></circle>
+                </svg>
+                <div class="timer-display" id="timer-display-focus">14:58</div>
+              </div>
+              <p class="status-label" id="status-label-focus" aria-live="polite">집중 중</p>
+              <p class="session-count-line">세션 완료: <span id="session-count-focus">1</span></p>
+              <div class="controls">
+                <button type="button" class="control-button control-button--primary" id="start-button-focus" aria-label="시작" disabled>
+                  시작
+                </button>
+                <button type="button" class="control-button" id="pause-button-focus" aria-label="일시정지">
+                  일시정지
+                </button>
+                <button type="button" class="control-button" id="reset-button-focus" aria-label="리셋">리셋</button>
+              </div>
+              <div class="settings">
+                <div class="settings__field">
+                  <label for="focus-duration-input-focus">집중 시간(분)</label>
+                  <input type="number" id="focus-duration-input-focus" value="25" disabled aria-describedby="settings-error-focus" />
+                </div>
+                <div class="settings__field">
+                  <label for="break-duration-input-focus">휴식 시간(분)</label>
+                  <input type="number" id="break-duration-input-focus" value="5" disabled aria-describedby="settings-error-focus" />
+                </div>
+                <p class="settings-error" id="settings-error-focus" role="alert">1~60 사이의 정수를 입력해 주세요.</p>
+              </div>
+            </div>
+          </article>
+
+          <!-- break -->
+          <article>
+            <h3>break (휴식 중, 진행 60%)</h3>
+            <div class="pomodoro-app pomodoro-app--break" id="pomodoro-app-break" data-mode="break">
+              <div class="progress-ring" id="progress-ring-break">
+                <svg viewBox="0 0 220 220">
+                  <circle class="progress-ring__track" cx="110" cy="110" r="98"></circle>
+                  <circle
+                    class="progress-ring__value"
+                    cx="110"
+                    cy="110"
+                    r="98"
+                    stroke-dasharray="615.75"
+                    stroke-dashoffset="246.3"
+                  ></circle>
+                </svg>
+                <div class="timer-display" id="timer-display-break">02:00</div>
+              </div>
+              <p class="status-label" id="status-label-break" aria-live="polite">휴식 중</p>
+              <p class="session-count-line">세션 완료: <span id="session-count-break">1</span></p>
+              <div class="controls">
+                <button type="button" class="control-button control-button--primary" id="start-button-break" aria-label="시작" disabled>
+                  시작
+                </button>
+                <button type="button" class="control-button" id="pause-button-break" aria-label="일시정지">
+                  일시정지
+                </button>
+                <button type="button" class="control-button" id="reset-button-break" aria-label="리셋">리셋</button>
+              </div>
+              <div class="settings">
+                <div class="settings__field">
+                  <label for="focus-duration-input-break">집중 시간(분)</label>
+                  <input type="number" id="focus-duration-input-break" value="25" disabled aria-describedby="settings-error-break" />
+                </div>
+                <div class="settings__field">
+                  <label for="break-duration-input-break">휴식 시간(분)</label>
+                  <input type="number" id="break-duration-input-break" value="5" disabled aria-describedby="settings-error-break" />
+                </div>
+                <p class="settings-error" id="settings-error-break" role="alert">1~60 사이의 정수를 입력해 주세요.</p>
+              </div>
+            </div>
+          </article>
+
+          <!-- paused (focus 중 정지) -->
+          <article>
+            <h3>paused (focus 배경 유지)</h3>
+            <div class="pomodoro-app pomodoro-app--focus" id="pomodoro-app-paused" data-mode="paused">
+              <div class="progress-ring" id="progress-ring-paused">
+                <svg viewBox="0 0 220 220">
+                  <circle class="progress-ring__track" cx="110" cy="110" r="98"></circle>
+                  <circle
+                    class="progress-ring__value"
+                    cx="110"
+                    cy="110"
+                    r="98"
+                    stroke-dasharray="615.75"
+                    stroke-dashoffset="461.8"
+                  ></circle>
+                </svg>
+                <div class="timer-display" id="timer-display-paused">12:07</div>
+              </div>
+              <p class="status-label" id="status-label-paused" aria-live="polite">일시정지됨 · 집중</p>
+              <p class="session-count-line">세션 완료: <span id="session-count-paused">2</span></p>
+              <div class="controls">
+                <button type="button" class="control-button control-button--primary" id="start-button-paused" aria-label="시작">
+                  시작
+                </button>
+                <button type="button" class="control-button" id="pause-button-paused" aria-label="일시정지" disabled>
+                  일시정지
+                </button>
+                <button type="button" class="control-button" id="reset-button-paused" aria-label="리셋">리셋</button>
+              </div>
+              <div class="settings">
+                <div class="settings__field">
+                  <label for="focus-duration-input-paused">집중 시간(분)</label>
+                  <input type="number" id="focus-duration-input-paused" value="25" disabled aria-describedby="settings-error-paused" />
+                </div>
+                <div class="settings__field">
+                  <label for="break-duration-input-paused">휴식 시간(분)</label>
+                  <input type="number" id="break-duration-input-paused" value="5" disabled aria-describedby="settings-error-paused" />
+                </div>
+                <p class="settings-error" id="settings-error-paused" role="alert">1~60 사이의 정수를 입력해 주세요.</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           패널 3. 설정 오류 상태 — settings-error--visible 데모
+           ========================================================= -->
+      <section class="mockup-panel">
+        <h2>3. 설정 오류 상태 (settings-error--visible)</h2>
+        <p class="mockup-panel__note">
+          idle 상태에서 <code>focus-duration-input</code>에 범위 밖 값(<code>61</code>)을
+          입력한 경우의 시각 표현입니다. 값은 반영되지 않고 이전 유효 값이 입력창에 남아
+          있으며, 오류 문구가 <code>settings-error--visible</code> 클래스로 노출됩니다.
+        </p>
+
+        <div class="pomodoro-app" id="pomodoro-app-error" data-mode="idle">
+          <div class="progress-ring" id="progress-ring-error">
+            <svg viewBox="0 0 220 220">
+              <circle class="progress-ring__track" cx="110" cy="110" r="98"></circle>
+              <circle
+                class="progress-ring__value"
+                cx="110"
+                cy="110"
+                r="98"
+                stroke-dasharray="615.75"
+                stroke-dashoffset="615.75"
+              ></circle>
+            </svg>
+            <div class="timer-display" id="timer-display-error">25:00</div>
+          </div>
+          <p class="status-label" id="status-label-error" aria-live="polite">대기 중</p>
+          <p class="session-count-line">세션 완료: <span id="session-count-error">0</span></p>
+          <div class="controls">
+            <button type="button" class="control-button control-button--primary" id="start-button-error" aria-label="시작">
+              시작
+            </button>
+            <button type="button" class="control-button" id="pause-button-error" aria-label="일시정지" disabled>
+              일시정지
+            </button>
+            <button type="button" class="control-button" id="reset-button-error" aria-label="리셋">리셋</button>
+          </div>
+          <div class="settings">
+            <div class="settings__field">
+              <label for="focus-duration-input-error">집중 시간(분)</label>
+              <input
+                type="number"
+                id="focus-duration-input-error"
+                value="61"
+                aria-describedby="settings-error-error"
+              />
+            </div>
+            <div class="settings__field">
+              <label for="break-duration-input-error">휴식 시간(분)</label>
+              <input type="number" id="break-duration-input-error" value="5" aria-describedby="settings-error-error" />
+            </div>
+            <p class="settings-error settings-error--visible" id="settings-error-error" role="alert">
+              1~60 사이의 정수를 입력해 주세요.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
