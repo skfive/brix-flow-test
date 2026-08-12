@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>단위 변환기 UI 시안 mockup (BF-2000)</title>
+<style>
+  :root {
+    --color-bg: #ffffff;
+    --color-text: #1f2933;
+    --color-primary: #2563eb;
+    --color-error: #dc2626;
+    --font-family-base: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --space-control-gap: 12px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 16px;
+    background: #f4f5f7;
+    color: var(--color-text);
+    font-family: var(--font-family-base);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+  }
+
+  h2.mockup-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(31, 41, 51, 0.6);
+    margin: 0 0 12px;
+    text-align: center;
+  }
+
+  #unit-converter-root {
+    width: 100%;
+    max-width: 480px;
+    background: var(--color-bg);
+    border: 1px solid rgba(31, 41, 51, 0.12);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(31, 41, 51, 0.08);
+  }
+
+  #unit-converter-root h1 {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0 0 20px;
+  }
+
+  #category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(31, 41, 51, 0.12);
+  }
+
+  .tab {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(31, 41, 51, 0.6);
+    font-family: var(--font-family-base);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+    padding: 8px 4px 10px;
+    cursor: pointer;
+  }
+
+  .tab--active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .converter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-control-gap);
+    margin-bottom: 12px;
+  }
+
+  .converter-field {
+    flex: 1 1 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .converter-field label {
+    font-size: 13px;
+    color: rgba(31, 41, 51, 0.6);
+  }
+
+  .converter-input,
+  .converter-output {
+    width: 100%;
+    font-family: var(--font-family-base);
+    font-size: 16px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    border: 1px solid rgba(31, 41, 51, 0.12);
+    border-radius: 8px;
+    color: var(--color-text);
+    background: var(--color-bg);
+  }
+
+  .converter-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .converter-input[aria-invalid="true"] {
+    border-color: var(--color-error);
+  }
+
+  .converter-output {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.3;
+    background: rgba(31, 41, 51, 0.03);
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+  }
+
+  .converter-output.is-empty {
+    color: rgba(31, 41, 51, 0.35);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .swap-button {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    margin-top: 20px;
+    border-radius: 999px;
+    border: 1px solid var(--color-primary);
+    background: var(--color-bg);
+    color: var(--color-primary);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .swap-button:hover {
+    background: rgba(37, 99, 235, 0.1);
+  }
+
+  .swap-button:active {
+    transform: scale(0.95);
+  }
+
+  .error-text {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-error);
+    min-height: 18px;
+  }
+
+  .direction-hint {
+    font-size: 13px;
+    color: rgba(31, 41, 51, 0.6);
+    margin-bottom: 12px;
+  }
+
+  /* 반응형: 480px 미만에서 컨트롤을 세로 stack으로 전환 (frozen 규칙 §4.3) */
+  @media (max-width: 480px) {
+    .converter-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .swap-button {
+      margin-top: 0;
+      align-self: center;
+    }
+  }
+
+  .state-gallery {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .state-card {
+    border: 1px dashed rgba(31, 41, 51, 0.25);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .state-card p {
+    margin: 0 0 6px;
+    font-size: 12px;
+    color: rgba(31, 41, 51, 0.6);
+  }
+</style>
+</head>
+<body>
+
+  <div>
+    <h2 class="mockup-section-title">라이브 mockup — 탭 전환 / 입력 / 스왑 / 오류를 직접 조작해 확인하세요</h2>
+
+    <div id="unit-converter-root">
+      <h1>단위 변환기</h1>
+
+      <div id="category-tabs" role="tablist" aria-label="변환 카테고리">
+        <button type="button" id="tab-length" class="tab tab--active" role="tab" aria-selected="true" data-category="length">길이 (m ↔ ft)</button>
+        <button type="button" id="tab-weight" class="tab" role="tab" aria-selected="false" data-category="weight">무게 (kg ↔ lb)</button>
+        <button type="button" id="tab-temperature" class="tab" role="tab" aria-selected="false" data-category="temperature">온도 (°C ↔ °F)</button>
+      </div>
+
+      <p class="direction-hint" id="direction-hint">방향: m → ft</p>
+
+      <div class="converter-controls">
+        <div class="converter-field">
+          <label for="input-value">입력값</label>
+          <input type="text" inputmode="decimal" id="input-value" class="converter-input" placeholder="값을 입력하세요" aria-invalid="false">
+        </div>
+
+        <button type="button" id="swap-direction" class="swap-button" aria-label="단위 방향 전환">⇄</button>
+
+        <div class="converter-field">
+          <label for="output-value">변환 결과</label>
+          <div id="output-value" class="converter-output is-empty" aria-readonly="true">결과가 여기에 표시됩니다</div>
+        </div>
+      </div>
+
+      <div id="error-message" class="error-text" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="state-gallery">
+    <h2 class="mockup-section-title">상태 참조 (idle / valid / error)</h2>
+
+    <div class="state-card">
+      <p>idle — 입력값 없음, 결과/오류 모두 비움</p>
+      <div class="converter-output is-empty" aria-readonly="true">결과가 여기에 표시됩니다</div>
+    </div>
+
+    <div class="state-card">
+      <p>valid — 숫자 입력 시 변환 결과 표시</p>
+      <div class="converter-output" aria-readonly="true">3.2808</div>
+    </div>
+
+    <div class="state-card">
+      <p>error — 숫자로 해석 불가한 입력, aria-live="polite"로 안내</p>
+      <input type="text" class="converter-input" value="abc" aria-invalid="true" readonly>
+      <div class="error-text" aria-live="polite" style="margin-top:6px;">숫자를 입력해주세요</div>
+    </div>
+  </div>
+
+  <script>
+    // 이 스크립트는 mockup 전용 시각 시연 코드이며, 실제 dev 구현(unit-converter/convert.js)을 대체하지 않는다.
+    (function () {
+      var FACTORS = {
+        length: { forwardLabel: 'm → ft', reverseLabel: 'ft → m', forward: function (v) { return v / 0.3048; }, reverse: function (v) { return v * 0.3048; } },
+        weight: { forwardLabel: 'kg → lb', reverseLabel: 'lb → kg', forward: function (v) { return v / 0.45359237; }, reverse: function (v) { return v * 0.45359237; } },
+        temperature: { forwardLabel: '°C → °F', reverseLabel: '°F → °C', forward: function (v) { return v * 9 / 5 + 32; }, reverse: function (v) { return (v - 32) * 5 / 9; } }
+      };
+
+      var state = { category: 'length', direction: 'forward' };
+
+      var tabs = document.querySelectorAll('#category-tabs .tab');
+      var input = document.getElementById('input-value');
+      var output = document.getElementById('output-value');
+      var errorEl = document.getElementById('error-message');
+      var swapBtn = document.getElementById('swap-direction');
+      var hint = document.getElementById('direction-hint');
+
+      function format(raw) {
+        var rounded = Math.round(raw * 10000) / 10000;
+        if (Object.is(rounded, -0)) rounded = 0;
+        var str = rounded.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+        return str;
+      }
+
+      function render() {
+        var def = FACTORS[state.category];
+        hint.textContent = '방향: ' + (state.direction === 'forward' ? def.forwardLabel : def.reverseLabel);
+
+        var raw = input.value.trim();
+        if (raw === '') {
+          // idle
+          output.textContent = '결과가 여기에 표시됩니다';
+          output.classList.add('is-empty');
+          errorEl.textContent = '';
+          input.setAttribute('aria-invalid', 'false');
+          return;
+        }
+
+        var num = Number(raw);
+        if (!Number.isFinite(num)) {
+          // error
+          output.textContent = '결과가 여기에 표시됩니다';
+          output.classList.add('is-empty');
+          errorEl.textContent = '숫자를 입력해주세요';
+          input.setAttribute('aria-invalid', 'true');
+          return;
+        }
+
+        // valid
+        var result = state.direction === 'forward' ? def.forward(num) : def.reverse(num);
+        output.textContent = format(result);
+        output.classList.remove('is-empty');
+        errorEl.textContent = '';
+        input.setAttribute('aria-invalid', 'false');
+      }
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          tabs.forEach(function (t) {
+            t.classList.remove('tab--active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          tab.classList.add('tab--active');
+          tab.setAttribute('aria-selected', 'true');
+          state.category = tab.getAttribute('data-category');
+          state.direction = 'forward';
+          // reset 경유: 입력값은 유지하고 새 카테고리 기준으로 재계산
+          render();
+        });
+      });
+
+      swapBtn.addEventListener('click', function () {
+        state.direction = state.direction === 'forward' ? 'reverse' : 'forward';
+        render();
+      });
+
+      input.addEventListener('input', render);
+
+      render();
+    })();
+  </script>
+
+</body>
+</html>
