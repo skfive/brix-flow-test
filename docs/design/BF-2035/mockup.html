@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BF-2036 · 퀴즈 카드 mockup</title>
+<style>
+  :root {
+    /* frozen design tokens (docs/plans/BF-2035/implementation-plan.md §4.5) */
+    --color-action-primary: #2563eb;
+    --color-correct: #16a34a;
+    --color-incorrect: #dc2626;
+    --font-family-base: system-ui, sans-serif;
+    --space-card-padding: 24px;
+
+    /* neutral tokens (design-spec.md §2) */
+    --color-bg: #f8fafc;
+    --color-card-bg: #ffffff;
+    --color-text: #1e293b;
+    --color-text-muted: #64748b;
+    --color-border: #e2e8f0;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 16px;
+    background: var(--color-bg);
+    font-family: var(--font-family-base);
+    color: var(--color-text);
+  }
+
+  h1 {
+    font-size: 20px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .mockup-note {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    margin-bottom: 32px;
+  }
+
+  .state-label {
+    max-width: 480px;
+    margin: 40px auto 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  #quiz-app {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .quiz-card {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: var(--space-card-padding);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  }
+
+  #progress-indicator,
+  .progress-indicator-preview {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin: 0 0 12px;
+  }
+
+  .quiz-card__question {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0 0 16px;
+  }
+
+  .answer-field {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .answer-field label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .quiz-card__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: var(--font-family-base);
+    font-size: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text);
+  }
+
+  .quiz-card__input:focus {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+  }
+
+  .quiz-card__input.is-error {
+    border-color: var(--color-incorrect);
+  }
+
+  .quiz-card__input:disabled {
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+  }
+
+  .quiz-card__submit {
+    flex: 0 0 auto;
+    font-family: var(--font-family-base);
+    font-size: 16px;
+    font-weight: 500;
+    color: #ffffff;
+    background: var(--color-action-primary);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+
+  .quiz-card__submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .error-hint {
+    font-size: 13px;
+    color: var(--color-incorrect);
+    margin: -8px 0 16px;
+  }
+
+  #feedback-message {
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 20px;
+  }
+
+  #feedback-message:empty {
+    padding: 0;
+    min-height: 0;
+  }
+
+  .quiz-card__feedback--correct {
+    background: #ecfdf3;
+    color: var(--color-correct);
+  }
+
+  .quiz-card__feedback--incorrect {
+    background: #fef2f2;
+    color: var(--color-incorrect);
+  }
+
+  #result-screen {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: var(--space-card-padding);
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  }
+
+  #result-screen h2 {
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+
+  #result-screen p {
+    font-size: 16px;
+    color: var(--color-text-muted);
+    margin: 0 0 20px;
+  }
+
+  #restart-btn {
+    font-family: var(--font-family-base);
+    font-size: 16px;
+    font-weight: 500;
+    color: #ffffff;
+    background: var(--color-action-primary);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    cursor: pointer;
+  }
+
+  /* 반응형: 320px~ 세로 배치 (design-spec.md §4.3) */
+  @media (max-width: 480px) {
+    .answer-field {
+      flex-direction: column;
+    }
+
+    .quiz-card__submit {
+      width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>퀴즈 카드 · BF-2036 시안</h1>
+<p class="mockup-note">
+  상태별 정적 스냅샷 — 실제 2초 자동 전환/JS 상태 관리는 developer(BF-2037) 구현 범위입니다.
+</p>
+
+<div id="quiz-app">
+
+  <p class="state-label">상태: idle (기본 진행 중)</p>
+  <div id="quiz-card" class="quiz-card">
+    <p id="progress-indicator">3 / 10</p>
+    <p class="quiz-card__question">대한민국의 수도는 어디입니까?</p>
+    <div class="answer-field">
+      <label for="answer-input">답 입력</label>
+      <input type="text" id="answer-input" class="quiz-card__input" placeholder="답을 입력하세요">
+      <button type="submit" id="submit-btn" class="quiz-card__submit">제출</button>
+    </div>
+    <div id="feedback-message" aria-live="polite"></div>
+  </div>
+
+  <p class="state-label">상태: empty-input-error</p>
+  <div class="quiz-card">
+    <p class="progress-indicator-preview">3 / 10</p>
+    <p class="quiz-card__question">대한민국의 수도는 어디입니까?</p>
+    <div class="answer-field">
+      <label for="answer-input-error">답 입력</label>
+      <input type="text" id="answer-input-error" class="quiz-card__input is-error" placeholder="답을 입력하세요">
+      <button type="submit" class="quiz-card__submit">제출</button>
+    </div>
+    <p class="error-hint">답을 입력해주세요</p>
+    <div aria-live="polite"></div>
+  </div>
+
+  <p class="state-label">상태: correct-feedback</p>
+  <div class="quiz-card">
+    <p class="progress-indicator-preview">3 / 10</p>
+    <p class="quiz-card__question">대한민국의 수도는 어디입니까?</p>
+    <div class="answer-field">
+      <label for="answer-input-correct">답 입력</label>
+      <input type="text" id="answer-input-correct" class="quiz-card__input" value="서울" disabled>
+      <button type="submit" class="quiz-card__submit" disabled>제출</button>
+    </div>
+    <div class="quiz-card__feedback--correct" aria-live="polite">✓ 정답입니다</div>
+  </div>
+
+  <p class="state-label">상태: incorrect-feedback</p>
+  <div class="quiz-card">
+    <p class="progress-indicator-preview">3 / 10</p>
+    <p class="quiz-card__question">대한민국의 수도는 어디입니까?</p>
+    <div class="answer-field">
+      <label for="answer-input-incorrect">답 입력</label>
+      <input type="text" id="answer-input-incorrect" class="quiz-card__input" value="부산" disabled>
+      <button type="submit" class="quiz-card__submit" disabled>제출</button>
+    </div>
+    <div class="quiz-card__feedback--incorrect" aria-live="polite">✗ 오답입니다 (정답: 서울)</div>
+  </div>
+
+  <p class="state-label">상태: finished (result-screen)</p>
+  <div id="result-screen">
+    <h2>퀴즈 완료</h2>
+    <p>7 / 10 문항을 맞혔습니다 · 정답률 70%</p>
+    <button type="button" id="restart-btn">다시 시작</button>
+  </div>
+
+</div>
+
+</body>
+</html>
