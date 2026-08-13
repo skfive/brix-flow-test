@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>15 퍼즐</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main class="puzzle-app">
+  <h1>15 퍼즐</h1>
+  <p id="puzzle-status" class="puzzle-status" aria-live="polite">대기 중</p>
+  <div id="puzzle-board" class="puzzle-board" aria-label="15 퍼즐 보드"></div>
+  <div class="puzzle-controls">
+    <button id="puzzle-shuffle-button" type="button">섞기</button>
+    <p id="puzzle-move-count">이동 횟수: 0</p>
+    <p id="puzzle-timer">경과 시간: 0초</p>
+  </div>
+  <p id="puzzle-success-message" class="puzzle-success-message" role="status" aria-live="polite"></p>
+</main>
+<script src="puzzle.js"></script>
+</body>
+</html>
