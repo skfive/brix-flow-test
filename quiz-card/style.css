@@ -1,0 +1,124 @@
+:root {
+  --color-action-primary: #2563eb;
+  --color-correct: #16a34a;
+  --color-incorrect: #dc2626;
+  --font-family-base: system-ui, sans-serif;
+  --space-card-padding: 24px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family-base);
+  background: #f8fafc;
+  color: #0f172a;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-card-padding);
+}
+
+#quiz-app {
+  width: 100%;
+  max-width: 480px;
+}
+
+.quiz-card {
+  width: 100%;
+  max-width: 100%;
+  padding: var(--space-card-padding);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.quiz-card__question {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.quiz-card__label {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.quiz-card__input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-family: inherit;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.quiz-card__submit {
+  padding: 10px 16px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #ffffff;
+  background: var(--color-action-primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.quiz-card__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#feedback-message {
+  min-height: 1.2em;
+  font-weight: 600;
+}
+
+.quiz-card__feedback--correct {
+  color: var(--color-correct);
+}
+
+.quiz-card__feedback--incorrect {
+  color: var(--color-incorrect);
+}
+
+#progress-indicator {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+#result-screen {
+  padding: var(--space-card-padding);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+#restart-btn {
+  padding: 10px 16px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #ffffff;
+  background: var(--color-action-primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .quiz-card {
+    flex-direction: column;
+  }
+
+  .quiz-card__input,
+  .quiz-card__submit {
+    width: 100%;
+  }
+}
