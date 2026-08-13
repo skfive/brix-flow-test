@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>퀴즈 카드</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="quiz-app">
+    <section id="quiz-card" class="quiz-card">
+      <p class="quiz-card__question"></p>
+      <label for="answer-input" class="quiz-card__label">정답 입력</label>
+      <input
+        id="answer-input"
+        class="quiz-card__input"
+        type="text"
+        aria-label="정답 입력"
+        autocomplete="off"
+      />
+      <button id="submit-btn" class="quiz-card__submit" type="button" aria-label="제출">
+        제출
+      </button>
+      <p id="feedback-message" aria-live="polite"></p>
+      <p id="progress-indicator">1 / 10</p>
+    </section>
+
+    <section id="result-screen" hidden>
+      <h2>퀴즈 종료</h2>
+      <p>맞힌 개수: <span data-result="score"></span></p>
+      <p>정답률: <span data-result="accuracy"></span></p>
+      <button id="restart-btn" type="button" aria-label="다시 시작">다시 시작</button>
+    </section>
+  </main>
+
+  <script type="module" src="quiz.js"></script>
+</body>
+</html>
