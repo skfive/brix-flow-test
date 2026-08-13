@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>컬러 팔레트 생성기 — mockup (BF-2071)</title>
+<style>
+  :root {
+    /* frozen tokens (docs/plans/BF-2071/implementation-plan.md 4.5절) */
+    --color-accent: #2563eb;
+    --color-error: #dc2626;
+    --color-success: #16a34a;
+    --color-swatch-border: #e2e8f0;
+    --space-swatch-gap: 12px;
+    --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* designer 보완 토큰 (palette-BF-2071.md 2절) */
+    --color-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-text: #0f172a;
+    --color-text-muted: #64748b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-family-base);
+    line-height: 1.5;
+  }
+
+  .doc-header {
+    max-width: 960px;
+    margin: 0 auto 40px;
+  }
+  .doc-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 8px;
+  }
+  .doc-header p {
+    color: var(--color-text-muted);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .gallery-section {
+    max-width: 960px;
+    margin: 0 auto 48px;
+  }
+  .gallery-section > h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: var(--color-text);
+  }
+  .gallery-section > p.desc {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin: 0 0 16px;
+  }
+
+  /* ---- palette-app card ---- */
+  .palette-app {
+    background: var(--color-surface);
+    border: 1px solid var(--color-swatch-border);
+    border-radius: 12px;
+    max-width: 720px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  }
+  @media (max-width: 480px) {
+    .palette-app { padding: 16px; }
+  }
+
+  .app-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .app-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin: 0 0 20px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 480px) {
+    .input-row { flex-direction: column; align-items: stretch; }
+  }
+
+  .field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+  }
+  .hex-input {
+    width: 100%;
+    font-family: var(--font-family-base);
+    font-size: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-swatch-border);
+    border-radius: 8px;
+    color: var(--color-text);
+    background: var(--color-surface);
+  }
+  .hex-input:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+  .color-picker {
+    width: 44px;
+    height: 44px;
+    padding: 2px;
+    border: 1px solid var(--color-swatch-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    cursor: pointer;
+  }
+  .field-group { flex: 1; min-width: 160px; }
+
+  .action-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .btn {
+    font-family: var(--font-family-base);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .generate-btn {
+    background: var(--color-accent);
+    color: #ffffff;
+  }
+  .generate-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .generate-btn[disabled] {
+    background: #93b4f5;
+    cursor: not-allowed;
+  }
+  .reset-btn {
+    background: transparent;
+    color: var(--color-text);
+    border-color: var(--color-swatch-border);
+  }
+
+  .status-message {
+    min-height: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 0 0 0 12px;
+    margin-bottom: 16px;
+  }
+  .status-message.is-error {
+    color: var(--color-error);
+    border-left: 4px solid var(--color-error);
+    padding: 8px 0 8px 12px;
+  }
+  .status-message.is-success {
+    color: var(--color-success);
+    border-left: 4px solid var(--color-success);
+    padding: 8px 0 8px 12px;
+  }
+
+  /* ---- swatch-list ---- */
+  .swatch-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-swatch-gap);
+  }
+  @media (min-width: 768px) {
+    .swatch-list { grid-template-columns: repeat(5, 1fr); }
+  }
+
+  .swatch {
+    border: 1px solid var(--color-swatch-border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 120px;
+    justify-content: space-between;
+  }
+  .swatch__label {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.85;
+  }
+  .swatch__hex {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .swatch__contrast-label {
+    font-size: 13px;
+    font-weight: 400;
+  }
+  .swatch__copy-btn {
+    align-self: flex-start;
+    font-family: var(--font-family-base);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid currentColor;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+  .swatch__copy-feedback {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .swatch__copy-feedback.is-hidden { visibility: hidden; }
+
+  .text-on-white { color: #0f172a; }
+  .text-on-black { color: #ffffff; }
+
+  /* ---- device frame demo (반응형 시뮬레이션 전용, mockup 한정) ---- */
+  .device-frame {
+    border: 1px dashed #94a3b8;
+    border-radius: 8px;
+    padding: 16px;
+    background: var(--color-bg);
+    overflow: hidden;
+  }
+  .device-frame__label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin: 0 0 12px;
+  }
+  .frame-mobile { width: 320px; }
+  .frame-desktop { width: 100%; }
+  .demo-stack { grid-template-columns: 1fr !important; }
+  .demo-grid5 { grid-template-columns: repeat(5, 1fr) !important; }
+
+  .state-note {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-accent);
+    background: #eff6ff;
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-bottom: 12px;
+  }
+
+  .token-table {
+    max-width: 720px;
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+  }
+  .token-table th, .token-table td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--color-swatch-border);
+  }
+  .token-chip {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--color-swatch-border);
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="doc-header">
+    <h1>컬러 팔레트 생성기 — UI mockup</h1>
+    <p>BF-2071 UI 계약(frozen) 기반 시각 시안. 실제 dev 산출물이 아니며 상태별 시각 시뮬레이션만 제공한다. 명세: docs/design/palette-BF-2071.md</p>
+  </div>
+
+  <!-- ============ 대표 예시: success 상태 (실 DOM id 사용, 데스크톱 5열) ============ -->
+  <section class="gallery-section">
+    <span class="state-note">state: success (대표 예시 · 실 id 포함)</span>
+    <h2>1. success 상태 — 팔레트 생성 완료 (AC-1)</h2>
+    <p class="desc">입력 "#2563EB" 기준 5개 스와치가 2.4절 순서(기준색 → 유사색−30° → 유사색+30° → 보색 → 보색의 유사색)대로 렌더링된 모습. 768px 이상에서는 자동으로 가로 5열이 된다(브라우저 폭을 줄이면 실제로 세로 스택으로 전환됨).</p>
+
+    <div id="palette-app" class="palette-app">
+      <h3 class="app-title">컬러 팔레트 생성기</h3>
+      <p class="app-subtitle">HEX 색상 코드를 입력하면 5개의 파생 스와치를 생성합니다</p>
+
+      <div class="input-row">
+        <div class="field-group">
+          <label class="field-label" for="hex-input">HEX 색상 코드</label>
+          <input id="hex-input" class="hex-input" type="text" value="#2563EB" aria-label="HEX 색상 코드 입력" placeholder="#2563EB">
+        </div>
+        <div>
+          <label class="field-label" for="color-picker">컬러 피커</label>
+          <input id="color-picker" class="color-picker" type="color" value="#2563eb">
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button id="generate-btn" class="btn generate-btn" aria-label="팔레트 생성">팔레트 생성</button>
+        <button id="reset-btn" class="btn reset-btn">초기화</button>
+      </div>
+
+      <div id="status-message" class="status-message is-success" role="status">5개의 스와치가 생성되었습니다.</div>
+
+      <div id="swatch-list" class="swatch-list">
+        <div class="swatch text-on-white" style="background:#2563EB; color:#ffffff;">
+          <span class="swatch__label">기준색 (0°)</span>
+          <span class="swatch__hex">#2563EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 흰색</span>
+          <button class="swatch__copy-btn" aria-label="HEX #2563EB 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+        <div class="swatch" style="background:#25C6EB; color:#0f172a;">
+          <span class="swatch__label">유사색 (−30°)</span>
+          <span class="swatch__hex">#25C6EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 검정</span>
+          <button class="swatch__copy-btn" aria-label="HEX #25C6EB 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+        <div class="swatch" style="background:#4A25EB; color:#ffffff;">
+          <span class="swatch__label">유사색 (+30°)</span>
+          <span class="swatch__hex">#4A25EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 흰색</span>
+          <button class="swatch__copy-btn" aria-label="HEX #4A25EB 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+        <div class="swatch" style="background:#EBAD25; color:#0f172a;">
+          <span class="swatch__label">보색 (180°)</span>
+          <span class="swatch__hex">#EBAD25</span>
+          <span class="swatch__contrast-label">권장 텍스트: 검정</span>
+          <button class="swatch__copy-btn" aria-label="HEX #EBAD25 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+        <div class="swatch" style="background:#EB4A25; color:#0f172a;">
+          <span class="swatch__label">보색의 유사색 (150°)</span>
+          <span class="swatch__hex">#EB4A25</span>
+          <span class="swatch__contrast-label">권장 텍스트: 검정</span>
+          <button class="swatch__copy-btn" aria-label="HEX #EB4A25 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ idle 상태 ============ -->
+  <section class="gallery-section">
+    <span class="state-note">state: idle</span>
+    <h2>2. idle 상태 — 초기 화면</h2>
+    <p class="desc">동일 구조(id: palette-app / hex-input / color-picker / generate-btn / reset-btn / status-message / swatch-list)이며, 갤러리 중복 방지를 위해 아래 스냅샷들은 id 속성을 생략하고 class만 표기한다.</p>
+    <div class="palette-app">
+      <h3 class="app-title">컬러 팔레트 생성기</h3>
+      <p class="app-subtitle">HEX 색상 코드를 입력하면 5개의 파생 스와치를 생성합니다</p>
+      <div class="input-row">
+        <div class="field-group">
+          <label class="field-label">HEX 색상 코드</label>
+          <input class="hex-input" type="text" value="" aria-label="HEX 색상 코드 입력" placeholder="#2563EB">
+        </div>
+        <div>
+          <label class="field-label">컬러 피커</label>
+          <input class="color-picker" type="color" value="#2563eb">
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn generate-btn" aria-label="팔레트 생성">팔레트 생성</button>
+        <button class="btn reset-btn">초기화</button>
+      </div>
+      <div class="status-message" role="status"></div>
+      <div class="swatch-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ generating 상태 ============ -->
+  <section class="gallery-section">
+    <span class="state-note">state: generating</span>
+    <h2>3. generating 상태 — 생성 처리 중</h2>
+    <p class="desc">generate-btn이 즉시 재클릭되지 않도록 비활성화되고 라벨이 "생성 중…"으로 바뀐다. 완료 즉시 success/error로 전환되며 버튼은 다시 사용 가능해진다(후조건 4.8절).</p>
+    <div class="palette-app">
+      <h3 class="app-title">컬러 팔레트 생성기</h3>
+      <p class="app-subtitle">HEX 색상 코드를 입력하면 5개의 파생 스와치를 생성합니다</p>
+      <div class="input-row">
+        <div class="field-group">
+          <label class="field-label">HEX 색상 코드</label>
+          <input class="hex-input" type="text" value="#2563EB" aria-label="HEX 색상 코드 입력">
+        </div>
+        <div>
+          <label class="field-label">컬러 피커</label>
+          <input class="color-picker" type="color" value="#2563eb">
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn generate-btn" aria-label="팔레트 생성" disabled aria-disabled="true">생성 중…</button>
+        <button class="btn reset-btn">초기화</button>
+      </div>
+      <div class="status-message" role="status"></div>
+      <div class="swatch-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ error 상태 ============ -->
+  <section class="gallery-section">
+    <span class="state-note">state: error</span>
+    <h2>4. error 상태 — 유효하지 않은 입력 (AC-2)</h2>
+    <p class="desc">에러 상태에서도 직전 success 결과(swatch-list)는 그대로 보존되고, generate-btn은 즉시 재사용 가능하다. 에러는 색상(빨강)뿐 아니라 status-message 텍스트로도 인지 가능하다.</p>
+    <div class="palette-app">
+      <h3 class="app-title">컬러 팔레트 생성기</h3>
+      <p class="app-subtitle">HEX 색상 코드를 입력하면 5개의 파생 스와치를 생성합니다</p>
+      <div class="input-row">
+        <div class="field-group">
+          <label class="field-label">HEX 색상 코드</label>
+          <input class="hex-input" type="text" value="#zzzz" aria-label="HEX 색상 코드 입력">
+        </div>
+        <div>
+          <label class="field-label">컬러 피커</label>
+          <input class="color-picker" type="color" value="#2563eb">
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn generate-btn" aria-label="팔레트 생성">팔레트 생성</button>
+        <button class="btn reset-btn">초기화</button>
+      </div>
+      <div class="status-message is-error" role="status">유효한 HEX 색상 코드를 입력해주세요.</div>
+      <div class="swatch-list">
+        <div class="swatch" style="background:#2563EB; color:#ffffff;">
+          <span class="swatch__label">기준색 (0°)</span>
+          <span class="swatch__hex">#2563EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 흰색</span>
+          <button class="swatch__copy-btn" aria-label="HEX #2563EB 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+        <div class="swatch" style="background:#25C6EB; color:#0f172a;">
+          <span class="swatch__label">유사색 (−30°)</span>
+          <span class="swatch__hex">#25C6EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 검정</span>
+          <button class="swatch__copy-btn" aria-label="HEX #25C6EB 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+        <div class="swatch" style="background:#4A25EB; color:#ffffff;">
+          <span class="swatch__label">유사색 (+30°)</span>
+          <span class="swatch__hex">#4A25EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 흰색</span>
+          <button class="swatch__copy-btn" aria-label="HEX #4A25EB 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+        <div class="swatch" style="background:#EBAD25; color:#0f172a;">
+          <span class="swatch__label">보색 (180°)</span>
+          <span class="swatch__hex">#EBAD25</span>
+          <span class="swatch__contrast-label">권장 텍스트: 검정</span>
+          <button class="swatch__copy-btn" aria-label="HEX #EBAD25 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+        <div class="swatch" style="background:#EB4A25; color:#0f172a;">
+          <span class="swatch__label">보색의 유사색 (150°)</span>
+          <span class="swatch__hex">#EB4A25</span>
+          <span class="swatch__contrast-label">권장 텍스트: 검정</span>
+          <button class="swatch__copy-btn" aria-label="HEX #EB4A25 복사">복사</button>
+          <span class="swatch__copy-feedback is-hidden">복사됨</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ copied 상태 (스와치 단위) ============ -->
+  <section class="gallery-section">
+    <span class="state-note">state: copied (스와치 단위)</span>
+    <h2>5. copied 상태 — HEX 복사 완료 (AC-4)</h2>
+    <p class="desc">copied는 전체 앱 상태가 아니라 클릭된 스와치 하나에만 적용되는 일시 상태다. swatch__copy-feedback에 "복사됨" 텍스트가 노출된다.</p>
+    <div class="swatch-list" style="max-width:720px;">
+      <div class="swatch" style="background:#2563EB; color:#ffffff;">
+        <span class="swatch__label">기준색 (0°)</span>
+        <span class="swatch__hex">#2563EB</span>
+        <span class="swatch__contrast-label">권장 텍스트: 흰색</span>
+        <button class="swatch__copy-btn" aria-label="HEX #2563EB 복사">복사</button>
+        <span class="swatch__copy-feedback">✓ 복사됨</span>
+      </div>
+      <div class="swatch" style="background:#25C6EB; color:#0f172a;">
+        <span class="swatch__label">유사색 (−30°)</span>
+        <span class="swatch__hex">#25C6EB</span>
+        <span class="swatch__contrast-label">권장 텍스트: 검정</span>
+        <button class="swatch__copy-btn" aria-label="HEX #25C6EB 복사">복사</button>
+        <span class="swatch__copy-feedback is-hidden">복사됨</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 반응형 시뮬레이션 (AC-6) ============ -->
+  <section class="gallery-section">
+    <span class="state-note">responsive</span>
+    <h2>6. 반응형 시뮬레이션 (AC-6)</h2>
+    <p class="desc">아래 두 프레임은 브라우저 폭과 무관하게 320px / 768px+ 배치를 나란히 비교하기 위한 mockup 전용 데모다(실제 구현은 media query로 뷰포트에 반응). 위 1번 섹션의 실 swatch-list는 실제 media query(min-width: 768px)가 적용되어 있어 브라우저 폭을 줄이면 그대로 세로 스택으로 바뀐다.</p>
+
+    <div class="device-frame frame-mobile" style="margin-bottom:16px;">
+      <p class="device-frame__label">320px ~ 767px — 세로 스택</p>
+      <div class="swatch-list demo-stack">
+        <div class="swatch" style="background:#2563EB; color:#ffffff;">
+          <span class="swatch__hex">#2563EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 흰색</span>
+          <button class="swatch__copy-btn" aria-label="HEX #2563EB 복사">복사</button>
+        </div>
+        <div class="swatch" style="background:#25C6EB; color:#0f172a;">
+          <span class="swatch__hex">#25C6EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 검정</span>
+          <button class="swatch__copy-btn" aria-label="HEX #25C6EB 복사">복사</button>
+        </div>
+        <div class="swatch" style="background:#4A25EB; color:#ffffff;">
+          <span class="swatch__hex">#4A25EB</span>
+          <span class="swatch__contrast-label">권장 텍스트: 흰색</span>
+          <button class="swatch__copy-btn" aria-label="HEX #4A25EB 복사">복사</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="device-frame frame-desktop">
+      <p class="device-frame__label">768px 이상 — 가로 5열</p>
+      <div class="swatch-list demo-grid5">
+        <div class="swatch" style="background:#2563EB; color:#ffffff;">
+          <span class="swatch__hex">#2563EB</span>
+          <span class="swatch__contrast-label">흰색</span>
+        </div>
+        <div class="swatch" style="background:#25C6EB; color:#0f172a;">
+          <span class="swatch__hex">#25C6EB</span>
+          <span class="swatch__contrast-label">검정</span>
+        </div>
+        <div class="swatch" style="background:#4A25EB; color:#ffffff;">
+          <span class="swatch__hex">#4A25EB</span>
+          <span class="swatch__contrast-label">흰색</span>
+        </div>
+        <div class="swatch" style="background:#EBAD25; color:#0f172a;">
+          <span class="swatch__hex">#EBAD25</span>
+          <span class="swatch__contrast-label">검정</span>
+        </div>
+        <div class="swatch" style="background:#EB4A25; color:#0f172a;">
+          <span class="swatch__hex">#EB4A25</span>
+          <span class="swatch__contrast-label">검정</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 디자인 토큰 레퍼런스 ============ -->
+  <section class="gallery-section">
+    <h2>7. 디자인 토큰 레퍼런스</h2>
+    <p class="desc">palette-BF-2071.md 2절과 동일. frozen 토큰은 그대로, designer 보완 토큰은 추가 표기.</p>
+    <table class="token-table">
+      <thead>
+        <tr><th>토큰</th><th>값</th><th>출처</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="token-chip" style="background:#2563eb;"></span>--color-accent</td><td>#2563eb</td><td>frozen</td></tr>
+        <tr><td><span class="token-chip" style="background:#dc2626;"></span>--color-error</td><td>#dc2626</td><td>frozen</td></tr>
+        <tr><td><span class="token-chip" style="background:#16a34a;"></span>--color-success</td><td>#16a34a</td><td>frozen</td></tr>
+        <tr><td><span class="token-chip" style="background:#e2e8f0;"></span>--color-swatch-border</td><td>#e2e8f0</td><td>frozen</td></tr>
+        <tr><td><span class="token-chip" style="background:#f8fafc;"></span>--color-bg</td><td>#f8fafc</td><td>designer 보완</td></tr>
+        <tr><td><span class="token-chip" style="background:#ffffff;"></span>--color-surface</td><td>#ffffff</td><td>designer 보완</td></tr>
+        <tr><td><span class="token-chip" style="background:#0f172a;"></span>--color-text</td><td>#0f172a</td><td>designer 보완</td></tr>
+        <tr><td><span class="token-chip" style="background:#64748b;"></span>--color-text-muted</td><td>#64748b</td><td>designer 보완</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</body>
+</html>
