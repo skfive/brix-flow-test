@@ -165,7 +165,7 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica N
 | cssClasses | `puzzle-tile` | §5.2, mockup 타일 15개 |
 | cssClasses | `puzzle-tile--blank` | §5.3, mockup 빈 칸 1개 |
 | cssClasses | `puzzle-tile--movable` | §5.2, mockup playing 예시의 인접 타일 outline |
-| states | `idle`/`shuffling`/`playing`/`solved` | §5.8 상태 텍스트 표, mockup idle/solved 섹션 |
+| states | `idle`/`shuffling`/`playing`/`solved` | §5.8 상태 텍스트 표, mockup idle/playing(참고)/solved 섹션 |
 | designTokens | `--color-tile-bg`, `--color-tile-text`, `--color-board-bg`, `--space-tile-gap` | §2, mockup `:root` |
 | accessibility | `aria-label="타일 N"` | §5.2 |
 | accessibility | 빈 칸 `aria-hidden="true"` | §5.3 |
@@ -175,4 +175,4 @@ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica N
 
 ## 8. mockup 참조
 
-시각 mockup: `docs/design/fifteen-puzzle-BF-2053-mockup.html` (idle 상태와 solved 상태를 각각 별도 섹션으로 정적 시각화).
+시각 mockup: `docs/design/fifteen-puzzle-BF-2053-mockup.html` — idle/playing/solved 3개 상태를 각각 별도 iframe 섹션으로 정적 시각화. AC 필수 요구 상태는 idle과 solved(축하 메시지 포함)이며, playing 섹션은 `puzzle-tile--movable` 강조와 진행 중 정보 바 표시를 보여주기 위한 참고용 추가 시각화다(mockup 내 "playing (참고)" 라벨 참조).
