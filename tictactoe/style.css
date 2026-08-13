@@ -1,0 +1,88 @@
+:root {
+  --color-cell-bg: #ffffff;
+  --color-cell-border: #333333;
+  --color-x: #2563eb;
+  --color-o: #dc2626;
+  --color-win-highlight: #facc15;
+  --space-board-gap: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+.tictactoe-app {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: var(--space-board-gap);
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1;
+}
+
+.cell {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-cell-bg);
+  border: 2px solid var(--color-cell-border);
+  border-radius: 4px;
+  font-size: clamp(1.5rem, 8vw, 2.5rem);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cell[data-value="X"] {
+  color: var(--color-x);
+}
+
+.cell[data-value="O"] {
+  color: var(--color-o);
+}
+
+.cell--win {
+  background-color: var(--color-win-highlight);
+  border-color: var(--color-win-highlight);
+}
+
+.status {
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.restart-btn {
+  padding: 8px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: var(--color-cell-bg);
+  border: 2px solid var(--color-cell-border);
+  border-radius: 4px;
+}
+
+.cell:focus-visible,
+.restart-btn:focus-visible {
+  outline: 3px solid var(--color-x);
+  outline-offset: 2px;
+}
