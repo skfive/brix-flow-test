@@ -2,6 +2,7 @@ const STORAGE_KEY = 'habit-tracker:v1:habits';
 const MAX_HABITS = 8;
 const WEEKDAY_LABELS = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
 const WEEKDAY_ABBR = ['월', '화', '수', '목', '금', '토', '일'];
+const STATE_LABELS = { empty: '비어있음', idle: '정상', error: '오류', success: '완료' };
 
 export function formatDate(date) {
   const year = date.getFullYear();
@@ -84,11 +85,20 @@ function initApp() {
   const errorMessage = document.getElementById('habit-error-message');
   const weeklySummary = document.getElementById('weekly-summary');
   const habitGrid = document.getElementById('habit-grid');
+  const stateLabel = document.getElementById('habit-state-label');
 
   let habits = loadHabits();
 
   function setError(message) {
     errorMessage.textContent = message || '';
+  }
+
+  function applyState(state) {
+    root.dataset.state = state;
+    const label = STATE_LABELS[state];
+    if (stateLabel) {
+      stateLabel.textContent = `상태: ${label}`;
+    }
   }
 
   function createHeaderRow(weekDates) {
@@ -122,13 +132,13 @@ function initApp() {
     nameEl.textContent = habit.name;
     row.appendChild(nameEl);
 
-    weekDates.forEach((date) => {
+    weekDates.forEach((date, index) => {
       const checked = habit.checks[date] === true;
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = checked ? 'habit-cell habit-cell--checked' : 'habit-cell';
       cell.setAttribute('aria-pressed', String(checked));
-      cell.setAttribute('aria-label', `${habit.name} ${date} ${checked ? '완료' : '미완료'}`);
+      cell.setAttribute('aria-label', `${habit.name} ${WEEKDAY_LABELS[index]} ${checked ? '완료' : '미완료'}`);
       cell.textContent = checked ? '✓' : '';
       cell.addEventListener('click', () => toggleCheck(habit.id, date));
       row.appendChild(cell);
@@ -155,7 +165,7 @@ function initApp() {
     habitGrid.innerHTML = '';
 
     if (habits.length === 0) {
-      root.dataset.state = 'empty';
+      applyState('empty');
       const emptyState = document.createElement('p');
       emptyState.className = 'habit-empty-state';
       emptyState.textContent = '등록된 습관이 없습니다. 습관을 추가해보세요.';
@@ -164,7 +174,7 @@ function initApp() {
       return;
     }
 
-    root.dataset.state = errorMessage.textContent ? 'error' : 'idle';
+    applyState(errorMessage.textContent ? 'error' : 'idle');
 
     habitGrid.appendChild(createHeaderRow(weekDates));
     habits.forEach((habit) => {
@@ -183,12 +193,12 @@ function initApp() {
     const validation = validateHabitName(rawName, existingNames);
     if (!validation.valid) {
       setError(validation.error);
-      root.dataset.state = 'error';
+      applyState('error');
       return;
     }
     if (habits.length >= MAX_HABITS) {
       setError('최대 8개까지 등록할 수 있습니다');
-      root.dataset.state = 'error';
+      applyState('error');
       return;
     }
     habits.push({
@@ -201,6 +211,7 @@ function initApp() {
     setError('');
     input.value = '';
     render();
+    applyState('success');
   }
 
   function deleteHabit(id) {
@@ -221,6 +232,7 @@ function initApp() {
     saveHabits(habits);
     setError('');
     render();
+    applyState('success');
   }
 
   form.addEventListener('submit', (event) => {
