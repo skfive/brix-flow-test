@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BF-2059 · 메모리 카드 게임 mockup</title>
+<style>
+  :root {
+    /* frozen tokens (BF-2062 §4.3 — 값 재정의 금지) */
+    --color-bg: #0f172a;
+    --color-card-back: #334155;
+    --color-card-face: #f8fafc;
+    --color-accent: #22c55e;
+    --font-family-base: system-ui, -apple-system, sans-serif;
+    --space-grid-gap: 12px;
+
+    /* 보조 컬러 (frozen 아님, 시각 표현용 파생값) */
+    --color-text: #f1f5f9;
+    --color-text-muted: #94a3b8;
+    --color-text-on-face: #0f172a;
+    --color-text-on-accent: #0f172a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-family-base);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 64px;
+  }
+
+  .memory-app {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .memory-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .memory-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .memory-hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .memory-hud .hud-stat {
+    color: var(--color-text);
+  }
+
+  .memory-hud .hud-stat .hud-label {
+    color: var(--color-text-muted);
+    font-weight: 400;
+    margin-right: 4px;
+  }
+
+  #memory-restart {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+
+  #memory-restart:hover,
+  #memory-restart:focus-visible {
+    filter: brightness(0.9);
+  }
+
+  #memory-restart:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  #memory-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-grid-gap);
+  }
+
+  .memory-card {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    min-width: 40px;
+    min-height: 40px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background: var(--color-card-back);
+    color: transparent;
+    font-family: inherit;
+    font-size: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .memory-card::after {
+    content: "?";
+    color: var(--color-text-muted);
+    font-weight: 700;
+    font-size: 1.25rem;
+  }
+
+  .memory-card--flipped,
+  .memory-card--matched {
+    background: var(--color-card-face);
+    color: var(--color-text-on-face);
+  }
+
+  .memory-card--flipped::after,
+  .memory-card--matched::after {
+    content: none;
+  }
+
+  .memory-card--matched {
+    border-color: var(--color-accent);
+    opacity: 0.85;
+  }
+
+  .memory-card--matched .memory-card__badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+    font-size: 0.75rem;
+    line-height: 20px;
+    text-align: center;
+  }
+
+  .memory-card:hover,
+  .memory-card:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  #memory-result {
+    display: none;
+    border: 2px solid var(--color-accent);
+    border-radius: 10px;
+    padding: 16px;
+    background: rgba(34, 197, 94, 0.12);
+    text-align: center;
+  }
+
+  #memory-result.memory-result--visible {
+    display: block;
+  }
+
+  #memory-result p {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  /* ---- 아래는 mockup 전용 "상태 미리보기" 섹션 스타일. frozen DOM 계약(#memory-result 등)과 별개의 시각 참조용 마크업 ---- */
+
+  .state-preview {
+    width: 100%;
+    max-width: 480px;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #1e293b;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .state-preview h2 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .state-preview .caption {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .legend-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-item .memory-card {
+    width: 64px;
+    height: 64px;
+    aspect-ratio: auto;
+    cursor: default;
+  }
+
+  .legend-item span.legend-label {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+  }
+
+  .result-preview-visible {
+    border: 2px solid var(--color-accent);
+    border-radius: 10px;
+    padding: 16px;
+    background: rgba(34, 197, 94, 0.12);
+    text-align: center;
+  }
+
+  .result-preview-visible p {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .result-preview-visible p.result-sub {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+</style>
+</head>
+<body>
+
+  <main class="memory-app">
+    <header class="memory-header">
+      <h1>메모리 카드</h1>
+      <div class="memory-hud">
+        <span class="hud-stat" id="memory-attempts"><span class="hud-label">시도</span>3</span>
+        <span class="hud-stat" id="memory-timer">01:24</span>
+        <button id="memory-restart" aria-label="다시 시작">🔄 다시 시작</button>
+      </div>
+    </header>
+
+    <div id="memory-board" role="group" aria-label="4x4 메모리 카드 보드">
+      <button class="memory-card memory-card--matched" aria-label="카드 1, 맞춤">🍎<span class="memory-card__badge" aria-hidden="true">✓</span></button>
+      <button class="memory-card" aria-label="카드 2, 가려짐"></button>
+      <button class="memory-card memory-card--matched" aria-label="카드 3, 맞춤">🍎<span class="memory-card__badge" aria-hidden="true">✓</span></button>
+      <button class="memory-card" aria-label="카드 4, 가려짐"></button>
+      <button class="memory-card memory-card--flipped" aria-label="카드 5, 뒤집힘">🍋</button>
+      <button class="memory-card" aria-label="카드 6, 가려짐"></button>
+      <button class="memory-card" aria-label="카드 7, 가려짐"></button>
+      <button class="memory-card memory-card--flipped" aria-label="카드 8, 뒤집힘">🍇</button>
+      <button class="memory-card memory-card--matched" aria-label="카드 9, 맞춤">🍓<span class="memory-card__badge" aria-hidden="true">✓</span></button>
+      <button class="memory-card" aria-label="카드 10, 가려짐"></button>
+      <button class="memory-card memory-card--matched" aria-label="카드 11, 맞춤">🍓<span class="memory-card__badge" aria-hidden="true">✓</span></button>
+      <button class="memory-card" aria-label="카드 12, 가려짐"></button>
+      <button class="memory-card" aria-label="카드 13, 가려짐"></button>
+      <button class="memory-card" aria-label="카드 14, 가려짐"></button>
+      <button class="memory-card" aria-label="카드 15, 가려짐"></button>
+      <button class="memory-card" aria-label="카드 16, 가려짐"></button>
+    </div>
+
+    <div id="memory-result" aria-live="polite">
+      <p>축하합니다! 12번 만에 완료했어요.</p>
+    </div>
+  </main>
+
+  <section class="state-preview" aria-label="카드 상태 및 결과 패널 미리보기 (참고용, 실제 DOM 아님)">
+    <h2>상태 미리보기</h2>
+    <p class="caption">아래는 각 카드 상태와 승리 시 결과 패널의 시각을 별도로 정리한 참고용 예시다. 실제 페이지에서는 하나의 `#memory-result`, id 없는 `.memory-card` 16개만 존재한다.</p>
+
+    <div class="legend">
+      <div class="legend-item">
+        <button class="memory-card" aria-label="카드 예시, 가려짐" tabindex="-1"></button>
+        <span class="legend-label">hidden</span>
+      </div>
+      <div class="legend-item">
+        <button class="memory-card memory-card--flipped" aria-label="카드 예시, 뒤집힘" tabindex="-1">🍒</button>
+        <span class="legend-label">flipped</span>
+      </div>
+      <div class="legend-item">
+        <button class="memory-card memory-card--matched" aria-label="카드 예시, 맞춤" tabindex="-1">🍒<span class="memory-card__badge" aria-hidden="true">✓</span></button>
+        <span class="legend-label">matched</span>
+      </div>
+    </div>
+
+    <div class="result-preview-visible" aria-hidden="true">
+      <p>축하합니다! 12번 만에 완료했어요.</p>
+      <p class="result-sub">memory-result--visible 적용 시 노출되는 배너 스타일</p>
+    </div>
+  </section>
+
+</body>
+</html>
