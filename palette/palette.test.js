@@ -1,62 +1,60 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { hexToHsl, hslToHex, buildPalette } = require('./palette.js');
+const { hexToRgb, rotateHue, contrastRatio } = require('./palette.js');
 
-test('hexToHsl(#ff0000) 기본 변환', () => {
-  assert.deepEqual(hexToHsl('#ff0000'), { h: 0, s: 100, l: 50 });
+test('hexToRgb(#FFFFFF) → {r:255, g:255, b:255}', () => {
+  assert.deepEqual(hexToRgb('#FFFFFF'), { r: 255, g: 255, b: 255 });
 });
 
-test('hexToHsl 접두사 없이도 정상 파싱 (대소문자 무관)', () => {
-  const result = hexToHsl('3b82f6');
-  assert.equal(typeof result.h, 'number');
-  assert.equal(typeof result.s, 'number');
-  assert.equal(typeof result.l, 'number');
+test('hexToRgb(#000000) → {r:0, g:0, b:0}', () => {
+  assert.deepEqual(hexToRgb('#000000'), { r: 0, g: 0, b: 0 });
 });
 
-test('hexToHsl 잘못된 hex 입력 시 Error throw', () => {
-  assert.throws(() => hexToHsl('#zzzzzz'));
+test('hexToRgb(#2563EB) → {r:37, g:99, b:235}', () => {
+  assert.deepEqual(hexToRgb('#2563EB'), { r: 37, g: 99, b: 235 });
 });
 
-test('hslToHex 기본 변환', () => {
-  assert.equal(hslToHex({ h: 0, s: 100, l: 50 }), '#ff0000');
+test('hexToRgb(#f00) 3자리 축약형 확장 → {r:255, g:0, b:0}', () => {
+  assert.deepEqual(hexToRgb('#f00'), { r: 255, g: 0, b: 0 });
 });
 
-test('hslToHex h=360 정규화 (0과 360 동일 처리)', () => {
-  assert.equal(hslToHex({ h: 360, s: 100, l: 50 }), '#ff0000');
+test('rotateHue(#FF0000, 180) → #00FFFF (보색)', () => {
+  assert.equal(rotateHue('#FF0000', 180), '#00FFFF');
 });
 
-test('왕복 변환: hslToHex(hexToHsl(hex)) === 원본 hex', () => {
-  const hex = '#ff0000';
-  assert.equal(hslToHex(hexToHsl(hex)), hex);
+test('rotateHue(#FF0000, 30) → #FF8000 (유사색 +30°)', () => {
+  assert.equal(rotateHue('#FF0000', 30), '#FF8000');
 });
 
-test('buildPalette는 길이 5의 유효한 #rrggbb 배열을 반환', () => {
-  const palette = buildPalette('#3b82f6');
-  assert.equal(palette.length, 5);
-  for (const { hex } of palette) {
-    assert.match(hex, /^#[0-9a-f]{6}$/);
-  }
+test('rotateHue(#FF0000, -30) → #FF0080 (유사색 -30°)', () => {
+  assert.equal(rotateHue('#FF0000', -30), '#FF0080');
 });
 
-test('buildPalette complementary 원소는 기준색과 hue 180도 차이', () => {
-  const base = hexToHsl('#3b82f6');
-  const palette = buildPalette('#3b82f6');
-  const complementary = palette.find((p) => p.role === 'complementary');
-  const compHsl = hexToHsl(complementary.hex);
-  const diff = Math.abs(compHsl.h - base.h);
-  assert.ok(Math.abs(diff - 180) <= 1);
+test('rotateHue(#2563EB, 180) → #EBAD25 (±1 RGB 단위 허용)', () => {
+  const result = rotateHue('#2563EB', 180);
+  const { r, g, b } = hexToRgb(result);
+  const expected = { r: 0xeb, g: 0xad, b: 0x25 };
+  assert.ok(Math.abs(r - expected.r) <= 1);
+  assert.ok(Math.abs(g - expected.g) <= 1);
+  assert.ok(Math.abs(b - expected.b) <= 1);
 });
 
-test('buildPalette lighter/darker는 lightness 상/하한(95/5)으로 clamp', () => {
-  const lightPalette = buildPalette('#ffffff');
-  const lighter = hexToHsl(lightPalette.find((p) => p.role === 'lighter').hex);
-  assert.ok(lighter.l <= 95);
-
-  const darkPalette = buildPalette('#000000');
-  const darker = hexToHsl(darkPalette.find((p) => p.role === 'darker').hex);
-  assert.ok(darker.l >= 5);
+test('contrastRatio(#FFFFFF, #000000) → 21 (최대 대비)', () => {
+  assert.equal(contrastRatio('#FFFFFF', '#000000'), 21);
 });
 
-test('buildPalette 잘못된 기준색 입력 시 Error throw', () => {
-  assert.throws(() => buildPalette('invalid'));
+test('contrastRatio(#000000, #000000) → 1 (최소 대비)', () => {
+  assert.equal(contrastRatio('#000000', '#000000'), 1);
+});
+
+test('contrastRatio(#2563EB, #FFFFFF) → ≈5.17 (허용 오차 ±0.01)', () => {
+  const ratio = contrastRatio('#2563EB', '#FFFFFF');
+  assert.ok(Math.abs(ratio - 5.17) <= 0.01);
+});
+
+test('contrastRatio(#2563EB, #000000) → ≈4.06이며 흰색(5.17) 대비가 더 높아 흰 텍스트가 권장됨', () => {
+  const white = contrastRatio('#2563EB', '#FFFFFF');
+  const black = contrastRatio('#2563EB', '#000000');
+  assert.ok(Math.abs(black - 4.06) <= 0.01);
+  assert.ok(white > black);
 });

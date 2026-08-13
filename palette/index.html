@@ -7,24 +7,26 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <div id="palette-root" class="palette">
-      <h1 class="palette__title">컬러 팔레트 생성기</h1>
+    <div id="palette-app" data-state="idle">
+      <h1>컬러 팔레트 생성기</h1>
 
-      <div class="palette__input-group">
+      <div class="palette-controls">
         <input
           type="text"
           id="hex-input"
-          aria-label="기준 색상 hex 코드"
-          placeholder="#3b82f6"
-          value="#3b82f6"
+          aria-label="HEX 색상 코드 입력"
+          placeholder="#2563EB"
         />
-        <input type="color" id="color-picker" value="#3b82f6" />
-        <button type="button" id="random-btn">무작위</button>
+        <input type="color" id="color-picker" value="#2563eb" />
+        <button type="button" id="generate-btn" aria-label="팔레트 생성">
+          팔레트 생성
+        </button>
+        <button type="button" id="reset-btn">초기화</button>
       </div>
 
-      <div id="palette-swatches"></div>
+      <div id="swatch-list"></div>
 
-      <p id="error-message" role="alert" hidden></p>
+      <p id="status-message" role="status"></p>
     </div>
 
     <script src="./palette.js"></script>
