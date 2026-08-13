@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>15퍼즐 디자인 mockup — BF-2053</title>
+<style>
+  :root {
+    --color-button-bg: #1e293b;
+    --color-button-accent: #3b82f6;
+    --color-page-bg: #f8fafc;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 24px 16px;
+    background: var(--color-page-bg);
+    color: var(--color-text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .mockup-note {
+    max-width: 480px;
+    margin: 0 auto 24px;
+    padding: 12px 16px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+  }
+
+  .mockup-frame-wrap {
+    max-width: 480px;
+    margin: 0 auto 32px;
+  }
+
+  .state-label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #ffffff;
+    background: var(--color-button-bg);
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .mockup-frame {
+    display: block;
+    width: 100%;
+    height: 480px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+</style>
+</head>
+<body>
+
+  <div class="mockup-note">
+    이 파일은 시각 mockup입니다. 실제 동작(클릭/키보드 이동/타이머)은 없으며, 각 상태를 정적 스냅샷으로 보여줍니다.
+    각 상태는 독립된 문서(iframe)로 분리해 <code>docs/design/fifteen-puzzle-BF-2053.md</code>의 동결 DOM id/class 계약을
+    상태마다 동일하게(문서 내 id 중복 없이) 그대로 재현합니다.
+  </div>
+
+  <div class="mockup-frame-wrap">
+    <span class="state-label">idle</span>
+    <iframe class="mockup-frame" title="15퍼즐 idle 상태" srcdoc="
+<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<style>
+  :root {
+    --color-tile-bg: #2563eb;
+    --color-tile-text: #ffffff;
+    --color-board-bg: #0f172a;
+    --space-tile-gap: 6px;
+    --color-button-bg: #1e293b;
+    --color-button-accent: #3b82f6;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-success: #16a34a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif; color: var(--color-text-primary); }
+  h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.3; margin: 0 0 8px; }
+  .puzzle-status { font-size: 0.875rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .puzzle-info-bar { display: flex; gap: 16px; margin-bottom: 16px; font-size: 0.875rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); }
+  #puzzle-board { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: var(--space-tile-gap); aspect-ratio: 1 / 1; max-width: 100%; width: 100%; padding: var(--space-tile-gap); background: var(--color-board-bg); border-radius: 10px; margin-bottom: 16px; }
+  .puzzle-tile { display: flex; align-items: center; justify-content: center; background: var(--color-tile-bg); color: var(--color-tile-text); font-size: 1.5rem; font-weight: 700; line-height: 1; border: none; border-radius: 8px; cursor: default; }
+  .puzzle-tile--movable { outline: 3px solid var(--color-button-accent); outline-offset: -3px; cursor: pointer; }
+  .puzzle-tile--blank { background: var(--color-board-bg); }
+  .puzzle-shuffle-button { display: inline-block; padding: 10px 20px; background: var(--color-button-bg); color: #ffffff; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
+  .puzzle-shuffle-button[disabled] { background: #94a3b8; cursor: not-allowed; }
+  .puzzle-success-message { margin-top: 12px; font-size: 1.25rem; font-weight: 700; line-height: 1.4; color: var(--color-success); }
+  .puzzle-success-message[hidden] { display: none; }
+</style>
+</head>
+<body data-state=&quot;idle&quot;>
+  <h1>15퍼즐</h1>
+  <p class=&quot;puzzle-status&quot;>대기 중 — 섞기 버튼을 눌러 시작하세요</p>
+  <div class=&quot;puzzle-info-bar&quot;>
+    <span id=&quot;puzzle-move-count&quot;>이동 횟수: 0회</span>
+    <span id=&quot;puzzle-timer&quot;>시간: 00:00</span>
+  </div>
+  <div id=&quot;puzzle-board&quot; aria-label=&quot;15퍼즐 보드&quot;>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 1&quot;>1</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 2&quot;>2</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 3&quot;>3</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 4&quot;>4</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 5&quot;>5</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 6&quot;>6</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 7&quot;>7</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 8&quot;>8</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 9&quot;>9</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 10&quot;>10</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 11&quot;>11</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 12&quot;>12</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 13&quot;>13</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 14&quot;>14</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 15&quot;>15</button>
+    <div class=&quot;puzzle-tile puzzle-tile--blank&quot; aria-hidden=&quot;true&quot;></div>
+  </div>
+  <button type=&quot;button&quot; class=&quot;puzzle-shuffle-button&quot; id=&quot;puzzle-shuffle-button&quot;>섞기</button>
+  <p class=&quot;puzzle-success-message&quot; id=&quot;puzzle-success-message&quot; hidden></p>
+</body>
+</html>
+    "></iframe>
+  </div>
+
+  <div class="mockup-frame-wrap">
+    <span class="state-label">playing (참고)</span>
+    <iframe class="mockup-frame" title="15퍼즐 playing 상태" srcdoc="
+<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<style>
+  :root {
+    --color-tile-bg: #2563eb;
+    --color-tile-text: #ffffff;
+    --color-board-bg: #0f172a;
+    --space-tile-gap: 6px;
+    --color-button-bg: #1e293b;
+    --color-button-accent: #3b82f6;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-success: #16a34a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif; color: var(--color-text-primary); }
+  h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.3; margin: 0 0 8px; }
+  .puzzle-status { font-size: 0.875rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .puzzle-info-bar { display: flex; gap: 16px; margin-bottom: 16px; font-size: 0.875rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); }
+  #puzzle-board { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: var(--space-tile-gap); aspect-ratio: 1 / 1; max-width: 100%; width: 100%; padding: var(--space-tile-gap); background: var(--color-board-bg); border-radius: 10px; margin-bottom: 16px; }
+  .puzzle-tile { display: flex; align-items: center; justify-content: center; background: var(--color-tile-bg); color: var(--color-tile-text); font-size: 1.5rem; font-weight: 700; line-height: 1; border: none; border-radius: 8px; cursor: default; }
+  .puzzle-tile--movable { outline: 3px solid var(--color-button-accent); outline-offset: -3px; cursor: pointer; }
+  .puzzle-tile--blank { background: var(--color-board-bg); }
+  .puzzle-shuffle-button { display: inline-block; padding: 10px 20px; background: var(--color-button-bg); color: #ffffff; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
+  .puzzle-shuffle-button[disabled] { background: #94a3b8; cursor: not-allowed; }
+  .puzzle-success-message { margin-top: 12px; font-size: 1.25rem; font-weight: 700; line-height: 1.4; color: var(--color-success); }
+  .puzzle-success-message[hidden] { display: none; }
+</style>
+</head>
+<body data-state=&quot;playing&quot;>
+  <h1>15퍼즐</h1>
+  <p class=&quot;puzzle-status&quot;>게임 진행 중</p>
+  <div class=&quot;puzzle-info-bar&quot;>
+    <span id=&quot;puzzle-move-count&quot;>이동 횟수: 7회</span>
+    <span id=&quot;puzzle-timer&quot;>시간: 00:24</span>
+  </div>
+  <div id=&quot;puzzle-board&quot; aria-label=&quot;15퍼즐 보드&quot;>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 2&quot;>2</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 1&quot;>1</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 3&quot;>3</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 4&quot;>4</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 5&quot;>5</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile puzzle-tile--movable&quot; aria-label=&quot;타일 6&quot;>6</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 7&quot;>7</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 8&quot;>8</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 9&quot;>9</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile puzzle-tile--movable&quot; aria-label=&quot;타일 10&quot;>10</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 11&quot;>11</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 12&quot;>12</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 13&quot;>13</button>
+    <div class=&quot;puzzle-tile puzzle-tile--blank&quot; aria-hidden=&quot;true&quot;></div>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile puzzle-tile--movable&quot; aria-label=&quot;타일 14&quot;>14</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 15&quot;>15</button>
+  </div>
+  <button type=&quot;button&quot; class=&quot;puzzle-shuffle-button&quot; id=&quot;puzzle-shuffle-button&quot;>다시 섞기</button>
+  <p class=&quot;puzzle-success-message&quot; id=&quot;puzzle-success-message&quot; hidden></p>
+</body>
+</html>
+    "></iframe>
+  </div>
+
+  <div class="mockup-frame-wrap">
+    <span class="state-label">solved</span>
+    <iframe class="mockup-frame" title="15퍼즐 solved 상태" srcdoc="
+<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<style>
+  :root {
+    --color-tile-bg: #2563eb;
+    --color-tile-text: #ffffff;
+    --color-board-bg: #0f172a;
+    --space-tile-gap: 6px;
+    --color-button-bg: #1e293b;
+    --color-button-accent: #3b82f6;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-success: #16a34a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif; color: var(--color-text-primary); }
+  h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.3; margin: 0 0 8px; }
+  .puzzle-status { font-size: 0.875rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .puzzle-info-bar { display: flex; gap: 16px; margin-bottom: 16px; font-size: 0.875rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); }
+  #puzzle-board { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: var(--space-tile-gap); aspect-ratio: 1 / 1; max-width: 100%; width: 100%; padding: var(--space-tile-gap); background: var(--color-board-bg); border-radius: 10px; margin-bottom: 16px; }
+  .puzzle-tile { display: flex; align-items: center; justify-content: center; background: var(--color-tile-bg); color: var(--color-tile-text); font-size: 1.5rem; font-weight: 700; line-height: 1; border: none; border-radius: 8px; cursor: default; }
+  .puzzle-tile--movable { outline: 3px solid var(--color-button-accent); outline-offset: -3px; cursor: pointer; }
+  .puzzle-tile--blank { background: var(--color-board-bg); }
+  .puzzle-shuffle-button { display: inline-block; padding: 10px 20px; background: var(--color-button-bg); color: #ffffff; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
+  .puzzle-shuffle-button[disabled] { background: #94a3b8; cursor: not-allowed; }
+  .puzzle-success-message { margin-top: 12px; font-size: 1.25rem; font-weight: 700; line-height: 1.4; color: var(--color-success); }
+  .puzzle-success-message[hidden] { display: none; }
+</style>
+</head>
+<body data-state=&quot;solved&quot;>
+  <h1>15퍼즐</h1>
+  <p class=&quot;puzzle-status&quot;>완성!</p>
+  <div class=&quot;puzzle-info-bar&quot;>
+    <span id=&quot;puzzle-move-count&quot;>이동 횟수: 42회</span>
+    <span id=&quot;puzzle-timer&quot;>시간: 01:37</span>
+  </div>
+  <div id=&quot;puzzle-board&quot; aria-label=&quot;15퍼즐 보드&quot;>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 1&quot;>1</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 2&quot;>2</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 3&quot;>3</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 4&quot;>4</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 5&quot;>5</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 6&quot;>6</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 7&quot;>7</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 8&quot;>8</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 9&quot;>9</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 10&quot;>10</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 11&quot;>11</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 12&quot;>12</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 13&quot;>13</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 14&quot;>14</button>
+    <button type=&quot;button&quot; class=&quot;puzzle-tile&quot; aria-label=&quot;타일 15&quot;>15</button>
+    <div class=&quot;puzzle-tile puzzle-tile--blank&quot; aria-hidden=&quot;true&quot;></div>
+  </div>
+  <button type=&quot;button&quot; class=&quot;puzzle-shuffle-button&quot; id=&quot;puzzle-shuffle-button&quot;>다시 섞기</button>
+  <p class=&quot;puzzle-success-message&quot; id=&quot;puzzle-success-message&quot;>🎉 완성했습니다! 42회, 01:37 만에 성공했어요.</p>
+</body>
+</html>
+    "></iframe>
+  </div>
+
+</body>
+</html>
