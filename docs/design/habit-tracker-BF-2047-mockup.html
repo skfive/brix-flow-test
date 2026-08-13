@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>습관 트래커 — 시각 mockup (BF-2048)</title>
+<style>
+  :root {
+    /* 동결 토큰 (docs/plans/BF-2047/implementation-plan.md 3.4절 — 이름/값 재정의 금지) */
+    --color-action-primary: #2563eb;
+    --color-success: #16a34a;
+    --color-error: #dc2626;
+    --color-cell-checked: #22c55e;
+    --color-cell-empty: #e5e7eb;
+    --font-family-base: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --space-grid-gap: 8px;
+
+    /* 제안 확장 토큰 (동결 아님, docs/design/habit-tracker-BF-2047.md 2.2절) */
+    --color-app-background: #f8fafc;
+    --color-surface-card: #ffffff;
+    --color-border: #e2e8f0;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #64748b;
+    --color-cell-mark: #ffffff;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: var(--color-app-background);
+    font-family: var(--font-family-base);
+    color: var(--color-text-primary);
+  }
+
+  .mockup-meta {
+    max-width: 420px;
+    margin: 0 auto 32px;
+    padding: 16px 20px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #7c2d12;
+  }
+  .mockup-meta strong { color: #7c2d12; }
+
+  .mockup-section-title {
+    max-width: 420px;
+    margin: 40px auto 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.02em;
+  }
+  .mockup-section-title span {
+    font-weight: 400;
+    color: var(--color-text-secondary);
+  }
+
+  /* ===== .habit-tracker-app 공통 스타일 (동결 class 사용) ===== */
+  .habit-tracker-app {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 24px;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .habit-tracker-app h1 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .habit-tracker-app h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .app-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 24px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+  .app-status .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-text-secondary);
+    flex-shrink: 0;
+  }
+  .app-status.is-idle { color: var(--color-text-secondary); }
+  .app-status.is-error { color: var(--color-error); }
+  .app-status.is-error .status-dot { background: var(--color-error); }
+  .app-status.is-success { color: var(--color-success); }
+  .app-status.is-success .status-dot { background: var(--color-success); }
+
+  .input-section { margin-bottom: 24px; }
+
+  .input-section label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .habit-tracker-app input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--color-text-primary);
+    background: #ffffff;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+  .habit-tracker-app input[type="text"]::placeholder { color: var(--color-text-secondary); }
+  .habit-tracker-app input[type="text"]:focus {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+  }
+
+  .habit-tracker-app button.add-btn {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #ffffff;
+    background: var(--color-action-primary);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .error-message {
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-error);
+  }
+  .error-message:empty { display: none; }
+
+  .summary-section { margin-bottom: 24px; }
+
+  .summary-bar {
+    position: relative;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--color-cell-empty);
+    overflow: hidden;
+  }
+  .summary-bar__fill {
+    position: absolute;
+    inset: 0;
+    width: var(--fill-pct, 0%);
+    background: var(--color-action-primary);
+    border-radius: 8px;
+  }
+  .summary-bar__label {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .grid-section { margin-bottom: 0; }
+
+  .habit-grid-scroll { overflow-x: auto; }
+
+  .habit-grid {
+    display: grid;
+    grid-template-columns: minmax(72px, auto) repeat(7, 32px) 40px;
+    gap: var(--space-grid-gap); /* 8px, 동결 */
+    align-items: center;
+  }
+  .habit-row { display: contents; }
+  .habit-grid__header { display: contents; }
+
+  .day-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-align: center;
+  }
+  .habit-grid__corner { }
+
+  .habit-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    overflow-wrap: break-word;
+  }
+
+  .habit-cell {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: transparent;
+    background: var(--color-cell-empty);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .habit-cell--checked {
+    background: var(--color-cell-checked);
+    color: var(--color-cell-mark);
+    border-color: var(--color-cell-checked);
+  }
+
+  .habit-rate {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-align: right;
+  }
+
+  .empty-grid-hint {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
+
+  /* ===== 320px 프레임 참고용 ===== */
+  .frame-320 {
+    width: 320px;
+    margin: 0 auto;
+    border: 2px dashed #94a3b8;
+    border-radius: 16px;
+    padding: 12px;
+    background: #ffffff;
+  }
+  .frame-320 .habit-tracker-app {
+    max-width: none;
+    padding: 16px;
+    border: none;
+    box-shadow: none;
+  }
+  .frame-320 .habit-tracker-app h1 { font-size: 18px; }
+  .frame-320-caption {
+    max-width: 420px;
+    margin: 12px auto 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+</style>
+</head>
+<body>
+
+  <div class="mockup-meta">
+    <strong>참고</strong> — 이 파일은 시각 시뮬레이션용 mockup이며 dev(BF-2049)의 실제 산출물이 아닙니다.
+    DOM id(<code>habit-tracker-root</code>, <code>habit-name-input</code>, <code>habit-add-button</code>,
+    <code>habit-error-message</code>, <code>weekly-summary</code>, <code>habit-grid</code>)와
+    class(<code>habit-row</code>, <code>habit-cell</code>, <code>habit-cell--checked</code>,
+    <code>habit-rate</code>, <code>summary-bar</code>), design token 7종은
+    <code>docs/plans/BF-2047/implementation-plan.md</code> 3절에서 동결된 값을 그대로 사용했습니다.
+    습관명·체크 패턴·완료율 수치는 레이아웃 예시용 placeholder이며 실제 계산 로직의 근거가 아닙니다
+    (계산 규칙은 계획 문서 2절 참조). HTML id 유일성 제약으로 아래 상태별/반응형 미리보기 중
+    "실행 예시" 1개에만 실제 id를 부여했고, 나머지는 class만 재사용한 참고 스케치입니다.
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 1) idle 상태 — 실행 예시 (동결 id 전체 부여) -->
+  <!-- ============================================================ -->
+  <p class="mockup-section-title">1. 실행 예시 <span>— idle 상태 (동결 id/class 실사용)</span></p>
+
+  <div id="habit-tracker-root" class="habit-tracker-app">
+    <h1>습관 트래커</h1>
+    <p role="status" aria-live="polite" class="app-status is-idle">
+      <span class="status-dot" aria-hidden="true"></span>
+      상태: 정상
+    </p>
+
+    <div class="input-section">
+      <h2>습관 추가</h2>
+      <label for="habit-name-input">습관 이름</label>
+      <div class="input-row">
+        <input id="habit-name-input" type="text" aria-label="습관 이름 입력" maxlength="20" placeholder="예: 운동">
+        <button id="habit-add-button" class="add-btn" type="button">추가</button>
+      </div>
+      <p id="habit-error-message" role="alert" class="error-message"></p>
+    </div>
+
+    <div class="summary-section">
+      <h2>주간 요약</h2>
+      <div id="weekly-summary">
+        <div class="summary-bar" style="--fill-pct: 54%;">
+          <div class="summary-bar__fill" aria-hidden="true"></div>
+          <span class="summary-bar__label">전체 완료율 54%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-section">
+      <h2>습관 체크</h2>
+      <div class="habit-grid-scroll">
+        <div id="habit-grid" class="habit-grid">
+          <div class="habit-grid__header">
+            <span class="habit-grid__corner" aria-hidden="true"></span>
+            <span class="day-label">월요일</span>
+            <span class="day-label">화요일</span>
+            <span class="day-label">수요일</span>
+            <span class="day-label">목요일</span>
+            <span class="day-label">금요일</span>
+            <span class="day-label">토요일</span>
+            <span class="day-label">일요일</span>
+            <span class="habit-grid__corner" aria-hidden="true"></span>
+          </div>
+
+          <div class="habit-row">
+            <span class="habit-name">운동</span>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 월요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 화요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 수요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 목요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 금요일 완료">✓</button>
+            <button class="habit-cell" aria-pressed="false" aria-label="운동 토요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="운동 일요일 미완료"></button>
+            <span class="habit-rate">5/7</span>
+          </div>
+
+          <div class="habit-row">
+            <span class="habit-name">독서</span>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="독서 월요일 완료">✓</button>
+            <button class="habit-cell" aria-pressed="false" aria-label="독서 화요일 미완료"></button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="독서 수요일 완료">✓</button>
+            <button class="habit-cell" aria-pressed="false" aria-label="독서 목요일 미완료"></button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="독서 금요일 완료">✓</button>
+            <button class="habit-cell" aria-pressed="false" aria-label="독서 토요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="독서 일요일 미완료"></button>
+            <span class="habit-rate">3/7</span>
+          </div>
+
+          <div class="habit-row">
+            <span class="habit-name">명상</span>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="명상 월요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="명상 화요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="명상 수요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="명상 목요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="명상 금요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="명상 토요일 완료">✓</button>
+            <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="명상 일요일 완료">✓</button>
+            <span class="habit-rate">7/7</span>
+          </div>
+
+          <div class="habit-row">
+            <span class="habit-name">물 마시기</span>
+            <button class="habit-cell" aria-pressed="false" aria-label="물 마시기 월요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="물 마시기 화요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="물 마시기 수요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="물 마시기 목요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="물 마시기 금요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="물 마시기 토요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="물 마시기 일요일 미완료"></button>
+            <span class="habit-rate">0/7</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 2) empty 상태 — 참고 스케치 (class만 재사용, id 없음) -->
+  <!-- ============================================================ -->
+  <p class="mockup-section-title">2. 상태 참고 스케치 <span>— empty (id 미부여, class만 재사용)</span></p>
+
+  <div class="habit-tracker-app">
+    <h1>습관 트래커</h1>
+    <p role="status" aria-live="polite" class="app-status">
+      <span class="status-dot" aria-hidden="true"></span>
+      상태: 습관 없음
+    </p>
+
+    <div class="input-section">
+      <h2>습관 추가</h2>
+      <label for="habit-name-input-empty-ref">습관 이름</label>
+      <div class="input-row">
+        <input id="habit-name-input-empty-ref" type="text" aria-label="습관 이름 입력" maxlength="20" placeholder="예: 운동">
+        <button class="add-btn" type="button">추가</button>
+      </div>
+      <p role="alert" class="error-message"></p>
+    </div>
+
+    <div class="summary-section">
+      <h2>주간 요약</h2>
+      <div>
+        <div class="summary-bar" style="--fill-pct: 0%;">
+          <div class="summary-bar__fill" aria-hidden="true"></div>
+          <span class="summary-bar__label">습관을 추가하면 완료율이 표시됩니다</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-section">
+      <h2>습관 체크</h2>
+      <p class="empty-grid-hint">습관을 추가해 트래킹을 시작하세요.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 3) error 상태 — 참고 스케치 (class만 재사용, id 없음) -->
+  <!-- ============================================================ -->
+  <p class="mockup-section-title">3. 상태 참고 스케치 <span>— error (id 미부여, class만 재사용)</span></p>
+
+  <div class="habit-tracker-app">
+    <h1>습관 트래커</h1>
+    <p role="status" aria-live="polite" class="app-status is-error">
+      <span class="status-dot" aria-hidden="true"></span>
+      상태: 오류 - 이미 등록된 습관입니다
+    </p>
+
+    <div class="input-section">
+      <h2>습관 추가</h2>
+      <label for="habit-name-input-error-ref">습관 이름</label>
+      <div class="input-row">
+        <input id="habit-name-input-error-ref" type="text" aria-label="습관 이름 입력" maxlength="20" value="운동">
+        <button class="add-btn" type="button">추가</button>
+      </div>
+      <p role="alert" class="error-message">이미 등록된 습관입니다</p>
+    </div>
+
+    <div class="summary-section">
+      <h2>주간 요약</h2>
+      <div>
+        <div class="summary-bar" style="--fill-pct: 54%;">
+          <div class="summary-bar__fill" aria-hidden="true"></div>
+          <span class="summary-bar__label">전체 완료율 54%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-section">
+      <h2>습관 체크</h2>
+      <p class="empty-grid-hint">(오류 상태에서도 기존 그리드는 그대로 유지됩니다 — 1절 실행 예시 참조)</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 4) success 상태 — 참고 스케치 (class만 재사용, id 없음) -->
+  <!-- ============================================================ -->
+  <p class="mockup-section-title">4. 상태 참고 스케치 <span>— success (id 미부여, class만 재사용)</span></p>
+
+  <div class="habit-tracker-app">
+    <h1>습관 트래커</h1>
+    <p role="status" aria-live="polite" class="app-status is-success">
+      <span class="status-dot" aria-hidden="true"></span>
+      상태: 등록 완료
+    </p>
+
+    <div class="input-section">
+      <h2>습관 추가</h2>
+      <label for="habit-name-input-success-ref">습관 이름</label>
+      <div class="input-row">
+        <input id="habit-name-input-success-ref" type="text" aria-label="습관 이름 입력" maxlength="20" placeholder="예: 운동">
+        <button class="add-btn" type="button">추가</button>
+      </div>
+      <p role="alert" class="error-message"></p>
+    </div>
+
+    <div class="summary-section">
+      <h2>주간 요약</h2>
+      <div>
+        <div class="summary-bar" style="--fill-pct: 43%;">
+          <div class="summary-bar__fill" aria-hidden="true"></div>
+          <span class="summary-bar__label">전체 완료율 43%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-section">
+      <h2>습관 체크</h2>
+      <div class="habit-grid-scroll">
+        <div class="habit-grid">
+          <div class="habit-row">
+            <span class="habit-name">스트레칭</span>
+            <button class="habit-cell" aria-pressed="false" aria-label="스트레칭 월요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="스트레칭 화요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="스트레칭 수요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="스트레칭 목요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="스트레칭 금요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="스트레칭 토요일 미완료"></button>
+            <button class="habit-cell" aria-pressed="false" aria-label="스트레칭 일요일 미완료"></button>
+            <span class="habit-rate">0/7</span>
+          </div>
+        </div>
+      </div>
+      <p class="empty-grid-hint">(방금 "스트레칭" 습관이 등록된 직후 스케치 — 새 행이 그리드에 즉시 추가됨)</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 5) 320px 반응형 미리보기 (class만 재사용, id 없음) -->
+  <!-- ============================================================ -->
+  <p class="mockup-section-title">5. 320px 반응형 미리보기 <span>— 참고 프레임 (id 미부여, 요일 축약형)</span></p>
+
+  <div class="frame-320">
+    <div class="habit-tracker-app">
+      <h1>습관 트래커</h1>
+      <p role="status" aria-live="polite" class="app-status is-idle">
+        <span class="status-dot" aria-hidden="true"></span>
+        상태: 정상
+      </p>
+
+      <div class="input-section">
+        <h2>습관 추가</h2>
+        <label for="habit-name-input-320-ref">습관 이름</label>
+        <div class="input-row">
+          <input id="habit-name-input-320-ref" type="text" aria-label="습관 이름 입력" maxlength="20" placeholder="예: 운동">
+          <button class="add-btn" type="button">추가</button>
+        </div>
+        <p role="alert" class="error-message"></p>
+      </div>
+
+      <div class="summary-section">
+        <h2>주간 요약</h2>
+        <div>
+          <div class="summary-bar" style="--fill-pct: 54%;">
+            <div class="summary-bar__fill" aria-hidden="true"></div>
+            <span class="summary-bar__label">전체 완료율 54%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-section">
+        <h2>습관 체크</h2>
+        <div class="habit-grid-scroll">
+          <div class="habit-grid">
+            <div class="habit-row">
+              <span class="day-label" aria-hidden="true">&nbsp;</span>
+              <span class="day-label" aria-label="월요일">월</span>
+              <span class="day-label" aria-label="화요일">화</span>
+              <span class="day-label" aria-label="수요일">수</span>
+              <span class="day-label" aria-label="목요일">목</span>
+              <span class="day-label" aria-label="금요일">금</span>
+              <span class="day-label" aria-label="토요일">토</span>
+              <span class="day-label" aria-label="일요일">일</span>
+              <span class="day-label" aria-hidden="true">&nbsp;</span>
+            </div>
+            <div class="habit-row">
+              <span class="habit-name">운동</span>
+              <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 월요일 완료">✓</button>
+              <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 화요일 완료">✓</button>
+              <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 수요일 완료">✓</button>
+              <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 목요일 완료">✓</button>
+              <button class="habit-cell habit-cell--checked" aria-pressed="true" aria-label="운동 금요일 완료">✓</button>
+              <button class="habit-cell" aria-pressed="false" aria-label="운동 토요일 미완료"></button>
+              <button class="habit-cell" aria-pressed="false" aria-label="운동 일요일 미완료"></button>
+              <span class="habit-rate">5/7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="frame-320-caption">
+    폭 320px · 요일 헤더가 축약형(월,화,수,목,금,토,일)으로 표시되고, 그리드 실제 폭(408px)이
+    뷰포트보다 넓어 <code>.habit-grid-scroll</code>의 <code>overflow-x: auto</code>로 가로 스크롤됨
+    (docs/design/habit-tracker-BF-2047.md 4.3/4.4절 계산 근거)
+  </p>
+
+</body>
+</html>
