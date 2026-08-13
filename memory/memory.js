@@ -77,6 +77,7 @@
     var attempts = 0;
     var timerSeconds = 0;
     var timerHandle = null;
+    var mismatchTimerHandle = null;
     var inputLocked = false;
 
     function stateLabel(state) {
@@ -162,13 +163,21 @@
         return;
       }
 
-      setTimeout(function () {
+      mismatchTimerHandle = setTimeout(function () {
+        mismatchTimerHandle = null;
         cardA.state = 'hidden';
         cardB.state = 'hidden';
         flippedIndexes = [];
         inputLocked = false;
         renderAll();
       }, MISMATCH_DELAY_MS);
+    }
+
+    function clearMismatchTimer() {
+      if (mismatchTimerHandle !== null) {
+        clearTimeout(mismatchTimerHandle);
+        mismatchTimerHandle = null;
+      }
     }
 
     function handleActivate(index) {
@@ -192,6 +201,7 @@
 
     function restart() {
       stopTimer();
+      clearMismatchTimer();
       cards = shuffledDeck(8, Math.random);
       flippedIndexes = [];
       attempts = 0;
