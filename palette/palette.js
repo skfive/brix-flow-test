@@ -1,16 +1,34 @@
-const HEX_PATTERN = /^#?[0-9a-fA-F]{6}$/;
+const HEX_FULL_PATTERN = /^#?[0-9a-fA-F]{6}$/;
+const HEX_SHORT_PATTERN = /^#?[0-9a-fA-F]{3}$/;
 
-function hexToHsl(hex) {
-  if (!HEX_PATTERN.test(hex)) {
-    throw new Error('올바른 hex 코드를 입력하세요 (예: #ff0000)');
-  }
+function hexToRgb(hex) {
   const raw = hex.replace(/^#/, '');
-  const r = parseInt(raw.slice(0, 2), 16) / 255;
-  const g = parseInt(raw.slice(2, 4), 16) / 255;
-  const b = parseInt(raw.slice(4, 6), 16) / 255;
+  let full;
+  if (HEX_SHORT_PATTERN.test(hex) && raw.length === 3) {
+    full = raw
+      .split('')
+      .map((c) => c + c)
+      .join('');
+  } else if (HEX_FULL_PATTERN.test(hex) && raw.length === 6) {
+    full = raw;
+  } else {
+    throw new Error('유효한 HEX 색상 코드를 입력해주세요');
+  }
 
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
+  return {
+    r: parseInt(full.slice(0, 2), 16),
+    g: parseInt(full.slice(2, 4), 16),
+    b: parseInt(full.slice(4, 6), 16),
+  };
+}
+
+function rgbToHsl({ r, g, b }) {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
   const l = (max + min) / 2;
 
   let h = 0;
@@ -20,33 +38,27 @@ function hexToHsl(hex) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r:
-        h = (g - b) / d + (g < b ? 6 : 0);
+      case rn:
+        h = (gn - bn) / d + (gn < bn ? 6 : 0);
         break;
-      case g:
-        h = (b - r) / d + 2;
+      case gn:
+        h = (bn - rn) / d + 2;
         break;
       default:
-        h = (r - g) / d + 4;
+        h = (rn - gn) / d + 4;
         break;
     }
     h *= 60;
   }
 
-  h = Math.round(h) % 360;
-  if (h < 0) h += 360;
-
-  return { h, s: Math.round(s * 100), l: Math.round(l * 100) };
+  return { h, s, l };
 }
 
 function hslToHex({ h, s, l }) {
   const hue = ((h % 360) + 360) % 360;
-  const sat = Math.min(100, Math.max(0, s)) / 100;
-  const light = Math.min(100, Math.max(0, l)) / 100;
-
-  const c = (1 - Math.abs(2 * light - 1)) * sat;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = light - c / 2;
+  const m = l - c / 2;
 
   let r = 0;
   let g = 0;
@@ -66,148 +78,215 @@ function hslToHex({ h, s, l }) {
     r = c; g = 0; b = x;
   }
 
-  const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+  const toHex = (v) =>
+    Math.round((v + m) * 255)
+      .toString(16)
+      .padStart(2, '0')
+      .toUpperCase();
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-function buildPalette(hex) {
-  const { h, s, l } = hexToHsl(hex);
-
-  const derived = [
-    { role: 'complementary', h: (h + 180) % 360, s, l },
-    { role: 'analogous-30', h: (h - 30 + 360) % 360, s, l },
-    { role: 'analogous+30', h: (h + 30) % 360, s, l },
-    { role: 'lighter', h, s, l: Math.min(l + 20, 95) },
-    { role: 'darker', h, s, l: Math.max(l - 20, 5) },
-  ];
-
-  return derived.map(({ role, h: dh, s: ds, l: dl }) => ({
-    hex: hslToHex({ h: dh, s: ds, l: dl }),
-    role,
-  }));
+function rotateHue(hex, degrees) {
+  const rgb = hexToRgb(hex);
+  const { h, s, l } = rgbToHsl(rgb);
+  const rotated = ((h + degrees) % 360 + 360) % 360;
+  return hslToHex({ h: rotated, s, l });
 }
 
-const DEFAULT_HEX = '#3b82f6';
-const COPIED_DURATION_MS = 1500;
-const ERROR_TEXT = '올바른 hex 코드를 입력하세요 (예: #ff0000)';
+function linearizeChannel(c) {
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const R = linearizeChannel(r / 255);
+  const G = linearizeChannel(g / 255);
+  const B = linearizeChannel(b / 255);
+  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+}
+
+function contrastRatio(hex1, hex2) {
+  const l1 = relativeLuminance(hex1);
+  const l2 = relativeLuminance(hex2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+const PALETTE_ROTATIONS = [
+  { label: '기준색', angle: 0 },
+  { label: '유사색(−30°)', angle: -30 },
+  { label: '유사색(+30°)', angle: 30 },
+  { label: '보색', angle: 180 },
+  { label: '보색의 유사색', angle: 150 },
+];
+
+function recommendedTextColor(hex) {
+  const whiteRatio = contrastRatio(hex, '#FFFFFF');
+  const blackRatio = contrastRatio(hex, '#000000');
+  return blackRatio > whiteRatio
+    ? { color: '#000000', label: '검정' }
+    : { color: '#FFFFFF', label: '흰색' };
+}
+
+function buildPalette(hex) {
+  return PALETTE_ROTATIONS.map(({ label, angle }) => {
+    const swatchHex = angle === 0 ? hexToRgbToHex(hex) : rotateHue(hex, angle);
+    const textColor = recommendedTextColor(swatchHex);
+    return { label, angle, hex: swatchHex, textColor };
+  });
+}
+
+function hexToRgbToHex(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const toHex = (v) => v.toString(16).padStart(2, '0').toUpperCase();
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
 
 function initPaletteUI() {
+  const app = document.getElementById('palette-app');
   const hexInput = document.getElementById('hex-input');
   const colorPicker = document.getElementById('color-picker');
-  const randomBtn = document.getElementById('random-btn');
-  const swatchesContainer = document.getElementById('palette-swatches');
-  const errorMessage = document.getElementById('error-message');
+  const generateBtn = document.getElementById('generate-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const swatchList = document.getElementById('swatch-list');
+  const statusMessage = document.getElementById('status-message');
 
-  function showError(message) {
-    errorMessage.textContent = message;
-    errorMessage.hidden = false;
+  const DEFAULT_COLOR = '#2563eb';
+
+  function setState(state) {
+    app.setAttribute('data-state', state);
   }
 
-  function clearError() {
-    errorMessage.textContent = '';
-    errorMessage.hidden = true;
+  function setStatusMessage(text) {
+    statusMessage.textContent = text;
   }
 
-  function showCopied(btn, badge) {
-    badge.hidden = false;
-    if (btn._copiedTimer) clearTimeout(btn._copiedTimer);
-    btn._copiedTimer = setTimeout(() => {
-      badge.hidden = true;
-      btn._copiedTimer = null;
-    }, COPIED_DURATION_MS);
+  function syncColorPicker(hex) {
+    try {
+      colorPicker.value = hexToRgbToHex(hex).toLowerCase();
+    } catch (_e) {
+      // 동기화 실패는 무시 — hex-input 값이 아직 완성되지 않은 입력 중일 수 있음
+    }
   }
 
-  function handleSwatchClick(btn, badge, hex) {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
-    navigator.clipboard
-      .writeText(hex)
-      .then(() => showCopied(btn, badge))
-      .catch(() => {});
-  }
+  function renderSwatches(entries) {
+    swatchList.innerHTML = '';
+    entries.forEach(({ hex, textColor }) => {
+      const swatch = document.createElement('div');
+      swatch.className = 'swatch';
+      swatch.style.backgroundColor = hex;
 
-  function renderPalette(paletteEntries) {
-    swatchesContainer.innerHTML = '';
-    paletteEntries.forEach(({ hex }) => {
-      const hexUpper = hex.toUpperCase();
+      const hexLabel = document.createElement('span');
+      hexLabel.className = 'swatch__hex';
+      hexLabel.textContent = hex;
 
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'palette__swatch';
-      btn.style.backgroundColor = hex;
-      btn.setAttribute('aria-label', `${hexUpper} 복사`);
+      const contrastLabel = document.createElement('span');
+      contrastLabel.className = 'swatch__contrast-label';
+      contrastLabel.textContent = `권장 텍스트: ${textColor.label}`;
 
-      const hexSpan = document.createElement('span');
-      hexSpan.className = 'palette__swatch-hex';
-      hexSpan.textContent = hexUpper;
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'swatch__copy-btn';
+      copyBtn.textContent = '복사';
+      copyBtn.setAttribute('aria-label', `HEX ${hex} 복사`);
 
-      const badge = document.createElement('span');
-      badge.className = 'palette__copied-badge';
-      badge.textContent = '복사됨';
-      badge.hidden = true;
+      const copyFeedback = document.createElement('span');
+      copyFeedback.className = 'swatch__copy-feedback';
+      copyFeedback.hidden = true;
 
-      btn.appendChild(hexSpan);
-      btn.appendChild(badge);
-      btn.addEventListener('click', () => handleSwatchClick(btn, badge, hex));
+      copyBtn.addEventListener('click', () => {
+        const finish = (text) => {
+          copyFeedback.textContent = text;
+          copyFeedback.hidden = false;
+          if (copyBtn._copiedTimer) clearTimeout(copyBtn._copiedTimer);
+          copyBtn._copiedTimer = setTimeout(() => {
+            copyFeedback.hidden = true;
+            copyBtn._copiedTimer = null;
+          }, 1500);
+        };
 
-      swatchesContainer.appendChild(btn);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard
+            .writeText(hex)
+            .then(() => finish('복사됨'))
+            .catch(() => finish('복사 실패'));
+        } else {
+          finish('복사 실패');
+        }
+      });
+
+      swatch.appendChild(hexLabel);
+      swatch.appendChild(contrastLabel);
+      swatch.appendChild(copyBtn);
+      swatch.appendChild(copyFeedback);
+      swatchList.appendChild(swatch);
     });
   }
 
-  function generateFrom(hex) {
-    randomBtn.setAttribute('aria-busy', 'true');
-    randomBtn.disabled = true;
+  function generate() {
+    const value = hexInput.value.trim();
+    setState('generating');
+    generateBtn.disabled = true;
+
     try {
-      renderPalette(buildPalette(hex));
-      clearError();
+      const palette = buildPalette(value);
+      renderSwatches(palette);
+      syncColorPicker(value);
+      setStatusMessage(`${palette.length}개 색상 팔레트가 생성되었습니다.`);
+      setState('success');
     } catch (_e) {
-      showError(ERROR_TEXT);
+      setStatusMessage('유효한 HEX 색상 코드를 입력해주세요.');
+      setState('error');
     } finally {
-      randomBtn.removeAttribute('aria-busy');
-      randomBtn.disabled = false;
+      generateBtn.disabled = false;
     }
   }
 
   function handleHexInput() {
-    const value = hexInput.value.trim();
-    if (!HEX_PATTERN.test(value)) {
-      showError(ERROR_TEXT);
-      return;
+    if (app.getAttribute('data-state') === 'error') {
+      setState('idle');
+      setStatusMessage('');
+      generateBtn.disabled = false;
     }
-    const normalized = value.startsWith('#') ? value : `#${value}`;
-    colorPicker.value = normalized;
-    generateFrom(normalized);
+    syncColorPicker(hexInput.value.trim());
   }
 
   function handleColorPickerInput() {
-    const value = colorPicker.value;
-    hexInput.value = value;
-    generateFrom(value);
+    hexInput.value = colorPicker.value;
+    if (app.getAttribute('data-state') === 'error') {
+      setState('idle');
+      setStatusMessage('');
+      generateBtn.disabled = false;
+    }
   }
 
-  function randomHex() {
-    const n = Math.floor(Math.random() * 0xffffff);
-    return `#${n.toString(16).padStart(6, '0')}`;
+  function handleReset() {
+    hexInput.value = '';
+    colorPicker.value = DEFAULT_COLOR;
+    swatchList.innerHTML = '';
+    setStatusMessage('');
+    setState('idle');
+    generateBtn.disabled = false;
+    hexInput.disabled = false;
   }
 
-  function handleRandomClick() {
-    const hex = randomHex();
-    hexInput.value = hex;
-    colorPicker.value = hex;
-    generateFrom(hex);
-  }
-
+  generateBtn.addEventListener('click', generate);
+  hexInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') generate();
+  });
   hexInput.addEventListener('input', handleHexInput);
   colorPicker.addEventListener('input', handleColorPickerInput);
-  randomBtn.addEventListener('click', handleRandomClick);
+  resetBtn.addEventListener('click', handleReset);
 
-  generateFrom(DEFAULT_HEX);
+  setState('idle');
 }
 
 if (typeof document !== 'undefined') {
-  initPaletteUI();
+  document.addEventListener('DOMContentLoaded', initPaletteUI);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { hexToHsl, hslToHex, buildPalette };
+  module.exports = { hexToRgb, rotateHue, contrastRatio, buildPalette };
 }
