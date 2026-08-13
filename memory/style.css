@@ -1,0 +1,100 @@
+:root {
+  --color-bg: #0f172a;
+  --color-card-back: #334155;
+  --color-card-face: #f8fafc;
+  --color-accent: #22c55e;
+  --font-family-base: system-ui, -apple-system, sans-serif;
+  --space-grid-gap: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-card-face);
+  font-family: var(--font-family-base);
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.memory-app {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.memory-status {
+  display: flex;
+  gap: 24px;
+  font-size: 1rem;
+}
+
+.memory-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-grid-gap);
+  width: 100%;
+}
+
+.memory-card {
+  aspect-ratio: 1 / 1;
+  min-width: 40px;
+  min-height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-card-back);
+  color: var(--color-card-face);
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.memory-card--flipped,
+.memory-card--matched {
+  background: var(--color-card-face);
+  color: var(--color-bg);
+}
+
+.memory-card--matched {
+  outline: 2px solid var(--color-accent);
+}
+
+#memory-result {
+  min-height: 1.5em;
+  font-weight: 600;
+  color: var(--color-accent);
+  visibility: hidden;
+  margin: 0;
+}
+
+.memory-result--visible {
+  visibility: visible;
+}
+
+#memory-restart {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-family: var(--font-family-base);
+  font-size: 1rem;
+  cursor: pointer;
+  min-height: 40px;
+}
+
+@media (max-width: 360px) {
+  .memory-board {
+    gap: 8px;
+  }
+}
