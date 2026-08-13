@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>메모리 카드 게임</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main class="memory-app">
+  <h1>메모리 카드 게임</h1>
+  <div class="memory-status" aria-live="polite">
+    <span>시도: <span id="memory-attempts">0</span></span>
+    <span>시간: <span id="memory-timer">00:00</span></span>
+  </div>
+  <div id="memory-board" class="memory-board" role="group" aria-label="메모리 카드 보드"></div>
+  <p id="memory-result" role="status"></p>
+  <button id="memory-restart" type="button" aria-label="다시 시작">다시 시작</button>
+</main>
+<script src="memory.js"></script>
+</body>
+</html>
