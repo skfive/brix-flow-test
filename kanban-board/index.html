@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>칸반 보드</title>
+    <style>
+      :root {
+        --color-priority-high: #dc2626;
+        --color-priority-med: #d97706;
+        --color-priority-low: #16a34a;
+        --color-column-bg: #f3f4f6;
+        --space-card-gap: 12px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .kanban-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+      }
+      .kanban-board {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-card-gap);
+        padding: 0 16px 16px;
+      }
+      .kanban-column {
+        background: var(--color-column-bg);
+        border-radius: 8px;
+        padding: 12px;
+        min-width: 0;
+      }
+      .kanban-column__count {
+        font-weight: normal;
+        color: #555;
+      }
+      .kanban-card {
+        background: #fff;
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: var(--space-card-gap);
+        border-left: 4px solid transparent;
+      }
+      .kanban-card:last-child {
+        margin-bottom: 0;
+      }
+      .kanban-card--high {
+        border-left-color: var(--color-priority-high);
+      }
+      .kanban-card--med {
+        border-left-color: var(--color-priority-med);
+      }
+      .kanban-card--low {
+        border-left-color: var(--color-priority-low);
+      }
+      .kanban-move-btn {
+        cursor: pointer;
+      }
+
+      @media (min-width: 768px) {
+        .kanban-board {
+          flex-direction: row;
+        }
+        .kanban-column {
+          flex: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="kanban-board-root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
