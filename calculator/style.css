@@ -83,10 +83,6 @@ body {
   gap: var(--space-button-gap);
 }
 
-.calculator__spacer {
-  visibility: hidden;
-}
-
 .calculator__button {
   appearance: none;
   border: none;
@@ -114,11 +110,6 @@ body {
   outline-offset: 2px;
 }
 
-.calculator__button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .calculator__button--operator {
   background: var(--color-button-operator-bg);
   color: var(--color-button-text);
@@ -128,7 +119,7 @@ body {
   font-weight: 700;
 }
 
-.calculator__button--zero {
+.calculator__button[data-key="0"] {
   grid-column: span 2;
 }
 
