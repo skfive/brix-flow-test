@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>BF-2090 · 단어 맞추기 UI Mockup</title>
+<style>
+  :root {
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-text: #f8fafc;
+    --color-accent: #6366f1;
+    --color-correct: #22c55e;
+    --color-wrong: #ef4444;
+    --space-gap: 8px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  .mockup-note {
+    max-width: 480px;
+    margin: 0 auto 24px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    opacity: 0.7;
+  }
+
+  /* mockup 전용 상태 전환 컨트롤 — 실제 게임 계약의 일부가 아님 (정적 스냅샷 3종을 병렬 비교하기 위한 장치) */
+  input[name="mockup-state"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .state-tabs {
+    max-width: 480px;
+    margin: 0 auto 16px;
+    display: flex;
+    gap: var(--space-gap);
+  }
+
+  .state-tabs label {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--color-surface);
+    border: 2px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #state-playing:checked ~ .state-tabs label[for="state-playing"],
+  #state-won:checked ~ .state-tabs label[for="state-won"],
+  #state-lost:checked ~ .state-tabs label[for="state-lost"] {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+  }
+
+  /* word-guess-root: frozen 계약의 루트 컨테이너 (docs/plans/BF-2089/implementation-plan.md §3.1) */
+  .word-guess {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 24px;
+    background: var(--color-surface);
+    border-radius: 16px;
+  }
+
+  .word-guess h1 {
+    margin: 0 0 16px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  #tries-left {
+    margin-bottom: 16px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  #word-display {
+    margin-bottom: 16px;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.25em;
+    text-align: center;
+    overflow-wrap: break-word;
+  }
+
+  #message {
+    margin-bottom: 24px;
+    min-height: 1.5em;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  #keyboard {
+    margin-bottom: 24px;
+  }
+
+  /* state 별 정적 스냅샷 — 선택된 mockup-state 라디오에 대응하는 항목만 표시 */
+  [data-state] { display: none; }
+  #state-playing:checked ~ #word-guess-root [data-state="playing"] { display: block; }
+  #state-won:checked ~ #word-guess-root [data-state="won"] { display: block; }
+  #state-lost:checked ~ #word-guess-root [data-state="lost"] { display: block; }
+
+  .keyboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+    gap: var(--space-gap);
+  }
+  #state-playing:checked ~ #word-guess-root .keyboard-grid[data-state="playing"] { display: grid; }
+  #state-won:checked ~ #word-guess-root .keyboard-grid[data-state="won"] { display: grid; }
+  #state-lost:checked ~ #word-guess-root .keyboard-grid[data-state="lost"] { display: grid; }
+
+  .letter-btn {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .letter-btn:hover:not(:disabled) {
+    background: var(--color-accent);
+  }
+  .letter-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .letter-btn--correct {
+    background: var(--color-correct);
+    color: var(--color-bg);
+  }
+  .letter-btn--wrong {
+    background: var(--color-wrong);
+    color: var(--color-text);
+  }
+  .letter-btn--disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  #message[data-state="playing"] { opacity: 0.7; }
+  #message[data-state="won"] { color: var(--color-correct); }
+  #message[data-state="lost"] { color: var(--color-wrong); }
+
+  #restart-btn {
+    display: block;
+    margin: 0 auto;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    background: var(--color-accent);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #restart-btn:hover { filter: brightness(1.1); }
+  #restart-btn:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+  #restart-btn:active { transform: scale(0.97); }
+
+  .legend {
+    max-width: 480px;
+    margin: 24px auto 0;
+    padding: 16px;
+    background: var(--color-surface);
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+  .legend h2 {
+    margin: 0 0 8px;
+    font-size: 0.9375rem;
+  }
+  .legend .swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+
+  /* 320px 반응형 — keyboard grid는 auto-fill로 별도 미디어쿼리 없이 줄바꿈, word-display/heading만 축소 */
+  @media (max-width: 360px) {
+    .word-guess { padding: 16px; }
+    .word-guess h1 { font-size: 1.25rem; }
+    #word-display { font-size: 1.375rem; }
+  }
+</style>
+</head>
+<body>
+  <p class="mockup-note">
+    이 mockup은 단어 맞추기 게임의 playing / won / lost 3개 상태를 정적으로 병렬 비교하기 위한
+    시안입니다. 위 탭은 mockup 전용 스냅샷 전환 컨트롤이며 실제 게임 DOM 계약의 일부가 아닙니다.
+    (참조: docs/design/word-guess-BF-2089.md)
+  </p>
+
+  <input type="radio" name="mockup-state" id="state-playing" checked>
+  <input type="radio" name="mockup-state" id="state-won">
+  <input type="radio" name="mockup-state" id="state-lost">
+
+  <div class="state-tabs">
+    <label for="state-playing">진행중 (playing)</label>
+    <label for="state-won">승리 (won)</label>
+    <label for="state-lost">패배 (lost)</label>
+  </div>
+
+  <main id="word-guess-root" class="word-guess">
+    <h1>단어 맞추기</h1>
+
+    <p id="tries-left">
+      <span data-state="playing">남은 기회: 5회</span>
+      <span data-state="won">남은 기회: 6회</span>
+      <span data-state="lost">남은 기회: 0회</span>
+    </p>
+
+    <div id="word-display">
+      <span data-state="playing">APP__</span>
+      <span data-state="won">APPLE</span>
+      <span data-state="lost">_____</span>
+    </div>
+
+    <div id="message" aria-live="polite">
+      <span data-state="playing">글자를 골라 단어를 맞혀보세요.</span>
+      <span data-state="won">정답입니다! 승리했습니다 🎉</span>
+      <span data-state="lost">아쉽습니다. 패배했습니다.</span>
+    </div>
+
+    <div id="keyboard">
+      <!-- playing: word=APPLE, guesses=[A,P,X], maxMiss=6 -->
+      <div class="keyboard-grid" data-state="playing">
+        <button type="button" class="letter-btn letter-btn--correct letter-btn--disabled" disabled aria-disabled="true" aria-label="A, 정답">A</button>
+        <button type="button" class="letter-btn">B</button>
+        <button type="button" class="letter-btn">C</button>
+        <button type="button" class="letter-btn">D</button>
+        <button type="button" class="letter-btn">E</button>
+        <button type="button" class="letter-btn">F</button>
+        <button type="button" class="letter-btn">G</button>
+        <button type="button" class="letter-btn">H</button>
+        <button type="button" class="letter-btn">I</button>
+        <button type="button" class="letter-btn">J</button>
+        <button type="button" class="letter-btn">K</button>
+        <button type="button" class="letter-btn">L</button>
+        <button type="button" class="letter-btn">M</button>
+        <button type="button" class="letter-btn">N</button>
+        <button type="button" class="letter-btn">O</button>
+        <button type="button" class="letter-btn letter-btn--correct letter-btn--disabled" disabled aria-disabled="true" aria-label="P, 정답">P</button>
+        <button type="button" class="letter-btn">Q</button>
+        <button type="button" class="letter-btn">R</button>
+        <button type="button" class="letter-btn">S</button>
+        <button type="button" class="letter-btn">T</button>
+        <button type="button" class="letter-btn">U</button>
+        <button type="button" class="letter-btn">V</button>
+        <button type="button" class="letter-btn">W</button>
+        <button type="button" class="letter-btn letter-btn--wrong letter-btn--disabled" disabled aria-disabled="true" aria-label="X, 오답">X</button>
+        <button type="button" class="letter-btn">Y</button>
+        <button type="button" class="letter-btn">Z</button>
+      </div>
+
+      <!-- won: word=APPLE, guesses=[A,P,L,E], maxMiss=6 → 승리 시 전체 잠금 -->
+      <div class="keyboard-grid" data-state="won">
+        <button type="button" class="letter-btn letter-btn--correct letter-btn--disabled" disabled aria-disabled="true" aria-label="A, 정답">A</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="B, 미시도(게임 종료)">B</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="C, 미시도(게임 종료)">C</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="D, 미시도(게임 종료)">D</button>
+        <button type="button" class="letter-btn letter-btn--correct letter-btn--disabled" disabled aria-disabled="true" aria-label="E, 정답">E</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="F, 미시도(게임 종료)">F</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="G, 미시도(게임 종료)">G</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="H, 미시도(게임 종료)">H</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="I, 미시도(게임 종료)">I</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="J, 미시도(게임 종료)">J</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="K, 미시도(게임 종료)">K</button>
+        <button type="button" class="letter-btn letter-btn--correct letter-btn--disabled" disabled aria-disabled="true" aria-label="L, 정답">L</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="M, 미시도(게임 종료)">M</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="N, 미시도(게임 종료)">N</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="O, 미시도(게임 종료)">O</button>
+        <button type="button" class="letter-btn letter-btn--correct letter-btn--disabled" disabled aria-disabled="true" aria-label="P, 정답">P</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="Q, 미시도(게임 종료)">Q</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="R, 미시도(게임 종료)">R</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="S, 미시도(게임 종료)">S</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="T, 미시도(게임 종료)">T</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="U, 미시도(게임 종료)">U</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="V, 미시도(게임 종료)">V</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="W, 미시도(게임 종료)">W</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="X, 미시도(게임 종료)">X</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="Y, 미시도(게임 종료)">Y</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="Z, 미시도(게임 종료)">Z</button>
+      </div>
+
+      <!-- lost: word=APPLE, guesses=[X,Y,Z,Q,W,V], maxMiss=6 → 패배 시 전체 잠금, 정답 미노출 -->
+      <div class="keyboard-grid" data-state="lost">
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="A, 미시도(게임 종료)">A</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="B, 미시도(게임 종료)">B</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="C, 미시도(게임 종료)">C</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="D, 미시도(게임 종료)">D</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="E, 미시도(게임 종료)">E</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="F, 미시도(게임 종료)">F</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="G, 미시도(게임 종료)">G</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="H, 미시도(게임 종료)">H</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="I, 미시도(게임 종료)">I</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="J, 미시도(게임 종료)">J</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="K, 미시도(게임 종료)">K</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="L, 미시도(게임 종료)">L</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="M, 미시도(게임 종료)">M</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="N, 미시도(게임 종료)">N</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="O, 미시도(게임 종료)">O</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="P, 미시도(게임 종료)">P</button>
+        <button type="button" class="letter-btn letter-btn--wrong letter-btn--disabled" disabled aria-disabled="true" aria-label="Q, 오답">Q</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="R, 미시도(게임 종료)">R</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="S, 미시도(게임 종료)">S</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="T, 미시도(게임 종료)">T</button>
+        <button type="button" class="letter-btn letter-btn--disabled" disabled aria-disabled="true" aria-label="U, 미시도(게임 종료)">U</button>
+        <button type="button" class="letter-btn letter-btn--wrong letter-btn--disabled" disabled aria-disabled="true" aria-label="V, 오답">V</button>
+        <button type="button" class="letter-btn letter-btn--wrong letter-btn--disabled" disabled aria-disabled="true" aria-label="W, 오답">W</button>
+        <button type="button" class="letter-btn letter-btn--wrong letter-btn--disabled" disabled aria-disabled="true" aria-label="X, 오답">X</button>
+        <button type="button" class="letter-btn letter-btn--wrong letter-btn--disabled" disabled aria-disabled="true" aria-label="Y, 오답">Y</button>
+        <button type="button" class="letter-btn letter-btn--wrong letter-btn--disabled" disabled aria-disabled="true" aria-label="Z, 오답">Z</button>
+      </div>
+    </div>
+
+    <button type="button" id="restart-btn" aria-label="다시 시작">다시 시작</button>
+  </main>
+
+  <section class="legend">
+    <h2>범례 (색상 + 텍스트 병기)</h2>
+    <p><span class="swatch" style="background: var(--color-correct);"></span>정답 글자 — 배경색 + <code>aria-label="{글자}, 정답"</code></p>
+    <p><span class="swatch" style="background: var(--color-wrong);"></span>오답 글자 — 배경색 + <code>aria-label="{글자}, 오답"</code></p>
+    <p><span class="swatch" style="background: var(--color-bg); opacity: 0.55;"></span>잠김(게임 종료 후 미시도) — <code>aria-label="{글자}, 미시도(게임 종료)"</code></p>
+    <p>승패 메시지는 색상과 함께 "승리했습니다" / "패배했습니다" 텍스트로 상태를 알립니다 (<code>aria-live="polite"</code>).</p>
+  </section>
+</body>
+</html>
