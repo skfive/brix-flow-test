@@ -1,209 +1,110 @@
 # brix-flow-test
 
-## 로컬 실행
+vanilla HTML/CSS/JS 기반 게임 · 유틸리티 SPA 모음 저장소입니다. 각 앱은 독립된 최상위
+디렉터리에서 `index.html` 하나로 동작하며, `file://` 직접 열기와 정적 서버 서빙을 모두
+지원합니다.
 
-### 방법 A — npm 정적 서버 (권장)
-
-```sh
-npm install        # http-server devDep 설치 (최초 1회)
-npm start          # → http://localhost:8080/ 기동
-# snake 게임: http://localhost:8080/snake/
-# pixi 백엔드 강제: http://localhost:8080/snake/?backend=pixi
-# canvas2d 백엔드 강제: http://localhost:8080/snake/?backend=canvas2d
-```
-
-> **권장 이유**: 상대 경로 로드·Web Audio·localStorage·`?backend=` URL 파라미터가 모두
-> 정상 동작합니다.
-
-> **함정**: `npm install` 없이 실행하면 `http-server: command not found` 오류 발생.
-
-### 방법 B — file:// 직접 열기
+## 빠른 시작 (Quick Start)
 
 ```sh
-open snake/index.html        # macOS
-xdg-open snake/index.html    # Linux
-start snake/index.html       # Windows
+npm install        # http-server devDependency 설치 (최초 1회)
+npm start          # → http://localhost:8888/ 기동
+# 예: http://localhost:8888/pomodoro/
 ```
 
-> **동작 조건**: pixi.js 및 game.js 가 `type="module"` 없는 일반 `<script>` 로 로드되므로
-> CORS 차단 없이 동작합니다 (BF-522).
+또는 정적 서버 없이 `<app>/index.html`을 브라우저로 직접 열어도 동작합니다 (module script
+미사용 — BF-522).
 
-> **함정**: `?backend=` URL 파라미터 테스트 시에는 file:// 주소에 파라미터를 직접 붙여야
-> 합니다 — 예: `file:///path/to/snake/index.html?backend=pixi`
+## 앱 인벤토리
 
----
+전체 앱 디렉터리는 85개이며, 그중 게임 · 유틸리티 카테고리(아래 표)만 1차 인벤토리로
+관리합니다. brix-Flow 자체 검증용 canary/phase 모듈, 특이 스택(`kanban-board`), 디자인
+mockup 잔존 `.html` 파일, 공용 인프라 디렉터리는 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)를
+참고하세요.
 
-## SPA 라우트
+실행은 공통으로 `<app>/index.html`을 직접 열거나 `npm start` 후
+`http://localhost:8888/<app>/`으로 접속합니다.
 
-| 경로 | 설명 |
-|---|---|
-| `notepad/index.html` | 메모장 |
-| `timer/index.html` | 타이머 (mm:ss 카운트다운) |
-| `stopwatch/index.html` | 스톱워치 (lap 기록) |
-| `kanban/index.html` | 칸반 보드 |
-| `pomodoro/index.html` | 뽀모도로 (BF-432) |
-| **`weather/index.html`** | **날씨 카드 (BF-438) — 도시 추가/메모/정렬/다크 우선** |
-| **`clicker/index.html`** | **클릭 카운터 (BF-443) — 점수/best/리셋/전체 초기화/다크 우선** |
-
----
-
-## /pomodoro (BF-432)
-
-25분 FOCUS / 5분 SHORT_BREAK / 4사이클마다 15분 LONG_BREAK 의 뽀모도로 타이머 SPA.
-디자인 명세: [`docs/design/pomodoro-BF-430.md`](docs/design/pomodoro-BF-430.md)
-
-### 열기
-
-```sh
-# 1) 직접 열기 (file:// — CORS 안전)
-open pomodoro/index.html       # macOS
-xdg-open pomodoro/index.html   # Linux
-
-# 2) 또는 정적 서버
-python3 -m http.server 8080
-# → http://localhost:8080/pomodoro/
-```
-
-> 외부 CDN·module import·`fetch()` self-load 0건이므로 정적 서버 없이 `file://` 로
-> 직접 열어도 동작합니다. DevTools console 의 CORS 에러도 0건입니다.
-
-### 컨트롤
-
-| 동작 | 마우스 | 키보드 |
+| 앱 | 경로 | 설명 |
 |---|---|---|
-| 시작 / 일시정지 / 재개 | `▶ Start` / `⏸ Pause` 버튼 | `Space` |
-| 리셋 (현재 모드 시간만, 사이클 유지) | `⟲ Reset` | `R` |
-| Skip (현재 모드 종료 → 다음 모드 자동 진입) | `⤼ Skip` | `S` |
-| 테마 토글 (다크 ↔ 라이트) | topbar 우측 `🌙` / `☀` | `T` |
+| a11y-counter | [a11y-counter/](a11y-counter/) | 접근성(a11y) 카운터 데모 |
+| addiction-mini | [addiction-mini/](addiction-mini/) | 습관 체크 미니 유틸리티 (이름 기반 추정) |
+| baseball | [baseball/](baseball/) | 숫자 야구 게임 |
+| calculator | [calculator/](calculator/) | 계산기 |
+| canvas-tower-defense | [canvas-tower-defense/](canvas-tower-defense/) | Canvas 기반 타워 디펜스 게임 |
+| cascade-check-0808 | [cascade-check-0808/](cascade-check-0808/) | 회귀/연쇄 검증용 픽스처로 추정 (이름 기반 추정, 미확인) |
+| clicker | [clicker/](clicker/) | 클릭 카운터 (BF-443) — 점수/best/리셋/전체 초기화/다크 우선 |
+| color-switch | [color-switch/](color-switch/) | 컬러 스위치 게임 |
+| contrast-checker | [contrast-checker/](contrast-checker/) | 색상 대비(contrast) 검사 유틸리티 |
+| dice | [dice/](dice/) | 주사위 굴리기 |
+| dom-rhythm-tap | [dom-rhythm-tap/](dom-rhythm-tap/) | DOM 기반 리듬 탭 게임 |
+| duration-converter | [duration-converter/](duration-converter/) | 시간 단위 변환기 |
+| fifteen-puzzle | [fifteen-puzzle/](fifteen-puzzle/) | 15퍼즐 게임 |
+| game-2048 | [game-2048/](game-2048/) | 2048 게임 |
+| guess-number | [guess-number/](guess-number/) | 숫자 맞히기 게임 |
+| habit-tracker | [habit-tracker/](habit-tracker/) | 습관 트래커 |
+| isolation-check-color-guess | [isolation-check-color-guess/](isolation-check-color-guess/) | 격리/색상 추측 검증용 픽스처로 추정 (이름 기반 추정, 미확인) |
+| iteration-check | [iteration-check/](iteration-check/) | 반복(iteration) 검증용 픽스처로 추정 (이름 기반 추정, 미확인) |
+| iteration-check2 | [iteration-check2/](iteration-check2/) | 반복(iteration) 검증용 픽스처로 추정 (이름 기반 추정, 미확인) |
+| iteration-check3 | [iteration-check3/](iteration-check3/) | 반복(iteration) 검증용 픽스처로 추정 (이름 기반 추정, 미확인) |
+| kanban | [kanban/](kanban/) | 칸반 보드 (vanilla) — `kanban-board/`(Vite+React)와 별개, [ARCHITECTURE §2.3](docs/ARCHITECTURE.md#23-특이-스택-앱-kanban-board-vite-react-vitest) 참고 |
+| local-iso-number-baseball | [local-iso-number-baseball/](local-iso-number-baseball/) | 로컬/격리 숫자 야구 변형 픽스처로 추정 (이름 기반 추정, 미확인) |
+| markdown-preview | [markdown-preview/](markdown-preview/) | 마크다운 미리보기 |
+| memory | [memory/](memory/) | 메모리(짝맞추기) 카드 게임 |
+| minesweeper | [minesweeper/](minesweeper/) | 지뢰찾기 |
+| notepad | [notepad/](notepad/) | 메모장 |
+| number-guess | [number-guess/](number-guess/) | 숫자 추측 게임 |
+| palette | [palette/](palette/) | 색상 팔레트 도구 |
+| password-strength | [password-strength/](password-strength/) | 비밀번호 강도 검사기 |
+| phaser-brick-blitz | [phaser-brick-blitz/](phaser-brick-blitz/) | Phaser 기반 벽돌깨기 게임 |
+| phaser-endless-runner | [phaser-endless-runner/](phaser-endless-runner/) | Phaser 기반 엔들리스 러너 |
+| phaser-memory-match | [phaser-memory-match/](phaser-memory-match/) | Phaser 기반 카드 매칭 게임 |
+| phaser-space-defender | [phaser-space-defender/](phaser-space-defender/) | Phaser 기반 우주 방어 게임 |
+| phaser-star-collector | [phaser-star-collector/](phaser-star-collector/) | Phaser 기반 별 수집 게임 |
+| pixi-breakout | [pixi-breakout/](pixi-breakout/) | Pixi.js 기반 벽돌깨기 게임 |
+| pixi-shooter | [pixi-shooter/](pixi-shooter/) | Pixi.js 기반 슈팅 게임 |
+| pomodoro | [pomodoro/](pomodoro/) | 뽀모도로 타이머 (BF-432) — 25/5/15분 사이클, [디자인 명세](docs/design/pomodoro-BF-430.md) |
+| quiz-card | [quiz-card/](quiz-card/) | 퀴즈 카드 |
+| rps | [rps/](rps/) | 가위바위보 게임 |
+| snake | [snake/](snake/) | 스네이크 게임 (pixi/canvas2d 백엔드 선택 — `?backend=pixi`) |
+| snake-game | [snake-game/](snake-game/) | 스네이크 게임 변형 — `snake/`와의 관계 미확인 |
+| stopwatch | [stopwatch/](stopwatch/) | 스톱워치 (lap 기록) |
+| supermario | [supermario/](supermario/) | 마리오풍 플랫포머 게임 |
+| svg-puzzle-slider | [svg-puzzle-slider/](svg-puzzle-slider/) | SVG 기반 슬라이딩 퍼즐 |
+| tetris | [tetris/](tetris/) | 테트리스 |
+| tictactoe | [tictactoe/](tictactoe/) | 틱택토 |
+| timer | [timer/](timer/) | 타이머 (mm:ss 카운트다운) |
+| typing | [typing/](typing/) | 타이핑 연습 |
+| unit-converter | [unit-converter/](unit-converter/) | 단위 변환기 |
+| weather | [weather/](weather/) | 날씨 카드 (BF-438) — 도시 추가/메모/정렬/다크 우선, [디자인 명세](docs/design/weather-BF-435.md) |
+| webaudio-memory-tone | [webaudio-memory-tone/](webaudio-memory-tone/) | Web Audio 기반 소리 기억 게임 |
+| word-guess | [word-guess/](word-guess/) | 단어 추측 게임 |
 
-- 첫 진입 시 (`localStorage["bf-theme"]` 미저장) **다크** 강제 — "집중 모드" 시각 시그널 (명세 §6.6)
-- 한 번 토글하면 저장값이 생성되어 이후 모든 SPA (`notepad`/`timer`/`stopwatch`/`kanban`) 와 동기
+> "이름 기반 추정"으로 표시된 항목은 실제 내부 구현을 열람하지 않고 디렉터리명으로만 분류한
+> 것입니다. 상세 조사가 필요한 항목은 [`docs/ARCHITECTURE.md`의 "알려진 제약 · 미해결
+> 항목"](docs/ARCHITECTURE.md#7-알려진-제약--미해결-항목)을 참고하세요.
 
-### 사이클 흐름
+## 저장소 구조 개요
 
-1. **FOCUS 25:00** (cycle 1) → 0:00 도달
-2. 자동으로 **SHORT_BREAK 5:00** 진입 + 토스트 알림
-3. SHORT_BREAK 종료 → **FOCUS** (cycle 2)
-4. … 4번째 FOCUS 종료 후 → **LONG_BREAK 15:00** (cycle 완료 표시)
-5. LONG_BREAK 종료 → **FOCUS** (cycle 1, wrap)
+디렉터리 카테고리 분류, 앱 실행 아키텍처 패턴(vanilla / Vite), 테스트 아키텍처,
+`localStorage` 상태 공유 규약은 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)에 정리되어
+있습니다.
 
-### 알림
+## 기여하기
 
-- **인앱 toast 만** 사용합니다. Web Notification API / 시스템 푸시 / 사운드 0건 (명세 §1.3).
-- 화면 우하단에 3.5초간 노출됩니다.
+브랜치 · 커밋 · PR 규칙, 신규 앱 추가 절차는 [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)를
+참고하세요.
 
-### 오늘 누적 집중 시간
-
-- topbar 우측 "오늘 N분" 라벨에 FOCUS 동안 흐른 시간이 분 단위로 누적됩니다.
-- **로컬 시간 자정 (00:00)** 경계에서 자동으로 0 으로 리셋됩니다 (`localStorage["pomodoro:stats"]` 의 `date` 가 오늘과 다르면 새 날 시작).
-- 30초 간격으로 라벨이 신선도 갱신됩니다 (자정 경계 검사 포함).
-
-### 새로고침 복원
-
-- 페이지를 새로고침하면 모드 / 사이클 / 남은 시간이 복원됩니다.
-- `running` 중이었던 경우 보수적으로 `paused` 로 복원합니다 (백그라운드 동작 정확성 보장 불가).
-
-### localStorage 키 (prefix `pomodoro:`)
-
-| 키 | 형식 | 비고 |
-|---|---|---|
-| `pomodoro:state` | `{ mode, phase, currentCycle, remainingMs, savedAtMs }` | 새로고침 복원용 |
-| `pomodoro:stats` | `{ date: "YYYY-MM-DD", focusMsToday }` | 오늘 누적 집중 시간 |
-| `pomodoro:debug:speed` | 양수 (default `1`) | 개발용 시뮬레이션 가속 — 예: `60` 설정 시 1초가 60초처럼 진행 |
-| `bf-theme` | `"dark"` / `"light"` | **본 prefix 밖** — 다른 SPA 와 공유 |
-
-### 개발용 시뮬레이션
-
-LONG_BREAK 자동 진입을 빠르게 검증하려면:
-
-```js
-// DevTools console
-localStorage.setItem("pomodoro:debug:speed", "60");
-location.reload();
-// 이제 1초가 60초처럼 흐릅니다 → FOCUS 25분이 ~25초로 단축
-```
-
-해제: `localStorage.removeItem("pomodoro:debug:speed")`
-
-### 단위 테스트
-
-```sh
-# pomodoro 모듈만
-BRIX_TEST_SCOPE=focused BRIX_TEST_MODULE=pomodoro \
-  node --test tests/pomodoro-*.test.js
-
-# 또는 npm script
-npm test -- tests/pomodoro-*.test.js
-```
-
-- `tests/pomodoro-timer.test.js` — 순수 로직 (모드 전이, 자정 리셋, 포맷)
-- `tests/pomodoro-storage.test.js` — localStorage 추상 (state/stats round-trip, prefix 격리)
-- `pomodoro/` 디렉토리는 비-module (UMD) 패턴 — `createRequire(import.meta.url)` 로 로드합니다.
-
----
-
----
-
-## /weather (BF-438)
-
-도시별 현재 날씨 카드 grid SPA — 도시 추가·메모 인라인 편집·삭제 모달·정렬 토글·다크 우선 테마.
-디자인 명세: [`docs/design/weather-BF-435.md`](docs/design/weather-BF-435.md)
-
-### 열기
+## 테스트 실행
 
 ```sh
-# 1) 직접 열기 (file:// — CORS 안전)
-open weather/index.html       # macOS
-xdg-open weather/index.html   # Linux
-
-# 2) 또는 정적 서버
-python3 -m http.server 8080
-# → http://localhost:8080/weather/
+node --test tests/<app>-*.test.js
 ```
 
-> 외부 CDN·module import·`fetch()` self-load 0건. DevTools console 의 에러도 0건입니다.
-
-### 컨트롤
-
-| 동작 | 마우스 | 키보드 |
-|---|---|---|
-| 도시 카드 추가 | 폼 `＋ 추가` 버튼 | 폼 안에서 `Enter` |
-| 메모 인라인 편집 | 메모 영역 클릭 | 메모 영역 focus 후 `Enter` |
-| 편집 저장 / 취소 | textarea 외부 클릭 = 저장 | `Enter` 저장 / `Esc` 취소 |
-| 카드 삭제 | 카드 우상단 `×` → 모달 `삭제` | 모달 focus 후 `Enter` 확정 / `Esc` 취소 |
-| 정렬 토글 (최신순 ↔ 가나다) | topbar 아래 `⇅ 최신순` 칩 | — |
-| 테마 토글 (다크 ↔ 라이트) | topbar 우측 `🌙` / `☀` | `T` |
-
-- 첫 진입 시 (`localStorage["bf-theme"]` 미저장) **다크** 강제 (명세 §6.5)
-- 한 번 토글하면 저장값이 생성되어 이후 모든 SPA (`notepad`/`timer`/`stopwatch`/`kanban`/`pomodoro`) 와 동기
-
-### 새로고침 복원
-
-- 카드·정렬 모드·테마 모두 복원됩니다.
-- 메모 편집 중인 상태는 복원하지 않습니다 (의도적 — 부분 입력 잔존 방지).
-
-### localStorage 키 (prefix `weather:`)
-
-| 키 | 형식 | 비고 |
-|---|---|---|
-| `weather:<ulid>` | `{ id, city, emoji, memo, state, createdAt, updatedAt }` | 카드 1건 = 1 entry |
-| `weather:__sort__` | `"updated-desc"` / `"city-asc"` | 정렬 모드 |
-| `bf-theme` | `"dark"` / `"light"` | **본 prefix 밖** — 다른 SPA 와 공유 |
-
-### 단위 테스트
-
-```sh
-# weather 모듈만 (focused scope)
-BRIX_TEST_SCOPE=focused node --test tests/weather-*.test.js
-```
-
-- `tests/weather-storage.test.js` — storage 추상 (CRUD round-trip, prefix 격리, ulid)
-- `tests/weather-integration.test.js` — 복원 시나리오 + 정적 회귀 가드 (결함 A~O)
-
----
-
-## 전체 테스트
-
-```sh
-npm test
-```
+⚠️ 루트 `package.json`의 `npm test`는 저장소 전체 테스트를 실행하지 않고 레거시 파일 하나
+(`tests/snake-BF608.test.js`)만 실행합니다. `tests/` 디렉터리에는 여러 앱/사이클의 테스트
+파일이 누적되어 있으므로, 앱을 검증할 때는 항상 위처럼 `node --test tests/<app>-*.test.js`
+형태로 범위를 좁히세요. `BRIX_TEST_SCOPE=focused BRIX_TEST_MODULE=<app>` 환경변수로도
+focused 범위를 지정할 수 있습니다. 자세한 내용은
+[`docs/CONTRIBUTING.md`의 테스트 실행 규칙](docs/CONTRIBUTING.md#6-테스트-실행-규칙)을
+참고하세요.
