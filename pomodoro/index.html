@@ -7,67 +7,25 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main class="pomodoro-app" id="pomodoro-app">
-      <h1 class="pomodoro-app__title">뽀모도로 타이머</h1>
+    <main class="timer mode-focus" id="pomodoro-timer">
+      <h1 class="timer__title">뽀모도로 타이머</h1>
 
-      <p class="status-label" id="status-label" aria-live="polite">대기 중</p>
+      <p class="timer__mode" id="timer-mode">집중</p>
 
-      <div class="progress-ring" id="progress-ring">
-        <p class="timer-display" id="timer-display">25:00</p>
-      </div>
+      <p class="timer__display" id="timer-display" aria-live="polite">25:00</p>
 
-      <p class="session-count-label">
-        완료한 집중 세션 <span id="session-count">0</span>
-      </p>
+      <p class="timer__count">완료한 집중 세션 <span id="timer-count">0</span></p>
 
-      <div class="controls" role="group" aria-label="타이머 제어">
-        <button
-          type="button"
-          class="control-button control-button--primary"
-          id="start-button"
-          aria-label="시작"
-        >
-          시작
-        </button>
-        <button type="button" class="control-button" id="pause-button" aria-label="일시정지">
+      <div class="timer__controls">
+        <button type="button" class="timer__button" id="btn-start" aria-label="시작">시작</button>
+        <button type="button" class="timer__button" id="btn-pause" aria-label="일시정지" disabled>
           일시정지
         </button>
-        <button type="button" class="control-button" id="reset-button" aria-label="리셋">
-          리셋
-        </button>
+        <button type="button" class="timer__button" id="btn-reset" aria-label="리셋">리셋</button>
       </div>
-
-      <fieldset class="settings">
-        <legend>설정</legend>
-        <div class="settings__field">
-          <label for="focus-duration-input">집중 시간(분)</label>
-          <input
-            type="number"
-            id="focus-duration-input"
-            min="1"
-            max="60"
-            step="1"
-            value="25"
-            aria-describedby="settings-error"
-          />
-        </div>
-        <div class="settings__field">
-          <label for="break-duration-input">휴식 시간(분)</label>
-          <input
-            type="number"
-            id="break-duration-input"
-            min="1"
-            max="60"
-            step="1"
-            value="5"
-            aria-describedby="settings-error"
-          />
-        </div>
-        <p class="settings-error" id="settings-error" role="alert"></p>
-      </fieldset>
     </main>
 
-    <!-- 비-module script — file:// CORS 안전 (pomodoro/timer.js, storage.js 와 동일 관례) -->
+    <!-- 비-module script — file:// CORS 안전 (pomodoro/package.json: "type": "commonjs") -->
     <script src="./pomodoro.js"></script>
   </body>
 </html>
