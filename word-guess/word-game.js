@@ -78,7 +78,7 @@ if (typeof document !== 'undefined' && document.getElementById('word-guess-root'
       }).filter(function (g, idx, arr) {
         return arr.indexOf(g) === idx;
       }).length;
-      triesLeftEl.textContent = '남은 기회: ' + String(MAX_MISS - wrongCount);
+      triesLeftEl.textContent = '남은 기회: ' + String(MAX_MISS - wrongCount) + '회';
 
       if (state.status === 'won') {
         messageEl.textContent = '승리! 정답은 ' + state.word + ' 입니다.';
