@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>단어 맞추기</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="word-guess-root" class="word-guess">
+  <h1>단어 맞추기</h1>
+  <p id="tries-left" class="tries-left">남은 기회: 6</p>
+  <p id="word-display" class="word-display"></p>
+  <div id="keyboard" class="keyboard"></div>
+  <p id="message" class="message" aria-live="polite"></p>
+  <button id="restart-btn" class="restart-btn" type="button" aria-label="다시 시작">다시 시작</button>
+</main>
+<script src="word-game.js"></script>
+</body>
+</html>
