@@ -198,10 +198,6 @@ function initCalculator() {
     displayEl.textContent = state.display;
     if (phaseEl) phaseEl.textContent = PHASE_LABELS[state.phase] || "";
     if (appEl) appEl.setAttribute("data-phase", state.phase);
-    var isError = state.phase === "error";
-    buttons.forEach(function (btn) {
-      btn.disabled = isError && btn.getAttribute("data-key") !== "C";
-    });
   }
 
   function handleKey(key) {
