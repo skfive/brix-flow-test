@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>뽀모도로 타이머 UI 시안 — BF-2084 (mockup)</title>
+<style>
+  :root {
+    /* frozen 토큰 — docs/design/pomodoro-BF-2083.md §2, 이름/값 변경 금지 */
+    --color-focus-bg: #fef3f2;
+    --color-short-break-bg: #f0fdf4;
+    --color-long-break-bg: #eff6ff;
+    --color-text-primary: #1f2937;
+    --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* 보조 토큰 — additive, 재정의 아님 (spec §2) */
+    --color-button-bg: #ffffff;
+    --color-button-primary-bg: var(--color-text-primary);
+    --color-button-border: rgba(31, 41, 55, .16);
+    --color-text-muted: rgba(31, 41, 55, .60);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-family-base);
+    color: var(--color-text-primary);
+    background: #f5f5f4;
+  }
+
+  /* ---- mockup 전용 chrome (frozen 계약 아님) ---- */
+  .mockup-page {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 40px 24px 96px;
+  }
+
+  .mockup-intro h1 {
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+
+  .mockup-intro p {
+    color: var(--color-text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 720px;
+    margin: 0 0 32px;
+  }
+
+  .mockup-section {
+    margin-bottom: 56px;
+  }
+
+  .mockup-section > h2 {
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+  }
+
+  .mockup-caption {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin: 10px 4px 0;
+    line-height: 1.5;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+  }
+
+  .gallery-item {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gallery-item .timer {
+    min-height: 320px;
+  }
+
+  /* ---- frozen 산출물: .timer 컴포넌트 (docs/design/pomodoro-BF-2083.md §4~§5) ---- */
+  .timer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: 100vh;
+    padding: 32px 16px;
+    border-radius: 20px;
+    text-align: center;
+  }
+
+  .gallery .timer,
+  .controls-demo .timer {
+    min-height: auto;
+    height: 100%;
+  }
+
+  .timer.mode-focus { background: var(--color-focus-bg); }
+  .timer.mode-short-break { background: var(--color-short-break-bg); }
+  .timer.mode-long-break { background: var(--color-long-break-bg); }
+
+  .timer__mode {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    margin: 0;
+  }
+
+  .timer__display {
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(56px, 16vw, 120px);
+    font-weight: 700;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .timer__count {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .timer__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  @media (min-width: 768px) {
+    .timer__controls {
+      flex-direction: row;
+      max-width: none;
+    }
+    .timer__button {
+      min-width: 120px;
+    }
+  }
+
+  .timer__button {
+    font-family: var(--font-family-base);
+    font-size: 16px;
+    font-weight: 600;
+    min-height: 44px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    border: 1px solid var(--color-button-border);
+    background: var(--color-button-bg);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    width: 100%;
+  }
+
+  #btn-start,
+  .timer__button--primary {
+    background: var(--color-button-primary-bg);
+    border-color: var(--color-button-primary-bg);
+    color: #ffffff;
+  }
+
+  .timer__button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+  }
+
+  .timer__button:focus-visible {
+    outline: 2px solid var(--color-text-primary);
+    outline-offset: 2px;
+  }
+
+  .controls-demo {
+    background: var(--color-focus-bg);
+    border-radius: 20px;
+    padding: 32px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+  }
+
+  .controls-demo figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .controls-demo figcaption {
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+</style>
+</head>
+<body>
+<div class="mockup-page">
+
+  <div class="mockup-intro">
+    <h1>뽀모도로 타이머 UI 시안 — BF-2084</h1>
+    <p>
+      이 페이지는 <code>docs/design/pomodoro-BF-2083.md</code>의 시각 명세를 정적으로 구현한
+      mockup입니다. 패널 구획·안내 텍스트·회색 배경 chrome은 mockup 전용 장치이며 frozen
+      계약이 아닙니다. "기본 구조" 패널의 <code>.timer</code> 마크업만 <code>pomodoro/index.html</code>의
+      구현 기준입니다. 외부 리소스 호출 없이 이 파일 하나로 완결됩니다.
+    </p>
+  </div>
+
+  <section class="mockup-section">
+    <h2>1. 기본 구조 (집중 · 대기)</h2>
+    <div class="timer mode-focus">
+      <p class="timer__mode" id="timer-mode">집중</p>
+      <p class="timer__display" id="timer-display" aria-live="polite">25:00</p>
+      <p class="timer__count" id="timer-count">완료 세션 0회</p>
+      <div class="timer__controls">
+        <button class="timer__button" id="btn-start" aria-label="시작">시작</button>
+        <button class="timer__button" id="btn-pause" aria-label="일시정지" disabled>일시정지</button>
+        <button class="timer__button" id="btn-reset" aria-label="리셋">리셋</button>
+      </div>
+    </div>
+    <p class="mockup-caption">
+      frozen id 전체를 부여한 정본(canonical) 인스턴스. 페이지 최초 진입 상태 —
+      <code>phase=focus</code>, <code>remainingSeconds=1500</code>, <code>cycleCount=0</code>,
+      <code>isRunning=false</code>. <code>#btn-start</code>만 활성.
+    </p>
+  </section>
+
+  <section class="mockup-section">
+    <h2>2. 상태 갤러리</h2>
+    <div class="gallery">
+
+      <div class="gallery-item">
+        <div class="timer mode-focus">
+          <p class="timer__mode">집중</p>
+          <p class="timer__display" aria-live="polite">18:24</p>
+          <p class="timer__count">완료 세션 0회</p>
+          <div class="timer__controls">
+            <button class="timer__button" disabled>시작</button>
+            <button class="timer__button timer__button--primary">일시정지</button>
+            <button class="timer__button">리셋</button>
+          </div>
+        </div>
+        <p class="mockup-caption">집중 실행 중 — 카운트다운 진행, <code>#btn-pause</code> 활성.</p>
+      </div>
+
+      <div class="gallery-item">
+        <div class="timer mode-short-break">
+          <p class="timer__mode">짧은 휴식</p>
+          <p class="timer__display" aria-live="polite">04:12</p>
+          <p class="timer__count">완료 세션 1회</p>
+          <div class="timer__controls">
+            <button class="timer__button" disabled>시작</button>
+            <button class="timer__button timer__button--primary">일시정지</button>
+            <button class="timer__button">리셋</button>
+          </div>
+        </div>
+        <p class="mockup-caption">1회차 집중 완료 직후 짧은 휴식 실행 중 — <code>cycleCount</code> 1로 증가.</p>
+      </div>
+
+      <div class="gallery-item">
+        <div class="timer mode-long-break">
+          <p class="timer__mode">긴 휴식</p>
+          <p class="timer__display" aria-live="polite">14:50</p>
+          <p class="timer__count">완료 세션 4회</p>
+          <div class="timer__controls">
+            <button class="timer__button" disabled>시작</button>
+            <button class="timer__button timer__button--primary">일시정지</button>
+            <button class="timer__button">리셋</button>
+          </div>
+        </div>
+        <p class="mockup-caption">4회차 집중 완료 직후 긴 휴식 실행 중 — 4의 배수 규칙 반영.</p>
+      </div>
+
+      <div class="gallery-item">
+        <div class="timer mode-focus">
+          <p class="timer__mode">집중</p>
+          <p class="timer__display" aria-live="polite">11:37</p>
+          <p class="timer__count">완료 세션 2회</p>
+          <div class="timer__controls">
+            <button class="timer__button timer__button--primary">시작</button>
+            <button class="timer__button" disabled>일시정지</button>
+            <button class="timer__button">리셋</button>
+          </div>
+        </div>
+        <p class="mockup-caption">
+          집중 중 일시정지 — 배경·모드 텍스트는 직전 phase(집중) 그대로 유지, 잔여시간 갱신만 정지.
+          <code>#btn-start</code>가 다시 활성화되어 재개 가능함을 표시.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="mockup-section">
+    <h2>3. 컨트롤 상태 확대 보기</h2>
+    <div class="controls-demo">
+      <figure>
+        <button class="timer__button timer__button--primary">시작</button>
+        <figcaption>활성 — 채워진 배경(primary)</figcaption>
+      </figure>
+      <figure>
+        <button class="timer__button" disabled>시작</button>
+        <figcaption>비활성 — opacity .45, 텍스트는 그대로 노출</figcaption>
+      </figure>
+      <figure>
+        <button class="timer__button">일시정지</button>
+        <figcaption>활성 — outline 배경</figcaption>
+      </figure>
+      <figure>
+        <button class="timer__button" style="outline: 2px solid var(--color-text-primary); outline-offset: 2px;">
+          리셋
+        </button>
+        <figcaption>:focus-visible — 2px outline</figcaption>
+      </figure>
+    </div>
+    <p class="mockup-caption">
+      실제 구현에서는 <code>#btn-start</code>/<code>#btn-pause</code>가 <code>isRunning</code> 값에
+      따라 서로 반대로 disabled 토글되고, <code>#btn-reset</code>은 항상 활성 상태를 유지합니다
+      (spec §5.5).
+    </p>
+  </section>
+
+</div>
+</body>
+</html>
