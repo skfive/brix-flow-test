@@ -47,7 +47,7 @@ mockup 잔존 `.html` 파일, 공용 인프라 디렉터리는 [`docs/ARCHITECTU
 | iteration-check | [iteration-check/](iteration-check/) | 반복(iteration) 검증용 픽스처로 추정 (이름 기반 추정, 미확인) |
 | iteration-check2 | [iteration-check2/](iteration-check2/) | 반복(iteration) 검증용 픽스처로 추정 (이름 기반 추정, 미확인) |
 | iteration-check3 | [iteration-check3/](iteration-check3/) | 반복(iteration) 검증용 픽스처로 추정 (이름 기반 추정, 미확인) |
-| kanban | [kanban/](kanban/) | 칸반 보드 (vanilla) — `kanban-board/`(Vite+React)와 별개, [ARCHITECTURE §1.3](docs/ARCHITECTURE.md#13-특이-스택-앱-kanban-board-vite-react-vitest) 참고 |
+| kanban | [kanban/](kanban/) | 칸반 보드 (vanilla) — `kanban-board/`(Vite+React)와 별개, [ARCHITECTURE §2.3](docs/ARCHITECTURE.md#23-특이-스택-앱-kanban-board-vite-react-vitest) 참고 |
 | local-iso-number-baseball | [local-iso-number-baseball/](local-iso-number-baseball/) | 로컬/격리 숫자 야구 변형 픽스처로 추정 (이름 기반 추정, 미확인) |
 | markdown-preview | [markdown-preview/](markdown-preview/) | 마크다운 미리보기 |
 | memory | [memory/](memory/) | 메모리(짝맞추기) 카드 게임 |
@@ -82,7 +82,7 @@ mockup 잔존 `.html` 파일, 공용 인프라 디렉터리는 [`docs/ARCHITECTU
 
 > "이름 기반 추정"으로 표시된 항목은 실제 내부 구현을 열람하지 않고 디렉터리명으로만 분류한
 > 것입니다. 상세 조사가 필요한 항목은 [`docs/ARCHITECTURE.md`의 "알려진 제약 · 미해결
-> 항목"](docs/ARCHITECTURE.md#6-알려진-제약--미해결-항목)을 참고하세요.
+> 항목"](docs/ARCHITECTURE.md#7-알려진-제약--미해결-항목)을 참고하세요.
 
 ## 저장소 구조 개요
 
@@ -95,14 +95,16 @@ mockup 잔존 `.html` 파일, 공용 인프라 디렉터리는 [`docs/ARCHITECTU
 브랜치 · 커밋 · PR 규칙, 신규 앱 추가 절차는 [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)를
 참고하세요.
 
-## 전체 테스트 실행
+## 테스트 실행
 
 ```sh
-npm test
+node --test tests/<app>-*.test.js
 ```
 
-`tests/` 디렉터리에는 여러 앱/사이클의 테스트 파일이 누적되어 있으므로, 특정 앱만 검증할
-때는 `node --test tests/<app>-*.test.js` 형태로 범위를 좁히세요. `BRIX_TEST_SCOPE=focused
-BRIX_TEST_MODULE=<app>` 환경변수로도 focused 범위를 지정할 수 있습니다. 자세한 내용은
-[`docs/CONTRIBUTING.md`의 테스트 실행 규칙](docs/CONTRIBUTING.md#5-테스트-실행-규칙)을
+⚠️ 루트 `package.json`의 `npm test`는 저장소 전체 테스트를 실행하지 않고 레거시 파일 하나
+(`tests/snake-BF608.test.js`)만 실행합니다. `tests/` 디렉터리에는 여러 앱/사이클의 테스트
+파일이 누적되어 있으므로, 앱을 검증할 때는 항상 위처럼 `node --test tests/<app>-*.test.js`
+형태로 범위를 좁히세요. `BRIX_TEST_SCOPE=focused BRIX_TEST_MODULE=<app>` 환경변수로도
+focused 범위를 지정할 수 있습니다. 자세한 내용은
+[`docs/CONTRIBUTING.md`의 테스트 실행 규칙](docs/CONTRIBUTING.md#6-테스트-실행-규칙)을
 참고하세요.
