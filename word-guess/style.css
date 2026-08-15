@@ -1,0 +1,129 @@
+:root {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-text: #f8fafc;
+  --color-accent: #6366f1;
+  --color-correct: #22c55e;
+  --color-wrong: #ef4444;
+  --space-gap: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: var(--space-gap);
+}
+
+.word-guess {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-gap);
+}
+
+.word-guess h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.tries-left {
+  text-align: center;
+  margin: 0;
+}
+
+.word-display {
+  text-align: center;
+  font-size: 2rem;
+  letter-spacing: 4px;
+  margin: 0;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.keyboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: var(--space-gap);
+}
+
+.letter-btn {
+  padding: 8px 0;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: var(--color-text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.letter-btn:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+.letter-btn--correct {
+  background: var(--color-correct);
+}
+
+.letter-btn--wrong {
+  background: var(--color-wrong);
+}
+
+.letter-btn--disabled,
+.letter-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.message {
+  text-align: center;
+  min-height: 1.5em;
+  margin: 0;
+}
+
+.restart-btn {
+  align-self: center;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: var(--color-text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.restart-btn:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+@media (max-width: 320px) {
+  .word-guess {
+    padding: 12px;
+  }
+
+  .keyboard {
+    grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+  }
+
+  .word-display {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+  }
+}
