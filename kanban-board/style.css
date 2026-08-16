@@ -1,0 +1,29 @@
+:root {
+  --color-badge-overdue-bg: #fee2e2;
+  --color-badge-overdue-text: #991b1b;
+  --color-badge-upcoming-bg: #e0f2fe;
+  --color-badge-upcoming-text: #075985;
+  --space-search-input-padding-inline: 12px;
+}
+
+.kanban-search-input {
+  padding-inline: var(--space-search-input-padding-inline);
+  padding-block: 6px;
+  min-width: 0;
+  flex: 1 1 160px;
+}
+
+.kanban-card-duedate-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.85em;
+  background: var(--color-badge-upcoming-bg);
+  color: var(--color-badge-upcoming-text);
+}
+
+.kanban-card-duedate-badge--overdue {
+  background: var(--color-badge-overdue-bg);
+  color: var(--color-badge-overdue-text);
+}

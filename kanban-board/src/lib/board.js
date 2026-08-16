@@ -6,6 +6,7 @@ export function createInitialBoard() {
     cards: [],
     status: 'idle',
     filter: 'all',
+    search: '',
     editingCardId: null,
     deletingCardId: null,
     errorMessage: null,
@@ -75,8 +76,68 @@ export function setFilter(board, filter) {
   return { ...board, filter };
 }
 
+export function setSearch(board, search) {
+  return { ...board, search };
+}
+
+function normalizeQuery(search) {
+  return (search ?? '').trim().toLowerCase();
+}
+
+function matchesSearch(card, normalizedQuery) {
+  if (normalizedQuery === '') return true;
+  const title = (card.title ?? '').trim().toLowerCase();
+  const description = (card.description ?? '').trim().toLowerCase();
+  return title.includes(normalizedQuery) || description.includes(normalizedQuery);
+}
+
+function matchesFilterAndSearch(board, card, normalizedQuery) {
+  return (board.filter === 'all' || card.priority === board.filter) && matchesSearch(card, normalizedQuery);
+}
+
 export function cardsForColumn(board, columnId) {
+  const normalizedQuery = normalizeQuery(board.search);
   return board.cards.filter(
-    (c) => c.columnId === columnId && (board.filter === 'all' || c.priority === board.filter)
+    (c) => c.columnId === columnId && matchesFilterAndSearch(board, c, normalizedQuery)
   );
+}
+
+export function searchState(board) {
+  const normalizedQuery = normalizeQuery(board.search);
+  if (normalizedQuery === '') return 'idle';
+  const hasMatch = board.cards.some((c) => matchesFilterAndSearch(board, c, normalizedQuery));
+  return hasMatch ? 'search-active' : 'no-results';
+}
+
+function parseDateOnly(value) {
+  if (typeof value !== 'string') return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  const isValid =
+    date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+  return isValid ? date : null;
+}
+
+export function dueDateStatus(dueDate, clock) {
+  const parsedDue = parseDateOnly(dueDate);
+  if (!parsedDue) return null;
+  const now = clock();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((parsedDue.getTime() - today.getTime()) / 86400000);
+  if (diffDays >= 0) {
+    return { kind: 'on-time', label: `D-${diffDays}` };
+  }
+  return { kind: 'overdue', label: '기한 초과' };
+}
+
+export function normalizeLoadedBoard(rawBoard) {
+  if (!rawBoard || typeof rawBoard !== 'object') return createInitialBoard();
+  const cards = Array.isArray(rawBoard.cards)
+    ? rawBoard.cards.map((c) => ({ ...c, dueDate: c.dueDate ?? null }))
+    : [];
+  return { ...createInitialBoard(), ...rawBoard, search: rawBoard.search ?? '', cards };
 }
