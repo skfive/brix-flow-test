@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>칸반 보드 — 검색 · D-day 배지 mockup (BF-2132 / BF-2133)</title>
+    <style>
+      :root {
+        /* 기존 팔레트 (변경 없음, 재사용) */
+        --color-priority-high: #dc2626;
+        --color-priority-med: #d97706;
+        --color-priority-low: #16a34a;
+        --color-column-bg: #f3f4f6;
+        --space-card-gap: 12px;
+
+        /* 신규 토큰 (frozen — docs/plans/BF-2132/implementation-plan.md §7) */
+        --color-badge-overdue-bg: #fee2e2;
+        --color-badge-overdue-text: #991b1b;
+        --color-badge-upcoming-bg: #e0f2fe;
+        --color-badge-upcoming-text: #075985;
+        --space-search-input-padding-inline: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #111827;
+        background: #fff;
+      }
+
+      .mockup-section {
+        border-bottom: 8px solid #e5e7eb;
+        padding-bottom: 24px;
+        margin-bottom: 24px;
+      }
+
+      .mockup-section__title {
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0;
+        padding: 12px 16px;
+        background: #111827;
+        color: #fff;
+      }
+
+      .mockup-section__desc {
+        font-size: 13px;
+        color: #4b5563;
+        padding: 8px 16px 0;
+        margin: 0;
+      }
+
+      /* ---- 기존 칸반 보드 스타일 (BF-2103/BF-2113, 변경 없음) ---- */
+      .kanban-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+      }
+      .kanban-board {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-card-gap);
+        padding: 0 16px 16px;
+      }
+      .kanban-column {
+        background: var(--color-column-bg);
+        border-radius: 8px;
+        padding: 12px;
+        min-width: 0;
+      }
+      .kanban-column__count {
+        font-weight: normal;
+        color: #555;
+      }
+      .kanban-card {
+        background: #fff;
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: var(--space-card-gap);
+        border-left: 4px solid transparent;
+      }
+      .kanban-card:last-child {
+        margin-bottom: 0;
+      }
+      .kanban-card--high {
+        border-left-color: var(--color-priority-high);
+      }
+      .kanban-card--med {
+        border-left-color: var(--color-priority-med);
+      }
+      .kanban-card--low {
+        border-left-color: var(--color-priority-low);
+      }
+      .kanban-card h3 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+      .kanban-card p {
+        margin: 0 0 6px;
+        font-size: 13px;
+        color: #374151;
+      }
+      .kanban-move-btn {
+        cursor: pointer;
+      }
+
+      @media (min-width: 768px) {
+        .kanban-board--wide {
+          flex-direction: row;
+        }
+        .kanban-board--wide .kanban-column {
+          flex: 1;
+        }
+      }
+
+      /* ---- 신규: 검색 입력 (frozen selector) ---- */
+      .kanban-search-input {
+        padding-inline: var(--space-search-input-padding-inline);
+        padding-block: 6px;
+        flex: 1 1 200px;
+        min-width: 160px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .kanban-search-input:focus {
+        outline: 2px solid #2563eb;
+        outline-offset: 1px;
+      }
+
+      /* ---- 신규: D-day 배지 (frozen selector + token) ---- */
+      .kanban-card-duedate-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1;
+        margin-bottom: 6px;
+        background: var(--color-badge-upcoming-bg);
+        color: var(--color-badge-upcoming-text);
+      }
+      .kanban-card-duedate-badge--overdue {
+        background: var(--color-badge-overdue-bg);
+        color: var(--color-badge-overdue-text);
+      }
+
+      /* ---- 신규: 검색 결과 없음 안내 (비-frozen 배치, frozen 문구 원칙만) ---- */
+      .kanban-no-results {
+        margin: 0 0 12px;
+        padding: 12px;
+        border-radius: 6px;
+        background: #f9fafb;
+        color: #4b5563;
+        font-size: 14px;
+      }
+
+      /* ---- 카드 폼 (기존 구조 + 신규 마감일 필드) ---- */
+      .mockup-form {
+        max-width: 360px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px;
+        background: var(--color-column-bg);
+        border-radius: 8px;
+        margin: 0 16px;
+      }
+      .mockup-form label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .mockup-form input,
+      .mockup-form textarea,
+      .mockup-form select {
+        font-size: 14px;
+        padding: 6px 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+      }
+      .mockup-form-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      /* ---- 320px 뷰포트 시뮬레이션 프레임 ---- */
+      .viewport-frame {
+        width: 320px;
+        border: 2px dashed #9ca3af;
+        margin: 0 16px;
+        overflow: hidden;
+      }
+      .viewport-frame .kanban-toolbar {
+        padding: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ================= 1. 기본 화면: idle 검색 + 배지 3종 혼합 ================= -->
+    <section class="mockup-section">
+      <h2 class="mockup-section__title">1. 기본 화면 — 검색 idle · D-day 배지(on-time / overdue / 없음) 혼합</h2>
+      <p class="mockup-section__desc">
+        검색 입력은 비어 있어 "idle" 상태(전체 카드 표시, 우선순위 필터만 적용). 카드별로 duedate-on-time, duedate-overdue, 배지 없음(dueDate 미설정) 3가지 상태를 함께 보여준다.
+      </p>
+      <div class="kanban-toolbar">
+        <button type="button">카드 추가</button>
+        <input
+          id="kanban-search-input"
+          class="kanban-search-input"
+          type="text"
+          placeholder="카드 검색"
+          aria-label="카드 검색"
+          value=""
+        />
+        <label for="kanban-priority-filter-1">우선순위 필터</label>
+        <select id="kanban-priority-filter-1" aria-label="우선순위 필터">
+          <option>전체</option>
+        </select>
+        <span role="status">상태: 대기</span>
+      </div>
+      <div class="kanban-board kanban-board--wide">
+        <section class="kanban-column" aria-label="할 일">
+          <h2>할 일 <span class="kanban-column__count">(2)</span></h2>
+          <article class="kanban-card kanban-card--high">
+            <h3>3분기 기획안 초안</h3>
+            <p>경쟁사 분석 포함해서 정리</p>
+            <p>우선순위: 높음</p>
+            <span class="kanban-card-duedate-badge" aria-label="D-0">D-0</span>
+            <div>
+              <button class="kanban-move-btn" aria-label="이전 컬럼으로 이동" disabled>◀</button>
+              <button class="kanban-move-btn" aria-label="다음 컬럼으로 이동">▶</button>
+              <button type="button">삭제</button>
+            </div>
+          </article>
+          <article class="kanban-card kanban-card--low">
+            <h3>사내 위키 정리</h3>
+            <p>우선순위: 낮음</p>
+            <div>
+              <button class="kanban-move-btn" aria-label="이전 컬럼으로 이동" disabled>◀</button>
+              <button class="kanban-move-btn" aria-label="다음 컬럼으로 이동">▶</button>
+              <button type="button">삭제</button>
+            </div>
+          </article>
+        </section>
+        <section class="kanban-column" aria-label="진행 중">
+          <h2>진행 중 <span class="kanban-column__count">(1)</span></h2>
+          <article class="kanban-card kanban-card--med">
+            <h3>배포 파이프라인 개선</h3>
+            <p>스테이징 배포 자동화</p>
+            <p>우선순위: 중간</p>
+            <span class="kanban-card-duedate-badge" aria-label="D-3">D-3</span>
+            <div>
+              <button class="kanban-move-btn" aria-label="이전 컬럼으로 이동">◀</button>
+              <button class="kanban-move-btn" aria-label="다음 컬럼으로 이동">▶</button>
+              <button type="button">삭제</button>
+            </div>
+          </article>
+        </section>
+        <section class="kanban-column" aria-label="완료">
+          <h2>완료 <span class="kanban-column__count">(1)</span></h2>
+          <article class="kanban-card kanban-card--high">
+            <h3>월간 보고서 발송</h3>
+            <p>우선순위: 높음</p>
+            <span class="kanban-card-duedate-badge kanban-card-duedate-badge--overdue" aria-label="기한 초과">기한 초과</span>
+            <div>
+              <button class="kanban-move-btn" aria-label="이전 컬럼으로 이동">◀</button>
+              <button class="kanban-move-btn" aria-label="다음 컬럼으로 이동" disabled>▶</button>
+              <button type="button">삭제</button>
+            </div>
+          </article>
+        </section>
+      </div>
+    </section>
+
+    <!-- ================= 2. 검색 search-active ================= -->
+    <section class="mockup-section">
+      <h2 class="mockup-section__title">2. 검색 결과 있음 — search-active</h2>
+      <p class="mockup-section__desc">
+        검색어 "기획" 입력 → 제목에 "기획"이 포함된 카드만 남는다(§3 검색 결합 규칙, 제목 OR 설명).
+      </p>
+      <div class="kanban-toolbar">
+        <button type="button">카드 추가</button>
+        <input
+          id="kanban-search-input"
+          class="kanban-search-input"
+          type="text"
+          placeholder="카드 검색"
+          aria-label="카드 검색"
+          value="기획"
+        />
+        <label for="kanban-priority-filter-2">우선순위 필터</label>
+        <select id="kanban-priority-filter-2" aria-label="우선순위 필터">
+          <option>전체</option>
+        </select>
+        <span role="status">상태: 대기</span>
+      </div>
+      <div class="kanban-board kanban-board--wide">
+        <section class="kanban-column" aria-label="할 일">
+          <h2>할 일 <span class="kanban-column__count">(1)</span></h2>
+          <article class="kanban-card kanban-card--high">
+            <h3>3분기 <mark>기획</mark>안 초안</h3>
+            <p>경쟁사 분석 포함해서 정리</p>
+            <p>우선순위: 높음</p>
+            <span class="kanban-card-duedate-badge" aria-label="D-0">D-0</span>
+            <div>
+              <button class="kanban-move-btn" aria-label="이전 컬럼으로 이동" disabled>◀</button>
+              <button class="kanban-move-btn" aria-label="다음 컬럼으로 이동">▶</button>
+              <button type="button">삭제</button>
+            </div>
+          </article>
+        </section>
+        <section class="kanban-column" aria-label="진행 중">
+          <h2>진행 중 <span class="kanban-column__count">(0)</span></h2>
+        </section>
+        <section class="kanban-column" aria-label="완료">
+          <h2>완료 <span class="kanban-column__count">(0)</span></h2>
+        </section>
+      </div>
+    </section>
+
+    <!-- ================= 3. 검색 no-results ================= -->
+    <section class="mockup-section">
+      <h2 class="mockup-section__title">3. 검색 결과 없음 — no-results</h2>
+      <p class="mockup-section__desc">
+        모든 카드가 검색어와 불일치. 에러 색상(빨강) 없이 중립 텍스트로 "검색 결과가 없습니다"를 안내한다(색상에만 의존하지 않는 상태 표현, 접근성 3항).
+      </p>
+      <div class="kanban-toolbar">
+        <button type="button">카드 추가</button>
+        <input
+          id="kanban-search-input"
+          class="kanban-search-input"
+          type="text"
+          placeholder="카드 검색"
+          aria-label="카드 검색"
+          value="존재하지않는검색어"
+        />
+        <label for="kanban-priority-filter-3">우선순위 필터</label>
+        <select id="kanban-priority-filter-3" aria-label="우선순위 필터">
+          <option>전체</option>
+        </select>
+        <span role="status">상태: 대기</span>
+      </div>
+      <div style="padding: 0 16px">
+        <p class="kanban-no-results">검색 결과가 없습니다</p>
+      </div>
+      <div class="kanban-board kanban-board--wide">
+        <section class="kanban-column" aria-label="할 일">
+          <h2>할 일 <span class="kanban-column__count">(0)</span></h2>
+        </section>
+        <section class="kanban-column" aria-label="진행 중">
+          <h2>진행 중 <span class="kanban-column__count">(0)</span></h2>
+        </section>
+        <section class="kanban-column" aria-label="완료">
+          <h2>완료 <span class="kanban-column__count">(0)</span></h2>
+        </section>
+      </div>
+    </section>
+
+    <!-- ================= 4. 카드 생성/수정 폼 — 마감일 입력 추가 ================= -->
+    <section class="mockup-section">
+      <h2 class="mockup-section__title">4. 카드 생성/수정 폼 — #kanban-card-form-duedate 추가</h2>
+      <p class="mockup-section__desc">
+        기존 제목 → 설명 → 우선순위 순서 다음에 마감일 입력을 추가한다(선택 입력, 미입력 시 dueDate: null).
+      </p>
+      <form class="mockup-form">
+        <h2 style="margin: 0 0 4px; font-size: 16px">카드 추가</h2>
+        <label for="kanban-card-title">제목</label>
+        <input id="kanban-card-title" type="text" value="분기 회고 준비" />
+        <label for="kanban-card-description">설명</label>
+        <textarea id="kanban-card-description" rows="2">팀별 회고 자료 취합</textarea>
+        <label for="kanban-card-priority">우선순위</label>
+        <select id="kanban-card-priority">
+          <option>높음</option>
+          <option selected>중간</option>
+          <option>낮음</option>
+        </select>
+        <label for="kanban-card-form-duedate">마감일</label>
+        <input id="kanban-card-form-duedate" type="date" value="2026-08-19" />
+        <div class="mockup-form-actions">
+          <button type="submit">저장</button>
+          <button type="button">취소</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ================= 5. 320px 반응형 — 툴바 줄바꿈 ================= -->
+    <section class="mockup-section" style="border-bottom: none; margin-bottom: 0">
+      <h2 class="mockup-section__title">5. 320px 뷰포트 — 검색 입력 · 우선순위 필터 줄바꿈</h2>
+      <p class="mockup-section__desc">
+        .kanban-toolbar의 flex-wrap: wrap을 유지하고 #kanban-search-input에 과도한 고정 min-width를 주지 않아, 320px에서도 요소가 겹치거나 잘리지 않는다.
+      </p>
+      <div class="viewport-frame">
+        <div class="kanban-toolbar">
+          <button type="button">카드 추가</button>
+          <input
+            id="kanban-search-input"
+            class="kanban-search-input"
+            type="text"
+            placeholder="카드 검색"
+            aria-label="카드 검색"
+            value=""
+          />
+          <label for="kanban-priority-filter-5">우선순위 필터</label>
+          <select id="kanban-priority-filter-5" aria-label="우선순위 필터">
+            <option>전체</option>
+          </select>
+          <span role="status">상태: 대기</span>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>
