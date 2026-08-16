@@ -95,7 +95,7 @@ export default function App() {
     };
     const next = submitCard(board, cardInput);
     setBoard(next);
-    if (next.status === 'idle' || next.status === 'validation-error') {
+    if (next.status === 'idle') {
       setDraft(EMPTY_DRAFT);
     }
   }

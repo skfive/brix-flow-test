@@ -104,7 +104,7 @@ describe('검색 · D-day 폼 초기화 (BF-2134)', () => {
     expect(document.querySelector('#kanban-card-form-duedate').value).toBe('');
   });
 
-  it('D3: 저장이 실패(빈 제목)하면 마감일 입력이 초기화되고 저장 버튼이 다시 사용 가능하다', () => {
+  it('D3: 저장이 실패(빈 제목)해도 사용자가 입력한 마감일은 유지되고 저장 버튼이 다시 사용 가능하다', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: '카드 추가' }));
     fireEvent.change(document.querySelector('#kanban-card-form-duedate'), {
@@ -113,7 +113,7 @@ describe('검색 · D-day 폼 초기화 (BF-2134)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '저장' }));
 
-    expect(document.querySelector('#kanban-card-form-duedate').value).toBe('');
+    expect(document.querySelector('#kanban-card-form-duedate').value).toBe('2026-08-20');
     expect(screen.getByRole('button', { name: '저장' }).disabled).toBe(false);
   });
 });
