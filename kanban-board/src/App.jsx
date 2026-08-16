@@ -6,9 +6,13 @@ import {
   cardsForColumn,
   confirmDelete,
   createInitialBoard,
+  dueDateStatus,
   moveCard,
+  normalizeLoadedBoard,
   requestDelete,
+  searchState,
   setFilter,
+  setSearch,
   startCreate,
   startEdit,
   submitCard,
@@ -25,7 +29,7 @@ const STATUS_LABELS = {
   'validation-error': '입력 오류',
 };
 
-const EMPTY_DRAFT = { title: '', description: '', priority: 'med' };
+const EMPTY_DRAFT = { title: '', description: '', priority: 'med', dueDate: '' };
 
 function createId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -34,7 +38,7 @@ function createId() {
 }
 
 export default function App() {
-  const [board, setBoard] = useState(() => loadBoard() ?? createInitialBoard());
+  const [board, setBoard] = useState(() => normalizeLoadedBoard(loadBoard()));
   const [draft, setDraft] = useState(EMPTY_DRAFT);
 
   useEffect(() => {
@@ -55,6 +59,7 @@ export default function App() {
   const isFormOpen =
     board.status === 'creating' || board.status === 'editing' || board.status === 'validation-error';
   const isDeleteConfirmOpen = board.status === 'confirming-delete';
+  const currentSearchState = searchState(board);
 
   function handleAddClick() {
     setDraft(EMPTY_DRAFT);
@@ -62,7 +67,12 @@ export default function App() {
   }
 
   function handleCardClick(card) {
-    setDraft({ title: card.title, description: card.description ?? '', priority: card.priority });
+    setDraft({
+      title: card.title,
+      description: card.description ?? '',
+      priority: card.priority,
+      dueDate: card.dueDate ?? '',
+    });
     setBoard((b) => startEdit(b, card.id));
   }
 
@@ -78,15 +88,20 @@ export default function App() {
       title: draft.title,
       description: draft.description || null,
       priority: draft.priority,
+      dueDate: draft.dueDate || null,
       columnId: board.editingCardId
         ? (board.cards.find((c) => c.id === board.editingCardId)?.columnId ?? 'todo')
         : 'todo',
     };
     const next = submitCard(board, cardInput);
     setBoard(next);
-    if (next.status === 'idle') {
+    if (next.status === 'idle' || next.status === 'validation-error') {
       setDraft(EMPTY_DRAFT);
     }
+  }
+
+  function handleSearchChange(event) {
+    setBoard((b) => setSearch(b, event.target.value));
   }
 
   function handleMove(cardId, direction) {
@@ -115,6 +130,15 @@ export default function App() {
         <button type="button" onClick={handleAddClick}>
           카드 추가
         </button>
+        <input
+          id="kanban-search-input"
+          type="text"
+          className="kanban-search-input"
+          aria-label="카드 검색"
+          placeholder="카드 검색"
+          value={board.search}
+          onChange={handleSearchChange}
+        />
         <label htmlFor="kanban-priority-filter">우선순위 필터</label>
         <select
           id="kanban-priority-filter"
@@ -128,6 +152,7 @@ export default function App() {
           <option value="low">낮음</option>
         </select>
         <span role="status">상태: {STATUS_LABELS[board.status]}</span>
+        {currentSearchState === 'no-results' ? <span role="status">검색 결과 없음</span> : null}
       </div>
 
       <div className="kanban-board">
@@ -142,7 +167,9 @@ export default function App() {
               {COLUMN_LABELS[columnId]}{' '}
               <span className="kanban-column__count">({cardsForColumn(board, columnId).length})</span>
             </h2>
-            {cardsForColumn(board, columnId).map((card) => (
+            {cardsForColumn(board, columnId).map((card) => {
+              const duedateStatus = dueDateStatus(card.dueDate, () => new Date());
+              return (
               <article
                 key={card.id}
                 className={`kanban-card kanban-card--${card.priority}`}
@@ -151,6 +178,16 @@ export default function App() {
                 <h3>{card.title}</h3>
                 {card.description ? <p>{card.description}</p> : null}
                 <p>우선순위: {PRIORITY_LABELS[card.priority]}</p>
+                {duedateStatus ? (
+                  <span
+                    className={`kanban-card-duedate-badge${
+                      duedateStatus.kind === 'overdue' ? ' kanban-card-duedate-badge--overdue' : ''
+                    }`}
+                    aria-label={duedateStatus.label}
+                  >
+                    {duedateStatus.label}
+                  </span>
+                ) : null}
                 <div>
                   <button
                     type="button"
@@ -187,7 +224,8 @@ export default function App() {
                   </button>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </section>
         ))}
       </div>
@@ -218,6 +256,13 @@ export default function App() {
             <option value="med">중간</option>
             <option value="low">낮음</option>
           </select>
+          <label htmlFor="kanban-card-form-duedate">마감일</label>
+          <input
+            id="kanban-card-form-duedate"
+            type="date"
+            value={draft.dueDate}
+            onChange={(event) => setDraft((d) => ({ ...d, dueDate: event.target.value }))}
+          />
           {board.status === 'validation-error' ? <p role="alert">{board.errorMessage}</p> : null}
           <button type="submit">저장</button>
           <button type="button" onClick={handleCancelForm}>

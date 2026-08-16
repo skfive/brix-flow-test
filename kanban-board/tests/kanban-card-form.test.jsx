@@ -75,6 +75,49 @@ describe('카드 생성 폼 스모크', () => {
   });
 });
 
+describe('검색 · D-day 폼 초기화 (BF-2134)', () => {
+  it('D1: 검색어를 입력하면 일치하지 않는 카드가 목록에서 사라진다', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: '카드 추가' }));
+    fireEvent.change(document.querySelector('#kanban-card-title'), {
+      target: { value: '기획 문서' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '저장' }));
+
+    fireEvent.change(document.querySelector('#kanban-search-input'), {
+      target: { value: '존재하지않는검색어' },
+    });
+
+    expect(screen.queryByText('기획 문서')).toBeNull();
+  });
+
+  it('D2: 취소하면 마감일 입력을 포함한 폼이 초기 상태로 복원된다', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: '카드 추가' }));
+    fireEvent.change(document.querySelector('#kanban-card-form-duedate'), {
+      target: { value: '2026-08-20' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '취소' }));
+    fireEvent.click(screen.getByRole('button', { name: '카드 추가' }));
+
+    expect(document.querySelector('#kanban-card-form-duedate').value).toBe('');
+  });
+
+  it('D3: 저장이 실패(빈 제목)하면 마감일 입력이 초기화되고 저장 버튼이 다시 사용 가능하다', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: '카드 추가' }));
+    fireEvent.change(document.querySelector('#kanban-card-form-duedate'), {
+      target: { value: '2026-08-20' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '저장' }));
+
+    expect(document.querySelector('#kanban-card-form-duedate').value).toBe('');
+    expect(screen.getByRole('button', { name: '저장' }).disabled).toBe(false);
+  });
+});
+
 // frozen ui-contract@v1 대비 실제 구현 결함 — src/ 미수정, 발견만 기록 (BF-2113 범위 아님)
 describe.todo('frozen ui-contract@v1 DOM/상태 계약 미충족 항목 (구현 결함 — 별도 티켓 필요)', () => {
   it.todo('제목 input id 가 kanban-card-title-input 이어야 하나 실제로는 kanban-card-title 이다');
