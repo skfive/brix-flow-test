@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main id="unit-converter-root">
+<main id="converter-app">
   <h1>단위 변환기</h1>
 
   <div id="category-tabs" role="tablist" aria-label="변환 카테고리">
@@ -16,22 +16,32 @@
     <button type="button" id="tab-temperature" class="tab" role="tab" aria-selected="false">온도</button>
   </div>
 
-  <p id="direction-label" class="direction-label" aria-live="polite"></p>
+  <div class="converter-form">
+    <div class="field">
+      <label for="value-input">입력값</label>
+      <input type="text" id="value-input" inputmode="decimal" autocomplete="off" placeholder="값을 입력하세요">
+    </div>
 
-  <div class="field">
-    <label for="input-value">입력값</label>
-    <input type="text" id="input-value" class="converter-input" inputmode="decimal" autocomplete="off" placeholder="값을 입력하세요">
+    <div class="field">
+      <label for="from-unit-select">출발 단위</label>
+      <select id="from-unit-select" class="unit-select"></select>
+    </div>
+
+    <button type="button" id="swap-button" class="swap-btn" aria-label="단위 교환">⇄</button>
+
+    <div class="field">
+      <label for="to-unit-select">도착 단위</label>
+      <select id="to-unit-select" class="unit-select"></select>
+    </div>
+
+    <div class="field">
+      <label for="result-output">결과</label>
+      <p id="result-output" class="result"></p>
+    </div>
   </div>
 
-  <button type="button" id="swap-direction" class="swap-button" aria-label="단위 방향 전환">⇄</button>
-
-  <div class="field">
-    <label for="output-value">결과</label>
-    <p id="output-value" class="converter-output"></p>
-  </div>
-
-  <p id="error-message" class="error-text" aria-live="polite"></p>
+  <p id="error-message" role="alert"></p>
 </main>
-<script src="convert.js"></script>
+<script src="converter.js"></script>
 </body>
 </html>
