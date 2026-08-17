@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스톱워치 UI 시안 mockup — BF-2159</title>
+<style>
+  :root {
+    --color-bg: #101418;
+    --color-surface: #1b2129;
+    --color-text: #f5f7fa;
+    --color-accent: #4f9dff;
+    --color-fastest: #34d399;
+    --color-slowest: #f87171;
+    --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --space-control-gap: 12px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-family-base);
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    max-width: 480px;
+    margin: 0 auto 8px;
+  }
+
+  .page-note {
+    max-width: 480px;
+    margin: 0 auto 32px;
+    font-size: 13px;
+    color: #9aa4b2;
+    line-height: 1.5;
+  }
+
+  .section-label {
+    max-width: 480px;
+    margin: 40px auto 12px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #9aa4b2;
+  }
+
+  /* ---- .stopwatch card (frozen class) ---- */
+  .stopwatch {
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--color-surface);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid #262e38;
+  }
+
+  .stopwatch__status {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #9aa4b2;
+    margin-bottom: 12px;
+  }
+
+  .stopwatch__status--running { color: var(--color-accent); }
+  .stopwatch__status--paused { color: #f5c451; }
+
+  .stopwatch__display {
+    font-size: 48px;
+    font-weight: 600;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    padding: 24px 0;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    background: var(--color-bg);
+  }
+
+  .stopwatch__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-control-gap);
+    margin-bottom: 20px;
+  }
+
+  .stopwatch__controls button {
+    flex: 1 1 calc(50% - var(--space-control-gap) / 2);
+    min-width: 100px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #303a46;
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .stopwatch__controls button.is-primary {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #08111f;
+    font-weight: 600;
+  }
+
+  .stopwatch__controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .stopwatch__lap-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stopwatch__lap-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--color-bg);
+    border-left: 3px solid transparent;
+  }
+
+  .stopwatch__lap-item .lap-number {
+    color: #9aa4b2;
+    min-width: 48px;
+  }
+
+  .stopwatch__lap-item .lap-time {
+    font-variant-numeric: tabular-nums;
+    flex: 1;
+    text-align: right;
+  }
+
+  .stopwatch__lap-item .lap-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .stopwatch__lap-item.lap--fastest {
+    border-left-color: var(--color-fastest);
+  }
+  .stopwatch__lap-item.lap--fastest .lap-time {
+    color: var(--color-fastest);
+  }
+  .stopwatch__lap-item.lap--fastest .lap-badge {
+    background: rgba(52, 211, 153, 0.15);
+    color: var(--color-fastest);
+  }
+
+  .stopwatch__lap-item.lap--slowest {
+    border-left-color: var(--color-slowest);
+  }
+  .stopwatch__lap-item.lap--slowest .lap-time {
+    color: var(--color-slowest);
+  }
+  .stopwatch__lap-item.lap--slowest .lap-badge {
+    background: rgba(248, 113, 113, 0.15);
+    color: var(--color-slowest);
+  }
+
+  .stopwatch__empty-note {
+    font-size: 13px;
+    color: #6b7480;
+    text-align: center;
+    padding: 12px 0;
+  }
+
+  /* 320px 근접 반응형: 패딩 축소, 버튼 2줄 wrap */
+  @media (max-width: 479px) {
+    .stopwatch {
+      padding: 16px;
+    }
+    .stopwatch__controls button {
+      flex: 1 1 calc(50% - var(--space-control-gap) / 2);
+    }
+    .stopwatch__display {
+      font-size: 36px;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <h1>스톱워치 UI 시안 — BF-2159 / BF-2160</h1>
+  <p class="page-note">
+    frozen ui-contract@v1의 DOM ID·class·토큰·상태를 그대로 반영한 정적 mockup이다.
+    상태별 버튼 활성/비활성과 랩 강조 표현을 비교하기 위해 idle → running → paused 순으로 3개 상태 예시를 나열한다.
+    실제 인터랙션 대상 DOM ID(<code>stopwatch-display</code> 등)는 아래 "running (메인 예시)" 섹션에서만 사용하며,
+    나머지 상태 예시는 동일한 class만 재사용한 정적 스냅샷이다(HTML 문서 내 id 중복 방지).
+  </p>
+
+  <!-- ============ idle 상태 예시 ============ -->
+  <div class="section-label">상태 예시 — idle (대기 중)</div>
+  <div class="stopwatch" data-state="idle">
+    <div class="stopwatch__status">대기 중</div>
+    <div class="stopwatch__display">00:00.00</div>
+    <div class="stopwatch__controls">
+      <button type="button" class="is-primary" aria-label="시작">시작</button>
+      <button type="button" disabled aria-label="일시정지">일시정지</button>
+      <button type="button" disabled aria-label="리셋">리셋</button>
+      <button type="button" disabled aria-disabled="true" aria-label="랩">랩</button>
+    </div>
+    <ul class="stopwatch__lap-list">
+    </ul>
+    <p class="stopwatch__empty-note">기록된 랩이 없습니다.</p>
+  </div>
+
+  <!-- ============ running 상태 예시 (메인 예시, 실제 DOM ID 사용) ============ -->
+  <div class="section-label">상태 예시 — running (측정 중, 메인 예시 · 실제 DOM ID)</div>
+  <div class="stopwatch" data-state="running">
+    <div class="stopwatch__status stopwatch__status--running">측정 중</div>
+    <div class="stopwatch__display" id="stopwatch-display">00:47.62</div>
+    <div class="stopwatch__controls">
+      <button type="button" id="stopwatch-start" disabled aria-label="시작">시작</button>
+      <button type="button" id="stopwatch-pause" class="is-primary" aria-label="일시정지">일시정지</button>
+      <button type="button" id="stopwatch-reset" disabled aria-label="리셋">리셋</button>
+      <button type="button" id="stopwatch-lap" aria-label="랩">랩</button>
+    </div>
+    <ul class="stopwatch__lap-list" id="stopwatch-lap-list">
+      <li class="stopwatch__lap-item">
+        <span class="lap-number">랩 1</span>
+        <span class="lap-time">00:15.02</span>
+      </li>
+      <li class="stopwatch__lap-item lap--fastest">
+        <span class="lap-number">랩 2</span>
+        <span class="lap-time">00:09.87</span>
+        <span class="lap-badge">최단랩</span>
+      </li>
+      <li class="stopwatch__lap-item">
+        <span class="lap-number">랩 3</span>
+        <span class="lap-time">00:12.34</span>
+      </li>
+      <li class="stopwatch__lap-item lap--slowest">
+        <span class="lap-number">랩 4</span>
+        <span class="lap-time">00:15.98</span>
+        <span class="lap-badge">최장랩</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ============ paused 상태 예시 ============ -->
+  <div class="section-label">상태 예시 — paused (일시정지)</div>
+  <div class="stopwatch" data-state="paused">
+    <div class="stopwatch__status stopwatch__status--paused">일시정지</div>
+    <div class="stopwatch__display">00:47.62</div>
+    <div class="stopwatch__controls">
+      <button type="button" class="is-primary" aria-label="재개">재개</button>
+      <button type="button" disabled aria-label="일시정지">일시정지</button>
+      <button type="button" aria-label="리셋">리셋</button>
+      <button type="button" disabled aria-disabled="true" aria-label="랩">랩</button>
+    </div>
+    <ul class="stopwatch__lap-list">
+      <li class="stopwatch__lap-item">
+        <span class="lap-number">랩 1</span>
+        <span class="lap-time">00:15.02</span>
+      </li>
+      <li class="stopwatch__lap-item lap--fastest">
+        <span class="lap-number">랩 2</span>
+        <span class="lap-time">00:09.87</span>
+        <span class="lap-badge">최단랩</span>
+      </li>
+      <li class="stopwatch__lap-item lap--slowest">
+        <span class="lap-number">랩 3</span>
+        <span class="lap-time">00:15.98</span>
+        <span class="lap-badge">최장랩</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ============ 랩 1개 이하 edge case 예시 ============ -->
+  <div class="section-label">edge case — 랩 1개 이하(최단/최장 배지 미표시)</div>
+  <div class="stopwatch" data-state="running-single-lap">
+    <div class="stopwatch__status stopwatch__status--running">측정 중</div>
+    <div class="stopwatch__display">00:08.10</div>
+    <div class="stopwatch__controls">
+      <button type="button" disabled aria-label="시작">시작</button>
+      <button type="button" class="is-primary" aria-label="일시정지">일시정지</button>
+      <button type="button" disabled aria-label="리셋">리셋</button>
+      <button type="button" aria-label="랩">랩</button>
+    </div>
+    <ul class="stopwatch__lap-list">
+      <li class="stopwatch__lap-item">
+        <span class="lap-number">랩 1</span>
+        <span class="lap-time">00:08.10</span>
+      </li>
+    </ul>
+  </div>
+
+</body>
+</html>
