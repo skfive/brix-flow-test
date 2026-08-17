@@ -1,25 +1,13 @@
 (function () {
   'use strict';
 
-  var DEFAULT_SYMBOLS = ['🍎', '🍋', '🍇', '🍒', '🍉', '🍓', '🍑', '🍍', '🥝', '🍌', '🍊', '🍈'];
-  var MISMATCH_DELAY_MS = 1000;
+  var SYMBOLS = ['🍎', '🍋', '🍇', '🍒', '🍉', '🍓', '🍑', '🍍'];
+  var MISMATCH_DELAY_MS = 800;
 
-  function createDeck(symbols) {
-    if (!Array.isArray(symbols) || symbols.length === 0) return [];
-    var cards = [];
-    var id = 0;
-    for (var i = 0; i < symbols.length; i++) {
-      cards.push({ id: id++, symbol: symbols[i], state: 'hidden' });
-      cards.push({ id: id++, symbol: symbols[i], state: 'hidden' });
-    }
-    return cards;
-  }
-
-  function shuffle(cards, rng) {
-    var random = typeof rng === 'function' ? rng : Math.random;
-    var result = Array.isArray(cards) ? cards.slice() : [];
+  function defaultShuffle(cards) {
+    var result = cards.slice();
     for (var i = result.length - 1; i > 0; i--) {
-      var j = Math.floor(random() * (i + 1));
+      var j = Math.floor(Math.random() * (i + 1));
       var tmp = result[i];
       result[i] = result[j];
       result[j] = tmp;
@@ -27,116 +15,112 @@
     return result;
   }
 
-  function isMatch(cardA, cardB) {
-    if (!cardA || !cardB) return false;
-    return cardA.symbol === cardB.symbol && cardA.id !== cardB.id;
+  function createDeck(symbols, shuffleFn) {
+    var list = Array.isArray(symbols) ? symbols : [];
+    var cards = [];
+    var id = 0;
+    for (var i = 0; i < list.length; i++) {
+      cards.push({ id: id++, symbol: list[i], flipped: false, matched: false });
+      cards.push({ id: id++, symbol: list[i], flipped: false, matched: false });
+    }
+    var shuffle = typeof shuffleFn === 'function' ? shuffleFn : defaultShuffle;
+    return shuffle(cards);
   }
 
-  function pad2(n) {
-    return String(n).padStart(2, '0');
-  }
+  function applyFlip(state, index) {
+    if (!state || !Array.isArray(state.deck)) return state;
+    if (state.phase === 'comparing' || state.phase === 'done') return state;
+    if (typeof index !== 'number' || index < 0 || index >= state.deck.length) return state;
 
-  function formatTime(seconds) {
-    var s = Number(seconds);
-    if (!Number.isFinite(s) || s < 0) s = 0;
-    s = Math.floor(s);
-    var mm = Math.floor(s / 60);
-    var ss = s % 60;
-    return pad2(mm) + ':' + pad2(ss);
-  }
+    var card = state.deck[index];
+    if (!card || card.flipped || card.matched) return state;
 
-  function isWon(cards) {
-    if (!Array.isArray(cards) || cards.length === 0) return false;
-    return cards.every(function (card) {
-      return card && card.state === 'matched';
+    if (state.phase === 'idle') {
+      var deckAfterFirst = state.deck.slice();
+      deckAfterFirst[index] = Object.assign({}, card, { flipped: true });
+      return Object.assign({}, state, {
+        deck: deckAfterFirst,
+        flippedIndices: [index],
+        phase: 'one-flipped'
+      });
+    }
+
+    // phase === 'one-flipped'
+    var firstIndex = state.flippedIndices[0];
+    var deck = state.deck.slice();
+    deck[index] = Object.assign({}, card, { flipped: true });
+    var firstCard = deck[firstIndex];
+    var moveCount = state.moveCount + 1;
+
+    if (firstCard.symbol === deck[index].symbol) {
+      deck[firstIndex] = Object.assign({}, firstCard, { matched: true });
+      deck[index] = Object.assign({}, deck[index], { matched: true });
+      var allMatched = deck.every(function (c) {
+        return c.matched;
+      });
+      return Object.assign({}, state, {
+        deck: deck,
+        flippedIndices: [],
+        moveCount: moveCount,
+        phase: allMatched ? 'done' : 'idle'
+      });
+    }
+
+    return Object.assign({}, state, {
+      deck: deck,
+      flippedIndices: [firstIndex, index],
+      moveCount: moveCount,
+      phase: 'comparing'
     });
   }
 
-  function shuffledDeck(pairCount, rng) {
-    var count = Number.isInteger(pairCount) && pairCount > 0 ? pairCount : DEFAULT_SYMBOLS.length;
-    var symbols = DEFAULT_SYMBOLS.slice(0, count);
-    return shuffle(createDeck(symbols), rng);
-  }
-
-  function judgeFlip(cardA, cardB) {
-    return isMatch(cardA, cardB);
-  }
-
   function initGame() {
-    var boardEl = document.getElementById('memory-board');
-    var attemptsEl = document.getElementById('memory-attempts');
-    var timerEl = document.getElementById('memory-timer');
-    var resultEl = document.getElementById('memory-result');
-    var restartEl = document.getElementById('memory-restart');
+    var boardEl = document.getElementById('game-board');
+    var counterEl = document.getElementById('move-counter');
+    var messageEl = document.getElementById('completion-message');
+    var restartEl = document.getElementById('restart-button');
 
-    if (!boardEl || !attemptsEl || !timerEl || !resultEl || !restartEl) return;
+    if (!boardEl || !counterEl || !messageEl || !restartEl) return;
 
-    var cards = [];
+    var state = null;
     var buttons = [];
-    var flippedIndexes = [];
-    var attempts = 0;
-    var timerSeconds = 0;
-    var timerHandle = null;
-    var mismatchTimerHandle = null;
-    var inputLocked = false;
+    var mismatchTimer = null;
 
-    function stateLabel(state) {
-      if (state === 'flipped') return '뒤집힘';
-      if (state === 'matched') return '맞춤';
-      return '가려짐';
+    function cardLabel(card) {
+      if (card.matched) return '맞춘 카드, ' + card.symbol;
+      if (card.flipped) return '뒤집힌 카드, ' + card.symbol;
+      return '가려진 카드';
     }
 
     function renderCard(index) {
-      var card = cards[index];
+      var card = state.deck[index];
       var button = buttons[index];
-      var className = 'memory-card';
-      if (card.state === 'flipped') className += ' memory-card--flipped';
-      if (card.state === 'matched') className += ' memory-card--matched';
+      var className = 'card';
+      if (card.flipped) className += ' card--flipped';
+      if (card.matched) className += ' card--matched';
       button.className = className;
-      button.textContent = card.state === 'hidden' ? '' : card.symbol;
-      button.setAttribute('aria-label', '카드 ' + (index + 1) + ', ' + stateLabel(card.state));
+      button.textContent = card.flipped || card.matched ? card.symbol : '';
+      button.setAttribute('aria-label', cardLabel(card));
+      button.disabled = card.matched || state.phase === 'comparing' || state.phase === 'done';
     }
 
     function renderAll() {
-      for (var i = 0; i < cards.length; i++) renderCard(i);
-      attemptsEl.textContent = String(attempts);
-      timerEl.textContent = formatTime(timerSeconds);
-    }
-
-    function stopTimer() {
-      if (timerHandle !== null) {
-        clearInterval(timerHandle);
-        timerHandle = null;
-      }
-    }
-
-    function startTimer() {
-      if (timerHandle !== null) return;
-      timerHandle = setInterval(function () {
-        timerSeconds += 1;
-        timerEl.textContent = formatTime(timerSeconds);
-      }, 1000);
-    }
-
-    function hideResult() {
-      resultEl.classList.remove('memory-result--visible');
-      resultEl.textContent = '';
-    }
-
-    function showResult() {
-      resultEl.textContent = '완료! 시도 ' + attempts + '회, 시간 ' + formatTime(timerSeconds);
-      resultEl.classList.add('memory-result--visible');
+      for (var i = 0; i < state.deck.length; i++) renderCard(i);
+      counterEl.textContent = String(state.moveCount);
+      messageEl.textContent =
+        state.phase === 'done' ? '모두 맞췄습니다! 총 ' + state.moveCount + '번 시도' : '';
     }
 
     function buildBoard() {
       boardEl.textContent = '';
       buttons = [];
-      for (var i = 0; i < cards.length; i++) {
+      for (var i = 0; i < state.deck.length; i++) {
         var button = document.createElement('button');
         button.type = 'button';
+        button.className = 'card';
         (function (index) {
           button.addEventListener('click', function () {
-            handleActivate(index);
+            handleCardClick(index);
           });
         })(i);
         boardEl.appendChild(button);
@@ -144,70 +128,48 @@
       }
     }
 
-    function resolvePair() {
-      var indexA = flippedIndexes[0];
-      var indexB = flippedIndexes[1];
-      var cardA = cards[indexA];
-      var cardB = cards[indexB];
-
-      if (judgeFlip(cardA, cardB)) {
-        cardA.state = 'matched';
-        cardB.state = 'matched';
-        flippedIndexes = [];
-        inputLocked = false;
-        renderAll();
-        if (isWon(cards)) {
-          stopTimer();
-          showResult();
-        }
-        return;
+    function clearMismatchTimer() {
+      if (mismatchTimer !== null) {
+        clearTimeout(mismatchTimer);
+        mismatchTimer = null;
       }
+    }
 
-      mismatchTimerHandle = setTimeout(function () {
-        mismatchTimerHandle = null;
-        cardA.state = 'hidden';
-        cardB.state = 'hidden';
-        flippedIndexes = [];
-        inputLocked = false;
+    function scheduleMismatchRevert() {
+      mismatchTimer = setTimeout(function () {
+        mismatchTimer = null;
+        var indices = state.flippedIndices;
+        var newDeck = state.deck.slice();
+        indices.forEach(function (i) {
+          newDeck[i] = Object.assign({}, newDeck[i], { flipped: false });
+        });
+        state = Object.assign({}, state, {
+          deck: newDeck,
+          flippedIndices: [],
+          phase: 'idle'
+        });
         renderAll();
       }, MISMATCH_DELAY_MS);
     }
 
-    function clearMismatchTimer() {
-      if (mismatchTimerHandle !== null) {
-        clearTimeout(mismatchTimerHandle);
-        mismatchTimerHandle = null;
+    function handleCardClick(index) {
+      var nextState = applyFlip(state, index);
+      if (nextState === state) return;
+      state = nextState;
+      renderAll();
+      if (state.phase === 'comparing') {
+        scheduleMismatchRevert();
       }
     }
 
-    function handleActivate(index) {
-      if (inputLocked) return;
-      var card = cards[index];
-      if (!card || card.state !== 'hidden') return;
-
-      if (flippedIndexes.length === 0) startTimer();
-
-      card.state = 'flipped';
-      flippedIndexes.push(index);
-      renderCard(index);
-
-      if (flippedIndexes.length < 2) return;
-
-      attempts += 1;
-      attemptsEl.textContent = String(attempts);
-      inputLocked = true;
-      resolvePair();
-    }
-
     function restart() {
-      stopTimer();
       clearMismatchTimer();
-      cards = shuffledDeck(8, Math.random);
-      flippedIndexes = [];
-      attempts = 0;
-      timerSeconds = 0;
-      inputLocked = false;
-      hideResult();
+      state = {
+        deck: createDeck(SYMBOLS),
+        flippedIndices: [],
+        moveCount: 0,
+        phase: 'idle'
+      };
       buildBoard();
       renderAll();
     }
@@ -226,12 +188,7 @@
 
   var api = {
     createDeck: createDeck,
-    shuffle: shuffle,
-    isMatch: isMatch,
-    formatTime: formatTime,
-    isWon: isWon,
-    shuffledDeck: shuffledDeck,
-    judgeFlip: judgeFlip
+    applyFlip: applyFlip
   };
 
   if (typeof module !== 'undefined' && module.exports) {

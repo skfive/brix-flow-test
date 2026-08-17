@@ -2,39 +2,28 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {
-  createDeck,
-  shuffle,
-  isMatch,
-  formatTime,
-  isWon,
-  shuffledDeck,
-  judgeFlip
-} = require('../memory.js');
+const { createDeck, applyFlip } = require('../memory.js');
 
-function sequenceRng(values) {
-  let i = 0;
-  return function () {
-    const value = values[i % values.length];
-    i += 1;
-    return value;
+function identityShuffle(cards) {
+  return cards.slice();
+}
+
+function reverseShuffle(cards) {
+  return cards.slice().reverse();
+}
+
+function baseState(symbols) {
+  return {
+    deck: createDeck(symbols, identityShuffle),
+    flippedIndices: [],
+    moveCount: 0,
+    phase: 'idle'
   };
 }
 
-test('createDeck: 빈 배열 입력 시 빈 배열 반환', () => {
-  assert.deepEqual(createDeck([]), []);
-});
-
-test('createDeck: symbol 1개 입력 시 2장, 동일 symbol, id 0/1', () => {
-  const deck = createDeck(['a']);
-  assert.equal(deck.length, 2);
-  assert.deepEqual(deck.map((c) => c.symbol), ['a', 'a']);
-  assert.deepEqual(deck.map((c) => c.id), [0, 1]);
-});
-
 test('createDeck: 8개 symbol 입력 시 16장, 각 symbol 정확히 2회 등장', () => {
   const symbols = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const deck = createDeck(symbols);
+  const deck = createDeck(symbols, identityShuffle);
   assert.equal(deck.length, 16);
   const counts = {};
   deck.forEach((c) => {
@@ -43,133 +32,129 @@ test('createDeck: 8개 symbol 입력 시 16장, 각 symbol 정확히 2회 등장
   symbols.forEach((s) => assert.equal(counts[s], 2));
 });
 
-test('createDeck: null/undefined 입력 시 빈 배열 반환 (방어적 처리)', () => {
-  assert.deepEqual(createDeck(null), []);
-  assert.deepEqual(createDeck(undefined), []);
-});
-
-test('createDeck: 생성 직후 모든 카드 state는 hidden', () => {
-  const deck = createDeck(['x', 'y']);
-  deck.forEach((c) => assert.equal(c.state, 'hidden'));
-});
-
-test('createDeck: 카드 id는 0부터 유일하게 증가', () => {
-  const deck = createDeck(['x', 'y', 'z']);
+test('createDeck: 카드 id는 0부터 유일하게 부여된다', () => {
+  const deck = createDeck(['a', 'b', 'c'], identityShuffle);
   const ids = deck.map((c) => c.id);
   assert.deepEqual(ids, [0, 1, 2, 3, 4, 5]);
   assert.equal(new Set(ids).size, ids.length);
 });
 
-test('shuffle: 빈 배열 입력 시 빈 배열 반환', () => {
-  assert.deepEqual(shuffle([], Math.random), []);
-});
-
-test('shuffle: 1장 배열 입력 시 순서 불변', () => {
-  const deck = createDeck(['a']);
-  const shuffled = shuffle([deck[0]], Math.random);
-  assert.deepEqual(shuffled, [deck[0]]);
-});
-
-test('shuffle: 동일 rng 시퀀스면 결정적으로 동일 순서를 반환한다', () => {
-  const deck = createDeck(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
-  const rngValues = [0.9, 0.1, 0.5, 0.2, 0.8, 0.3, 0.6, 0.4, 0.7, 0.05, 0.95, 0.15, 0.55, 0.25, 0.65];
-  const shuffledA = shuffle(deck, sequenceRng(rngValues));
-  const shuffledB = shuffle(deck, sequenceRng(rngValues));
-  assert.deepEqual(
-    shuffledA.map((c) => c.id),
-    shuffledB.map((c) => c.id)
-  );
-  assert.equal(shuffledA.length, deck.length);
-  const symbolsA = shuffledA.map((c) => c.symbol).sort();
-  const symbolsB = deck.map((c) => c.symbol).sort();
-  assert.deepEqual(symbolsA, symbolsB);
-});
-
-test('shuffle: 원본 배열은 mutate하지 않는다', () => {
-  const deck = createDeck(['a', 'b', 'c']);
-  const originalOrder = deck.map((c) => c.id);
-  shuffle(deck, sequenceRng([0.9, 0.1, 0.5]));
-  assert.deepEqual(
-    deck.map((c) => c.id),
-    originalOrder
-  );
-});
-
-test('isMatch: 동일 symbol, 서로 다른 id면 true', () => {
-  assert.equal(isMatch({ id: 0, symbol: 'a' }, { id: 1, symbol: 'a' }), true);
-});
-
-test('isMatch: 서로 다른 symbol이면 false', () => {
-  assert.equal(isMatch({ id: 0, symbol: 'a' }, { id: 1, symbol: 'b' }), false);
-});
-
-test('isMatch: 동일 id(자기 자신)면 false', () => {
-  assert.equal(isMatch({ id: 0, symbol: 'a' }, { id: 0, symbol: 'a' }), false);
-});
-
-test('formatTime: 0초는 "00:00"', () => {
-  assert.equal(formatTime(0), '00:00');
-});
-
-test('formatTime: 5초는 "00:05"', () => {
-  assert.equal(formatTime(5), '00:05');
-});
-
-test('formatTime: 59초는 "00:59"', () => {
-  assert.equal(formatTime(59), '00:59');
-});
-
-test('formatTime: 60초는 "01:00"', () => {
-  assert.equal(formatTime(60), '01:00');
-});
-
-test('formatTime: 3599초는 "59:59"', () => {
-  assert.equal(formatTime(3599), '59:59');
-});
-
-test('formatTime: 음수/NaN은 "00:00" (방어적 처리)', () => {
-  assert.equal(formatTime(-1), '00:00');
-  assert.equal(formatTime(NaN), '00:00');
-});
-
-test('isWon: 빈 배열이면 false', () => {
-  assert.equal(isWon([]), false);
-});
-
-test('isWon: 16장 전부 matched면 true', () => {
-  const cards = createDeck(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']).map((c) => ({ ...c, state: 'matched' }));
-  assert.equal(isWon(cards), true);
-});
-
-test('isWon: 15장 matched + 1장 hidden이면 false', () => {
-  const cards = createDeck(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']).map((c) => ({ ...c, state: 'matched' }));
-  cards[0].state = 'hidden';
-  assert.equal(isWon(cards), false);
-});
-
-test('isWon: null/undefined면 false (방어적 처리)', () => {
-  assert.equal(isWon(null), false);
-  assert.equal(isWon(undefined), false);
-});
-
-test('shuffledDeck: pairCount=8, 고정 rng로 16장·8쌍을 결정적으로 반환한다', () => {
-  const rngValues = [0.9, 0.1, 0.5, 0.2, 0.8, 0.3, 0.6, 0.4, 0.7, 0.05, 0.95, 0.15, 0.55, 0.25, 0.65];
-  const deckA = shuffledDeck(8, sequenceRng(rngValues));
-  const deckB = shuffledDeck(8, sequenceRng(rngValues));
-  assert.equal(deckA.length, 16);
-  const counts = {};
-  deckA.forEach((c) => {
-    counts[c.symbol] = (counts[c.symbol] || 0) + 1;
+test('createDeck: 초기 카드 상태는 모두 flipped:false, matched:false', () => {
+  const deck = createDeck(['x', 'y'], identityShuffle);
+  deck.forEach((c) => {
+    assert.equal(c.flipped, false);
+    assert.equal(c.matched, false);
   });
-  assert.equal(Object.keys(counts).length, 8);
-  Object.values(counts).forEach((count) => assert.equal(count, 2));
+});
+
+test('createDeck: 원본 symbols 배열을 변경하지 않는다', () => {
+  const symbols = ['a', 'b', 'c'];
+  const snapshot = symbols.slice();
+  createDeck(symbols, identityShuffle);
+  assert.deepEqual(symbols, snapshot);
+});
+
+test('createDeck: shuffleFn 주입 시 지정한 순서로 결정적으로 배치된다', () => {
+  const symbols = ['a', 'b', 'c', 'd'];
+  const ordered = createDeck(symbols, identityShuffle);
+  const reversed = createDeck(symbols, reverseShuffle);
   assert.deepEqual(
-    deckA.map((c) => c.id),
-    deckB.map((c) => c.id)
+    reversed.map((c) => c.id),
+    ordered.map((c) => c.id).slice().reverse()
   );
 });
 
-test('judgeFlip: isMatch와 동일하게 짝/비짝을 판정한다', () => {
-  assert.equal(judgeFlip({ id: 0, symbol: 'a' }, { id: 1, symbol: 'a' }), true);
-  assert.equal(judgeFlip({ id: 0, symbol: 'a' }, { id: 1, symbol: 'b' }), false);
+test('createDeck: 매 호출마다 새 배열과 새 카드 객체를 반환한다', () => {
+  const symbols = ['a', 'b'];
+  const deckA = createDeck(symbols, identityShuffle);
+  const deckB = createDeck(symbols, identityShuffle);
+  assert.notEqual(deckA, deckB);
+  assert.notEqual(deckA[0], deckB[0]);
+});
+
+test('applyFlip: idle 상태에서 카드 클릭 시 해당 카드만 flipped, phase는 one-flipped', () => {
+  const state = baseState(['a', 'b']);
+  const next = applyFlip(state, 0);
+  assert.equal(next.deck[0].flipped, true);
+  assert.equal(next.flippedIndices.length, 1);
+  assert.equal(next.flippedIndices[0], 0);
+  assert.equal(next.phase, 'one-flipped');
+});
+
+test('applyFlip: one-flipped 상태에서 두 번째 카드가 매치되면 두 카드 matched, moveCount 증가, phase idle로 복귀', () => {
+  // symbols ['a','b','c'] -> deck: a,a,b,b,c,c (identityShuffle 순서 유지)
+  const state = baseState(['a', 'b', 'c']);
+  const afterFirst = applyFlip(state, 0);
+  const afterSecond = applyFlip(afterFirst, 1);
+  assert.equal(afterSecond.deck[0].matched, true);
+  assert.equal(afterSecond.deck[1].matched, true);
+  assert.equal(afterSecond.moveCount, 1);
+  assert.equal(afterSecond.flippedIndices.length, 0);
+  assert.equal(afterSecond.phase, 'idle');
+});
+
+test('applyFlip: 매치 실패 시 flippedIndices에 두 index 보관, phase comparing, moveCount 증가', () => {
+  // deck: a,a,b,b -> index 0(a) vs index 2(b) 불일치
+  const state = baseState(['a', 'b']);
+  const afterFirst = applyFlip(state, 0);
+  const afterSecond = applyFlip(afterFirst, 2);
+  assert.deepEqual(afterSecond.flippedIndices, [0, 2]);
+  assert.equal(afterSecond.moveCount, 1);
+  assert.equal(afterSecond.phase, 'comparing');
+  assert.equal(afterSecond.deck[0].flipped, true);
+  assert.equal(afterSecond.deck[2].flipped, true);
+});
+
+test('applyFlip: comparing 상태에서 클릭은 무시(no-op, 동일 state 반환)', () => {
+  const state = baseState(['a', 'b']);
+  const afterFirst = applyFlip(state, 0);
+  const comparing = applyFlip(afterFirst, 2);
+  const next = applyFlip(comparing, 1);
+  assert.equal(next, comparing);
+});
+
+test('applyFlip: done 상태에서 클릭은 무시', () => {
+  const state = baseState(['a']);
+  const afterFirst = applyFlip(state, 0);
+  const done = applyFlip(afterFirst, 1);
+  assert.equal(done.phase, 'done');
+  const next = applyFlip(done, 0);
+  assert.equal(next, done);
+});
+
+test('applyFlip: 이미 flipped된 카드 재클릭은 무시', () => {
+  const state = baseState(['a', 'b']);
+  const afterFirst = applyFlip(state, 0);
+  const next = applyFlip(afterFirst, 0);
+  assert.equal(next, afterFirst);
+});
+
+test('applyFlip: 이미 matched된 카드 재클릭은 무시', () => {
+  const state = baseState(['a', 'b', 'c']);
+  const afterFirst = applyFlip(state, 0);
+  const matched = applyFlip(afterFirst, 1);
+  assert.equal(matched.phase, 'idle');
+  const next = applyFlip(matched, 0);
+  assert.equal(next, matched);
+});
+
+test('applyFlip: index가 범위를 벗어나면 무시 (음수/초과)', () => {
+  const state = baseState(['a', 'b']);
+  assert.equal(applyFlip(state, -1), state);
+  assert.equal(applyFlip(state, 99), state);
+});
+
+test('applyFlip: 원본 state와 하위 객체를 mutate하지 않는다', () => {
+  const state = baseState(['a', 'b']);
+  const snapshot = JSON.parse(JSON.stringify(state));
+  applyFlip(state, 0);
+  assert.deepEqual(state, snapshot);
+});
+
+test('applyFlip: 마지막 쌍까지 매치되면 comparing을 거치지 않고 done으로 전이', () => {
+  const state = baseState(['a']);
+  const afterFirst = applyFlip(state, 0);
+  const afterSecond = applyFlip(afterFirst, 1);
+  assert.equal(afterSecond.phase, 'done');
+  assert.equal(afterSecond.deck.every((c) => c.matched), true);
 });
