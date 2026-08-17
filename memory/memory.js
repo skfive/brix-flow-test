@@ -88,8 +88,8 @@
 
     function cardLabel(card) {
       if (card.matched) return '맞춘 카드, ' + card.symbol;
-      if (card.flipped) return '뒤집힌 카드, ' + card.symbol;
-      return '가려진 카드';
+      if (card.flipped) return card.symbol;
+      return '뒤집힌 카드';
     }
 
     function renderCard(index) {
@@ -99,7 +99,13 @@
       if (card.flipped) className += ' card--flipped';
       if (card.matched) className += ' card--matched';
       button.className = className;
-      button.textContent = card.flipped || card.matched ? card.symbol : '';
+      if (card.matched) {
+        button.textContent = card.symbol + ' ✓ 맞춤';
+      } else if (card.flipped) {
+        button.textContent = card.symbol;
+      } else {
+        button.textContent = '';
+      }
       button.setAttribute('aria-label', cardLabel(card));
       button.disabled = card.matched || state.phase === 'comparing' || state.phase === 'done';
     }

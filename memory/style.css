@@ -70,6 +70,8 @@ body {
 
 .card--matched {
   outline: 2px solid var(--color-card-back);
+  font-size: 0.85rem;
+  text-align: center;
 }
 
 .card:disabled {
