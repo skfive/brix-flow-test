@@ -1,178 +1,213 @@
-const CENTISECOND_MS = 10;
+(function () {
+  'use strict';
 
-/**
- * ms -> "MM:SS.CC" (분은 100 이상이면 자연 확장, 음수/NaN은 0으로 방어)
- */
-export function formatElapsed(ms) {
-  const n = Number(ms);
-  const safeMs = Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
-  const totalCentiseconds = Math.floor(safeMs / CENTISECOND_MS);
-  const centiseconds = totalCentiseconds % 100;
-  const totalSeconds = Math.floor(totalCentiseconds / 100);
-  const seconds = totalSeconds % 60;
-  const minutes = Math.floor(totalSeconds / 60);
-  const pad2 = (value) => String(value).padStart(2, "0");
-  return `${pad2(minutes)}:${pad2(seconds)}.${pad2(centiseconds)}`;
-}
+  var CENTISECOND_MS = 10;
+  var TICK_INTERVAL_MS = 30;
+  var STATE_LABEL = { idle: '대기', running: '진행 중', paused: '일시정지' };
 
-/**
- * 비교 기준은 lapMs. 동률(min===max 포함 완전 동률)이거나 랩이 2개 미만이면 null.
- * 최솟값/최댓값 동률 시 먼저 기록된 id를 채택한다.
- */
-export function lapStats(laps) {
-  if (!Array.isArray(laps) || laps.length < 2) {
-    return { bestId: null, worstId: null };
+  function pad2(value) {
+    return String(value).padStart(2, '0');
   }
 
-  let bestId = null;
-  let worstId = null;
-  let bestMs = Infinity;
-  let worstMs = -Infinity;
+  function formatElapsed(ms) {
+    var n = Number(ms);
+    var safeMs = Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+    var totalCentiseconds = Math.floor(safeMs / CENTISECOND_MS);
+    var centiseconds = totalCentiseconds % 100;
+    var totalSeconds = Math.floor(totalCentiseconds / 100);
+    var seconds = totalSeconds % 60;
+    var minutes = Math.floor(totalSeconds / 60);
+    return pad2(minutes) + ':' + pad2(seconds) + '.' + pad2(centiseconds);
+  }
 
-  for (const lap of laps) {
-    if (lap.lapMs < bestMs) {
-      bestMs = lap.lapMs;
-      bestId = lap.id;
+  function currentElapsedMs(state, nowMs) {
+    if (state.status === 'running' && state.startedAt !== null) {
+      return state.accumulatedMs + (nowMs - state.startedAt);
     }
-    if (lap.lapMs > worstMs) {
-      worstMs = lap.lapMs;
-      worstId = lap.id;
+    return state.accumulatedMs;
+  }
+
+  function markFastestSlowest(laps) {
+    if (laps.length < 2) {
+      return laps.map(function (lap) {
+        return Object.assign({}, lap, { isFastest: false, isSlowest: false });
+      });
     }
-  }
 
-  if (bestId === worstId) {
-    return { bestId: null, worstId: null };
-  }
-  return { bestId, worstId };
-}
+    var fastestId = null;
+    var slowestId = null;
+    var fastestMs = Infinity;
+    var slowestMs = -Infinity;
 
-function initStopwatchUI() {
-  const root = document.getElementById("stopwatch-root");
-  if (!root) return;
-
-  const displayEl = document.getElementById("stopwatch-display");
-  const statusEl = document.getElementById("stopwatch-status");
-  const startBtn = document.getElementById("btn-start");
-  const pauseBtn = document.getElementById("btn-pause");
-  const resetBtn = document.getElementById("btn-reset");
-  const lapBtn = document.getElementById("btn-lap");
-  const lapListEl = document.getElementById("lap-list");
-
-  const STATE_LABEL = { idle: "대기", running: "진행 중", paused: "일시정지" };
-
-  let state = "idle";
-  let accumulatedMs = 0;
-  let startedAt = null;
-  let laps = [];
-  let tickHandle = null;
-
-  function currentElapsed() {
-    if (state !== "running" || startedAt === null) return accumulatedMs;
-    return accumulatedMs + (Date.now() - startedAt);
-  }
-
-  function renderLaps() {
-    const { bestId, worstId } = lapStats(laps);
-    lapListEl.textContent = "";
-    for (let i = laps.length - 1; i >= 0; i--) {
-      const lap = laps[i];
-      const li = document.createElement("li");
-      li.className = "lap-list__item";
-      if (lap.id === bestId) li.classList.add("lap-list__item--best");
-      if (lap.id === worstId) li.classList.add("lap-list__item--worst");
-
-      const label = document.createElement("span");
-      label.className = "lap-list__label";
-      label.textContent = `#${lap.id} ${formatElapsed(lap.lapMs)}`;
-      li.appendChild(label);
-
-      if (lap.id === bestId) {
-        const badge = document.createElement("span");
-        badge.className = "lap-list__badge";
-        badge.textContent = "최고 랩";
-        li.appendChild(badge);
+    laps.forEach(function (lap) {
+      if (lap.lapMs < fastestMs) {
+        fastestMs = lap.lapMs;
+        fastestId = lap.id;
       }
-      if (lap.id === worstId) {
-        const badge = document.createElement("span");
-        badge.className = "lap-list__badge";
-        badge.textContent = "최저 랩";
-        li.appendChild(badge);
+      if (lap.lapMs > slowestMs) {
+        slowestMs = lap.lapMs;
+        slowestId = lap.id;
       }
-      lapListEl.appendChild(li);
+    });
+
+    if (fastestId === slowestId) {
+      fastestId = null;
+      slowestId = null;
+    }
+
+    return laps.map(function (lap) {
+      return Object.assign({}, lap, {
+        isFastest: lap.id === fastestId,
+        isSlowest: lap.id === slowestId
+      });
+    });
+  }
+
+  function addLap(state, nowMs) {
+    var totalMs = currentElapsedMs(state, nowMs);
+    var previousTotal = state.laps.length > 0 ? state.laps[state.laps.length - 1].totalMs : 0;
+    var newLap = { id: state.laps.length + 1, lapMs: totalMs - previousTotal, totalMs: totalMs };
+    var newLaps = markFastestSlowest(state.laps.concat([newLap]));
+    return Object.assign({}, state, { laps: newLaps });
+  }
+
+  function getControlsState(status) {
+    var isRunning = status === 'running';
+    var isPaused = status === 'paused';
+    return {
+      startDisabled: isRunning,
+      startLabel: isPaused ? '재개' : '시작',
+      pauseDisabled: !isRunning,
+      resetDisabled: !isPaused,
+      lapDisabled: !isRunning
+    };
+  }
+
+  function initStopwatchUI() {
+    var displayEl = document.getElementById('stopwatch-display');
+    var statusEl = document.getElementById('stopwatch-state');
+    var startBtn = document.getElementById('stopwatch-start');
+    var pauseBtn = document.getElementById('stopwatch-pause');
+    var resetBtn = document.getElementById('stopwatch-reset');
+    var lapBtn = document.getElementById('stopwatch-lap');
+    var lapListEl = document.getElementById('stopwatch-lap-list');
+
+    if (!displayEl || !startBtn || !pauseBtn || !resetBtn || !lapBtn || !lapListEl) return;
+
+    var state = { status: 'idle', accumulatedMs: 0, startedAt: null, laps: [] };
+    var tickHandle = null;
+
+    function renderLaps() {
+      lapListEl.textContent = '';
+      for (var i = state.laps.length - 1; i >= 0; i--) {
+        var lap = state.laps[i];
+        var li = document.createElement('li');
+        li.className = 'stopwatch__lap-item';
+        if (lap.isFastest) li.classList.add('lap--fastest');
+        if (lap.isSlowest) li.classList.add('lap--slowest');
+
+        var label = document.createElement('span');
+        label.textContent = '#' + lap.id + ' ' + formatElapsed(lap.lapMs);
+        li.appendChild(label);
+
+        if (lap.isFastest) {
+          var fastestBadge = document.createElement('span');
+          fastestBadge.textContent = '최단랩';
+          li.appendChild(fastestBadge);
+        }
+        if (lap.isSlowest) {
+          var slowestBadge = document.createElement('span');
+          slowestBadge.textContent = '최장랩';
+          li.appendChild(slowestBadge);
+        }
+        lapListEl.appendChild(li);
+      }
+    }
+
+    function render() {
+      displayEl.textContent = formatElapsed(currentElapsedMs(state, Date.now()));
+      if (statusEl) statusEl.textContent = '상태: ' + STATE_LABEL[state.status];
+
+      var controls = getControlsState(state.status);
+      startBtn.disabled = controls.startDisabled;
+      startBtn.textContent = controls.startLabel;
+      startBtn.setAttribute('aria-label', controls.startLabel);
+
+      pauseBtn.disabled = controls.pauseDisabled;
+      resetBtn.disabled = controls.resetDisabled;
+
+      lapBtn.disabled = controls.lapDisabled;
+      lapBtn.setAttribute('aria-disabled', controls.lapDisabled ? 'true' : 'false');
+
+      renderLaps();
+    }
+
+    function stopTick() {
+      if (tickHandle !== null) {
+        clearInterval(tickHandle);
+        tickHandle = null;
+      }
+    }
+
+    function startTick() {
+      stopTick();
+      tickHandle = setInterval(render, TICK_INTERVAL_MS);
+    }
+
+    function handleStart() {
+      if (state.status === 'running') return;
+      state = Object.assign({}, state, { status: 'running', startedAt: Date.now() });
+      startTick();
+      render();
+    }
+
+    function handlePause() {
+      if (state.status !== 'running') return;
+      var elapsed = currentElapsedMs(state, Date.now());
+      state = Object.assign({}, state, { status: 'paused', accumulatedMs: elapsed, startedAt: null });
+      stopTick();
+      render();
+    }
+
+    function handleReset() {
+      if (state.status !== 'paused') return;
+      state = { status: 'idle', accumulatedMs: 0, startedAt: null, laps: [] };
+      stopTick();
+      render();
+    }
+
+    function handleLap() {
+      if (state.status !== 'running') return;
+      state = addLap(state, Date.now());
+      render();
+    }
+
+    startBtn.addEventListener('click', handleStart);
+    pauseBtn.addEventListener('click', handlePause);
+    resetBtn.addEventListener('click', handleReset);
+    lapBtn.addEventListener('click', handleLap);
+
+    render();
+  }
+
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initStopwatchUI);
+    } else {
+      initStopwatchUI();
     }
   }
 
-  function render() {
-    displayEl.textContent = formatElapsed(currentElapsed());
-    if (statusEl) statusEl.textContent = `상태: ${STATE_LABEL[state]}`;
+  var api = {
+    formatElapsed: formatElapsed,
+    addLap: addLap,
+    getControlsState: getControlsState
+  };
 
-    startBtn.disabled = state === "running";
-    pauseBtn.disabled = state !== "running";
-    resetBtn.disabled = state !== "paused";
-    lapBtn.disabled = state !== "running";
-
-    renderLaps();
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
   }
-
-  function stopTick() {
-    if (tickHandle !== null) {
-      clearInterval(tickHandle);
-      tickHandle = null;
-    }
+  if (typeof window !== 'undefined') {
+    window.Stopwatch = api;
   }
-
-  function startTick() {
-    stopTick();
-    tickHandle = setInterval(render, 30);
-  }
-
-  function start() {
-    if (state === "running") return;
-    state = "running";
-    startedAt = Date.now();
-    startTick();
-    render();
-  }
-
-  function pause() {
-    if (state !== "running") return;
-    accumulatedMs += Date.now() - startedAt;
-    startedAt = null;
-    state = "paused";
-    stopTick();
-    render();
-  }
-
-  function reset() {
-    if (state !== "paused") return;
-    state = "idle";
-    accumulatedMs = 0;
-    startedAt = null;
-    laps = [];
-    stopTick();
-    render();
-  }
-
-  function addLap() {
-    if (state !== "running") return;
-    const totalMs = currentElapsed();
-    const previousTotal = laps.length > 0 ? laps[laps.length - 1].totalMs : 0;
-    laps.push({ id: laps.length + 1, lapMs: totalMs - previousTotal, totalMs });
-    render();
-  }
-
-  startBtn.addEventListener("click", start);
-  pauseBtn.addEventListener("click", pause);
-  resetBtn.addEventListener("click", reset);
-  lapBtn.addEventListener("click", addLap);
-
-  render();
-}
-
-if (typeof document !== "undefined") {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initStopwatchUI);
-  } else {
-    initStopwatchUI();
-  }
-}
+})();

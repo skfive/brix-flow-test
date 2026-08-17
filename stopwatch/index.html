@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main id="stopwatch-root" class="stopwatch" aria-label="스톱워치">
-      <p id="stopwatch-status" aria-live="polite">상태: 대기</p>
+    <main class="stopwatch" aria-label="스톱워치">
+      <p id="stopwatch-state" aria-live="polite">상태: 대기</p>
 
       <div
         id="stopwatch-display"
@@ -20,18 +20,12 @@
       </div>
 
       <div class="stopwatch__controls">
-        <button
-          type="button"
-          id="btn-start"
-          class="stopwatch__btn"
-          aria-label="시작"
-        >
+        <button type="button" id="stopwatch-start" aria-label="시작">
           시작
         </button>
         <button
           type="button"
-          id="btn-pause"
-          class="stopwatch__btn"
+          id="stopwatch-pause"
           aria-label="일시정지"
           disabled
         >
@@ -39,17 +33,16 @@
         </button>
         <button
           type="button"
-          id="btn-lap"
-          class="stopwatch__btn"
+          id="stopwatch-lap"
           aria-label="랩 기록"
           disabled
+          aria-disabled="true"
         >
           랩 기록
         </button>
         <button
           type="button"
-          id="btn-reset"
-          class="stopwatch__btn"
+          id="stopwatch-reset"
           aria-label="리셋"
           disabled
         >
@@ -57,9 +50,13 @@
         </button>
       </div>
 
-      <ol id="lap-list" aria-label="랩 기록 목록"></ol>
+      <ol
+        id="stopwatch-lap-list"
+        class="stopwatch__lap-list"
+        aria-label="랩 기록 목록"
+      ></ol>
     </main>
 
-    <script type="module" src="stopwatch.js"></script>
+    <script src="stopwatch.js"></script>
   </body>
 </html>
