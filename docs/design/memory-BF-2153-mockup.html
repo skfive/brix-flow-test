@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>카드 짝맞추기(memory) 디자인 mockup — BF-2153</title>
+<style>
+  :root {
+    --color-button-bg: #1e293b;
+    --color-button-accent: #2563eb;
+    --color-page-bg: #f1f5f9;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 24px 16px;
+    background: var(--color-page-bg);
+    color: var(--color-text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  .mockup-note {
+    max-width: 480px;
+    margin: 0 auto 24px;
+    padding: 12px 16px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+  }
+
+  .mockup-frame-wrap {
+    max-width: 480px;
+    margin: 0 auto 32px;
+  }
+
+  .state-label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #ffffff;
+    background: var(--color-button-bg);
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .mockup-frame {
+    display: block;
+    width: 100%;
+    height: 560px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+</style>
+</head>
+<body>
+
+  <div class="mockup-note">
+    이 파일은 시각 mockup입니다. 실제 동작(카드 클릭/타이머/판정)은 없으며, 각 phase를 정적 스냅샷으로 보여줍니다.
+    각 상태는 독립된 문서(iframe)로 분리해 <code>docs/design/memory-BF-2153.md</code>의 동결 DOM id/class 계약을
+    상태마다 동일하게(문서 내 id 중복 없이) 그대로 재현합니다. 4개 섹션은 동일한 8쌍 16장 보드를 기준으로
+    idle(2쌍 맞춤, 시도 5번) → one-flipped(1장 추가 확인) → comparing(2번째 카드까지 확인, 불일치, 입력 잠금) →
+    done(16장 모두 맞춤, 완료 메시지)로 자연스럽게 이어지는 진행 예시입니다.
+  </div>
+
+  <div class="mockup-frame-wrap">
+    <span class="state-label">idle</span>
+    <iframe class="mockup-frame" title="카드 짝맞추기 idle 상태" srcdoc="
+<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<style>
+  :root {
+    --font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --color-card-back: #2563eb;
+    --color-card-face: #f8fafc;
+    --color-board-bg: #0f172a;
+    --space-grid-gap: 12px;
+    --color-page-bg: #f1f5f9;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-matched-accent: #16a34a;
+    --color-button-bg: #1e293b;
+    --color-button-accent: #2563eb;
+    --color-focus-ring: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; font-family: var(--font-family-base); color: var(--color-text-primary); background: var(--color-page-bg); }
+  h1 { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin: 0 0 8px; }
+  .phase-status { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin: 0 0 12px; }
+  .info-bar { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin-bottom: 12px; }
+  .board { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: var(--space-grid-gap); max-width: 100%; padding: var(--space-grid-gap); background: var(--color-board-bg); border-radius: 12px; margin-bottom: 16px; }
+  .card { position: relative; aspect-ratio: 1 / 1; border: none; border-radius: 8px; background: var(--color-card-back); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; overflow: hidden; }
+  .card::before { content: &quot;&quot;; position: absolute; inset: 0; margin: auto; width: 40%; height: 40%; background: rgba(248,250,252,0.18); transform: rotate(45deg); border-radius: 4px; }
+  .card:not(.card--flipped):hover { filter: brightness(1.1); }
+  .card:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .card--flipped { background: var(--color-card-face); border: 2px solid var(--color-card-back); }
+  .card--flipped::before { content: none; }
+  .card--matched { border: 2px solid var(--color-matched-accent); cursor: not-allowed; }
+  .card__symbol { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .card__label { font-size: 0.625rem; font-weight: 600; line-height: 1.2; color: var(--color-text-primary); margin-top: 2px; }
+  .card__badge { position: absolute; top: 4px; right: 4px; font-size: 0.5625rem; font-weight: 700; color: #ffffff; background: var(--color-matched-accent); padding: 1px 4px; border-radius: 999px; }
+  .restart-button { display: inline-block; padding: 10px 20px; background: var(--color-button-bg); color: #ffffff; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
+  .restart-button:hover, .restart-button:focus-visible { background: var(--color-button-accent); }
+  .restart-button:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .completion-message { margin-top: 16px; font-size: 1.125rem; font-weight: 700; line-height: 1.4; color: var(--color-matched-accent); min-height: 1.4em; }
+</style>
+</head>
+<body data-phase=&quot;idle&quot;>
+  <h1>카드 짝맞추기</h1>
+  <p class=&quot;phase-status&quot;>카드를 선택하세요</p>
+  <p class=&quot;info-bar&quot; id=&quot;move-counter&quot; aria-live=&quot;polite&quot;>시도 횟수: 5번</p>
+  <div class=&quot;board&quot; id=&quot;game-board&quot; aria-label=&quot;카드 짝맞추기 보드&quot;>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 사과&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍎</span><span class=&quot;card__label&quot;>사과</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 포도&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍇</span><span class=&quot;card__label&quot;>포도</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 사과&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍎</span><span class=&quot;card__label&quot;>사과</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 포도&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍇</span><span class=&quot;card__label&quot;>포도</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+  </div>
+  <button type=&quot;button&quot; class=&quot;restart-button&quot; id=&quot;restart-button&quot;>다시 시작</button>
+  <p class=&quot;completion-message&quot; id=&quot;completion-message&quot; aria-live=&quot;polite&quot;></p>
+</body>
+</html>
+    "></iframe>
+  </div>
+
+  <div class="mockup-frame-wrap">
+    <span class="state-label">one-flipped</span>
+    <iframe class="mockup-frame" title="카드 짝맞추기 one-flipped 상태" srcdoc="
+<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<style>
+  :root {
+    --font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --color-card-back: #2563eb;
+    --color-card-face: #f8fafc;
+    --color-board-bg: #0f172a;
+    --space-grid-gap: 12px;
+    --color-page-bg: #f1f5f9;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-matched-accent: #16a34a;
+    --color-button-bg: #1e293b;
+    --color-button-accent: #2563eb;
+    --color-focus-ring: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; font-family: var(--font-family-base); color: var(--color-text-primary); background: var(--color-page-bg); }
+  h1 { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin: 0 0 8px; }
+  .phase-status { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin: 0 0 12px; }
+  .info-bar { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin-bottom: 12px; }
+  .board { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: var(--space-grid-gap); max-width: 100%; padding: var(--space-grid-gap); background: var(--color-board-bg); border-radius: 12px; margin-bottom: 16px; }
+  .card { position: relative; aspect-ratio: 1 / 1; border: none; border-radius: 8px; background: var(--color-card-back); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; overflow: hidden; }
+  .card::before { content: &quot;&quot;; position: absolute; inset: 0; margin: auto; width: 40%; height: 40%; background: rgba(248,250,252,0.18); transform: rotate(45deg); border-radius: 4px; }
+  .card:not(.card--flipped):hover { filter: brightness(1.1); }
+  .card:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .card--flipped { background: var(--color-card-face); border: 2px solid var(--color-card-back); }
+  .card--flipped::before { content: none; }
+  .card--matched { border: 2px solid var(--color-matched-accent); cursor: not-allowed; }
+  .card__symbol { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .card__label { font-size: 0.625rem; font-weight: 600; line-height: 1.2; color: var(--color-text-primary); margin-top: 2px; }
+  .card__badge { position: absolute; top: 4px; right: 4px; font-size: 0.5625rem; font-weight: 700; color: #ffffff; background: var(--color-matched-accent); padding: 1px 4px; border-radius: 999px; }
+  .restart-button { display: inline-block; padding: 10px 20px; background: var(--color-button-bg); color: #ffffff; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
+  .restart-button:hover, .restart-button:focus-visible { background: var(--color-button-accent); }
+  .restart-button:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .completion-message { margin-top: 16px; font-size: 1.125rem; font-weight: 700; line-height: 1.4; color: var(--color-matched-accent); min-height: 1.4em; }
+</style>
+</head>
+<body data-phase=&quot;one-flipped&quot;>
+  <h1>카드 짝맞추기</h1>
+  <p class=&quot;phase-status&quot;>두 번째 카드를 선택하세요</p>
+  <p class=&quot;info-bar&quot; id=&quot;move-counter&quot; aria-live=&quot;polite&quot;>시도 횟수: 5번</p>
+  <div class=&quot;board&quot; id=&quot;game-board&quot; aria-label=&quot;카드 짝맞추기 보드&quot;>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 사과&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍎</span><span class=&quot;card__label&quot;>사과</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped&quot; aria-label=&quot;바나나&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍌</span><span class=&quot;card__label&quot;>바나나</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 포도&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍇</span><span class=&quot;card__label&quot;>포도</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 사과&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍎</span><span class=&quot;card__label&quot;>사과</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 포도&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍇</span><span class=&quot;card__label&quot;>포도</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot;></button>
+  </div>
+  <button type=&quot;button&quot; class=&quot;restart-button&quot; id=&quot;restart-button&quot;>다시 시작</button>
+  <p class=&quot;completion-message&quot; id=&quot;completion-message&quot; aria-live=&quot;polite&quot;></p>
+</body>
+</html>
+    "></iframe>
+  </div>
+
+  <div class="mockup-frame-wrap">
+    <span class="state-label">comparing (입력 잠금)</span>
+    <iframe class="mockup-frame" title="카드 짝맞추기 comparing 상태" srcdoc="
+<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<style>
+  :root {
+    --font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --color-card-back: #2563eb;
+    --color-card-face: #f8fafc;
+    --color-board-bg: #0f172a;
+    --space-grid-gap: 12px;
+    --color-page-bg: #f1f5f9;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-matched-accent: #16a34a;
+    --color-button-bg: #1e293b;
+    --color-button-accent: #2563eb;
+    --color-focus-ring: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; font-family: var(--font-family-base); color: var(--color-text-primary); background: var(--color-page-bg); }
+  h1 { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin: 0 0 8px; }
+  .phase-status { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin: 0 0 12px; }
+  .info-bar { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin-bottom: 12px; }
+  .board { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: var(--space-grid-gap); max-width: 100%; padding: var(--space-grid-gap); background: var(--color-board-bg); border-radius: 12px; margin-bottom: 16px; }
+  .board[data-locked=&quot;true&quot;] .card:not(.card--flipped) { cursor: not-allowed; }
+  .card { position: relative; aspect-ratio: 1 / 1; border: none; border-radius: 8px; background: var(--color-card-back); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; overflow: hidden; }
+  .card::before { content: &quot;&quot;; position: absolute; inset: 0; margin: auto; width: 40%; height: 40%; background: rgba(248,250,252,0.18); transform: rotate(45deg); border-radius: 4px; }
+  .card:not(.card--flipped):hover { filter: brightness(1.1); }
+  .card:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .card--flipped { background: var(--color-card-face); border: 2px solid var(--color-card-back); }
+  .card--flipped::before { content: none; }
+  .card--matched { border: 2px solid var(--color-matched-accent); cursor: not-allowed; }
+  .card__symbol { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .card__label { font-size: 0.625rem; font-weight: 600; line-height: 1.2; color: var(--color-text-primary); margin-top: 2px; }
+  .card__badge { position: absolute; top: 4px; right: 4px; font-size: 0.5625rem; font-weight: 700; color: #ffffff; background: var(--color-matched-accent); padding: 1px 4px; border-radius: 999px; }
+  .restart-button { display: inline-block; padding: 10px 20px; background: var(--color-button-bg); color: #ffffff; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
+  .restart-button:hover, .restart-button:focus-visible { background: var(--color-button-accent); }
+  .restart-button:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .completion-message { margin-top: 16px; font-size: 1.125rem; font-weight: 700; line-height: 1.4; color: var(--color-matched-accent); min-height: 1.4em; }
+</style>
+</head>
+<body data-phase=&quot;comparing&quot;>
+  <h1>카드 짝맞추기</h1>
+  <p class=&quot;phase-status&quot;>확인 중입니다…</p>
+  <p class=&quot;info-bar&quot; id=&quot;move-counter&quot; aria-live=&quot;polite&quot;>시도 횟수: 6번</p>
+  <div class=&quot;board&quot; id=&quot;game-board&quot; data-locked=&quot;true&quot; aria-label=&quot;카드 짝맞추기 보드, 입력 잠금&quot;>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 사과&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍎</span><span class=&quot;card__label&quot;>사과</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped&quot; aria-label=&quot;바나나&quot; disabled><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍌</span><span class=&quot;card__label&quot;>바나나</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 포도&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍇</span><span class=&quot;card__label&quot;>포도</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped&quot; aria-label=&quot;수박&quot; disabled><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍉</span><span class=&quot;card__label&quot;>수박</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 사과&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍎</span><span class=&quot;card__label&quot;>사과</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 포도&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍇</span><span class=&quot;card__label&quot;>포도</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+    <button type=&quot;button&quot; class=&quot;card&quot; aria-label=&quot;뒤집힌 카드&quot; disabled></button>
+  </div>
+  <button type=&quot;button&quot; class=&quot;restart-button&quot; id=&quot;restart-button&quot;>다시 시작</button>
+  <p class=&quot;completion-message&quot; id=&quot;completion-message&quot; aria-live=&quot;polite&quot;></p>
+</body>
+</html>
+    "></iframe>
+  </div>
+
+  <div class="mockup-frame-wrap">
+    <span class="state-label">done</span>
+    <iframe class="mockup-frame" title="카드 짝맞추기 done 상태" srcdoc="
+<!DOCTYPE html>
+<html lang=&quot;ko&quot;>
+<head>
+<meta charset=&quot;UTF-8&quot;>
+<style>
+  :root {
+    --font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --color-card-back: #2563eb;
+    --color-card-face: #f8fafc;
+    --color-board-bg: #0f172a;
+    --space-grid-gap: 12px;
+    --color-page-bg: #f1f5f9;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-matched-accent: #16a34a;
+    --color-button-bg: #1e293b;
+    --color-button-accent: #2563eb;
+    --color-focus-ring: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; font-family: var(--font-family-base); color: var(--color-text-primary); background: var(--color-page-bg); }
+  h1 { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin: 0 0 8px; }
+  .phase-status { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin: 0 0 12px; }
+  .info-bar { font-size: 0.9375rem; font-weight: 600; line-height: 1.4; color: var(--color-text-secondary); margin-bottom: 12px; }
+  .board { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: var(--space-grid-gap); max-width: 100%; padding: var(--space-grid-gap); background: var(--color-board-bg); border-radius: 12px; margin-bottom: 16px; }
+  .card { position: relative; aspect-ratio: 1 / 1; border: none; border-radius: 8px; background: var(--color-card-back); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; overflow: hidden; }
+  .card::before { content: &quot;&quot;; position: absolute; inset: 0; margin: auto; width: 40%; height: 40%; background: rgba(248,250,252,0.18); transform: rotate(45deg); border-radius: 4px; }
+  .card:not(.card--flipped):hover { filter: brightness(1.1); }
+  .card:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .card--flipped { background: var(--color-card-face); border: 2px solid var(--color-card-back); }
+  .card--flipped::before { content: none; }
+  .card--matched { border: 2px solid var(--color-matched-accent); cursor: not-allowed; }
+  .card__symbol { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .card__label { font-size: 0.625rem; font-weight: 600; line-height: 1.2; color: var(--color-text-primary); margin-top: 2px; }
+  .card__badge { position: absolute; top: 4px; right: 4px; font-size: 0.5625rem; font-weight: 700; color: #ffffff; background: var(--color-matched-accent); padding: 1px 4px; border-radius: 999px; }
+  .restart-button { display: inline-block; padding: 10px 20px; background: var(--color-button-bg); color: #ffffff; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
+  .restart-button:hover, .restart-button:focus-visible { background: var(--color-button-accent); }
+  .restart-button:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .completion-message { margin-top: 16px; font-size: 1.125rem; font-weight: 700; line-height: 1.4; color: var(--color-matched-accent); min-height: 1.4em; }
+</style>
+</head>
+<body data-phase=&quot;done&quot;>
+  <h1>카드 짝맞추기</h1>
+  <p class=&quot;phase-status&quot;>완료!</p>
+  <p class=&quot;info-bar&quot; id=&quot;move-counter&quot; aria-live=&quot;polite&quot;>시도 횟수: 12번</p>
+  <div class=&quot;board&quot; id=&quot;game-board&quot; aria-label=&quot;카드 짝맞추기 보드, 완료&quot;>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 사과&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍎</span><span class=&quot;card__label&quot;>사과</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 바나나&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍌</span><span class=&quot;card__label&quot;>바나나</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 포도&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍇</span><span class=&quot;card__label&quot;>포도</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 수박&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍉</span><span class=&quot;card__label&quot;>수박</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 레몬&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍋</span><span class=&quot;card__label&quot;>레몬</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 사과&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍎</span><span class=&quot;card__label&quot;>사과</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 딸기&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍓</span><span class=&quot;card__label&quot;>딸기</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 포도&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍇</span><span class=&quot;card__label&quot;>포도</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 복숭아&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍑</span><span class=&quot;card__label&quot;>복숭아</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 바나나&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍌</span><span class=&quot;card__label&quot;>바나나</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 파인애플&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍍</span><span class=&quot;card__label&quot;>파인애플</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 수박&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍉</span><span class=&quot;card__label&quot;>수박</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 딸기&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍓</span><span class=&quot;card__label&quot;>딸기</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 복숭아&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍑</span><span class=&quot;card__label&quot;>복숭아</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 레몬&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍋</span><span class=&quot;card__label&quot;>레몬</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+    <button type=&quot;button&quot; class=&quot;card card--flipped card--matched&quot; aria-label=&quot;맞춘 카드, 파인애플&quot;><span class=&quot;card__symbol&quot; aria-hidden=&quot;true&quot;>🍍</span><span class=&quot;card__label&quot;>파인애플</span><span class=&quot;card__badge&quot; aria-hidden=&quot;true&quot;>✓ 맞춤</span></button>
+  </div>
+  <button type=&quot;button&quot; class=&quot;restart-button&quot; id=&quot;restart-button&quot;>다시 시작</button>
+  <p class=&quot;completion-message&quot; id=&quot;completion-message&quot; aria-live=&quot;polite&quot;>모두 맞췄습니다! 총 12번 시도</p>
+</body>
+</html>
+    "></iframe>
+  </div>
+
+</body>
+</html>
