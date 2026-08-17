@@ -1,9 +1,8 @@
 :root {
-  --color-bg: #0f172a;
-  --color-card-back: #334155;
+  --font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-card-back: #2563eb;
   --color-card-face: #f8fafc;
-  --color-accent: #22c55e;
-  --font-family-base: system-ui, -apple-system, sans-serif;
+  --color-board-bg: #0f172a;
   --space-grid-gap: 12px;
 }
 
@@ -14,7 +13,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--color-bg);
+  background: var(--color-board-bg);
   color: var(--color-card-face);
   font-family: var(--font-family-base);
   display: flex;
@@ -22,7 +21,7 @@ body {
   padding: 24px 16px;
 }
 
-.memory-app {
+.app {
   width: 100%;
   max-width: 480px;
   display: flex;
@@ -31,27 +30,26 @@ body {
   gap: 16px;
 }
 
-.memory-status {
-  display: flex;
-  gap: 24px;
+.status-bar {
+  margin: 0;
   font-size: 1rem;
 }
 
-.memory-board {
+.board {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--space-grid-gap);
   width: 100%;
 }
 
-.memory-card {
+.card {
   aspect-ratio: 1 / 1;
-  min-width: 40px;
-  min-height: 40px;
+  min-width: 56px;
+  min-height: 56px;
   border: none;
   border-radius: 8px;
   background: var(--color-card-back);
-  color: var(--color-card-face);
+  color: var(--color-board-bg);
   font-size: 1.5rem;
   display: flex;
   align-items: center;
@@ -59,52 +57,52 @@ body {
   cursor: pointer;
 }
 
-.memory-card:hover,
-.memory-card:focus-visible {
-  outline: 2px solid var(--color-accent);
+.card:focus-visible {
+  outline: 2px solid var(--color-card-face);
+  outline-offset: 2px;
 }
 
-.memory-card--flipped,
-.memory-card--matched {
+.card--flipped,
+.card--matched {
   background: var(--color-card-face);
-  color: var(--color-bg);
+  color: var(--color-board-bg);
 }
 
-.memory-card--matched {
-  outline: 2px solid var(--color-accent);
+.card--matched {
+  outline: 2px solid var(--color-card-back);
+  font-size: 0.85rem;
+  text-align: center;
 }
 
-#memory-result {
+.card:disabled {
+  cursor: default;
+}
+
+#completion-message {
   min-height: 1.5em;
-  font-weight: 600;
-  color: var(--color-accent);
-  visibility: hidden;
   margin: 0;
+  font-weight: 600;
 }
 
-#memory-result.memory-result--visible {
-  visibility: visible;
-}
-
-#memory-restart {
+#restart-button {
   padding: 10px 20px;
   border: none;
   border-radius: 8px;
-  background: var(--color-accent);
-  color: var(--color-bg);
+  background: var(--color-card-back);
+  color: var(--color-card-face);
   font-family: var(--font-family-base);
   font-size: 1rem;
   cursor: pointer;
-  min-height: 40px;
+  min-height: 44px;
 }
 
-#memory-restart:hover,
-#memory-restart:focus-visible {
-  outline: 2px solid var(--color-accent);
+#restart-button:hover,
+#restart-button:focus-visible {
+  outline: 2px solid var(--color-card-face);
 }
 
-@media (max-width: 360px) {
-  .memory-board {
-    gap: 8px;
+@media (min-width: 600px) {
+  .card {
+    font-size: 2.5rem;
   }
 }

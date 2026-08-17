@@ -3,19 +3,16 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>메모리 카드 게임</title>
+<title>카드 짝맞추기</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<main class="memory-app">
-  <h1>메모리 카드 게임</h1>
-  <div class="memory-status" aria-live="polite">
-    <span>시도: <span id="memory-attempts">0</span></span>
-    <span>시간: <span id="memory-timer">00:00</span></span>
-  </div>
-  <div id="memory-board" class="memory-board" role="group" aria-label="메모리 카드 보드"></div>
-  <p id="memory-result" role="status"></p>
-  <button id="memory-restart" type="button" aria-label="다시 시작">다시 시작</button>
+<main class="app">
+  <h1>카드 짝맞추기</h1>
+  <p class="status-bar">시도 횟수: <span id="move-counter" aria-live="polite">0</span></p>
+  <div id="game-board" class="board" role="group" aria-label="카드 보드"></div>
+  <p id="completion-message" aria-live="polite"></p>
+  <button id="restart-button" type="button">다시 시작</button>
 </main>
 <script src="memory.js"></script>
 </body>
