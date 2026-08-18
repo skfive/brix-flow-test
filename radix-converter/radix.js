@@ -27,6 +27,15 @@
     16: '16진수'
   };
 
+  var STATE_LABELS = {
+    idle: '대기 중',
+    'invalid-input': '입력 오류',
+    converted: '변환 완료',
+    copied: '복사됨'
+  };
+
+  var COPY_FEEDBACK_MS = 1500;
+
   function invalidCharMessage(base) {
     return BASE_LABELS[base] + '에서 허용되지 않는 문자가 포함되어 있습니다.';
   }
@@ -129,34 +138,39 @@
 
     var input = $('radix-input');
     var errorEl = $('radix-error');
+    var statusEl = $('radix-status');
     var resultEls = {
       2: $('radix-result-2'),
       8: $('radix-result-8'),
       10: $('radix-result-10'),
       16: $('radix-result-16')
     };
-    var resultContainers = [];
-    BASES.forEach(function (base) {
-      var el = resultEls[base];
-      if (el) {
-        var container = el.closest('.' + 'radix-converter__result');
-        if (container) {
-          resultContainers.push(container);
-        }
-      }
-    });
     var copyButtons = {
       2: $('radix-copy-2'),
       8: $('radix-copy-8'),
       10: $('radix-copy-10'),
       16: $('radix-copy-16')
     };
+    var copyFeedbackEls = {};
+    BASES.forEach(function (base) {
+      var button = copyButtons[base];
+      if (button && button.parentNode) {
+        copyFeedbackEls[base] = button.parentNode.querySelector('.radix-converter__copy-feedback');
+      }
+    });
     var radioButtons = BASES.map(function (base) {
       return $('radix-base-' + base);
     });
 
     var copyTimers = {};
-    var copyOriginalText = {};
+    var currentState = 'idle';
+
+    function setState(state) {
+      currentState = state;
+      if (statusEl) {
+        statusEl.textContent = STATE_LABELS[state];
+      }
+    }
 
     function currentBase() {
       for (var i = 0; i < radioButtons.length; i += 1) {
@@ -171,31 +185,34 @@
     function showIdle() {
       errorEl.textContent = '';
       errorEl.classList.remove('radix-converter__error--visible');
-      resultContainers.forEach(function (container) {
-        container.classList.add('radix-converter__result--hidden');
+      BASES.forEach(function (base) {
+        resultEls[base].textContent = '';
+        resultEls[base].classList.add('radix-converter__result--hidden');
       });
+      setState('idle');
     }
 
     function showError(message) {
       errorEl.textContent = message;
       errorEl.classList.add('radix-converter__error--visible');
-      resultContainers.forEach(function (container) {
-        container.classList.add('radix-converter__result--hidden');
+      BASES.forEach(function (base) {
+        resultEls[base].textContent = '';
+        resultEls[base].classList.add('radix-converter__result--hidden');
       });
+      setState('invalid-input');
     }
 
     function showConverted(value) {
       errorEl.textContent = '';
       errorEl.classList.remove('radix-converter__error--visible');
-      resultContainers.forEach(function (container) {
-        container.classList.remove('radix-converter__result--hidden');
-      });
       BASES.forEach(function (base) {
         var formatted = formatInBase(value, base);
         if (formatted.ok) {
           resultEls[base].textContent = formatted.text;
         }
+        resultEls[base].classList.remove('radix-converter__result--hidden');
       });
+      setState('converted');
     }
 
     function recalculate() {
@@ -234,6 +251,7 @@
     function handleCopyClick(base) {
       var button = copyButtons[base];
       var resultEl = resultEls[base];
+      var feedbackEl = copyFeedbackEls[base];
       if (!button || !resultEl) {
         return;
       }
@@ -242,18 +260,21 @@
 
       if (copyTimers[base]) {
         clearTimeout(copyTimers[base]);
-      } else {
-        copyOriginalText[base] = button.textContent;
       }
 
-      button.textContent = '복사됨';
-      button.classList.add('radix-converter__copy-feedback');
+      if (feedbackEl) {
+        feedbackEl.textContent = '복사됨';
+      }
+      var previousState = currentState === 'copied' ? 'converted' : currentState;
+      setState('copied');
 
       copyTimers[base] = setTimeout(function () {
-        button.textContent = copyOriginalText[base];
-        button.classList.remove('radix-converter__copy-feedback');
+        if (feedbackEl) {
+          feedbackEl.textContent = '';
+        }
         copyTimers[base] = null;
-      }, 2000);
+        setState(previousState);
+      }, COPY_FEEDBACK_MS);
     }
 
     input.addEventListener('input', recalculate);
