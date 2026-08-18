@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>진법 변환기</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="radix-root" class="radix-converter">
+  <h1>진법 변환기</h1>
+
+  <div class="radix-converter__field">
+    <label for="radix-input">입력값</label>
+    <input
+      type="text"
+      id="radix-input"
+      class="radix-converter__input"
+      inputmode="text"
+      autocomplete="off"
+      aria-label="변환할 숫자 입력"
+      placeholder="변환할 숫자를 입력하세요">
+  </div>
+
+  <fieldset class="radix-converter__base-group" role="radiogroup" aria-label="입력 진법 선택">
+    <legend>입력 진법</legend>
+    <label class="radix-converter__base-option">
+      <input type="radio" id="radix-base-2" name="radix-base" value="2">
+      2진수
+    </label>
+    <label class="radix-converter__base-option">
+      <input type="radio" id="radix-base-8" name="radix-base" value="8">
+      8진수
+    </label>
+    <label class="radix-converter__base-option">
+      <input type="radio" id="radix-base-10" name="radix-base" value="10" checked>
+      10진수
+    </label>
+    <label class="radix-converter__base-option">
+      <input type="radio" id="radix-base-16" name="radix-base" value="16">
+      16진수
+    </label>
+  </fieldset>
+
+  <p id="radix-error" class="radix-converter__error" role="alert"></p>
+
+  <div class="radix-converter__results">
+    <div class="radix-converter__result radix-converter__result--hidden">
+      <span class="radix-converter__result-label">2진수</span>
+      <span id="radix-result-2" class="radix-converter__result-value"></span>
+      <button
+        type="button"
+        id="radix-copy-2"
+        class="radix-converter__copy-btn"
+        aria-label="2진수 결과 복사">복사</button>
+    </div>
+    <div class="radix-converter__result radix-converter__result--hidden">
+      <span class="radix-converter__result-label">8진수</span>
+      <span id="radix-result-8" class="radix-converter__result-value"></span>
+      <button
+        type="button"
+        id="radix-copy-8"
+        class="radix-converter__copy-btn"
+        aria-label="8진수 결과 복사">복사</button>
+    </div>
+    <div class="radix-converter__result radix-converter__result--hidden">
+      <span class="radix-converter__result-label">10진수</span>
+      <span id="radix-result-10" class="radix-converter__result-value"></span>
+      <button
+        type="button"
+        id="radix-copy-10"
+        class="radix-converter__copy-btn"
+        aria-label="10진수 결과 복사">복사</button>
+    </div>
+    <div class="radix-converter__result radix-converter__result--hidden">
+      <span class="radix-converter__result-label">16진수</span>
+      <span id="radix-result-16" class="radix-converter__result-value"></span>
+      <button
+        type="button"
+        id="radix-copy-16"
+        class="radix-converter__copy-btn"
+        aria-label="16진수 결과 복사">복사</button>
+    </div>
+  </div>
+</main>
+<script src="radix.js"></script>
+</body>
+</html>
