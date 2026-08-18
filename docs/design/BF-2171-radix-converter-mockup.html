@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>진법 변환기 UI 명세 mockup (BF-2171 / BF-2172)</title>
+<style>
+  :root {
+    /* frozen 디자인 토큰 (docs/plans/BF-2171/implementation-plan.md §8) — 값 변경/재정의 금지 */
+    --color-bg: #f8fafc;
+    --color-surface: #ffffff;
+    --color-text-primary: #0f172a;
+    --color-text-muted: #64748b;
+    --color-border: #cbd5e1;
+    --color-action-primary: #2563eb;
+    --color-error: #dc2626;
+    --color-success: #16a34a;
+    --space-control-gap: 12px;
+    --radius-control: 8px;
+    --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-family-base);
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+    padding: 24px 16px 64px;
+  }
+
+  .doc-note {
+    max-width: 480px;
+    margin: 0 auto 24px;
+    padding: 12px 16px;
+    background: var(--color-surface);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-control);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+  }
+
+  .doc-note strong {
+    color: var(--color-action-primary);
+  }
+
+  .demo-toolbar {
+    max-width: 480px;
+    margin: 0 auto 16px;
+    display: flex;
+    gap: var(--space-control-gap);
+    flex-wrap: wrap;
+  }
+
+  .demo-toolbar button {
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    cursor: pointer;
+  }
+
+  .demo-toolbar button:hover,
+  .demo-toolbar button:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+  }
+
+  .demo-toolbar button[aria-pressed="true"] {
+    border-color: var(--color-action-primary);
+    color: var(--color-action-primary);
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  /* ===== frozen UI 계약 영역 (#radix-root.radix-converter) ===== */
+
+  .radix-converter {
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 20px;
+  }
+
+  .radix-converter h1 {
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 var(--space-control-gap);
+  }
+
+  .radix-converter__state-live {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    margin: 0 0 var(--space-control-gap);
+    color: var(--color-text-primary);
+  }
+
+  .radix-converter__state-live .state-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+
+  .radix-converter[data-state="idle"] .state-badge {
+    background: rgba(100, 116, 139, 0.15);
+    color: var(--color-text-muted);
+  }
+
+  .radix-converter[data-state="invalid-input"] .state-badge {
+    background: rgba(220, 38, 38, 0.15);
+    color: var(--color-error);
+  }
+
+  .radix-converter[data-state="converted"] .state-badge,
+  .radix-converter[data-state="copied"] .state-badge {
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--color-action-primary);
+  }
+
+  /* .radix-converter__input — frozen 클래스 */
+  .radix-converter__input {
+    display: block;
+    width: 100%;
+    font: inherit;
+    font-size: 1.0625rem;
+    font-weight: 400;
+    line-height: 1.4;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-control-gap);
+  }
+
+  .radix-converter__input:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+  }
+
+  .radix-converter[data-state="invalid-input"] .radix-converter__input {
+    border-color: var(--color-error);
+    border-width: 2px;
+  }
+
+  /* radiogroup */
+  .radix-converter__base-group {
+    display: flex;
+    gap: var(--space-control-gap);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-control-gap);
+  }
+
+  .radix-converter__base-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    color: var(--color-text-primary);
+  }
+
+  .radix-converter__base-label:has(.radix-converter__base-option:checked) {
+    border-color: var(--color-action-primary);
+    color: var(--color-action-primary);
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  /* .radix-converter__base-option — frozen 클래스 */
+  .radix-converter__base-option:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 2px;
+  }
+
+  /* .radix-converter__error / .radix-converter__error--visible — frozen 클래스 */
+  .radix-converter__error {
+    display: none;
+    color: var(--color-error);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0 0 var(--space-control-gap);
+    padding: 8px 12px;
+    border-left: 4px solid var(--color-error);
+    background: rgba(220, 38, 38, 0.06);
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  }
+
+  .radix-converter__error.radix-converter__error--visible {
+    display: block;
+  }
+
+  /* .radix-converter__result / .radix-converter__result--hidden — frozen 클래스(컨테이너) */
+  .radix-converter__result-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-control-gap);
+  }
+
+  .radix-converter__result-group.radix-converter__result--hidden {
+    display: none;
+  }
+
+  @media (min-width: 481px) {
+    .radix-converter__result-group {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .radix-converter__result-group.radix-converter__result--hidden {
+      display: none;
+    }
+  }
+
+  .radix-converter__result-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: var(--space-control-gap);
+    background: var(--color-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .radix-converter__result-card--source {
+    border-color: var(--color-action-primary);
+    background: rgba(37, 99, 235, 0.06);
+  }
+
+  .radix-converter__result-caption {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+  }
+
+  .radix-converter__result-card--source .radix-converter__result-caption::after {
+    content: " · 입력한 진법";
+    color: var(--color-action-primary);
+    font-weight: 700;
+  }
+
+  /* .radix-converter__result — frozen 클래스(개별 결과 값 span) */
+  .radix-converter__result {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text-primary);
+    word-break: break-all;
+  }
+
+  /* .radix-converter__copy-btn — frozen 클래스 */
+  .radix-converter__copy-btn {
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 6px 10px;
+    border: 1px solid var(--color-action-primary);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-action-primary);
+    cursor: pointer;
+    align-self: flex-start;
+  }
+
+  .radix-converter__copy-btn:hover,
+  .radix-converter__copy-btn:focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 1px;
+  }
+
+  /* .radix-converter__copy-feedback — frozen 클래스 */
+  .radix-converter__copy-feedback {
+    display: none;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-success);
+  }
+
+  .radix-converter__result-card--copied .radix-converter__copy-feedback {
+    display: inline-block;
+  }
+
+  .section-heading {
+    max-width: 480px;
+    margin: 40px auto 12px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .snapshot-row {
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    gap: var(--space-control-gap);
+    flex-wrap: wrap;
+  }
+
+  .snapshot {
+    flex: 1 1 260px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 16px;
+    background: var(--color-surface);
+  }
+
+  .snapshot h3 {
+    margin: 0 0 8px;
+    font-size: 0.875rem;
+  }
+
+  .snapshot .tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .snapshot.is-idle .tag {
+    background: rgba(100, 116, 139, 0.15);
+    color: var(--color-text-muted);
+  }
+
+  .snapshot.is-invalid .tag {
+    background: rgba(220, 38, 38, 0.15);
+    color: var(--color-error);
+  }
+
+  .snapshot.is-converted .tag,
+  .snapshot.is-copied .tag {
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--color-action-primary);
+  }
+</style>
+</head>
+<body>
+
+  <div class="doc-note">
+    <strong>디자인 시안 mockup</strong> — 실제 앱 코드가 아닙니다. DOM id/class/토큰은
+    <code>docs/plans/BF-2171/implementation-plan.md</code>의 frozen <code>ui-contract@v1</code>를
+    그대로 사용했습니다. 상세 명세는 <code>docs/design/BF-2171-radix-converter.md</code> 참고.
+    변환 계산은 실제 로직이 아닌 placeholder 값입니다(계산 로직은 developer(BF-2173) 구현 범위).
+  </div>
+
+  <div class="demo-toolbar" role="group" aria-label="mockup 상태 데모 전환(실제 앱 기능 아님)">
+    <button type="button" class="demo-state-btn" data-state="idle" aria-pressed="true">idle</button>
+    <button type="button" class="demo-state-btn" data-state="invalid-input" aria-pressed="false">invalid-input</button>
+    <button type="button" class="demo-state-btn" data-state="converted" aria-pressed="false">converted</button>
+    <button type="button" class="demo-state-btn" data-state="copied" aria-pressed="false">copied</button>
+  </div>
+
+  <!-- ===================================================================
+       frozen ui-contract@v1 데모 영역: radix-root / radix-input / radix-base-* /
+       radix-error / radix-result-* / radix-copy-*
+       =================================================================== -->
+  <div id="radix-root" class="radix-converter" data-state="idle">
+    <h1>진법 변환기</h1>
+
+    <p class="radix-converter__state-live" aria-live="polite">
+      현재 상태: <span id="state-badge-text" class="state-badge">idle (대기)</span>
+    </p>
+
+    <input type="text" id="radix-input" class="radix-converter__input" inputmode="text"
+      autocomplete="off" aria-label="변환할 숫자 입력" value="">
+
+    <div class="radix-converter__base-group" role="radiogroup" aria-label="입력 진법 선택">
+      <label class="radix-converter__base-label">
+        <input type="radio" name="radix-base" id="radix-base-2" class="radix-converter__base-option" value="2">
+        2진수
+      </label>
+      <label class="radix-converter__base-label">
+        <input type="radio" name="radix-base" id="radix-base-8" class="radix-converter__base-option" value="8">
+        8진수
+      </label>
+      <label class="radix-converter__base-label">
+        <input type="radio" name="radix-base" id="radix-base-10" class="radix-converter__base-option" value="10" checked>
+        10진수
+      </label>
+      <label class="radix-converter__base-label">
+        <input type="radio" name="radix-base" id="radix-base-16" class="radix-converter__base-option" value="16">
+        16진수
+      </label>
+    </div>
+
+    <p id="radix-error" class="radix-converter__error" role="alert"></p>
+
+    <div class="radix-converter__result-group radix-converter__result--hidden">
+      <div class="radix-converter__result-card" id="radix-card-2">
+        <span class="radix-converter__result-caption">2진수</span>
+        <span id="radix-result-2" class="radix-converter__result">0</span>
+        <button type="button" id="radix-copy-2" class="radix-converter__copy-btn" aria-label="2진수 결과 복사">복사</button>
+        <span class="radix-converter__copy-feedback" aria-hidden="true">복사됨</span>
+      </div>
+      <div class="radix-converter__result-card" id="radix-card-8">
+        <span class="radix-converter__result-caption">8진수</span>
+        <span id="radix-result-8" class="radix-converter__result">0</span>
+        <button type="button" id="radix-copy-8" class="radix-converter__copy-btn" aria-label="8진수 결과 복사">복사</button>
+        <span class="radix-converter__copy-feedback" aria-hidden="true">복사됨</span>
+      </div>
+      <div class="radix-converter__result-card" id="radix-card-10">
+        <span class="radix-converter__result-caption">10진수</span>
+        <span id="radix-result-10" class="radix-converter__result">0</span>
+        <button type="button" id="radix-copy-10" class="radix-converter__copy-btn" aria-label="10진수 결과 복사">복사</button>
+        <span class="radix-converter__copy-feedback" aria-hidden="true">복사됨</span>
+      </div>
+      <div class="radix-converter__result-card" id="radix-card-16">
+        <span class="radix-converter__result-caption">16진수</span>
+        <span id="radix-result-16" class="radix-converter__result">0</span>
+        <button type="button" id="radix-copy-16" class="radix-converter__copy-btn" aria-label="16진수 결과 복사">복사</button>
+        <span class="radix-converter__copy-feedback" aria-hidden="true">복사됨</span>
+      </div>
+    </div>
+  </div>
+  <!-- ===================================================================
+       frozen ui-contract@v1 데모 영역 끝
+       =================================================================== -->
+
+  <p class="section-heading">상태 스냅샷 (idle / invalid-input / converted / copied 비교 — 정적 참고용)</p>
+  <div class="snapshot-row">
+    <div class="snapshot is-idle">
+      <span class="tag">idle</span>
+      <h3>대기 — 입력 없음</h3>
+      <p style="font-size:0.8125rem;line-height:1.5;margin:0;">
+        <code>radix-converter__result-group</code>에 <code>--result--hidden</code> 적용,
+        <code>radix-error</code>는 숨김. 위 데모의 <strong>idle</strong> 버튼 참고.
+      </p>
+    </div>
+    <div class="snapshot is-invalid">
+      <span class="tag">invalid-input</span>
+      <h3>오류 — 2진수 진법에 "2" 입력</h3>
+      <p style="font-size:0.8125rem;line-height:1.5;margin:0;">
+        <code>radix-error</code>: "2진수에서 허용되지 않는 문자가 포함되어 있습니다."
+        (<code>role="alert"</code>). 결과 영역은 계속 숨김. 위 데모의 <strong>invalid-input</strong> 버튼 참고.
+      </p>
+    </div>
+    <div class="snapshot is-converted">
+      <span class="tag">converted</span>
+      <h3>변환 완료 — 2진수 "1010" 입력</h3>
+      <p style="font-size:0.8125rem;line-height:1.5;margin:0;">
+        4개 카드 모두 표시: 2진수 "1010"(입력한 진법, 강조), 8진수 "12", 10진수 "10", 16진수 "A".
+        위 데모의 <strong>converted</strong> 버튼 참고.
+      </p>
+    </div>
+    <div class="snapshot is-copied">
+      <span class="tag">copied</span>
+      <h3>복사 완료 — 16진수 결과 복사 버튼 클릭</h3>
+      <p style="font-size:0.8125rem;line-height:1.5;margin:0;">
+        16진수 카드에 "복사됨" 피드백 노출(<code>--color-success</code>), 1500ms 후 자동으로
+        <code>converted</code>로 복귀. 위 데모의 <strong>copied</strong> 버튼 참고.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // mockup 전용 시각 시연 스크립트 — 실제 parseInBase/formatInBase 로직 없음(placeholder 값 토글만 수행).
+    (function () {
+      "use strict";
+
+      var root = document.getElementById("radix-root");
+      var stateBadge = document.getElementById("state-badge-text");
+      var input = document.getElementById("radix-input");
+      var errorEl = document.getElementById("radix-error");
+      var resultGroup = root.querySelector(".radix-converter__result-group");
+      var card2 = document.getElementById("radix-card-2");
+      var card8 = document.getElementById("radix-card-8");
+      var card10 = document.getElementById("radix-card-10");
+      var card16 = document.getElementById("radix-card-16");
+
+      var STATE_LABEL = {
+        "idle": "idle (대기)",
+        "invalid-input": "invalid-input (오류)",
+        "converted": "converted (변환 완료)",
+        "copied": "copied (복사됨)"
+      };
+
+      function clearCardHighlight() {
+        [card2, card8, card10, card16].forEach(function (card) {
+          card.classList.remove("radix-converter__result-card--source");
+          card.classList.remove("radix-converter__result-card--copied");
+        });
+      }
+
+      function applyState(state) {
+        root.setAttribute("data-state", state);
+        stateBadge.textContent = STATE_LABEL[state];
+
+        document.querySelectorAll(".demo-state-btn").forEach(function (btn) {
+          btn.setAttribute("aria-pressed", btn.getAttribute("data-state") === state ? "true" : "false");
+        });
+
+        if (state === "idle") {
+          input.value = "";
+          errorEl.textContent = "";
+          errorEl.classList.remove("radix-converter__error--visible");
+          resultGroup.classList.add("radix-converter__result--hidden");
+          clearCardHighlight();
+          return;
+        }
+
+        if (state === "invalid-input") {
+          input.value = "2";
+          document.getElementById("radix-base-2").checked = true;
+          errorEl.textContent = "2진수에서 허용되지 않는 문자가 포함되어 있습니다.";
+          errorEl.classList.add("radix-converter__error--visible");
+          resultGroup.classList.add("radix-converter__result--hidden");
+          clearCardHighlight();
+          return;
+        }
+
+        // converted / copied 공통: AC-1 예시(입력 진법 2, 값 1010)
+        input.value = "1010";
+        document.getElementById("radix-base-2").checked = true;
+        errorEl.textContent = "";
+        errorEl.classList.remove("radix-converter__error--visible");
+        resultGroup.classList.remove("radix-converter__result--hidden");
+        clearCardHighlight();
+        document.getElementById("radix-result-2").textContent = "1010";
+        document.getElementById("radix-result-8").textContent = "12";
+        document.getElementById("radix-result-10").textContent = "10";
+        document.getElementById("radix-result-16").textContent = "A";
+        card2.classList.add("radix-converter__result-card--source");
+
+        if (state === "copied") {
+          card16.classList.add("radix-converter__result-card--copied");
+        }
+      }
+
+      document.querySelectorAll(".demo-state-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          applyState(btn.getAttribute("data-state"));
+        });
+      });
+
+      applyState("idle");
+    })();
+  </script>
+</body>
+</html>
