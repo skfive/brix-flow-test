@@ -112,3 +112,244 @@ test('computeStats: elapsedMs가 전달된 값 그대로 결과에 포함된다'
   const stats = computeStats('abcde', 'abcde', 12345);
   assert.equal(stats.elapsedMs, 12345);
 });
+
+// ---- DOM 바인딩 — docs/plans/BF-2178/implementation-plan.md §2(상태 전이표)·§3(재시작)·§4(입력 규칙) ----
+//
+// jsdom 등 외부 의존성 없이(vanilla-static 제약) 최소 fake DOM으로 typing.js의
+// bindTypingUI 이벤트 핸들러 동작을 검증한다. 매 테스트마다 캐시버스팅 쿼리로
+// typing.js를 다시 import해 상태를 격리한다(모듈 top-level에서 document 존재 시
+// 즉시 바인딩되므로, import 시점에 fake document가 global에 있어야 한다).
+
+function createFakeElement() {
+  const listeners = new Map();
+  return {
+    _attrs: {},
+    className: '',
+    textContent: '',
+    _innerHTML: '',
+    value: '',
+    disabled: false,
+    hidden: true,
+    children: [],
+    focused: false,
+    setAttribute(name, val) {
+      this._attrs[name] = val;
+    },
+    getAttribute(name) {
+      return this._attrs[name];
+    },
+    addEventListener(type, handler) {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type).push(handler);
+    },
+    dispatch(type, event) {
+      (listeners.get(type) || []).forEach((handler) => handler(event));
+    },
+    appendChild(child) {
+      this.children.push(child);
+    },
+    focus() {
+      this.focused = true;
+    },
+    set innerHTML(value) {
+      this._innerHTML = value;
+      if (value === '') this.children = [];
+    },
+    get innerHTML() {
+      return this._innerHTML;
+    }
+  };
+}
+
+function createFakeDocument() {
+  const ids = [
+    'typing-root',
+    'status-text',
+    'prompt-text',
+    'typed-input',
+    'paste-warning',
+    'restart-button',
+    'wpm-value',
+    'accuracy-value',
+    'error-count-value'
+  ];
+  const elements = new Map();
+  ids.forEach((id) => elements.set(id, createFakeElement()));
+  return {
+    getElementById(id) {
+      return elements.get(id) || null;
+    },
+    createElement() {
+      return createFakeElement();
+    }
+  };
+}
+
+let domTestCounter = 0;
+
+// typing.js는 이벤트 핸들러 안에서도 (renderPrompt의 document.createElement 등)
+// 전역 document를 직접 참조하므로, import 시점뿐 아니라 핸들러 호출 시점까지
+// globalThis.document가 유지돼야 한다. 다음 loadTypingUI 호출이 새 fake document로
+// 덮어쓰므로 테스트 간 상태는 격리된다.
+async function loadTypingUI() {
+  const fakeDocument = createFakeDocument();
+  globalThis.document = fakeDocument;
+  domTestCounter += 1;
+  await import(`./typing.js?domtest=${domTestCounter}`);
+  return fakeDocument;
+}
+
+test('DOM: 초기 로드 시 idle 상태이고 typed-input이 비어있고 활성화되어 있다', async () => {
+  const doc = await loadTypingUI();
+  const root = doc.getElementById('typing-root');
+  const statusText = doc.getElementById('status-text');
+  const typedInput = doc.getElementById('typed-input');
+  assert.equal(root.getAttribute('data-state'), 'idle');
+  assert.equal(statusText.textContent, '대기 중 — 입력을 시작하세요');
+  assert.equal(typedInput.value, '');
+  assert.equal(typedInput.disabled, false);
+});
+
+test('DOM: 첫 글자를 입력하면 typing 상태로 전환되고 상태 문구가 바뀐다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const statusText = doc.getElementById('status-text');
+  const root = doc.getElementById('typing-root');
+  typedInput.value = 'T';
+  typedInput.dispatch('input', {});
+  assert.equal(root.getAttribute('data-state'), 'typing');
+  assert.equal(statusText.textContent, '입력 중');
+});
+
+test('DOM: typing 상태에서 백스페이스로 입력을 모두 지우면 idle로 되돌아간다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const root = doc.getElementById('typing-root');
+  typedInput.value = 'T';
+  typedInput.dispatch('input', {});
+  typedInput.value = '';
+  typedInput.dispatch('input', {});
+  assert.equal(root.getAttribute('data-state'), 'idle');
+});
+
+test('DOM: 목표 문장을 모두 입력하면 done 상태가 되고 typed-input이 비활성화되며 통계가 표시된다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const root = doc.getElementById('typing-root');
+  const statusText = doc.getElementById('status-text');
+  const wpmValue = doc.getElementById('wpm-value');
+  const target = globalThis.TypingPractice.TARGET_TEXT;
+
+  typedInput.value = target;
+  typedInput.dispatch('input', {});
+
+  assert.equal(root.getAttribute('data-state'), 'done');
+  assert.equal(statusText.textContent, '완료되었습니다');
+  assert.equal(typedInput.disabled, true);
+  assert.equal(typeof wpmValue.textContent, 'string');
+});
+
+test('DOM: typed-input에서 Enter는 preventDefault되고 값과 상태가 바뀌지 않는다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const root = doc.getElementById('typing-root');
+
+  typedInput.value = 'T';
+  typedInput.dispatch('input', {});
+
+  let prevented = false;
+  typedInput.dispatch('keydown', {
+    key: 'Enter',
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(typedInput.value, 'T');
+  assert.equal(root.getAttribute('data-state'), 'typing');
+});
+
+test('DOM: 붙여넣기를 시도하면 preventDefault되고 paste-warning이 노출된다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const pasteWarning = doc.getElementById('paste-warning');
+  assert.equal(pasteWarning.hidden, true);
+
+  let prevented = false;
+  typedInput.dispatch('paste', {
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(pasteWarning.hidden, false);
+});
+
+test('DOM: 드래그앤드롭으로 텍스트를 삽입하려 하면 preventDefault되고 paste-warning이 노출된다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const pasteWarning = doc.getElementById('paste-warning');
+
+  let prevented = false;
+  typedInput.dispatch('drop', {
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(pasteWarning.hidden, false);
+});
+
+test('DOM: done 상태에서 다시 시작을 누르면 idle로 초기화되고 typed-input이 재활성화된다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const root = doc.getElementById('typing-root');
+  const restartButton = doc.getElementById('restart-button');
+  const statusText = doc.getElementById('status-text');
+  const wpmValue = doc.getElementById('wpm-value');
+  const target = globalThis.TypingPractice.TARGET_TEXT;
+
+  typedInput.value = target;
+  typedInput.dispatch('input', {});
+  assert.equal(root.getAttribute('data-state'), 'done');
+
+  restartButton.dispatch('click', {});
+
+  assert.equal(root.getAttribute('data-state'), 'idle');
+  assert.equal(statusText.textContent, '대기 중 — 입력을 시작하세요');
+  assert.equal(typedInput.value, '');
+  assert.equal(typedInput.disabled, false);
+  assert.equal(wpmValue.textContent, '0');
+});
+
+test('DOM: typing 상태에서도 다시 시작을 누르면 idle로 초기화된다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const root = doc.getElementById('typing-root');
+  const restartButton = doc.getElementById('restart-button');
+
+  typedInput.value = 'T';
+  typedInput.dispatch('input', {});
+  assert.equal(root.getAttribute('data-state'), 'typing');
+
+  restartButton.dispatch('click', {});
+
+  assert.equal(root.getAttribute('data-state'), 'idle');
+  assert.equal(typedInput.value, '');
+});
+
+test('DOM: paste-warning이 표시된 상태에서 다시 시작하면 숨겨진다', async () => {
+  const doc = await loadTypingUI();
+  const typedInput = doc.getElementById('typed-input');
+  const pasteWarning = doc.getElementById('paste-warning');
+  const restartButton = doc.getElementById('restart-button');
+
+  typedInput.dispatch('paste', { preventDefault() {} });
+  assert.equal(pasteWarning.hidden, false);
+
+  restartButton.dispatch('click', {});
+  assert.equal(pasteWarning.hidden, true);
+});

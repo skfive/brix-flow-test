@@ -170,6 +170,7 @@
       typedInput.addEventListener('input', handleInput);
       typedInput.addEventListener('keydown', handleKeydown);
       typedInput.addEventListener('paste', handlePaste);
+      typedInput.addEventListener('drop', handlePaste);
       restartButton.addEventListener('click', handleRestart);
 
       renderPrompt('');
