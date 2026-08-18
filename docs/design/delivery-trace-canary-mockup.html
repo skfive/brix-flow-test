@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>납품 추적 상태 보드 시각 mockup · delivery-trace-canary (BF-1241)</title>
+  <style>
+    /* ===== frozen design token (ui-contract@v1 §2.3 — exact 값, 변경 금지) ===== */
+    :root {
+      --color-stage-complete: #16a34a;
+      --color-stage-pending:  #9ca3af;
+      --color-evidence-missing: #dc2626;
+      --space-board-gap: 16px;
+
+      /* 시안 보조 로컬 변수 (frozen 아님 — mockup 뼈대 표현용) */
+      --color-bg: #f9fafb;
+      --color-surface: #ffffff;
+      --color-text: #111827;
+      --color-text-muted: #6b7280;
+      --color-border: #e5e7eb;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+    }
+    .mockup-doc-title { font-size: 1.25rem; font-weight: 700; margin: 0 0 4px; }
+    .mockup-doc-sub { color: var(--color-text-muted); font-size: 0.875rem; margin: 0 0 24px; }
+    .state-block { margin-bottom: 32px; }
+    .state-block__label {
+      display: inline-block; font-size: 0.75rem; font-weight: 600;
+      color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em;
+      margin-bottom: 8px; padding: 2px 8px; border: 1px solid var(--color-border);
+      border-radius: 999px; background: var(--color-surface);
+    }
+
+    /* ===== 보드 (frozen ID/class) ===== */
+    .trace-board {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: var(--space-board-gap);
+      display: flex; flex-direction: column; gap: var(--space-board-gap);
+      max-width: 880px;
+    }
+    .trace-board__header {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: var(--space-board-gap);
+    }
+    .trace-board__header h1 { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin: 0; }
+
+    /* 상태 필터 그룹: wrapper=로컬 class, 필터 컨트롤 자체=frozen class trace-board__filter */
+    .trace-board__filter-group {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .trace-board__filter-group > span { font-size: 0.875rem; color: var(--color-text-muted); }
+    /* 상태 필터 컨트롤 (frozen class — select 에 직접 적용) */
+    select.trace-board__filter {
+      font: inherit; font-size: 0.875rem; padding: 6px 10px;
+      border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface);
+      color: var(--color-text);
+    }
+    select.trace-board__filter:focus-visible { outline: 2px solid var(--color-stage-complete); outline-offset: 2px; }
+
+    /* 누락 evidence 경고 (frozen) */
+    .trace-board__warning {
+      border: 1px solid var(--color-evidence-missing);
+      background: #fef2f2;
+      color: var(--color-evidence-missing);
+      border-radius: 6px; padding: 10px 12px; font-size: 0.875rem;
+    }
+    .trace-board__warning strong { font-weight: 700; }
+    .trace-board__warning ul { margin: 6px 0 0; padding-left: 18px; }
+
+    /* 요구사항 행 + 단계 목록 */
+    .trace-row { border-top: 1px solid var(--color-border); padding-top: var(--space-board-gap); }
+    .trace-row__req { font-size: 1rem; font-weight: 600; line-height: 1.4; margin: 0 0 8px; }
+    .trace-board__stage-list {
+      display: flex; gap: var(--space-board-gap); flex-wrap: wrap; min-width: 0;
+      align-items: stretch;
+    }
+
+    /* 단계 카드 (frozen) */
+    .trace-board__stage {
+      flex: 1 1 120px; min-width: 0;
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 12px; border-radius: 6px; cursor: pointer;
+      border: 1px solid var(--color-border); background: var(--color-surface);
+      font: inherit; text-align: left; color: var(--color-text);
+    }
+    .trace-board__stage:focus-visible { outline: 2px solid var(--color-stage-complete); outline-offset: 2px; }
+    .trace-board__stage-name { font-size: 0.875rem; font-weight: 600; }
+    .trace-board__stage-status {
+      font-size: 0.75rem; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .trace-board__stage-status::before {
+      content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+    }
+    /* 상태별 색 (frozen 토큰) — 색 + 텍스트 + aria 3중 노출 */
+    .trace-board__stage[data-status="complete"] { border-left: 4px solid var(--color-stage-complete); }
+    .trace-board__stage[data-status="complete"] .trace-board__stage-status { color: var(--color-stage-complete); }
+    .trace-board__stage[data-status="pending"]  { border-left: 4px solid var(--color-stage-pending); }
+    .trace-board__stage[data-status="pending"]  .trace-board__stage-status { color: var(--color-stage-pending); }
+    .trace-board__stage[data-status="missing"]  { border-left: 4px solid var(--color-evidence-missing); background: #fef2f2; }
+    .trace-board__stage[data-status="missing"]  .trace-board__stage-status { color: var(--color-evidence-missing); }
+
+    /* filtered 상태: 비강조 카드 흐리게(dim) — 상태명 텍스트는 유지 */
+    .trace-board[data-state="filtered"] .trace-board__stage[data-dim="true"] { opacity: 0.35; }
+
+    /* 상세 패널 (frozen) */
+    .trace-board__detail {
+      border: 1px solid var(--color-border); border-radius: 6px;
+      padding: var(--space-board-gap); background: #f9fafb; font-size: 0.875rem;
+    }
+    .trace-board__detail[data-empty="true"] { color: var(--color-text-muted); }
+    .trace-board__detail h2 { font-size: 0.9375rem; margin: 0 0 6px; }
+    .trace-board__detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
+    .trace-board__detail dt { color: var(--color-text-muted); }
+
+    /* 로딩 / 오류 안내 */
+    .trace-board__notice { padding: 24px; text-align: center; color: var(--color-text-muted); font-size: 0.9375rem; }
+    .trace-board[data-state="error"] .trace-board__notice { color: var(--color-evidence-missing); }
+    .trace-board__notice .retry { display: block; margin-top: 8px; font-size: 0.8125rem; }
+
+    /* ===== 반응형: 480px 미만 단계 카드 세로 스택 (frozen §2.5) ===== */
+    @media (max-width: 479px) {
+      body { padding: 16px; }
+      .trace-board__stage-list { flex-direction: column; }
+      .trace-board__stage { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  <p class="mockup-doc-title">납품 추적 상태 보드 — 시각 mockup</p>
+  <p class="mockup-doc-sub">
+    BF-1241 · frozen ui-contract@v1 selector / token / 상태 텍스트를 그대로 표현한 정적 시뮬레이션.
+    아래 6개 <code>&lt;section&gt;</code>은 각 상태(loading / ready / filtered / missing-evidence /
+    detail-open / error)를 나타냅니다. 실제 dev 산출물이 아니라 시안 시각화입니다.
+    <br />
+    <strong>고유 id 규약</strong>: 한 페이지에 6개 보드를 겹쳐 두므로 HTML 고유 id 제약상 frozen id 4개
+    (<code>delivery-trace-board</code> · <code>trace-stage-filter</code> · <code>trace-detail-panel</code> ·
+    <code>trace-evidence-warning</code>)는 각 요소가 활성화되는 대표 상태 섹션에 <strong>정확히 1회</strong>만
+    노출합니다(id 개명·재정의 없음: board=ready, filter=ready, detail=detail-open, warning=missing-evidence).
+    frozen class(<code>trace-board</code> 등)는 모든 시뮬레이션 섹션에서 반복 사용합니다.
+  </p>
+
+  <!-- ============ 1) loading ============ -->
+  <section class="state-block">
+    <span class="state-block__label">상태: loading</span>
+    <div class="trace-board" data-state="loading">
+      <div class="trace-board__header">
+        <h1>납품 추적 상태 보드</h1>
+      </div>
+      <p class="trace-board__notice">추적 데이터를 불러오는 중…</p>
+    </div>
+  </section>
+
+  <!-- ============ 2) ready (5단계 연결, 한국어/영문 병기) ============ -->
+  <section class="state-block">
+    <span class="state-block__label">상태: ready</span>
+    <div class="trace-board" id="delivery-trace-board" data-state="ready">
+      <div class="trace-board__header">
+        <h1>납품 추적 상태 보드</h1>
+        <label class="trace-board__filter-group">
+          <span>단계 상태 필터</span>
+          <select id="trace-stage-filter" class="trace-board__filter" aria-label="단계 상태 필터">
+            <option value="all" selected>전체</option>
+            <option value="complete">완료</option>
+            <option value="pending">진행 중</option>
+            <option value="missing">누락</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="trace-row">
+        <p class="trace-row__req">REQ-1. 5단계 추적 연결 렌더</p>
+        <div class="trace-board__stage-list">
+          <button type="button" class="trace-board__stage" data-stage="requirement" data-status="complete" aria-label="요구사항 완료(Complete)">
+            <span class="trace-board__stage-name">요구사항 · Requirement</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="design" data-status="complete" aria-label="설계 완료(Complete)">
+            <span class="trace-board__stage-name">설계 · Design</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="implementation" data-status="complete" aria-label="구현 완료(Complete)">
+            <span class="trace-board__stage-name">구현 · Implementation</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="review" data-status="complete" aria-label="검토 완료(Complete)">
+            <span class="trace-board__stage-name">검토 · Review</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="test" data-status="complete" aria-label="테스트 완료(Complete)">
+            <span class="trace-board__stage-name">테스트 · Test</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="trace-row">
+        <p class="trace-row__req">REQ-2. 상태 필터 강조/흐림 전환</p>
+        <div class="trace-board__stage-list">
+          <button type="button" class="trace-board__stage" data-stage="requirement" data-status="complete" aria-label="요구사항 완료(Complete)">
+            <span class="trace-board__stage-name">요구사항 · Requirement</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="design" data-status="complete" aria-label="설계 완료(Complete)">
+            <span class="trace-board__stage-name">설계 · Design</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="implementation" data-status="pending" aria-label="구현 진행 중(Pending)">
+            <span class="trace-board__stage-name">구현 · Implementation</span>
+            <span class="trace-board__stage-status">진행 중</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="review" data-status="pending" aria-label="검토 진행 중(Pending)">
+            <span class="trace-board__stage-name">검토 · Review</span>
+            <span class="trace-board__stage-status">진행 중</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="test" data-status="pending" aria-label="테스트 진행 중(Pending)">
+            <span class="trace-board__stage-name">테스트 · Test</span>
+            <span class="trace-board__stage-status">진행 중</span>
+          </button>
+        </div>
+      </div>
+
+      <aside class="trace-board__detail" role="region" aria-label="단계 상세(초기 · 빈 상태)" tabindex="-1" data-empty="true">
+        <p>단계 카드를 선택하면 상세 evidence가 표시됩니다.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ 3) filtered (완료 필터 → 완료 강조, 나머지 흐림) ============ -->
+  <section class="state-block">
+    <span class="state-block__label">상태: filtered · 필터="완료"</span>
+    <div class="trace-board" data-state="filtered">
+      <div class="trace-board__header">
+        <h1>납품 추적 상태 보드</h1>
+        <label class="trace-board__filter-group">
+          <span>단계 상태 필터</span>
+          <select class="trace-board__filter" aria-label="단계 상태 필터">
+            <option value="all">전체</option>
+            <option value="complete" selected>완료</option>
+            <option value="pending">진행 중</option>
+            <option value="missing">누락</option>
+          </select>
+        </label>
+      </div>
+      <div class="trace-row">
+        <p class="trace-row__req">REQ-2. 선택 필터 단계만 강조 · 나머지는 흐리게</p>
+        <div class="trace-board__stage-list">
+          <button type="button" class="trace-board__stage" data-stage="requirement" data-status="complete" aria-label="요구사항 완료(Complete)">
+            <span class="trace-board__stage-name">요구사항 · Requirement</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="design" data-status="complete" aria-label="설계 완료(Complete)">
+            <span class="trace-board__stage-name">설계 · Design</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="implementation" data-status="pending" data-dim="true" aria-label="구현 진행 중(Pending)">
+            <span class="trace-board__stage-name">구현 · Implementation</span>
+            <span class="trace-board__stage-status">진행 중</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="review" data-status="pending" data-dim="true" aria-label="검토 진행 중(Pending)">
+            <span class="trace-board__stage-name">검토 · Review</span>
+            <span class="trace-board__stage-status">진행 중</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="test" data-status="pending" data-dim="true" aria-label="테스트 진행 중(Pending)">
+            <span class="trace-board__stage-name">테스트 · Test</span>
+            <span class="trace-board__stage-status">진행 중</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4) missing-evidence (경고 + 보완 대상 목록) ============ -->
+  <section class="state-block">
+    <span class="state-block__label">상태: missing-evidence</span>
+    <div class="trace-board" data-state="missing-evidence">
+      <div class="trace-board__header">
+        <h1>납품 추적 상태 보드</h1>
+        <label class="trace-board__filter-group">
+          <span>단계 상태 필터</span>
+          <select class="trace-board__filter" aria-label="단계 상태 필터">
+            <option value="all">전체</option>
+            <option value="complete">완료</option>
+            <option value="pending">진행 중</option>
+            <option value="missing" selected>누락</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="trace-board__warning" id="trace-evidence-warning" aria-live="polite">
+        <strong>누락된 evidence — 보완 대상</strong>
+        <ul>
+          <li>REQ-3 · 검토(Review) — evidence 누락</li>
+          <li>REQ-3 · 테스트(Test) — evidence 누락</li>
+        </ul>
+      </div>
+
+      <div class="trace-row">
+        <p class="trace-row__req">REQ-3. 누락 evidence 경고</p>
+        <div class="trace-board__stage-list">
+          <button type="button" class="trace-board__stage" data-stage="requirement" data-status="complete" aria-label="요구사항 완료(Complete)">
+            <span class="trace-board__stage-name">요구사항 · Requirement</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="design" data-status="complete" aria-label="설계 완료(Complete)">
+            <span class="trace-board__stage-name">설계 · Design</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="implementation" data-status="complete" aria-label="구현 완료(Complete)">
+            <span class="trace-board__stage-name">구현 · Implementation</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="review" data-status="missing" aria-label="검토 누락(Missing)">
+            <span class="trace-board__stage-name">검토 · Review</span>
+            <span class="trace-board__stage-status">누락</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="test" data-status="missing" aria-label="테스트 누락(Missing)">
+            <span class="trace-board__stage-name">테스트 · Test</span>
+            <span class="trace-board__stage-status">누락</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5) detail-open (선택 단계 상세 evidence) ============ -->
+  <section class="state-block">
+    <span class="state-block__label">상태: detail-open · 선택="설계(Design)"</span>
+    <div class="trace-board" data-state="detail-open">
+      <div class="trace-board__header">
+        <h1>납품 추적 상태 보드</h1>
+        <label class="trace-board__filter-group">
+          <span>단계 상태 필터</span>
+          <select class="trace-board__filter" aria-label="단계 상태 필터">
+            <option value="all" selected>전체</option>
+            <option value="complete">완료</option>
+            <option value="pending">진행 중</option>
+            <option value="missing">누락</option>
+          </select>
+        </label>
+      </div>
+      <div class="trace-row">
+        <p class="trace-row__req">REQ-4. 단계 선택 시 상세 패널 표시</p>
+        <div class="trace-board__stage-list">
+          <button type="button" class="trace-board__stage" data-stage="requirement" data-status="complete" aria-label="요구사항 완료(Complete)">
+            <span class="trace-board__stage-name">요구사항 · Requirement</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="design" data-status="complete" aria-selected="true" aria-label="설계 완료(Complete), 선택됨">
+            <span class="trace-board__stage-name">설계 · Design</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="implementation" data-status="complete" aria-label="구현 완료(Complete)">
+            <span class="trace-board__stage-name">구현 · Implementation</span>
+            <span class="trace-board__stage-status">완료</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="review" data-status="pending" aria-label="검토 진행 중(Pending)">
+            <span class="trace-board__stage-name">검토 · Review</span>
+            <span class="trace-board__stage-status">진행 중</span>
+          </button>
+          <button type="button" class="trace-board__stage" data-stage="test" data-status="pending" aria-label="테스트 진행 중(Pending)">
+            <span class="trace-board__stage-name">테스트 · Test</span>
+            <span class="trace-board__stage-status">진행 중</span>
+          </button>
+        </div>
+      </div>
+
+      <aside class="trace-board__detail" id="trace-detail-panel" role="region" aria-label="단계 상세: 설계(Design)" tabindex="-1" data-empty="false">
+        <h2>설계 · Design — evidence 상세</h2>
+        <dl>
+          <dt>단계 상태</dt><dd>완료(Complete)</dd>
+          <dt>evidence 문서</dt><dd>docs/design/delivery-trace-canary-BF-1240.md</dd>
+          <dt>연결 요구사항</dt><dd>REQ-4 · 단계 선택 시 상세 패널 표시</dd>
+          <dt>비고</dt><dd>선택 시 이 패널이 포커스를 받습니다(role=region).</dd>
+        </dl>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ 6) error ============ -->
+  <section class="state-block">
+    <span class="state-block__label">상태: error</span>
+    <div class="trace-board" data-state="error">
+      <div class="trace-board__header">
+        <h1>납품 추적 상태 보드</h1>
+      </div>
+      <p class="trace-board__notice">
+        추적 데이터를 표시할 수 없습니다
+        <span class="retry">잠시 후 다시 시도하거나 새로고침하세요.</span>
+      </p>
+    </div>
+  </section>
+</body>
+</html>
