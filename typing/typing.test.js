@@ -1,76 +1,114 @@
 'use strict';
 
 // typing.js는 브라우저에서 file:// 로 <script> classic 태그 로드가 가능해야 하므로
-// import/export 문 없이 IIFE + globalThis.Typing 로 노출한다.
-// 여기서는 부수효과 import 로 로드한 뒤 globalThis.Typing 에서 꺼내 쓴다.
+// import/export 문 없이 IIFE + globalThis.TypingPractice 로 노출한다.
+// 여기서는 부수효과 import 로 로드한 뒤 globalThis.TypingPractice 에서 꺼내 쓴다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import './typing.js';
 
-const { calcWpm, calcAccuracy, calcTypoCount } = globalThis.Typing;
+const { evaluateInput, computeStats } = globalThis.TypingPractice;
 
-// ---- calcWpm(charCount, elapsedMs) — docs/plans/BF-2029/implementation-plan.md §3.1 ----
+// ---- evaluateInput(target, typed) — docs/plans/BF-2178/implementation-plan.md §6 ----
 
-test('calcWpm: 300자 / 60000ms === 60 (AC 고정 케이스)', () => {
-  assert.equal(calcWpm(300, 60000), 60);
+test('evaluateInput: typed가 빈 문자열이면 모든 글자가 pending, done=false, errorCount=0', () => {
+  const result = evaluateInput('abc', '');
+  assert.deepEqual(
+    result.chars,
+    [
+      { char: 'a', status: 'pending' },
+      { char: 'b', status: 'pending' },
+      { char: 'c', status: 'pending' }
+    ]
+  );
+  assert.equal(result.done, false);
+  assert.equal(result.errorCount, 0);
 });
 
-test('calcWpm: 0자 / 60000ms === 0', () => {
-  assert.equal(calcWpm(0, 60000), 0);
+test('evaluateInput: 부분 입력 중 정타/오타/미입력이 섞이면 각 글자 상태가 정확히 매핑된다', () => {
+  const result = evaluateInput('abcde', 'abx');
+  assert.deepEqual(
+    result.chars,
+    [
+      { char: 'a', status: 'correct' },
+      { char: 'b', status: 'correct' },
+      { char: 'c', status: 'incorrect' },
+      { char: 'd', status: 'pending' },
+      { char: 'e', status: 'pending' }
+    ]
+  );
+  assert.equal(result.done, false);
+  assert.equal(result.errorCount, 1);
 });
 
-test('calcWpm: 250자 / 60000ms === 50', () => {
-  assert.equal(calcWpm(250, 60000), 50);
+test('evaluateInput: 입력 길이가 target 길이에 도달하면 done=true', () => {
+  const result = evaluateInput('abc', 'abc');
+  assert.equal(result.done, true);
+  assert.equal(result.errorCount, 0);
 });
 
-test('calcWpm: 125자 / 30000ms === 50 (0.5분 환산)', () => {
-  assert.equal(calcWpm(125, 30000), 50);
+test('evaluateInput: 전부 오타로 완료된 경우 done=true이고 errorCount가 전체 글자 수와 같다', () => {
+  const result = evaluateInput('abc', 'xyz');
+  assert.equal(result.done, true);
+  assert.equal(result.errorCount, 3);
+  assert.deepEqual(result.chars.map((c) => c.status), ['incorrect', 'incorrect', 'incorrect']);
 });
 
-test('calcWpm: 1자 / 60000ms === 0 (0.2단어 반올림)', () => {
-  assert.equal(calcWpm(1, 60000), 0);
+test('evaluateInput: 원본 target/typed 문자열을 변경하지 않는다', () => {
+  const target = 'abc';
+  const typed = 'ab';
+  evaluateInput(target, typed);
+  assert.equal(target, 'abc');
+  assert.equal(typed, 'ab');
 });
 
-test('calcWpm: elapsedMs === 0 이면 0으로 나눔 없이 0을 반환한다', () => {
-  assert.equal(calcWpm(250, 0), 0);
+test('evaluateInput: 호출마다 새 배열을 반환하며 이전 결과가 공유되지 않는다', () => {
+  const first = evaluateInput('abc', 'a');
+  const second = evaluateInput('abc', 'ab');
+  assert.notEqual(first.chars, second.chars);
+  assert.equal(first.chars[1].status, 'pending');
+  assert.equal(second.chars[1].status, 'correct');
 });
 
-// ---- calcAccuracy(typed, target) — docs/plans/BF-2029/implementation-plan.md §3.2 ----
+// ---- computeStats(target, typed, elapsedMs) — 5글자 = 1단어 기준 WPM/정확도 ----
 
-test('calcAccuracy: "abcde" vs "abcxe" === 80 (AC 고정 케이스)', () => {
-  assert.equal(calcAccuracy('abcde', 'abcxe'), 80);
+test('computeStats: 10글자 전부 정타, 60000ms(1분) === wpm 2, accuracy 100', () => {
+  const stats = computeStats('abcdefghij', 'abcdefghij', 60000);
+  assert.equal(stats.wpm, 2);
+  assert.equal(stats.accuracy, 100);
+  assert.equal(stats.errorCount, 0);
 });
 
-test('calcAccuracy: typed가 빈 문자열이면 100 (0 나눗셈 가드)', () => {
-  assert.equal(calcAccuracy('', 'the quick'), 100);
+test('computeStats: 10글자 중 8글자 정타 === accuracy 80', () => {
+  const stats = computeStats('abcdefghij', 'abcdefghxx', 60000);
+  assert.equal(stats.accuracy, 80);
+  assert.equal(stats.errorCount, 2);
 });
 
-test('calcAccuracy: typed === target 이면 100', () => {
-  assert.equal(calcAccuracy('the', 'the'), 100);
+test('computeStats: elapsedMs === 0이면 0으로 나눔 없이 wpm 0을 반환한다', () => {
+  const stats = computeStats('abcdefghij', 'abcdefghij', 0);
+  assert.equal(stats.wpm, 0);
 });
 
-test('calcAccuracy: "thw" vs "the" === 67 (2/3 반올림)', () => {
-  assert.equal(calcAccuracy('thw', 'the'), 67);
+test('computeStats: typed가 빈 문자열이면 accuracy 0, wpm 0', () => {
+  const stats = computeStats('abcdefghij', '', 60000);
+  assert.equal(stats.accuracy, 0);
+  assert.equal(stats.wpm, 0);
+  assert.equal(stats.errorCount, 0);
 });
 
-test('calcAccuracy: "thereX" vs "there" === 83 (오버타이핑 포함, 5/6 반올림)', () => {
-  assert.equal(calcAccuracy('thereX', 'there'), 83);
+test('computeStats: 30000ms(0.5분), 10글자 정타 === wpm 4 (분수 환산)', () => {
+  const stats = computeStats('abcdefghij', 'abcdefghij', 30000);
+  assert.equal(stats.wpm, 4);
 });
 
-test('calcAccuracy: "th" vs "the" === 100 (입력 중, 남은 글자는 미평가)', () => {
-  assert.equal(calcAccuracy('th', 'the'), 100);
+test('computeStats: typed가 target보다 길어도 target 길이만큼만 비교해 정확도를 계산한다', () => {
+  const stats = computeStats('abc', 'abcxx', 60000);
+  assert.equal(stats.errorCount, 2);
+  assert.equal(stats.accuracy, 60);
 });
 
-// ---- calcTypoCount(typed, target) — §3.2 오타 수 규칙 ----
-
-test('calcTypoCount: "thw" vs "the" === 1', () => {
-  assert.equal(calcTypoCount('thw', 'the'), 1);
-});
-
-test('calcTypoCount: "thereX" vs "there" === 1 (오버타이핑 문자도 오타로 센다)', () => {
-  assert.equal(calcTypoCount('thereX', 'there'), 1);
-});
-
-test('calcTypoCount: typed가 빈 문자열이면 0', () => {
-  assert.equal(calcTypoCount('', 'the'), 0);
+test('computeStats: elapsedMs가 전달된 값 그대로 결과에 포함된다', () => {
+  const stats = computeStats('abcde', 'abcde', 12345);
+  assert.equal(stats.elapsedMs, 12345);
 });
